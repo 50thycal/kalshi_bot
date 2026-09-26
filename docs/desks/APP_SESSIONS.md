@@ -86,7 +86,7 @@ do not run it from either research session or the temporary setup service. Have 
 an open binary market that closes more than ten minutes away, then preview it:
 
 ```sh
-python scripts/desk_live_smoke.py --ticker MARKET-TICKER --side yes
+/opt/venv/bin/python scripts/desk_live_smoke.py --ticker MARKET-TICKER --side yes
 ```
 
 The preview is read-only and requires an observed ask of at least 10 cents. Review the printed
@@ -100,12 +100,20 @@ the ticker, create a new order ID, retry the POST, or manually unwind. Re-runnin
 command only recovers an exchange-visible order or returns the saved result; an unresolved claim
 remains fail-closed. A fill makes the clean-book launch check fail until it is settled and flat.
 
-The sole approved exception is the versioned recovery selected after the 2026-09-22 v1 incident.
-It does not clear or reuse the v1 claim. After at least five minutes, it first requires the v1
-order to remain absent, the restricted book to be clean and the exchange balance to remain exactly
-$30. Preview with `--recovery-v2`, then use the same flag with `--execute` only after reviewing the
-new fixed v2 order ID. The v2 path has no further recovery version: any v2 ambiguity remains
-fail-closed. HTTP write failures record their submit-versus-reconcile stage and safe exchange status.
+The first approved exception was the versioned recovery selected after the 2026-09-22 v1
+incident. It preserved the v1 claim and used a distinct fixed v2 order ID. V2 then recorded a
+classified submit-stage HTTP 403 while production was configured with Kalshi's legacy
+`api.elections` host. Read-only key inspection proved the restricted key had `read` and
+`write::trade` scopes, a current region attestation, and access only to subaccount 1. Production
+was corrected to `https://external-api.kalshi.com/trade-api/v2`; a read-only isolation check on
+the rebuilt service passed with the balance still exactly $30.
+
+The sole remaining exception is `--recovery-v3`. It does not clear or reuse either prior claim.
+It requires both prior orders to remain absent, the exact durable v2 submit-stage 403, at least a
+five-minute delay, the current `external-api` live host, a clean book, and the unchanged $30
+balance. Preview with `--recovery-v3`, then use the same flag with `--execute` only after reviewing
+the new fixed v3 order ID and obtaining fresh live-order approval. There is no v4 path: any v3
+ambiguity remains fail-closed. HTTP write failures continue to record their safe stage and status.
 
 Only after a clean zero-fill result, both genuine app cycles, and `preflight` may the operator
 use the single common `start` command.

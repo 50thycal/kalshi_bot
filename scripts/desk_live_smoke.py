@@ -29,10 +29,16 @@ def main(argv=None) -> int:
         action="store_true",
         help="place the single live IOC; without this flag the command is read-only",
     )
-    parser.add_argument(
+    recovery = parser.add_mutually_exclusive_group()
+    recovery.add_argument(
         "--recovery-v2",
         action="store_true",
         help="use the one-time v2 recovery path after an unresolved v1 claim",
+    )
+    recovery.add_argument(
+        "--recovery-v3",
+        action="store_true",
+        help="use the one-time v3 recovery path after the classified v2 HTTP 403",
     )
     args = parser.parse_args(argv)
     exchange = None
@@ -56,6 +62,7 @@ def main(argv=None) -> int:
             args.side,
             execute=args.execute,
             recovery_v2=args.recovery_v2,
+            recovery_v3=args.recovery_v3,
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         report = result.get("report")

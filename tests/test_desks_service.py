@@ -94,6 +94,11 @@ def settings(**overrides):
     return DeskSettings(**data)
 
 
+def test_desk_settings_reject_legacy_kalshi_host():
+    with pytest.raises(ValidationError, match="unsupported Kalshi host"):
+        settings(kalshi_base_url="https://api.elections.kalshi.com/trade-api/v2")
+
+
 @pytest.fixture
 def service(tmp_path):
     store = DeskStore(f"sqlite:///{tmp_path / 'service.db'}")

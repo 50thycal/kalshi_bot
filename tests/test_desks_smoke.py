@@ -14,6 +14,7 @@ NOW = datetime(2026, 9, 22, 12, tzinfo=timezone.utc)
 
 class FakeExchange:
     subaccount = 1
+    base_url = "https://external-api.kalshi.com/trade-api/v2"
 
     def __init__(self):
         self.order = None
@@ -153,6 +154,25 @@ def _claim_v1(store, when=NOW - timedelta(minutes=10)):
     )
 
 
+def _failed_v2(store, when=NOW - timedelta(minutes=10), *, stage="submit", status=403):
+    _claim_v1(store, when - timedelta(minutes=1))
+    _, claim_id, _ = smoke_ids(1, 2)
+    store.publish(
+        "chatgpt",
+        "live_smoke_claim",
+        {"protocol": "chatgpt-live-smoke-v2", "mode": "claimed"},
+        when,
+        record_id=claim_id,
+    )
+    store.publish(
+        "chatgpt",
+        "live_smoke_exchange_error",
+        {"stage": stage, "http_status": status},
+        when + timedelta(microseconds=1),
+        record_id=smoke_error_id(1, 2),
+    )
+
+
 def test_v2_recovery_preview_preserves_v1_and_is_read_only(smoke_case):
     store, exchange = smoke_case
     _claim_v1(store)
@@ -216,6 +236,84 @@ def test_v2_recovery_waits_and_recovers_old_order_instead(smoke_case):
     assert recovered["protocol"] == "chatgpt-live-smoke-v1"
     assert recovered["mode"] == "recovered"
     assert exchange.submissions == 0
+
+
+def test_v3_preview_requires_classified_v2_failure_and_current_host(smoke_case):
+    store, exchange = smoke_case
+    _claim_v1(store)
+    with pytest.raises(DeskError, match="smoke_v3_requires_v2_claim"):
+        run_chatgpt_smoke(store, exchange, "TEST", "yes", recovery_v3=True, now=NOW)
+
+    _, claim_id, _ = smoke_ids(1, 2)
+    store.publish(
+        "chatgpt", "live_smoke_claim", {"protocol": "chatgpt-live-smoke-v2"},
+        NOW - timedelta(minutes=10), record_id=claim_id,
+    )
+    with pytest.raises(DeskError, match="smoke_v3_requires_v2_exchange_error"):
+        run_chatgpt_smoke(store, exchange, "TEST", "yes", recovery_v3=True, now=NOW)
+
+    store.publish(
+        "chatgpt", "live_smoke_exchange_error",
+        {"stage": "submit", "http_status": 422},
+        NOW - timedelta(minutes=9), record_id=smoke_error_id(1, 2),
+    )
+    with pytest.raises(DeskError, match="smoke_v3_requires_v2_submit_403"):
+        run_chatgpt_smoke(store, exchange, "TEST", "yes", recovery_v3=True, now=NOW)
+
+    exchange.base_url = "https://api.elections.kalshi.com/trade-api/v2"
+    with pytest.raises(DeskError, match="smoke_v3_requires_current_live_host"):
+        run_chatgpt_smoke(store, exchange, "TEST", "yes", recovery_v3=True, now=NOW)
+
+
+def test_v3_recovery_preview_is_read_only_and_distinct(smoke_case):
+    store, exchange = smoke_case
+    _failed_v2(store)
+    result = run_chatgpt_smoke(
+        store, exchange, "TEST", "yes", recovery_v3=True, now=NOW
+    )
+    assert result["protocol"] == "chatgpt-live-smoke-v3"
+    assert result["mode"] == "preview"
+    assert result["supersedes"]["protocol"] == "chatgpt-live-smoke-v2"
+    assert result["client_order_id"] == smoke_ids(1, 3)[0]
+    assert result["client_order_id"] not in {smoke_ids(1, 1)[0], smoke_ids(1, 2)[0]}
+    assert exchange.submissions == 0
+
+
+def test_v3_recovery_waits_and_recovers_prior_order_without_post(smoke_case):
+    store, exchange = smoke_case
+    _failed_v2(store, NOW - timedelta(minutes=1))
+    with pytest.raises(DeskError, match="smoke_v2_recovery_delay_active"):
+        run_chatgpt_smoke(store, exchange, "TEST", "yes", recovery_v3=True, now=NOW)
+
+    old_client_id = smoke_ids(1, 2)[0]
+    exchange.orders[old_client_id] = (
+        "OLD",
+        OrderReport(
+            client_order_id=old_client_id,
+            order_id="old-v2-order",
+            status="terminal",
+            observed_at=NOW,
+        ),
+    )
+    recovered = run_chatgpt_smoke(
+        store, exchange, "TEST", "yes", recovery_v3=True, now=NOW
+    )
+    assert recovered["protocol"] == "chatgpt-live-smoke-v2"
+    assert recovered["mode"] == "recovered"
+    assert exchange.submissions == 0
+
+
+def test_v3_recovery_is_one_shot(smoke_case):
+    store, exchange = smoke_case
+    _failed_v2(store)
+    result = run_chatgpt_smoke(
+        store, exchange, "TEST", "yes", execute=True, recovery_v3=True, now=NOW
+    )
+    again = run_chatgpt_smoke(
+        store, exchange, "TEST", "yes", execute=True, recovery_v3=True, now=NOW
+    )
+    assert result == again
+    assert exchange.submissions == 1
 
 
 def test_write_http_error_is_durably_classified(smoke_case):

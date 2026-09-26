@@ -311,3 +311,23 @@ v3 recovery. Common start and Claude readiness remain unchanged.
 Acceptance: v1 cannot be retried; a late v1 order is recovered instead of v2 submission; v2
 preview is read-only; v2 submits at most once; changed balance, position, resting order, early
 retry or existing v1 result refuses; HTTP submit/reconcile failures are distinct and persisted.
+
+### DEC-023 incident recovery — current host and versioned smoke v3
+
+V2 produced a durable submit-stage HTTP 403 with no exchange body. Official current create-order
+documentation specifies `https://external-api.kalshi.com/trade-api/v2/portfolio/events/orders`,
+but the deployed desk variable still used `api.elections.kalshi.com`. Read-only API-key metadata
+eliminated permissions and region gating: ChatGPT's key had `read` plus `write::trade`, was locked
+to subaccount 1, and its region attestation was current. After changing the Railway variable to
+the current host and rebuilding, the restricted isolation check passed and the balance remained
+$30. No order POST was made during diagnosis.
+
+Build card: reject the legacy host in desk settings and add one explicit `--recovery-v3` path.
+Require both prior claims, no prior results, absence of both prior fixed order IDs, the durable v2
+submit-stage 403, a five-minute delay, current live host, clean book and unchanged $30. Recover a
+late prior order instead of posting. Give v3 a distinct deterministic order ID, retain the
+claim-before-write rule, and allow exactly one POST only after fresh operator confirmation. No v4.
+
+Acceptance: legacy desk configuration fails validation; missing or mismatched v2 evidence refuses;
+v3 preview is read-only; prior-order recovery makes no POST; v3 is one-shot; changed balance,
+dirty book, early recovery, common start, prior result or any ambiguous v3 claim fails closed.

@@ -58,7 +58,6 @@ class DeskSettings(BaseSettings):
             raise ValueError("three distinct authentication tokens of at least 32 characters required")
         allowed = {
             "https://external-api.kalshi.com/trade-api/v2",
-            "https://api.elections.kalshi.com/trade-api/v2",
             "https://demo-api.kalshi.co/trade-api/v2",
         }
         if self.kalshi_base_url not in allowed:
