@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-settle-json-1","sql":"select market_ticker, realized_pnl, raw_json::text from positions where quantity=0 and raw_json ? 'settled_time' and captured_at > now() - interval '3 days' order by captured_at desc limit 6"}
+{"type":"noop"}
