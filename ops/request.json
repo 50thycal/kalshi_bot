@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-0953","sql":"select created_at, market_ticker, side, action, status, limit_price, quantity, left(client_order_id,24) coid from live_orders where strategy='Alimm1' and created_at > '2026-09-26 02:25' order by created_at"}
