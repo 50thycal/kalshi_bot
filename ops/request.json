@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-1357c","sql":"select distinct on (market_ticker) market_ticker, captured_at, quantity, realized_pnl, market_exposure from positions where captured_at >= date_trunc('day', now() at time zone 'utc') and realized_pnl is not null order by market_ticker, captured_at desc"}
