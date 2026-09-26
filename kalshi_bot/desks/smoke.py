@@ -18,10 +18,11 @@ MIN_ASK = D("0.10")
 SMOKE_LIMIT = D("0.01")
 MIN_BALANCE = D("30")
 RECOVERY_DELAY = timedelta(minutes=5)
+CURRENT_LIVE_BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
 
 
 def smoke_ids(subaccount: int, version: int = 1) -> tuple[str, str, str]:
-    if version not in (1, 2):
+    if version not in (1, 2, 3):
         raise DeskError("unsupported_smoke_version")
     stem = f"https://kalshi-bot/desks/chatgpt-live-smoke/v{version}/{subaccount}"
     return (
@@ -48,12 +49,15 @@ def run_chatgpt_smoke(
     *,
     execute: bool = False,
     recovery_v2: bool = False,
+    recovery_v3: bool = False,
     now: datetime | None = None,
 ) -> dict:
     """Preview or submit the single permitted ChatGPT write-path probe."""
     now = now or utcnow()
     if not ticker or side not in ("yes", "no"):
         raise DeskError("invalid_smoke_market")
+    if recovery_v2 and recovery_v3:
+        raise DeskError("multiple_smoke_recovery_versions")
     snapshot = store.snapshot(now)
     if snapshot.get("started_at") is not None:
         raise DeskError("smoke_after_common_start_forbidden")
@@ -63,7 +67,7 @@ def run_chatgpt_smoke(
 
     publications = _publications(snapshot)
     superseded = None
-    version = 2 if recovery_v2 else 1
+    version = 3 if recovery_v3 else 2 if recovery_v2 else 1
     if recovery_v2:
         old_client_id, old_claim_id, old_result_id = smoke_ids(exchange.subaccount, 1)
         if old_result_id in publications:
@@ -96,6 +100,55 @@ def run_chatgpt_smoke(
             "result_id": old_result_id,
             "order_absent_at": now.isoformat(),
         }
+    elif recovery_v3:
+        if getattr(exchange, "base_url", "").rstrip("/") != CURRENT_LIVE_BASE_URL:
+            raise DeskError("smoke_v3_requires_current_live_host")
+        for old_version in (1, 2):
+            old_client_id, old_claim_id, old_result_id = smoke_ids(
+                exchange.subaccount, old_version
+            )
+            if old_result_id in publications:
+                return publications[old_result_id]["payload"]
+            if old_claim_id not in publications:
+                raise DeskError(f"smoke_v3_requires_v{old_version}_claim")
+            old_order = exchange.find_order(old_client_id)
+            if old_order is not None:
+                actual_ticker, report = old_order
+                payload = {
+                    "protocol": f"chatgpt-live-smoke-v{old_version}",
+                    "mode": "recovered",
+                    "ticker": actual_ticker,
+                    "client_order_id": old_client_id,
+                    "report": report.model_dump(mode="json"),
+                }
+                if report.status == "terminal":
+                    store.publish(
+                        "chatgpt", "live_smoke_result", payload, now,
+                        record_id=old_result_id,
+                    )
+                return payload
+        _, old_claim_id, old_result_id = smoke_ids(exchange.subaccount, 2)
+        error_id = smoke_error_id(exchange.subaccount, 2)
+        old_error = publications.get(error_id)
+        if old_error is None:
+            raise DeskError("smoke_v3_requires_v2_exchange_error")
+        error_payload = old_error.get("payload", {})
+        if (error_payload.get("stage") != "submit"
+                or error_payload.get("http_status") != 403):
+            raise DeskError("smoke_v3_requires_v2_submit_403")
+        old_claim = publications[old_claim_id]
+        claimed_at = datetime.fromisoformat(old_claim["created_at"])
+        if now < claimed_at + RECOVERY_DELAY:
+            raise DeskError("smoke_v2_recovery_delay_active")
+        superseded = {
+            "protocol": "chatgpt-live-smoke-v2",
+            "client_order_id": smoke_ids(exchange.subaccount, 2)[0],
+            "claim_id": old_claim_id,
+            "result_id": old_result_id,
+            "error_id": error_id,
+            "http_status": 403,
+            "order_absent_at": now.isoformat(),
+        }
 
     client_order_id, claim_id, result_id = smoke_ids(exchange.subaccount, version)
     if result_id in publications:
@@ -125,8 +178,8 @@ def run_chatgpt_smoke(
     if balance < MIN_BALANCE:
         raise DeskError("smoke_balance_below_initial_bankroll")
     exchange.check_clean_book()
-    if recovery_v2 and balance != MIN_BALANCE:
-        raise DeskError("smoke_v2_requires_unchanged_balance")
+    if (recovery_v2 or recovery_v3) and balance != MIN_BALANCE:
+        raise DeskError(f"smoke_v{version}_requires_unchanged_balance")
     quote = exchange.quote(ticker, side)
     if quote.status not in ("open", "active"):
         raise DeskError("smoke_market_not_open")

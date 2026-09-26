@@ -1216,5 +1216,17 @@ HTTP error. Two delayed authenticated reads found no order under its fixed ID, a
 remained flat with the original $30. Calvin selected a one-time versioned recovery rather than
 clearing or reusing that claim. V2 uses a distinct fixed order ID and is available only after a
 five-minute delay, continued v1-order absence, a clean book and an exactly unchanged $30 balance.
-It records safe HTTP status evidence separately for the submit and reconciliation stages. V2 has
-no successor recovery attempt: a fill, visible v1 order or v2 ambiguity remains a hard stop.
+It records safe HTTP status evidence separately for the submit and reconciliation stages.
+
+The v2 attempt durably recorded a submit-stage HTTP 403. Subsequent diagnosis found production
+used the legacy `api.elections.kalshi.com` host while the current create-order API is served at
+`external-api.kalshi.com`. Read-only inspection proved the restricted key carried `read` and
+`write::trade`, was locked to subaccount 1 and had a current region attestation; after changing
+only the host, the rebuilt service passed isolation and still reported the original $30.
+
+Calvin authorized fixing the error and trying the smoke again. The implementation therefore
+permits one explicit v3 recovery, but never an automatic retry. V3 requires the immutable v1 and
+v2 claims, the exact durable v2 submit-stage 403, absence of both prior order IDs and results, a
+five-minute delay, the current external API host, a clean book and exactly $30. It uses a third
+fixed order ID and still needs fresh action-time confirmation before its sole POST. There is no
+v4 recovery: any visible prior order is reconciled, and any v3 ambiguity is a permanent hard stop.
