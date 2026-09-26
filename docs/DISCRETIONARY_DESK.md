@@ -165,11 +165,13 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**Open position ($1 at risk):**
-
-| pick | market | side / fill | settles | status |
-|---|---|---|---|---|
-| D-2026-09-26-001 | `KXTOKENUSE-26SEP28-T144` (OpenRouter week-of-9/21 total > 144T) | YES @ 56¢ (cap 60¢) | Mon 2026-09-28 ~03:35 UTC | Placed on a two-read pace confirmation (below). Not yet gradeable. |
+**No open real-money positions.** `D-2026-09-26-001` was **never placed** — the operator confirmed
+around 21:22 UTC (a live screenshot of the book, `KXTOKENUSE-26SEP28-T144` already trading ~84/16)
+that the 56¢ order never went in. It still grades at settlement as a judgment call either way (§5:
+"placed records what the operator did; a skipped pick still settles and still grades" — the desk's
+calibration is measured on its own read, not the subset that got executed). By the time the operator
+looked, the book had already moved most of the way to where the desk's own estimate (0.85) said it
+should be — the thesis is reading correctly so far, just with $0 actually at risk on it.
 
 **How this pick came together — the Saturday two-read plan, completed as planned.** First read
 (13:37 UTC): 116.006T week-to-date, cumulative pace 0.873 T/h, projecting ~149.7T. That alone wasn't
@@ -187,15 +189,18 @@ acted on today rather than deferred, per the explicit plan set this morning.
 ladders remain untradeable — still no live read of the settlement metric itself (§6a). Diesel and
 the ERCOT source are unchanged from Friday; Climate/Weather empty again at a 50-vol floor.
 
-**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 1 open, 5 no-picks logged.** Sample is
-still far too small to read as calibration (R6 — no claim before ~30 settled picks); this is the
-first pick made from a genuinely two-measurement-confirmed thesis rather than a single read or a
-book-vs-print check, worth watching for what it says about the method once it grades.
+**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 0 open, 1 unplaced pick pending grade,
+5 no-picks logged.** Sample is still far too small to read as calibration (R6 — no claim before
+~30 settled picks); `D-2026-09-26-001` is the first pick made from a genuinely
+two-measurement-confirmed thesis rather than a single read or a book-vs-print check, and it grades
+Monday regardless of the operator not having risked money on it — worth watching for what it says
+about the method.
 
 **Standing windows:**
 
-- `KXTOKENUSE`: this week's pick is placed; grades Monday ~03:35 UTC. Next week's ladder opens
-  Monday — repeat the two-read Saturday plan, don't shortcut to one read.
+- `KXTOKENUSE`: this week's pick (`D-2026-09-26-001`) was **not placed** by the operator but still
+  grades Monday ~03:35 UTC as a judgment call. Next week's ladder opens Monday — repeat the
+  two-read Saturday plan, don't shortcut to one read.
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
   the week. Pass.
 - `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
