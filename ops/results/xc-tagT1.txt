@@ -1,4 +1,0 @@
-# ops request: type='xos'
-experiment         state  ver  arm       role       epoch  deployment              stage  kind 
------------------  -----  ---  --------  ---------  -----  ----------------------  -----  -----
-mmsell-type-tight  PAPER  1    Tmmsell1  secondary  1      tmmsell-paper-legacy-1  PAPER  paper
