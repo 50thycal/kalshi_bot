@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"kalshi_desk_board","args":["--hours","48","--min-volume","300","--top","80"],"id":"desk-20260926-adhoc1"}
