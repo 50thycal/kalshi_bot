@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-1357c","sql":"select distinct on (market_ticker) market_ticker, captured_at, quantity, realized_pnl, market_exposure from positions where captured_at >= date_trunc('day', now() at time zone 'utc') and realized_pnl is not null order by market_ticker, captured_at desc"}
+{"type":"db","id":"limm-ci-1357d","sql":"select captured_at, quantity, realized_pnl, raw_json::text from positions where market_ticker='KXAAAGASDCO-26SEP26-4.2350' order by captured_at desc limit 3"}
