@@ -1170,3 +1170,12 @@ the budget. Quake positions untouched (`closed_awaiting_settlement`).
 §9.38 deployed, `no_slots` gone (995 candidates), but every cycle fetched the same 8
 soonest-closing markets — all in excluded series — and placed nothing. Excluded series are now
 dropped before the bounded book fetch. [Thesis §9.39](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-26 — netting credit in both ledgers; shared daily-loss cap 25 -> 50 (§9.40)
+
+First pairs placed after §9.39 (PHIL rain both legs filled, +$0.22; CA and CO gas one-sided,
+stopped out). CO gas settled at a real ≈ −$8.33 but was recorded −$24.33 — the settlement
+formula omitted Kalshi's $1-per-netted-contract credit — which tripped the SHARED daily-loss
+breaker and paused every live book. Fixed in the settlement P&L (with a one-time self-heal of
+the stored row) and in the reward ledger (positions carried between readings). Operator raised
+`MAX_DAILY_LOSS` 25 -> 50 (VERIFIED in production). [Thesis §9.40](../LIQUIDITY_INCENTIVE_THESIS.md).

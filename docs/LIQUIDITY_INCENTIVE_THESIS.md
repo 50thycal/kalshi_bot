@@ -2565,3 +2565,33 @@ once the close-time window (§9.37) ranks by soonest close, where those series c
 rule the decision layer uses (series = ticker prefix before the first `-`, case-insensitive); the
 decision layer keeps its own check. Tests: a book whose soonest programmes are all excluded now
 spends its fetches on the eligible market and places a pair.
+
+### 9.40 The $1 netting credit was missing from two ledgers — one of them tripped the shared breaker (2026-09-26)
+
+**What happened.** The CO gas pair (`KXAAAGASDCO-26SEP26-4.2350`) filled one-sided: 35 NO at 28c
+($9.80). The stop-loss closed 16 of them by buying YES (≈84–92c) before its three attempts ran
+out; 19 NO rode to a YES settlement at 11:06Z. Real result ≈ **−$8.33**. The executor recorded
+**−$24.33**, which pushed portfolio realized-today to ≈ −$26.8 (real ≈ −$10.7), past the SHARED
+`MAX_DAILY_LOSS` of $25. The breaker then refused new entries on **every** live book (mmsell
+canaries included) from ≈11:07Z.
+
+**Why.** Kalshi pays $1 immediately for each YES that meets a NO held in the same market. The
+settlement row carries `yes_total_cost_dollars` and `no_total_cost_dollars` for every contract
+ever held, but `revenue` only for contracts still held at settlement — the $1-per-netted-pair
+never appears. `revenue − costs − fee` therefore understated P&L by $1 per netted contract
+(16 × $1 = the $16 gap). The reward ledger had the same hole from the other direction: every exit
+and every filled pair left +100c per contract in the residual, flagged `presumed_transfer`,
+which would also have hidden a real reward in those windows (the pattern first seen 2026-09-25
+14:44:21Z).
+
+**Fixes.**
+- `live.executor.settlement_realized_pnl` adds `min(yes_count, no_count)` dollars. On the real
+  payload: −$24.33 → −$8.33. A settlement row recorded by the old formula is re-recorded once
+  when the new figure differs (self-heal; a flat `/positions` snapshot is never touched).
+- `reward_ledger` names the credit: each balance reading stores signed positions per market,
+  and the next window computes `netted = (|p0| + y + n − |p0 + y − n|) / 2` per market from its
+  fills. A market with no known starting position is reported unknown and the window marked
+  untrustworthy (so the first window after deploy says so rather than guesses).
+- **Operator decision (2026-09-26):** shared `MAX_DAILY_LOSS` raised **25.0 → 50.0** in production
+  (ops env request `limm-dailyloss-50`, VERIFIED), recorded in the package `settings`.
+  `CASH_DIRECTION` is unchanged.
