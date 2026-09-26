@@ -1,1 +1,1 @@
-{"type":"env","action":"set","values":{"MAX_DAILY_LOSS":"50.0"},"id":"limm-dailyloss-50"}
+{"type":"noop"}
