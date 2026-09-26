@@ -134,6 +134,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/07). **Week of 9/14 measured five times**: 96.45T (Sat 04:08Z), 103.27T (13:43Z), 108.99T (20:31Z), 121.17T (Sun 13:39Z), **126.21T (Sun 20:00Z)** → paces 0.711, 0.841, 0.711, **0.794** T/h. The pace is far more stable than first assumed and the weekend is not slower than the weekday. **Lag is under an hour**: 96.45T over 124.1h elapsed averages 0.777 T/h against an instantaneous ~0.78, so time-to-close is the right multiplier. Final projection 128.6–130.2T. **The market repriced to match between Sat afternoon and Sun evening** (>128 went 11/58 → 93/98), so this series' edge lives in the *early* read, not the late one — the opposite of what the desk assumed on Saturday. | `desk_fetch` market-share endpoint ×5 + two ladder reads, 2026-09-19/20 |
 | `KXTOKENUSE` **graded 2026-09-24**: the week of 9/14 finalized at **128.895T** (summed from the market-share endpoint's now-closed 2026-09-14 bucket). The desk's pre-registered projection from Sunday evening (`D-2026-09-20-NP2`) was **128.6–130.2T** — the actual figure landed just inside the low end. The market's implied odds also called it right: >128 closed 98/98 (true, by 0.895T) and >130 closed near 0 (false). This is the first live test of the projection method and it held. The Saturday counterfactual (`D-2026-09-19-NP1`) is also confirmed: the >128 strike the desk passed on at 58¢ did clear, and the postmortem's lesson about a padded uncertainty band stands. |
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
+| `KXTOKENUSE` week of 9/21, **two-read confirmation, 2026-09-26**: 116.006T at 13:37Z, 121.521T at 19:14Z → interval pace **0.981 T/h**, *faster* than the week's own cumulative average (0.873 T/h), not slower. Both project 149.7–153.2T with 32.3h left to close, comfortably clearing 144T (would need the pace to fall to 0.695 T/h or below — beyond any hourly pace measured last week — to miss). The market moved some between reads (T142 56/74 → 77/88) but T144 was still only 33/56 (~44–56% implied) against a desk estimate near 0.85. Picked `D-2026-09-26-001`, YES @ 56¢. | `desk_fetch` market-share endpoint ×2 + two ladder reads, 2026-09-26 |
 | `KXDIESELD` daily ladder, 2026-09-24 check | AAA national diesel average has **turned down**, not up: $6.5276 (record, Tue 9/22) → $6.5217 (Wed 9/23) → $6.5141 (Thu 9/24), roughly −0.6 to −0.8¢/day. The T6.520 strike for Fri 9/25 traded ~9% implied YES, which lines up with a continued small decline landing just under $6.52 — the market looks efficient here, not mispriced. Worth recording because a naive trend read from the prior week (which was climbing) would have pointed the wrong way; checking the live print before trading averted a second R13-style error. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-24 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
@@ -160,38 +161,41 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-26 ~13:41 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-26 ~19:18 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**No open real-money positions.** Both picks written so far are settled and both won
-(+$0.32, +$1.33 = +$1.65 realized). Unchanged since Thursday's close.
+**Open position ($1 at risk):**
 
-**In progress right now: `KXTOKENUSE-26SEP28`, a same-day two-read plan.** This is the Saturday
-early read the standing note calls for. First read (13:37 UTC): week-to-date **116.006T**, 133.6h
-into the 171.6h week, cumulative pace 0.868 T/h → projects **~149.0T** if the pace holds. The full
-ladder's own 50% crossover sits between T142 (56/74) and T144 (25/54) — a market-implied median
-near **143T**, about 6T below the projection. That gap is real but rests on a **single measurement**;
-last week's correct call came from five reads spread across ~40h, not one. **A second, time-spaced
-read is planned for this evening** (~19:00–20:00 UTC) to get an actual short-interval pace before
-sizing anything — and if the gap holds up, the pick gets made *today*, not deferred to tomorrow.
-Deferring is exactly the mistake `POSTMORTEMS.md` §1a already recorded once (the market repriced
-between Saturday and Sunday last time, and the desk's own delay cost it a correct call). Logged as
-`D-2026-09-26-NP1`, no position yet.
+| pick | market | side / fill | settles | status |
+|---|---|---|---|---|
+| D-2026-09-26-001 | `KXTOKENUSE-26SEP28-T144` (OpenRouter week-of-9/21 total > 144T) | YES @ 56¢ (cap 60¢) | Mon 2026-09-28 ~03:35 UTC | Placed on a two-read pace confirmation (below). Not yet gradeable. |
+
+**How this pick came together — the Saturday two-read plan, completed as planned.** First read
+(13:37 UTC): 116.006T week-to-date, cumulative pace 0.873 T/h, projecting ~149.7T. That alone wasn't
+enough to size a position (R14 — one measurement isn't a pace). Second read (19:14 UTC), 5.6h later:
+121.521T, an **interval pace of 0.981 T/h — faster than the week's own average**, not slower as a
+weekend slowdown might have suggested. Both paces project 149.7–153.2T against 32.3h left to the
+2026-09-28T03:35Z close, comfortably clearing the T144 strike: the total only misses 144T if the
+pace falls to 0.695 T/h or below, a bigger slowdown than any hourly pace the desk measured last
+week (0.711–0.841 T/h range). The market had moved up some between reads (T142 went 56/74 → 77/88)
+but T144 was still only 33/56 (~44–56¢ implied) against the desk's ~0.85 estimate — real edge, and
+acted on today rather than deferred, per the explicit plan set this morning.
 
 **Otherwise, today's daily routine (13:34 UTC):** branch restarted from
 `origin/claude/confident-goldberg-83u3q` (clean merge). `KX*SHARE` (OpenRouter request-share)
 ladders remain untradeable — still no live read of the settlement metric itself (§6a). Diesel and
 the ERCOT source are unchanged from Friday; Climate/Weather empty again at a 50-vol floor.
 
-**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 5 no-picks logged** (one, today's
-KXTOKENUSE row, still open pending the evening read). Sample is still far too small to read as
-calibration (R6 — no claim before ~30 settled picks).
+**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 1 open, 5 no-picks logged.** Sample is
+still far too small to read as calibration (R6 — no claim before ~30 settled picks); this is the
+first pick made from a genuinely two-measurement-confirmed thesis rather than a single read or a
+book-vs-print check, worth watching for what it says about the method once it grades.
 
 **Standing windows:**
 
-- `KXTOKENUSE` (OpenRouter weekly tokens): **active right now** — see above. The evening read is
-  the next thing any session picking this up should do, before the routine's own board scan.
+- `KXTOKENUSE`: this week's pick is placed; grades Monday ~03:35 UTC. Next week's ladder opens
+  Monday — repeat the two-read Saturday plan, don't shortcut to one read.
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
   the week. Pass.
 - `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
@@ -199,12 +203,12 @@ calibration (R6 — no claim before ~30 settled picks).
   read, which doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further
   otherwise. Full detail in §6a.
 
-**Scheduled check-ins bound to this session:** none armed — no open PR, no open position, nothing
-pending beyond the KXTOKENUSE evening read noted above (not yet scheduled as a trigger; a new
-session should either wait for the operator's next message or schedule its own check-in for the
-second read). The "Desk: daily board read and picks" routine (13:30 UTC daily) is the only standing
-trigger and needs no action; a new session re-creates anything else it needs (playbook Startup
-Routine step 3).
+**Scheduled check-ins bound to this session:** none armed beyond the daily routine. Grading
+D-2026-09-26-001 is the next session's job once Monday's close has passed — check
+`kalshi_desk_board --ticker KXTOKENUSE-26SEP28-T144` for the `result` field first (fast, direct)
+before falling back to a fresh `desk_fetch` sum of the now-closed market-share bucket. The "Desk:
+daily board read and picks" routine (13:30 UTC daily) is the only standing trigger and needs no
+action; a new session re-creates anything else it needs (playbook Startup Routine step 3).
 
 **Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily,
 gridstatus.io and most data sites are blocked from the sandbox; `ercot.com` is now reachable
@@ -220,4 +224,6 @@ token outcome correctly; the settlement source is read from the contract before 
 written (R13); when every named source is unreachable, Kalshi's own `result` field is a legitimate
 single source to grade on; a trend from last week is not this week's data; and a contract naming a
 real, specific source is necessary but not sufficient — the desk also has to be able to *read* that
-source itself, not take a web search's word for a number it can't check.
+source itself, not take a web search's word for a number it can't check; and a single reading is
+a data point, not a pace — two measurements, spaced hours apart, are what actually separate a real
+signal from noise, and a signal confirmed today is acted on today, not carried to tomorrow.
