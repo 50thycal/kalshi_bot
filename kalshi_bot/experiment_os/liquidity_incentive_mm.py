@@ -145,7 +145,7 @@ RISK_ENVELOPE: dict = {
         "LIQUIDITY_INCENTIVE_LIVE_ENABLED": "true",
         "LIVE_MAX_ORDER_DOLLARS": "1.0",
         "MAX_MARKET_EXPOSURE": "25.0",
-        "MAX_DAILY_LOSS": "25.0",
+        "MAX_DAILY_LOSS": "50.0",
         "LIVE_KILL_ON_DAILY_LOSS": "true",
         "LIVE_ORDER_TIMEOUT_SECONDS": "14400",
     },
@@ -159,8 +159,10 @@ RISK_ENVELOPE: dict = {
         "MAX_DAILY_LOSS": (
             "SHARED. Raised 5.0 -> 25.0 in production on 2026-09-25 by explicit operator "
             "decision (thesis §9.36), because one bad fill at the larger size could trip the old "
-            "breaker and halt every live book. Named in `settings` above as that fact, so a "
-            "re-run of activation_env cannot quietly put it back"
+            "breaker and halt every live book; raised again 25.0 -> 50.0 on 2026-09-26 by "
+            "explicit operator decision (thesis §9.40) after an overstated settlement tripped it "
+            "and paused every book. Named in `settings` above as that fact, so a re-run of "
+            "activation_env cannot quietly put it back"
         ),
         "LIVE_PAPER_TWIN_SUFFIX": (
             "SHARED, and the one variable in this area that must never carry this book's "

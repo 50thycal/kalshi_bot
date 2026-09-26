@@ -450,3 +450,110 @@ class TestTheCashDirectionTableIsDeliberate:
         assert rec.residual_cents == 0
         assert rec.unknown_fill_shapes == ()
         assert rec.is_material is False  # a clean zero residual is not a reward candidate
+
+
+def _tfill(ticker, *, side, action, count, price):
+    """A fill in the live payload shape, with its market — what the netting credit needs."""
+    key = "yes_price_dollars" if side == "yes" else "no_price_dollars"
+    return {"ticker": ticker, "side": side, "action": action, "count_fp": f"{count}.00",
+            key: f"{price / 100:.2f}"}
+
+
+class TestTheNettingCredit:
+    """Kalshi pays $1 per contract the moment a YES we hold meets a NO we hold (thesis §9.40).
+    Before this was counted, every exit and every filled pair left +100c per contract in the
+    residual, flagged `presumed_transfer` — a real reward in that window would have been hidden."""
+
+    def test_the_window_that_exposed_it_now_reconciles_to_zero(self):
+        """2026-09-25 14:44:21Z: one held NO closed by a 1c YES buy, plus an unrelated 94c NO buy
+        elsewhere, against a +5c balance move. Old identity: residual +100."""
+        fills = [_tfill("KXEARN", side="yes", action="buy", count=1, price=1),
+                 _tfill("KXOTHER", side="no", action="sell", count=1, price=94)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_005, fills=fills,
+                           prev_positions={"KXEARN": -1}, net_positions=True)
+        assert rec.netting_cents == 100
+        assert rec.residual_cents == 0
+        assert not rec.presumed_transfer
+
+    def test_a_pair_filling_in_one_window_nets_every_matched_contract(self):
+        fills = [_tfill("KXRAIN", side="yes", action="buy", count=11, price=14),
+                 _tfill("KXRAIN", side="no", action="sell", count=11, price=84)]
+        # 11 x (14 + 84) = 1078 paid, 1100 credited: the pair's +22c edge, and nothing else
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_022, fills=fills,
+                           prev_positions={}, net_positions=True)
+        assert rec.netting_cents == 1100
+        assert rec.residual_cents == 0
+
+    def test_an_opening_fill_nets_nothing(self):
+        fills = [_tfill("KXNEW", side="no", action="sell", count=35, price=28)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=9_020, fills=fills,
+                           prev_positions={}, net_positions=True)
+        assert rec.netting_cents == 0
+        assert rec.residual_cents == 0
+
+    def test_a_partial_close_nets_only_what_it_closes(self):
+        """The CO gas stop-loss: 35 NO held, 16 closed by buying YES in the window."""
+        fills = [_tfill("KXCO", side="yes", action="buy", count=16, price=90)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_160, fills=fills,
+                           prev_positions={"KXCO": -35}, net_positions=True)
+        assert rec.netting_cents == 1600
+        assert rec.residual_cents == 0
+
+    def test_buying_past_flat_nets_only_up_to_flat(self):
+        # 3 NO held, 5 YES bought: 3 net, 2 open a YES position
+        fills = [_tfill("KXX", side="yes", action="buy", count=5, price=50)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_000 - 250 + 300,
+                           fills=fills, prev_positions={"KXX": -3}, net_positions=True)
+        assert rec.netting_cents == 300
+        assert rec.residual_cents == 0
+
+    def test_an_unknown_starting_position_is_said_not_guessed(self):
+        fills = [_tfill("KXCO", side="yes", action="buy", count=1, price=90)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_010, fills=fills,
+                           prev_positions=None, net_positions=True)
+        assert rec.netting_unknown_markets == ("KXCO",)
+        assert not rec.is_material
+
+    def test_the_old_identity_is_kept_unless_netting_is_asked_for(self):
+        fills = [_tfill("KXEARN", side="yes", action="buy", count=1, price=1)]
+        rec = rl.reconcile(prev_balance_cents=10_000, balance_cents=10_099, fills=fills)
+        assert rec.netting_cents == 0 and rec.residual_cents == 100
+
+
+class _PosClient(_Client):
+    def __init__(self, *, positions=None, **kw):
+        super().__init__(**kw)
+        self._positions = positions or []
+
+    def get_positions(self, **params):
+        return self._page("market_positions", self._positions, params)
+
+
+class TestObserveCarriesPositionsForward:
+    def test_each_reading_stores_where_every_market_stands(self):
+        client = _PosClient(positions=[{"ticker": "KXCO", "position_fp": "-19.00"},
+                                       {"ticker": "KXFLAT", "position_fp": "0.00"}])
+        _, _, notes = rl.observe(client, prev_balance_cents=None, since=None)
+        assert notes["positions"] == {"KXCO": -19}
+
+    def test_the_previous_positions_net_this_windows_fills(self):
+        client = _PosClient(balance=10_160,
+                            fills=[_tfill("KXCO", side="yes", action="buy", count=16, price=90)])
+        _, rec, notes = rl.observe(client, prev_balance_cents=10_000, since=None,
+                                   prev_positions={"KXCO": -35})
+        assert rec.netting_cents == 1600 and rec.residual_cents == 0
+        assert "residual_untrustworthy" not in notes
+
+    def test_a_first_window_without_positions_is_marked_untrustworthy(self):
+        client = _PosClient(balance=10_010,
+                            fills=[_tfill("KXCO", side="yes", action="buy", count=1, price=90)])
+        _, _, notes = rl.observe(client, prev_balance_cents=10_000, since=None)
+        assert notes["netting_unknown_markets"] == ["KXCO"]
+        assert notes["residual_untrustworthy"] is True
+
+    def test_a_failed_position_read_does_not_taint_this_window(self):
+        client = _PosClient(balance=18_654, fail={"market_positions"})
+        _, rec, notes = rl.observe(client, prev_balance_cents=18_651, since=None,
+                                   prev_positions={})
+        assert "positions_error" in notes
+        assert "residual_untrustworthy" not in notes

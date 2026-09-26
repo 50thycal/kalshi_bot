@@ -387,8 +387,12 @@ class IncentiveLiveRunner:
             prev = store.latest_balance_observation(session)
             prev_balance = None if prev is None else int(prev.balance_cents)
             prev_at = None if prev is None else prev.at
+            prev_notes = (prev.notes_json if prev is not None
+                          and isinstance(prev.notes_json, dict) else {})
+            prev_positions = prev_notes.get("positions")
             balance_cents, rec, notes = rl.observe(
-                self.client, prev_balance_cents=prev_balance, since=prev_at)
+                self.client, prev_balance_cents=prev_balance, since=prev_at,
+                prev_positions=prev_positions if isinstance(prev_positions, dict) else None)
             store.record_balance_observation(
                 session, at=now, balance_cents=balance_cents,
                 prev_at=prev_at, prev_balance_cents=prev_balance,

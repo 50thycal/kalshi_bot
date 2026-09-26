@@ -108,6 +108,28 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def settlement_realized_pnl(st: dict) -> float:
+    """Realized P&L in dollars for one `/portfolio/settlements` row — the daily-loss breaker's
+    input for a market that settled.
+
+    `yes_total_cost_dollars` and `no_total_cost_dollars` are what we PAID for every contract ever
+    held on each side, and `revenue` is only what the contracts still held at settlement paid.
+    The piece Kalshi does not put in `revenue` is the $1 it paid, the moment they met, for each
+    YES that netted against a NO we held — how every exit by buying the opposite side, and every
+    filled pair, closes. Leaving it out overstated the loss by $1 per netted contract: the
+    2026-09-26 CO gas market (35 NO, 16 closed by buying YES) recorded -$24.33 for a real
+    -$8.33 and tripped the SHARED breaker, halting every live book (thesis §9.40).
+    Netted contracts are min(yes_count, no_count): netting consumes one of each."""
+    revenue = _to_float(st.get("revenue")) or 0.0  # cents received at settlement
+    cost = ((_to_float(st.get("yes_total_cost_dollars")) or 0.0)
+            + (_to_float(st.get("no_total_cost_dollars")) or 0.0))
+    fee = _to_float(st.get("fee_cost")) or 0.0
+    yes_n = _to_float(_first(st, "yes_count_fp", "yes_count")) or 0.0
+    no_n = _to_float(_first(st, "no_count_fp", "no_count")) or 0.0
+    netted = min(yes_n, no_n)
+    return revenue / 100.0 + netted - cost - fee
+
+
 class LiveExecutor:
     def __init__(self, client, settings, risk):
         self.client = client
@@ -1673,14 +1695,15 @@ class LiveExecutor:
             if ts is None or ts < midnight:
                 continue
             tkr = st.get("ticker")
+            pnl = settlement_realized_pnl(st)
             last = repo.latest_position_snapshot(session, tkr)
             if last is not None and last.quantity == 0 and last.realized_pnl is not None:
-                continue  # settlement already recorded
-            revenue = _to_float(st.get("revenue")) or 0.0  # cents received at settlement
-            cost = ((_to_float(st.get("yes_total_cost_dollars")) or 0.0)
-                    + (_to_float(st.get("no_total_cost_dollars")) or 0.0))
-            fee = _to_float(st.get("fee_cost")) or 0.0
-            pnl = revenue / 100.0 - cost - fee
+                # Already recorded. Re-record only a SETTLEMENT row whose figure this formula
+                # now disagrees with — the self-heal for rows written before the netting credit
+                # was counted (§9.40). A flat snapshot from /positions is left alone.
+                was_settlement = isinstance(last.raw_json, dict) and "settled_time" in last.raw_json
+                if not was_settlement or abs(float(last.realized_pnl) - pnl) < 0.005:
+                    continue
             repo.insert_position_snapshot(
                 session, ticker=tkr, side=st.get("market_result"), quantity=0,
                 avg_price=None, market_exposure=0.0, realized_pnl=pnl, raw_json=st)

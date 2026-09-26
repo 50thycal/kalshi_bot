@@ -14,11 +14,15 @@ and look at, and which has read **$0** every time it has been checked (§9.17, �
 So we recover it as a residual. A liquidity credit is cash that appears in the account balance
 and is neither a trade nor a market settlement:
 
-    Δbalance = settlements + sell proceeds − buy cost − fees + REWARDS + external transfers
+    Δbalance = settlements + netting + sell proceeds − buy cost − fees + REWARDS + transfers
 
 Rearranged, that is what this module computes:
 
-    residual = Δbalance − settlements − sell proceeds + buy cost + fees
+    residual = Δbalance − settlements − netting − sell proceeds + buy cost + fees
+
+`netting` is the $1 Kalshi pays, immediately, for every contract where a YES we hold meets a NO
+we hold in the same market (thesis §9.40). It is neither a fill nor a settlement, so before it
+was counted every two-sided round trip and every exit left a +100c-per-contract residual.
 
 Everything on the right is observable through endpoints we already call. What is left over is a
 candidate reward.
@@ -177,6 +181,73 @@ def _fill_cost_cents(fill: dict) -> tuple[int, int, int, bool]:
     return gross, 0, fee, direction == DEBIT
 
 
+#: The side a fill ADDS to, for the shapes `CASH_DIRECTION` vouches for. Both verified shapes are
+#: acquisitions — ("no","sell") acquires NO, ("yes","buy") acquires YES — which is what makes the
+#: netting arithmetic below exact. Any other shape leaves netting unknown for its market.
+_ACQUIRES: dict[tuple[str, str], str] = {
+    ("no", "sell"): "no",
+    ("yes", "buy"): "yes",
+}
+
+
+def netting_credit_cents(fills: list[dict] | None,
+                         prev_positions: dict[str, int] | None) -> tuple[int, tuple[str, ...]]:
+    """`(cents, unknown_markets)`: the $1-per-contract Kalshi credited for YES meeting NO.
+
+    Kalshi nets a YES and a NO in the same market the moment both are held, paying $1 for each
+    matched pair. That cash is neither a fill nor a settlement, so it must be named or it lands
+    in the residual as a phantom +100c per contract — the pattern every exit and every filled
+    pair produced before this existed (thesis §9.40).
+
+    Per market, with `p0` the signed position at the window's start (YES positive, NO negative)
+    and `y`/`n` the YES and NO contracts acquired in the window:
+
+        netted = (|p0| + y + n − |p0 + y − n|) / 2
+
+    Pure arithmetic on the fills, so it does not care whether the market also settled in the
+    window. `p0` comes from the PREVIOUS observation's position read. A market is reported
+    unknown when that read is missing (`prev_positions` is None) or a fill's shape does not say
+    which side it acquired — the caller marks such a window untrustworthy rather than guess."""
+    per_market: dict[str, list[int]] = {}
+    unknown: list[str] = []
+    for fill in fills or ():
+        ticker = str(fill.get("ticker") or fill.get("market_ticker") or "")
+        side = str(fill.get("side") or "").strip().lower()
+        action = str(fill.get("action") or "").strip().lower()
+        acquired = _ACQUIRES.get((side, action))
+        count = _to_count(_first(fill, "count_fp", "count", "quantity"))
+        if acquired is None or not ticker:
+            if ticker and ticker not in unknown:
+                unknown.append(ticker)
+            continue
+        yn = per_market.setdefault(ticker, [0, 0])
+        yn[0 if acquired == "yes" else 1] += count
+    cents = 0
+    for ticker, (y, n) in per_market.items():
+        if prev_positions is None:
+            # Without the starting position we cannot tell a fill that nets from one that
+            # opens; say so instead of guessing either way.
+            if ticker not in unknown:
+                unknown.append(ticker)
+            continue
+        p0 = int(prev_positions.get(ticker, 0))
+        netted = (abs(p0) + y + n - abs(p0 + y - n)) // 2
+        cents += 100 * netted
+    return cents, tuple(unknown)
+
+
+def positions_by_ticker(rows: list[dict] | None) -> dict[str, int]:
+    """Signed contract positions (YES positive, NO negative) from a `market_positions` read,
+    non-zero only. Stored on each observation so the next window knows where it started."""
+    out: dict[str, int] = {}
+    for row in rows or ():
+        ticker = row.get("ticker") or row.get("market_ticker")
+        pos = _to_count(_first(row, "position_fp", "position"))
+        if ticker and pos:
+            out[str(ticker)] = pos
+    return out
+
+
 @dataclass(frozen=True)
 class Reconciliation:
     """One window's worth of cash movement, split into what we can explain and what we cannot."""
@@ -189,6 +260,11 @@ class Reconciliation:
     residual_cents: int
     fills_counted: int
     settlements_counted: int
+    #: The YES-meets-NO $1-per-contract credit, from `netting_credit_cents`.
+    netting_cents: int = 0
+    #: Markets whose netting could not be computed (no starting position, or an unvouched
+    #: fill shape). Non-empty makes the residual unattributable, exactly like an unknown shape.
+    netting_unknown_markets: tuple[str, ...] = ()
     #: `(side, action)` shapes in this window that `CASH_DIRECTION` does not vouch for. Non-empty
     #: means the explained side of the identity rests on a guess, so the residual is not
     #: attributable — see `is_material`.
@@ -208,7 +284,8 @@ class Reconciliation:
         module's two production defects was announcing such a number as though it were."""
         return (abs(self.residual_cents) >= MATERIAL_RESIDUAL_CENTS
                 and not self.presumed_transfer
-                and not self.unknown_fill_shapes)
+                and not self.unknown_fill_shapes
+                and not self.netting_unknown_markets)
 
     def as_dict(self) -> dict:
         d = {
@@ -220,6 +297,8 @@ class Reconciliation:
             "residual_cents": self.residual_cents,
             "fills_counted": self.fills_counted,
             "settlements_counted": self.settlements_counted,
+            "netting_cents": self.netting_cents,
+            "netting_unknown_markets": list(self.netting_unknown_markets),
             "unknown_fill_shapes": list(self.unknown_fill_shapes),
         }
         d["presumed_transfer"] = self.presumed_transfer
@@ -229,7 +308,9 @@ class Reconciliation:
 
 def reconcile(*, prev_balance_cents: int, balance_cents: int,
               fills: list[dict] | None = None,
-              settlements: list[dict] | None = None) -> Reconciliation:
+              settlements: list[dict] | None = None,
+              prev_positions: dict[str, int] | None = None,
+              net_positions: bool = False) -> Reconciliation:
     """Split a balance change into explained cash and an unexplained residual.
 
     Pure: it takes the two balances and the raw payloads for the window between them, and
@@ -238,7 +319,11 @@ def reconcile(*, prev_balance_cents: int, balance_cents: int,
 
     The identity, restated from the module docstring:
 
-        residual = Δbalance − settlements − sell proceeds + buy cost + fees
+        residual = Δbalance − settlements − netting − sell proceeds + buy cost + fees
+
+    Netting is computed only when `net_positions` is set, from `prev_positions` (the signed
+    positions at the window's start). The default leaves it at zero so a caller that has no
+    position read keeps the old identity rather than silently gaining a guessed term.
 
     A positive residual is cash that arrived from somewhere that is not a trade and not a
     settlement. That is the shape a liquidity credit has. It is also the shape a deposit has,
@@ -265,12 +350,15 @@ def reconcile(*, prev_balance_cents: int, balance_cents: int,
     # the same reason the fill parser accepts both: a shape change here would not raise, it
     # would quietly turn settled cash into a residual and invite it to be read as a reward.
     settlement = sum(_to_cents(_first(s, "revenue", "revenue_dollars")) for s in settle_rows)
+    netting, netting_unknown = (netting_credit_cents(fill_rows, prev_positions)
+                                if net_positions else (0, ()))
     delta = int(balance_cents) - int(prev_balance_cents)
-    residual = delta - settlement - sell_proceeds + buy_cost + fees
+    residual = delta - settlement - netting - sell_proceeds + buy_cost + fees
     return Reconciliation(
         delta_cents=delta, buy_cost_cents=buy_cost, sell_proceeds_cents=sell_proceeds,
         fees_cents=fees, settlement_cents=settlement, residual_cents=residual,
         fills_counted=len(fill_rows), settlements_counted=len(settle_rows),
+        netting_cents=netting, netting_unknown_markets=netting_unknown,
         unknown_fill_shapes=tuple(unknown_shapes),
     )
 
@@ -309,7 +397,9 @@ def _collect(fetch, key: str, *, params: dict, max_pages: int = 20,
 
 
 def observe(client, *, prev_balance_cents: int | None,
-            since: datetime | None) -> tuple[int, Reconciliation | None, dict]:
+            since: datetime | None,
+            prev_positions: dict[str, int] | None = None,
+            ) -> tuple[int, Reconciliation | None, dict]:
     """Read the balance now, and reconcile it against the last reading.
 
     Returns `(balance_cents, reconciliation_or_None, notes)`. The reconciliation is `None` on
@@ -325,6 +415,17 @@ def observe(client, *, prev_balance_cents: int | None,
     # the tolerant parser anyway: a dollar-string `balance` taken as an int would understate the
     # account hundredfold and manufacture an enormous residual on the very next window.
     balance_cents = _to_cents(_first(balance_raw, "balance", "balance_dollars"))
+    # Where every market stands NOW, stored on this row so the NEXT window knows its starting
+    # positions — the input the netting credit needs (§9.40). A failed read stores nothing, and
+    # the next window then reports its netting unknown instead of guessing.
+    get_positions = getattr(client, "get_positions", None)
+    if get_positions is not None:
+        try:
+            pos = _collect(get_positions, "market_positions", params={})
+            if not pos.truncated:
+                notes["positions"] = positions_by_ticker(pos.rows)
+        except Exception as exc:  # noqa: BLE001 — a missed read is a note, never a crash
+            notes["positions_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     if prev_balance_cents is None:
         notes["anchor"] = "first observation; no previous balance to difference against"
         return balance_cents, None, notes
@@ -352,14 +453,20 @@ def observe(client, *, prev_balance_cents: int | None,
         notes["fills_truncated"] = True
     if settlements.truncated:
         notes["settlements_truncated"] = True
-    if notes:
+    # The position read describes where the NEXT window starts, so neither its value nor its
+    # failure says anything about this window's arithmetic.
+    if any(k not in ("positions", "positions_error") for k in notes):
         # Any of the above means the explained side of the identity is incomplete, so whatever
         # is left over is not attributable. Say so on the row rather than letting a reader treat
         # an under-explained window as a reward.
         notes["residual_untrustworthy"] = True
 
     rec = reconcile(prev_balance_cents=prev_balance_cents, balance_cents=balance_cents,
-                    fills=fills.rows, settlements=settlements.rows)
+                    fills=fills.rows, settlements=settlements.rows,
+                    prev_positions=prev_positions, net_positions=True)
+    if rec.netting_unknown_markets:
+        notes["netting_unknown_markets"] = list(rec.netting_unknown_markets)
+        notes["residual_untrustworthy"] = True
     return balance_cents, rec, notes
 
 
@@ -367,6 +474,8 @@ __all__ = [
     "EXTERNAL_TRANSFER_CENTS",
     "MATERIAL_RESIDUAL_CENTS",
     "Reconciliation",
+    "netting_credit_cents",
     "observe",
+    "positions_by_ticker",
     "reconcile",
 ]
