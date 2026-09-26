@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-settle-json-2","sql":"select key, value::text from positions p, jsonb_each(p.raw_json::jsonb) where p.market_ticker='KXAAAGASDCO-26SEP26-4.2350' and p.quantity=0 and p.raw_json::jsonb ? 'settled_time'"}
+{"type":"noop"}
