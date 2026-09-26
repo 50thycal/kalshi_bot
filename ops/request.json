@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","50","--category","Climate","--top","30"],"id":"desk-20260926-climate1"}
+{"type":"db","id":"limm-ci-1357","sql":"select created_at, market_ticker, side, action, status, limit_price, quantity, left(client_order_id,24) coid from live_orders where strategy='Alimm1' and created_at > '2026-09-26 02:25' order by created_at"}
