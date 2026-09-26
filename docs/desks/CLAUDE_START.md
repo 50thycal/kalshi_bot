@@ -5,6 +5,11 @@ funded restricted key and account. DEC-021 shared-primary support remains availa
 not selected. A prior ChatGPT-only write smoke does not establish Claude access, readiness,
 or permission to begin before the common start.
 
+**Environment prerequisite.** Claude sessions opened on 2026-09-20 and 2026-09-26 in a cloud
+environment with no desk token and no egress to the service, so neither could run a cycle.
+Before pasting this packet, provision the dedicated Claude-desk environment described in
+[CLAUDE-ACCESS-2026-09-26.md](CLAUDE-ACCESS-2026-09-26.md); repository access alone is not enough.
+
 
 Paste this packet into the new Claude session after it can access this repository and the
 private desk service. This is a continuation of one persistent desk, not permission to
