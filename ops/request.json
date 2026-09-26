@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-472-heal-1","sql":"select captured_at, quantity, realized_pnl from positions where market_ticker='KXAAAGASDCO-26SEP26-4.2350' order by captured_at desc limit 3"}
+{"type":"logs","id":"limm-472-heal-2","service":"main","filter":"incentive","lines":40}
