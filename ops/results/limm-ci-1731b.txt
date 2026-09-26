@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-1731b
-# code c2b22623a2cea52ee6b5e552f75cd46e4c319397 · started 2026-09-25T17:33:36Z
-created_at                        market_ticker                    side  action  status    limit_price  quantity  coid                            cr            
---------------------------------  -------------------------------  ----  ------  --------  -----------  --------  ------------------------------  --------------
-2026-09-25 15:38:13.999935+00:00  KXTRUMPENDORSEMENTS-26SEP25-A25  yes   sell    filled    1            1         limmexit:stop_loss:0b0a9d23-e9                
-2026-09-25 15:35:23.729556+00:00  KXTRUMPENDORSEMENTS-26SEP25-A25  no    buy     canceled  93           1         limmexitleg:6b1057fa-e4ed-465f  incentive_exit
-
-(2 rows)
