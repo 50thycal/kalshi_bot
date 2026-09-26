@@ -160,69 +160,59 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-25 ~14:05 UTC (Fri).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-26 ~13:41 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
 **No open real-money positions.** Both picks written so far are settled and both won
-(+$0.32, +$1.33 = +$1.65 realized). Unchanged since yesterday's close.
+(+$0.32, +$1.33 = +$1.65 realized). Unchanged since Thursday's close.
 
-**Today's daily routine (13:34 UTC) — zero-pick day, logged as `D-2026-09-25-NP1`:** branch
-restarted from `origin/claude/confident-goldberg-83u3q` (clean merge). A fresh week of `KX*SHARE`
-(OpenRouter request-share) ladders opened for 26SEP28 with large volume (18.6k on one strike) —
-still no live read of the actual request-share metric (only the token-count proxy, which is known
-to diverge — §6a), so R2 still forbids trading these regardless of size. Diesel unchanged from
-yesterday's read, not re-underwritten.
+**In progress right now: `KXTOKENUSE-26SEP28`, a same-day two-read plan.** This is the Saturday
+early read the standing note calls for. First read (13:37 UTC): week-to-date **116.006T**, 133.6h
+into the 171.6h week, cumulative pace 0.868 T/h → projects **~149.0T** if the pace holds. The full
+ladder's own 50% crossover sits between T142 (56/74) and T144 (25/54) — a market-implied median
+near **143T**, about 6T below the projection. That gap is real but rests on a **single measurement**;
+last week's correct call came from five reads spread across ~40h, not one. **A second, time-spaced
+read is planned for this evening** (~19:00–20:00 UTC) to get an actual short-interval pace before
+sizing anything — and if the gap holds up, the pick gets made *today*, not deferred to tomorrow.
+Deferring is exactly the mistake `POSTMORTEMS.md` §1a already recorded once (the market repriced
+between Saturday and Sunday last time, and the desk's own delay cost it a correct call). Logged as
+`D-2026-09-26-NP1`, no position yet.
 
-**The day's real find: `KXTXERCOTPEAKD-26SEP26`** (Texas ERCOT peak electricity demand, strikes at
-80,000 / 82,000 / 84,500 MW, settling ~15h out). Its rules are the most specific the desk has seen
-— *"the highest value in the TOTAL column of the first complete Actual System Load by Forecast Zone
-CSV report published by ERCOT"* — a real, nameable, R2/R13-compliant source. But `ercot.com`,
-`gridstatus.io` and one third-party ERCOT tracker were all blocked from the sandbox, and web
-search's AI summaries **contradicted themselves within the same research pass** (one said the heat
-had broken and load was a mundane 58,129 MW; another quoted an 80,400 MW peak forecast with
-above-normal temperatures) — the same unreliable-source pattern already flagged this week. No pick
-without a primary-source read. **Added `www.ercot.com` to `desk_fetch`'s allowlist this session**
-(code + a new host-allowlist test, both green), merged (PR #467), and **live-tested end to end**:
-the host resolves (HTTP 200), and the exact report the contract names — ERCOT's NP6-346-CD
-("Actual System Load by Forecast Zone", `misapp/GetReports.do?reportTypeId=14836`) — returns real,
-dated files. The catch: it's a **next-day retrospective report**. The file published the morning of
-day N+1 covers day N's already-complete actuals — today's file (dated 9/25) held 9/24's data, not
-9/25's. `KXTXERCOTPEAKD`'s own close (just after midnight the night of its operating day) is
-*before* ERCOT ever publishes that day's file, so this source **grades a settled pick the next
-morning** but **cannot inform a same-day one** — a live pick still needs an actual forecast feed,
-and this session didn't find a working read for one (the dashboard page is a JS shell with no
-numbers in the raw HTML, same pattern as OpenRouter's in-progress week). Getting from the file list
-to real numbers also needs the zip download links (not in `desk_fetch`'s stripped-text view) and an
-unzip/CSV-parse step the script doesn't have yet — real, but smaller, next steps if this series is
-worth the effort. Full detail in §6a. Today's own ladder still went untraded — this was verification,
-not a live read of it.
+**Otherwise, today's daily routine (13:34 UTC):** branch restarted from
+`origin/claude/confident-goldberg-83u3q` (clean merge). `KX*SHARE` (OpenRouter request-share)
+ladders remain untradeable — still no live read of the settlement metric itself (§6a). Diesel and
+the ERCOT source are unchanged from Friday; Climate/Weather empty again at a 50-vol floor.
 
-**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 4 no-picks logged.** Sample is still far
-too small to read as calibration (R6 — no claim before ~30 settled picks).
+**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 5 no-picks logged** (one, today's
+KXTOKENUSE row, still open pending the evening read). Sample is still far too small to read as
+calibration (R6 — no claim before ~30 settled picks).
 
 **Standing windows:**
 
-- `KXTOKENUSE` (OpenRouter weekly tokens): next week's ladder opens Monday. Read early Saturday —
-  this series' edge is in the early read, not Sunday evening (R14).
+- `KXTOKENUSE` (OpenRouter weekly tokens): **active right now** — see above. The evening read is
+  the next thing any session picking this up should do, before the routine's own board scan.
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
-  the week. Pass, including on the newly-opened 26SEP28 week.
+  the week. Pass.
 - `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
-  live but only grades the day after — a same-day pick still needs a working forecast read, which
-  doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further otherwise.
+  live (2026-09-25) but only grades the day after — a same-day pick still needs a working forecast
+  read, which doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further
+  otherwise. Full detail in §6a.
 
 **Scheduled check-ins bound to this session:** none armed — no open PR, no open position, nothing
-pending. The "Desk: daily board read and picks" routine (13:30 UTC daily) is the only standing
+pending beyond the KXTOKENUSE evening read noted above (not yet scheduled as a trigger; a new
+session should either wait for the operator's next message or schedule its own check-in for the
+second read). The "Desk: daily board read and picks" routine (13:30 UTC daily) is the only standing
 trigger and needs no action; a new session re-creates anything else it needs (playbook Startup
 Routine step 3).
 
 **Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily,
-ercot.com (pre-merge), gridstatus.io and most data sites are blocked from the sandbox; use the ops
-runner (`kalshi_desk_board`, `desk_fetch`) and web search — but treat web search's AI-generated
-summaries as unreliable on anything numeric (two separate ERCOT queries this session returned
-contradictory numbers); verify through a primary-source `desk_fetch` before trading on one. FRED
-timed out twice yesterday and wasn't retried today. The operator approved widening the
-environment's own network allowlist (DEC-017); still not done as of this session.
+gridstatus.io and most data sites are blocked from the sandbox; `ercot.com` is now reachable
+(§6a). Use the ops runner (`kalshi_desk_board`, `desk_fetch`) and web search — but treat web
+search's AI-generated summaries as unreliable on anything numeric (two separate ERCOT queries
+Friday returned contradictory numbers); verify through a primary-source `desk_fetch` before trading
+on one. FRED timed out twice Thursday and hasn't been retried since. The operator approved widening
+the environment's own network allowlist (DEC-017); still not done as of this session.
 
 **Lessons so far:** the operator paid 76¢ on D-001 against a 55¢ cap, so the report must carry the
 cap in the first line; a projection band built from actual measurements (not padded) predicted the
