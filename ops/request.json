@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-0346","sql":"select created_at, market_ticker, side, action, status, limit_price, quantity, left(client_order_id,24) coid from live_orders where strategy='Alimm1' and created_at > '2026-09-25 23:00' order by created_at"}
+{"type":"db","id":"limm-ci-0346b","sql":"select market_ticker, filled_at, side, action, price, quantity, fee from fills where market_ticker in ('KXAAAGASDCO-26SEP26-4.2350','KXRAIN-26SEP25-PHIL') order by filled_at"}
