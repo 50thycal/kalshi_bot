@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-0927b
-# code e40747b5b33029b863cca1a7ff4a72fffc637750 · started 2026-09-27T03:45:10Z
-contest                        legs                         r1  r2  entered   
------------------------------  ---------------------------  --  --  ----------
-KXMLBGAME-26SEP261310PITDET    DET:Rmmsell1 DET:Rmmsell2    1   1   2026-09-26
-KXMLBSPREAD-26SEP251940STLMIL  MIL4:Rmmsell1 MIL4:Rmmsell2  1   1   2026-09-26
-
-(2 rows)
