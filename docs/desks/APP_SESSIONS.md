@@ -55,6 +55,11 @@ The following access must be provisioned and verified before live activation:
   GitHub access alone does not provide that bridge. Never put tokens in GitHub, chat,
   handoff text, URLs, or public ops. An app without private credentials/network tools
   cannot submit research or trades; report missing access instead of claiming readiness.
+  Allowlisted ChatGPT cloud environments use their approved HTTPS proxy for diagnostics
+  and desk traffic. The service accepts its bounded chunked JSON framing while rejecting
+  stacked transfer codings, ambiguous content-length plus transfer-encoding requests,
+  empty bodies and oversized bodies. Do not switch to unrestricted internet access as a
+  connectivity workaround.
 
 Start disabled. Each app completes a genuine source-backed research cycle without any
 trade decisions, reads its published result, and marks only its own desk ready. This is

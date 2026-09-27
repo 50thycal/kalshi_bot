@@ -78,7 +78,10 @@ mode with coordinated market ownership; restricted subaccounts remain an alterna
 configuration is exclusively `DESKS_*`. The desk service owns its persistence; it never
 writes `paper_trades`, XOS state, or the historical manual ledger. An authenticated API
 allows shared reads and own-desk publications/decisions; operator authority controls start
-and pause/resume. Startup packets live under `docs/desks/`.
+and pause/resume. Its JSON write boundary accepts fixed-length requests and strictly bounded
+single-coding HTTP/1.1 chunked requests from allowlisted app-session proxies; ambiguous
+content-length/transfer-encoding framing remains rejected. Startup packets live under
+`docs/desks/`.
 
 Durable research jobs accept either externally scheduled session completions or explicitly
 funded provider calls. Default additional model budget is zero. Intent and reservations

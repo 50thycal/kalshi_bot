@@ -6,6 +6,7 @@ import json
 import threading
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from io import BytesIO
 from types import SimpleNamespace
 
 import pytest
@@ -14,7 +15,7 @@ from pydantic import ValidationError
 from kalshi_bot.desks.config import DeskSettings
 from kalshi_bot.desks.contracts import Decision, DeskError, OrderReport, Settlement
 from kalshi_bot.desks.scoreboard import comparison
-from kalshi_bot.desks.server import MAX_BODY, make_server
+from kalshi_bot.desks.server import MAX_BODY, InvalidBodySize, _read_chunked, make_server
 from kalshi_bot.desks.service import DeskService
 from kalshi_bot.desks.store import DeskStore
 
@@ -313,6 +314,47 @@ def test_invalid_json_content_type_body_limit_and_invalid_decision(api):
     assert api(path, method='POST', raw='{}', headers={'Content-Type':'text/plain'})[0] == 415
     assert api(path, method='POST', raw='x'*(MAX_BODY+1), headers={'Content-Type':'application/json'})[0] == 413
     assert api(path, method='POST', body={'desk_id':'chatgpt'})[:2] == (400, {'error':'invalid_request'})
+
+
+def test_allowlisted_proxy_chunked_json_can_continue(service):
+    server = make_server(service, ('127.0.0.1', 0))
+    thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .01}, daemon=True)
+    thread.start()
+    conn = http.client.HTTPConnection(*server.server_address, timeout=3)
+    try:
+        conn.request('POST', '/api/desks/chatgpt/continue', body=[b'{}'], encode_chunked=True,
+                     headers={'Authorization': 'Bearer ' + TOKENS['chatgpt'],
+                              'Content-Type': 'application/json'})
+        response = conn.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read()) == {'scheduled': True}
+        assert service.supervisor.ticks
+    finally:
+        conn.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_chunked_json_rejects_ambiguous_framing(api):
+    path = '/api/desks/chatgpt/continue'
+    assert api(path, method='POST', raw='{}', headers={
+        'Content-Type':'application/json', 'Content-Length':'2',
+        'Transfer-Encoding':'chunked'})[0] == 413
+
+
+def test_chunked_decoder_is_bounded_and_strict():
+    assert _read_chunked(BytesIO(b'2\r\n{}\r\n0\r\n\r\n')) == b'{}'
+    invalid = [
+        b'',
+        b'zz\r\n',
+        f'{MAX_BODY + 1:x}\r\n'.encode(),
+        b'1\r\nxX\r\n0\r\n\r\n',
+        b'0\r\n\r\n',
+    ]
+    for body in invalid:
+        with pytest.raises(InvalidBodySize):
+            _read_chunked(BytesIO(body))
 
 
 def test_status_exposes_research_blockers_without_secrets(api, service):
