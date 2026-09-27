@@ -97,8 +97,10 @@ def validate_connection(url: str, token: str) -> tuple[str, str]:
 def fetch_status(url, token, *, transport=None):
     endpoint, token = validate_connection(url, token)
     try:
+        # App-session sandboxes route allowlisted hosts through their approved HTTPS proxy.
+        # Match the session client so this read-only check measures the usable path.
         with httpx.Client(timeout=httpx.Timeout(10, connect=5), follow_redirects=False,
-                          trust_env=False, transport=transport) as client:
+                          trust_env=True, transport=transport) as client:
             with client.stream('GET', endpoint, headers={
                 'Authorization': 'Bearer ' + token, 'Accept': 'application/json',
                 'Accept-Encoding': 'identity',

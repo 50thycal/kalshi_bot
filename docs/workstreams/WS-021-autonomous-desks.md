@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-20
-**Updated:** 2026-09-22
+**Updated:** 2026-09-27
 **Build OS:** v0.12
 
 ## Goal
@@ -331,3 +331,24 @@ claim-before-write rule, and allow exactly one POST only after fresh operator co
 Acceptance: legacy desk configuration fails validation; missing or mismatched v2 evidence refuses;
 v3 preview is read-only; prior-order recovery makes no POST; v3 is one-shot; changed balance,
 dirty book, early recovery, common start, prior result or any ambiguous v3 claim fails closed.
+
+## App-session proxy compatibility continuation
+
+The first ChatGPT live Continue session proved that environment variables, repository selection,
+authenticated GET status and the service deployment were correct, but every POST arrived with
+chunked transfer framing and was rejected as `invalid_body_size`. The read-only doctor also
+bypassed the environment's required allowlisted HTTPS proxy and falsely reported the reachable
+service as unavailable. No Continue request was accepted, no job was created and no trade or
+order action occurred during diagnosis.
+
+Build card: make the existing service boundary interoperate with the selected app-session
+transport without broadening authorization or payload limits. Accept exactly one HTTP/1.1
+`chunked` transfer coding, decode it under the existing 256 KB cap, and keep empty, malformed,
+oversized, stacked-coding and ambiguous content-length-plus-transfer-encoding requests closed.
+Route the read-only doctor through the same approved environment proxy as the session client.
+
+Acceptance: a chunked own-desk Continue request reaches the unchanged role and service gates;
+malformed and ambiguous framing remains a fixed redacted 413; normal fixed-length callers remain
+unchanged; the doctor can use an allowlisted cloud proxy; no limit, trading rule, start authority,
+desk isolation or financial exposure changes. Deployment is required before retrying ChatGPT's
+Continue cycle.

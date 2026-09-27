@@ -12,7 +12,56 @@ from pydantic import ValidationError
 from .contracts import Decision, DeskError, utcnow
 
 MAX_BODY = 256_000
+MAX_CHUNK_LINE = 128
+MAX_TRAILER_BYTES = 8_192
 _INDEX = Path(__file__).parent / "static" / "index.html"
+
+
+class InvalidBodySize(ValueError):
+    """Request framing is unsupported, malformed, empty, or over the body limit."""
+
+
+def _read_exact(stream, size):
+    data = bytearray()
+    while len(data) < size:
+        chunk = stream.read(size - len(data))
+        if not chunk:
+            raise InvalidBodySize
+        data.extend(chunk)
+    return bytes(data)
+
+
+def _read_chunked(stream):
+    """Decode a strictly bounded HTTP/1.1 chunked body from ``BaseHTTPRequestHandler``."""
+    body = bytearray()
+    while True:
+        line = stream.readline(MAX_CHUNK_LINE + 1)
+        if not line or len(line) > MAX_CHUNK_LINE or not line.endswith(b"\r\n"):
+            raise InvalidBodySize
+        size_text = line[:-2].split(b";", 1)[0]
+        try:
+            if not size_text or any(c not in b"0123456789abcdefABCDEF" for c in size_text):
+                raise ValueError
+            size = int(size_text, 16)
+        except ValueError:
+            raise InvalidBodySize from None
+        if size > MAX_BODY - len(body):
+            raise InvalidBodySize
+        if size == 0:
+            trailer_bytes = 0
+            while True:
+                trailer = stream.readline(MAX_CHUNK_LINE + 1)
+                trailer_bytes += len(trailer)
+                if (not trailer or len(trailer) > MAX_CHUNK_LINE
+                        or trailer_bytes > MAX_TRAILER_BYTES or not trailer.endswith(b"\r\n")):
+                    raise InvalidBodySize
+                if trailer == b"\r\n":
+                    if not body:
+                        raise InvalidBodySize
+                    return bytes(body)
+        body.extend(_read_exact(stream, size))
+        if _read_exact(stream, 2) != b"\r\n":
+            raise InvalidBodySize
 
 
 def handler_for(service):
@@ -74,16 +123,34 @@ def handler_for(service):
             if not role:
                 return self.send(401, {"error": "authentication_required"})
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if length <= 0 or length > MAX_BODY or self.headers.get("Transfer-Encoding"):
-                    return self.send(413, {"error": "invalid_body_size"})
                 if self.headers.get_content_type() != "application/json":
                     return self.send(415, {"error": "json_required"})
-                body = json.loads(self.rfile.read(length))
+                lengths = self.headers.get_all("Content-Length", [])
+                encodings = [part.strip().lower() for value in
+                             self.headers.get_all("Transfer-Encoding", [])
+                             for part in value.split(",") if part.strip()]
+                if encodings:
+                    # Never accept ambiguous CL+TE framing or stacked transfer codings.
+                    if lengths or encodings != ["chunked"]:
+                        raise InvalidBodySize
+                    raw = _read_chunked(self.rfile)
+                else:
+                    if len(lengths) != 1:
+                        raise InvalidBodySize
+                    try:
+                        length = int(lengths[0])
+                    except ValueError:
+                        raise InvalidBodySize from None
+                    if length <= 0 or length > MAX_BODY:
+                        raise InvalidBodySize
+                    raw = _read_exact(self.rfile, length)
+                body = json.loads(raw)
                 if not isinstance(body, dict):
                     raise DeskError("object_required")
                 result = self.mutate(urlsplit(self.path).path, role, body)
                 self.send(200, result if result is not None else {"ok": True})
+            except InvalidBodySize:
+                self.send(413, {"error": "invalid_body_size"})
             except PermissionError:
                 self.send(403, {"error": "role_forbidden"})
             except (ValidationError, ValueError, KeyError) as exc:
