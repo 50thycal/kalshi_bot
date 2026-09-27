@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-20260926-tokens2
-# code b06b490fbd67c9a8eb7905d1dc18f558910d10ad · started 2026-09-26T13:37:27Z
-# desk_fetch https://openrouter.ai/api/frontend/v1/rankings/market-share
-# HTTP 200 · application/json · 13423 bytes
-# 1 window(s) around '2026-09-21'
----
-7244772899959,     "nvidia": 5183407009661,     "openai": 18536802128948,     "others": 11320459578142,     "tencent": 18672750568930,     "xiaomi": 2623468233546,     "z-ai": 17977716607707    }   },   {    "x": "2026-09-07",    "ys": {     "anthropic": 4826722978852,     "deepseek": 24257683335788,     "google": 7484129162783,     "meta": 2412911836917,     "nvidia": 4801749632353,     "openai": 23953076616364,     "others": 14070304422969,     "tencent": 20624550078250,     "xiaomi": 7994078909370,     "z-ai": 16337815070537    }   },   {    "x": "2026-09-14",    "ys": {     "anthropic": 4636736592673,     "deepseek": 33074488904425,     "google": 6921100715668,     "meta": 2451238012783,     "nvidia": 5600916411883,     "openai": 16886183981309,     "others": 15713986243142,     "tencent": 17307764687800,     "xiaomi": 7337446346326,     "z-ai": 18965408083068    }   },   {    "x": "2026-09-21",    "ys": {     "anthropic": 4429086936309,     "deepseek": 26161874453450,     "google": 5755179149771,     "nvidia": 4865240656527,     "openai": 14674319682596,     "others": 15232733921288,     "stealth": 8016257574702,     "tencent": 10508388623088,     "xiaomi": 7370019676540,     "z-ai": 18992551995965    }   }  ] }
