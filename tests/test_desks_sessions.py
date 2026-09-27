@@ -22,6 +22,14 @@ def test_session_mode_is_explicit_and_rejects_paid_provider_configuration():
         settings(research_mode='session', chatgpt_provider='openai')
     with pytest.raises(ValidationError):
         settings(research_mode='typo')
+    scheduled = settings(research_timezone='America/Chicago',
+                         chatgpt_research_schedule='08:00,12:00,16:00',
+                         claude_research_schedule='disabled')
+    assert scheduled.chatgpt_research_schedule == '08:00,12:00,16:00'
+    with pytest.raises(ValidationError, match='IANA time zone'):
+        settings(research_timezone='Central')
+    with pytest.raises(ValidationError, match='comma-separated HH:MM'):
+        settings(chatgpt_research_schedule='8:00,24:00')
     blocked = settings(research_mode='session', live_enabled=False, existing_workers_isolated=False,
                        chatgpt_subaccount=0, claude_subaccount=0, chatgpt_kalshi_key_id='')
     assert {'live_execution_disabled', 'existing_worker_subaccount_isolation_unverified',

@@ -119,6 +119,47 @@ def test_parallel_enqueue_has_one_job_per_desk(tmp_path):
         assert len(list(session.scalars(select(ResearchJob)))) == 1
 
 
+def test_exact_local_windows_are_dst_aware_without_catch_up(tmp_path):
+    sup = runtime(store_at(tmp_path), research_timezone="America/Chicago",
+                  research_schedules={"chatgpt": "08:00,12:00,16:00", "claude": "disabled"})
+
+    # 08:00 Chicago is 14:00 UTC in winter and 13:00 UTC in summer.
+    winter = datetime(2026, 1, 15, 14, 0, 30, tzinfo=timezone.utc)
+    summer = datetime(2026, 7, 15, 13, 0, 30, tzinfo=timezone.utc)
+    sup.tick(winter)
+    with sup.store._tx() as session:
+        jobs = list(session.scalars(select(ResearchJob)))
+        assert [job.desk_id for job in jobs] == ["chatgpt"]
+        jobs[0].state = "completed"
+    sup.tick(summer)
+    with sup.store._tx() as session:
+        jobs = list(session.scalars(select(ResearchJob).order_by(ResearchJob.created_at)))
+    assert len(jobs) == 2
+    assert jobs[0].job_id.endswith("20260115-0800--0600")
+    assert jobs[1].job_id.endswith("20260715-0800--0500")
+
+    # A process returning after the exact minute waits for the next window.
+    sup.tick(datetime(2026, 7, 15, 17, 1, tzinfo=timezone.utc))
+    with sup.store._tx() as session:
+        assert len(list(session.scalars(select(ResearchJob)))) == 2
+
+
+def test_scheduled_windows_never_overlap_or_duplicate(tmp_path):
+    sup = runtime(store_at(tmp_path), research_timezone="America/Chicago",
+                  research_schedules={"chatgpt": "08:00,12:00,16:00", "claude": "disabled"})
+    first = datetime(2026, 7, 15, 13, 0, tzinfo=timezone.utc)
+    sup.tick(first)
+    sup.tick(first + timedelta(seconds=30))
+    sup.tick(datetime(2026, 7, 15, 17, 0, tzinfo=timezone.utc))
+    with sup.store._tx() as session:
+        jobs = list(session.scalars(select(ResearchJob)))
+        assert len(jobs) == 1  # The still-queued 08:00 job blocks the noon window.
+        jobs[0].state = "completed"
+    sup.tick(datetime(2026, 7, 15, 21, 0, tzinfo=timezone.utc))
+    with sup.store._tx() as session:
+        assert len(list(session.scalars(select(ResearchJob)))) == 2
+
+
 def test_sources_refuse_credentials_redirects_private_hosts_and_oversized():
     fetcher = PublicFetcher(transport=httpx.MockTransport(lambda request: httpx.Response(
         302, headers={"location": "http://127.0.0.1/private"})))

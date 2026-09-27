@@ -18,6 +18,30 @@ session ready, or start a round. Existing model access and an always-running hos
 real setup requirements. No live model calls or hosted deployment are implied by local
 regression tests.
 
+## Exact local research windows
+
+Scheduled mode defaults to the legacy interval cadence. A deployment can instead configure
+each desk independently with exact `HH:MM` windows in one IANA time zone:
+
+```text
+DESKS_RESEARCH_TIMEZONE=America/Chicago
+DESKS_CHATGPT_RESEARCH_SCHEDULE=08:00,12:00,16:00
+DESKS_CLAUDE_RESEARCH_SCHEDULE=disabled
+```
+
+`interval` preserves `DESKS_RESEARCH_INTERVAL_SECONDS`; `disabled` creates no automatic jobs
+for that desk. Exact windows match only the current local minute. They use the time-zone
+database for daylight-saving changes, do not enqueue missed windows after downtime, and
+include the local UTC offset in the durable job identity. The existing active-job guard still
+prevents a later window from overlapping queued, claimed, running, retrying, or publishing
+work. Configure these values on the desk service, not the runner: a continuously polling
+runner only claims work that the service has made due.
+
+Do not change a production app-session deployment merely to stage a runner. Keep
+`DESKS_RESEARCH_MODE=session` and `DESKS_EXTERNAL_RUNNERS_VERIFIED=false` until authentication,
+billing, a real scheduled cycle, supervision, and scheduled-mode alerts have all been
+verified. Switching the mode is a separate activation action.
+
 ## What belongs on which process
 
 | Process | Required access | Must not receive |
@@ -124,6 +148,27 @@ or shell quoting inside it. The model ID recorded in the ledger must match the a
 client invocation. This records the explicitly requested model identifier, not an attestation
 of a provider-resolved model version. Keep worker IDs stable across ordinary restarts and state directories
 unique per desk/service identity.
+
+For the Railway `chatgpt-runner` image, the inactive setup command is
+`/usr/local/bin/desk-runner-entrypoint sleep infinity`. Its volume remains mounted at
+`/data`; use `/data/runner` for state and `/data/model-home` for the dedicated Codex login.
+Provide only `DESK_SERVICE_URL`, `DESK_SESSION_TOKEN`, and non-secret command/model
+configuration. Do not add `OPENAI_API_KEY`, an operator/Claude token, exchange credentials,
+or database credentials. Keep the replica stopped or on the inactive setup command until
+the activation checklist is complete; do not run `once` against a service that remains in
+app-session mode.
+
+### Scheduled-mode alert requirement
+
+Session-only alerts are invalid once scheduled research is selected. Configure
+`DESKS_ALERT_MODE=webhook`, set a private public-HTTPS destination in
+`DESKS_ALERT_WEBHOOK_URL`, and run the operator-only `test-alerts` command before activation.
+For a small phone-first setup, an ntfy topic with a long unguessable name is the simplest
+compatible option: the notifier posts a JSON object containing `message`, and the operator
+can subscribe to that topic in the ntfy mobile app. Treat the topic URL as a secret; self-host
+ntfy if public-topic confidentiality is unacceptable. A successful delivery test, not the
+vendor choice, satisfies the gate. Do not use session alert mode or clear the gate merely
+because a runner appears healthy.
 
 ## Supervised service example
 
