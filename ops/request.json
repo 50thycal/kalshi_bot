@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-0421c","sql":"select captured_at, quantity, realized_pnl, raw_json->>'market_result' res from positions where market_ticker='KXOPENVREQ-26SEP26-T17' order by captured_at desc limit 3"}
