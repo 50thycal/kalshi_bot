@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-2044","sql":"select created_at, market_ticker, side||'/'||action||'/'||status s, limit_price, quantity from live_orders where strategy='Alimm1' and created_at > '2026-09-27 16:20' order by created_at"}
+{"type":"logs","id":"limm-ci-2044b","service":"main","filter":"incentive","lines":100}
