@@ -136,6 +136,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
 | `KXTOKENUSE` week of 9/21, **two-read confirmation, 2026-09-26**: 116.006T at 13:37Z, 121.521T at 19:14Z → interval pace **0.981 T/h**, *faster* than the week's own cumulative average (0.873 T/h), not slower. Both project 149.7–153.2T with 32.3h left to close, comfortably clearing 144T (would need the pace to fall to 0.695 T/h or below — beyond any hourly pace measured last week — to miss). The market moved some between reads (T142 56/74 → 77/88) but T144 was still only 33/56 (~44–56% implied) against a desk estimate near 0.85. Picked `D-2026-09-26-001`, YES @ 56¢. | `desk_fetch` market-share endpoint ×2 + two ladder reads, 2026-09-26 |
 | `KXDIESELD` daily ladder, 2026-09-24 check | AAA national diesel average has **turned down**, not up: $6.5276 (record, Tue 9/22) → $6.5217 (Wed 9/23) → $6.5141 (Thu 9/24), roughly −0.6 to −0.8¢/day. The T6.520 strike for Fri 9/25 traded ~9% implied YES, which lines up with a continued small decline landing just under $6.52 — the market looks efficient here, not mispriced. Worth recording because a naive trend read from the prior week (which was climbing) would have pointed the wrong way; checking the live print before trading averted a second R13-style error. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-24 |
+| `KXDIESELMON` (new series, first seen 2026-09-27) | Despite the "monthly" name, same single-day mechanism as `KXDIESELD`/`KXDIESELW` (R13: no source named, "the Diesel Price on \<date\>"). The decline continues but is **decelerating**: $6.5019 (Fri 9/25) → $6.4839 (Sat 9/26, −1.8¢) → $6.4709 (Sun 9/27, −1.3¢). A naive linear extrapolation to the Sep 30 strike lands ~$6.43–6.45, clearing the $6.40 line the market itself prices at 64–77% — no mispricing found with only two data points of a decelerating trend to go on. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-27 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
 
@@ -161,36 +162,34 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-26 ~19:18 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-27 ~13:39 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**No open real-money positions.** `D-2026-09-26-001` was **never placed** — the operator confirmed
-around 21:22 UTC (a live screenshot of the book, `KXTOKENUSE-26SEP28-T144` already trading ~84/16)
-that the 56¢ order never went in. It still grades at settlement as a judgment call either way (§5:
-"placed records what the operator did; a skipped pick still settles and still grades" — the desk's
-calibration is measured on its own read, not the subset that got executed). By the time the operator
-looked, the book had already moved most of the way to where the desk's own estimate (0.85) said it
-should be — the thesis is reading correctly so far, just with $0 actually at risk on it.
+**No open real-money positions.** `D-2026-09-26-001` (`KXTOKENUSE-26SEP28-T144`, YES @ 56¢) was
+**never placed** — the operator confirmed Saturday evening (a live screenshot of the book, already
+trading ~84/16 by then) that the order never went in. It still grades at settlement as a judgment
+call either way (§5: "placed records what the operator did; a skipped pick still settles and still
+grades" — the desk's calibration is measured on its own read, not the subset that got executed).
+By the time the operator looked, the book had already moved most of the way to where the desk's own
+estimate (0.85) said it should be — the thesis is reading correctly so far, just with $0 actually
+at risk on it. **Settles Monday ~03:35 UTC — grade it first thing next session** (or this one, if
+the close has passed by the time this is read): `kalshi_desk_board --ticker
+KXTOKENUSE-26SEP28-T144` for the `result` field first, falling back to a fresh `desk_fetch` sum of
+the now-closed market-share bucket only if that's not yet posted.
 
-**How this pick came together — the Saturday two-read plan, completed as planned.** First read
-(13:37 UTC): 116.006T week-to-date, cumulative pace 0.873 T/h, projecting ~149.7T. That alone wasn't
-enough to size a position (R14 — one measurement isn't a pace). Second read (19:14 UTC), 5.6h later:
-121.521T, an **interval pace of 0.981 T/h — faster than the week's own average**, not slower as a
-weekend slowdown might have suggested. Both paces project 149.7–153.2T against 32.3h left to the
-2026-09-28T03:35Z close, comfortably clearing the T144 strike: the total only misses 144T if the
-pace falls to 0.695 T/h or below, a bigger slowdown than any hourly pace the desk measured last
-week (0.711–0.841 T/h range). The market had moved up some between reads (T142 went 56/74 → 77/88)
-but T144 was still only 33/56 (~44–56¢ implied) against the desk's ~0.85 estimate — real edge, and
-acted on today rather than deferred, per the explicit plan set this morning.
-
-**Otherwise, today's daily routine (13:34 UTC):** branch restarted from
-`origin/claude/confident-goldberg-83u3q` (clean merge). `KX*SHARE` (OpenRouter request-share)
-ladders remain untradeable — still no live read of the settlement metric itself (§6a). Diesel and
-the ERCOT source are unchanged from Friday; Climate/Weather empty again at a 50-vol floor.
+**Today's daily routine (13:34 UTC), zero-pick day, logged as `D-2026-09-27-NP1`:** branch
+restarted from `origin/claude/confident-goldberg-83u3q` (clean merge, unrelated autonomous-desks
+activity only). `KX*SHARE` and SOFR unchanged and still untradeable. One new instrument found:
+`KXDIESELMON-26SEP30` ("Diesel prices in Sep 2026") — despite the name, same single-day mechanism
+as `KXDIESELD`/`KXDIESELW` (R13, no source named). Checked the live AAA print before trusting the
+ladder: the decline continues but is **decelerating** ($6.5019 Fri → $6.4839 Sat, −1.8¢ → $6.4709
+Sun, −1.3¢). A naive extrapolation to the Sep 30 strike lands ~$6.43–6.45, clearing the $6.40 line
+the market already prices at 64–77% — no mispricing found with only two data points to go on.
+Climate/Weather empty again. Zero new picks.
 
 **Score so far: 2 settled picks, 2 wins (+$1.65 realized), 0 open, 1 unplaced pick pending grade,
-5 no-picks logged.** Sample is still far too small to read as calibration (R6 — no claim before
+6 no-picks logged.** Sample is still far too small to read as calibration (R6 — no claim before
 ~30 settled picks); `D-2026-09-26-001` is the first pick made from a genuinely
 two-measurement-confirmed thesis rather than a single read or a book-vs-print check, and it grades
 Monday regardless of the operator not having risked money on it — worth watching for what it says
@@ -198,20 +197,21 @@ about the method.
 
 **Standing windows:**
 
-- `KXTOKENUSE`: this week's pick (`D-2026-09-26-001`) was **not placed** by the operator but still
-  grades Monday ~03:35 UTC as a judgment call. Next week's ladder opens Monday — repeat the
-  two-read Saturday plan, don't shortcut to one read.
+- `KXTOKENUSE`: this week's pick (`D-2026-09-26-001`) grades Monday ~03:35 UTC — see above, top
+  priority for the next session. Next week's ladder opens Monday — repeat the two-read Saturday
+  plan, don't shortcut to one read.
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
   the week. Pass.
 - `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
-  live (2026-09-25) but only grades the day after — a same-day pick still needs a working forecast
-  read, which doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further
-  otherwise. Full detail in §6a.
+  live but only grades the day after — a same-day pick still needs a working forecast read, which
+  doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further otherwise.
+  Full detail in §6a.
+- `KXDIESELMON` / `KXDIESELMONAK`: new this week, same mechanism as the existing diesel series —
+  checked and passed today (above), not obviously mispriced. Re-check the live AAA print before any
+  future pick on either.
 
 **Scheduled check-ins bound to this session:** none armed beyond the daily routine. Grading
-D-2026-09-26-001 is the next session's job once Monday's close has passed — check
-`kalshi_desk_board --ticker KXTOKENUSE-26SEP28-T144` for the `result` field first (fast, direct)
-before falling back to a fresh `desk_fetch` sum of the now-closed market-share bucket. The "Desk:
+`D-2026-09-26-001` is the next session's first job once Monday's close has passed. The "Desk:
 daily board read and picks" routine (13:30 UTC daily) is the only standing trigger and needs no
 action; a new session re-creates anything else it needs (playbook Startup Routine step 3).
 
