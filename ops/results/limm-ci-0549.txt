@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0549
-# code b06b490fbd67c9a8eb7905d1dc18f558910d10ad · started 2026-09-26T05:49:10Z
-created_at                        market_ticker               side  action  status    limit_price  quantity  coid                    
---------------------------------  --------------------------  ----  ------  --------  -----------  --------  ------------------------
-2026-09-26 02:20:26.265684+00:00  KXAAAGASDCO-26SEP26-4.2350  no    sell    canceled  10           34        limmexit:stop_loss:cacf3
-2026-09-26 02:23:16.402867+00:00  KXAAAGASDCO-26SEP26-4.2350  no    sell    canceled  7            31        limmexit:stop_loss:ad601
-
-(2 rows)
