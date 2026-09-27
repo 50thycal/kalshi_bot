@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-1233","sql":"select 'pos' k, captured_at::text t, market_ticker m, quantity::text q, realized_pnl::text p, raw_json->>'market_result' r from (select * from positions where market_ticker='KXOPENVREQ-26SEP26-T17' order by captured_at desc limit 2) a union all select 'ord', created_at::text, market_ticker, side||'/'||action||'/'||status, limit_price::text, quantity::text from live_orders where strategy='Alimm1' and created_at > '2026-09-27 04:00'"}
