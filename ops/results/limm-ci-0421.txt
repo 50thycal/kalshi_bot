@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0421
-# code e40747b5b33029b863cca1a7ff4a72fffc637750 · started 2026-09-27T04:21:34Z
-created_at                        market_ticker           side  action  status    limit_price  quantity  coid                    
---------------------------------  ----------------------  ----  ------  --------  -----------  --------  ------------------------
-2026-09-27 01:28:37.519281+00:00  KXOPENVREQ-26SEP26-T17  yes   buy     canceled  61           90        limmexitleg:d7ea4b7d-8e4
-
-(1 row)
