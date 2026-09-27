@@ -159,6 +159,24 @@ None.
 Review PR #448 after CI; then complete the private-access and
 account/alert prerequisites in docs/desks/APP_SESSIONS.md before common start.
 
+## Scheduled ChatGPT runner continuation — 2026-09-27
+
+Owner requested staging only the ChatGPT runner for three daily America/Chicago windows,
+without changing the live service out of app-session mode or verifying/starting a runner.
+The scheduler now accepts per-desk `interval`, `disabled`, or exact local `HH:MM` windows.
+Exact windows are DST-aware, do not catch up after downtime, use durable per-window identity,
+and retain the existing active-job overlap guard. The intended later configuration is
+ChatGPT `08:00,12:00,16:00` and Claude `disabled`; all trading and evidence controls are
+unchanged.
+
+Runtime activation remains blocked: this environment has no authenticated Railway CLI
+session, so the `chatgpt-runner` service, its token isolation/volume, and its saved Codex
+login could not be inspected or changed. Calvin must authenticate Codex as UID 10001 in the
+runner's dedicated `/data/model-home`, confirm subscription entitlement and that extra paid
+usage is disabled, and configure/test a scheduled-mode HTTPS alert webhook. Keep production
+`DESKS_RESEARCH_MODE=session`, `DESKS_EXTERNAL_RUNNERS_VERIFIED=false`, and the runner
+inactive until those checks and a deliberate activation pass.
+
 
 ## App-session continuation — DEC-019
 

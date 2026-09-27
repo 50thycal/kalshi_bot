@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,6 +36,9 @@ class DeskSettings(BaseSettings):
     claude_kalshi_key_id: SecretStr = SecretStr("")
     claude_kalshi_private_key: SecretStr = SecretStr("")
     research_interval_seconds: int = Field(default=3600, ge=300, le=86400)
+    research_timezone: str = "UTC"
+    chatgpt_research_schedule: str = "interval"
+    claude_research_schedule: str = "interval"
     tick_seconds: int = Field(default=15, ge=1, le=60)
     monthly_research_budget_usd: Decimal = Field(default=Decimal(0), ge=0)
     chatgpt_provider: Literal["external", "openai"] = "external"
@@ -50,6 +54,25 @@ class DeskSettings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_isolation(self):
+        try:
+            ZoneInfo(self.research_timezone)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("research timezone must be an IANA time zone") from None
+        for desk in ("chatgpt", "claude"):
+            value = getattr(self, f"{desk}_research_schedule")
+            if value in {"interval", "disabled"}:
+                continue
+            windows = value.split(",")
+            if not windows or len(set(windows)) != len(windows):
+                raise ValueError(f"{desk} research schedule must contain unique HH:MM windows")
+            for window in windows:
+                try:
+                    hour, minute = window.split(":")
+                    valid = len(hour) == 2 and len(minute) == 2 and 0 <= int(hour) <= 23 and 0 <= int(minute) <= 59
+                except (ValueError, AttributeError):
+                    valid = False
+                if not valid:
+                    raise ValueError(f"{desk} research schedule must be interval, disabled, or comma-separated HH:MM windows")
         if self.alert_mode == "session" and self.research_mode != "session":
             raise ValueError("session-only alerts require app-session research")
         tokens = [getattr(self, f"{role}_token").get_secret_value()

@@ -60,6 +60,11 @@ def build_service(settings):
                 existing_workers_isolated=settings.existing_workers_isolated)
     supervisor = Supervisor(store, providers=providers,
                             interval_seconds=settings.research_interval_seconds,
+                            research_timezone=settings.research_timezone,
+                            research_schedules={
+                                "chatgpt": settings.chatgpt_research_schedule,
+                                "claude": settings.claude_research_schedule,
+                            },
                             monthly_budget_usd=settings.monthly_research_budget_usd,
                             external_runners_verified=settings.external_runners_verified,
                             research_mode=settings.research_mode)

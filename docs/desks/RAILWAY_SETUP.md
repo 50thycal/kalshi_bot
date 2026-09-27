@@ -53,6 +53,26 @@ alone leaves PID 1 as root and skips private directory initialization.
 An online container in this mode is NOT a functioning researcher.
 Keep one replica. Preserve volume contents through every redeployment.
 
+For a staged ChatGPT-only scheduled setup, leave the desk service in app-session mode and
+leave `DESKS_EXTERNAL_RUNNERS_VERIFIED=false`. The eventual desk-service configuration is:
+
+```text
+DESKS_RESEARCH_TIMEZONE=America/Chicago
+DESKS_CHATGPT_RESEARCH_SCHEDULE=08:00,12:00,16:00
+DESKS_CLAUDE_RESEARCH_SCHEDULE=disabled
+```
+
+Do not apply `DESKS_RESEARCH_MODE=scheduled` yet. Exact windows are DST-aware, skip missed
+windows instead of catching up, and retain the active-job non-overlap guard. The disabled
+Claude schedule changes no Claude runner service or credential; it only prevents the shared
+desk service from creating unattended Claude jobs after a future scheduled-mode cutover.
+
+The `chatgpt-runner` service must have its own `/data` volume and only its own
+`DESK_SESSION_TOKEN` plus `DESK_SERVICE_URL`. Keep `/data/runner` and `/data/model-home`
+private. Do not configure an OpenAI API key: authenticate Codex in `/data/model-home` using
+the existing subscription, and independently verify in the ChatGPT billing controls that
+extra paid usage is disabled. If either check is unavailable, leave the runner inactive.
+
 Using Railway's authenticated console, run commands as the same identity:
 
 ```sh
@@ -72,6 +92,13 @@ Login is performed by the account owner. Do not copy credentials between hosts,
 paste auth files into chat, put codes in deployment logs, or use API fallback.
 Verify active authentication, subscription entitlement and extra-usage settings
 before any research invocation. Login success alone does not establish billing.
+
+Scheduled mode also requires a tested HTTPS webhook; session-only alerting is not valid.
+A long, random ntfy topic subscribed in the mobile app is the smallest phone-friendly
+destination compatible with the notifier's JSON `message` field. Store its URL as the
+secret `DESKS_ALERT_WEBHOOK_URL`, set `DESKS_ALERT_MODE=webhook`, and run the operator-only
+`scripts/desk_operator.py test-alerts`. Keep the gate blocked unless that test is recorded
+successful.
 
 Then run the relevant `once` command from RUNNERS.md with these real paths:
 Python `/opt/desk-venv/bin/python`, checkout `/opt/kalshi_bot`,

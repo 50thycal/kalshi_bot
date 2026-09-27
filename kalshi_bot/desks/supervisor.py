@@ -11,6 +11,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_CEILING, Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -42,7 +43,7 @@ class Supervisor:
     def __init__(self, store, providers: dict[str, HTTPProvider] | None = None,
                  market_reader=None, source_fetcher=None, submit_decision=None,
                  interval_seconds=3600, monthly_budget_usd="0", external_runners_verified=False,
-                 research_mode="scheduled"):
+                 research_mode="scheduled", research_timezone="UTC", research_schedules=None):
         self.store = store
         if research_mode not in {"scheduled", "session"}:
             raise ValueError("invalid research mode")
@@ -57,6 +58,8 @@ class Supervisor:
         self.interval = int(interval_seconds)
         if self.interval < 60:
             raise ValueError("research interval must be at least 60 seconds")
+        self.research_timezone = ZoneInfo(research_timezone)
+        self.research_schedules = research_schedules or {}
         self.limit = _micros(monthly_budget_usd)
         self.round_id = self.store.snapshot(datetime.now(timezone.utc))["round_id"]
         for table in (ResearchBudget.__table__, ResearchJob.__table__, ResearchSource.__table__):
@@ -68,11 +71,11 @@ class Supervisor:
     def request_cycle(self, desk_id, now):
         return {"job_id": self.enqueue(desk_id, now, manual=True), "state": "queued"}
 
-    def enqueue(self, desk_id, now, *, manual=False):
+    def enqueue(self, desk_id, now, *, manual=False, schedule_key=None):
         if desk_id not in {"chatgpt", "claude"}:
             raise DeskError("invalid_desk")
         stamp = int(now.timestamp()) // self.interval
-        key = f"research-{self._round_id()}-{desk_id}-{stamp}"
+        key = f"research-{self._round_id()}-{desk_id}-{schedule_key or stamp}"
         with self.store._tx() as session:
             self.store._book(session, desk_id)  # Serialize enqueue across worker processes.
             active = session.scalar(select(ResearchJob).where(
@@ -88,6 +91,22 @@ class Supervisor:
                         created_at=now, updated_at=now, state="queued", context={"research_mode": self.research_mode},
                         reserved_microusd=0))
         return key
+
+    def _scheduled_window(self, desk_id, now):
+        """Return the current window identity, or None when this tick is not due.
+
+        Exact local-minute matching deliberately avoids catch-up after downtime. The
+        local date and UTC offset distinguish repeated wall-clock times at a DST fold.
+        """
+        schedule = self.research_schedules.get(desk_id, "interval")
+        if schedule == "disabled":
+            return None
+        if schedule == "interval":
+            return str(int(now.timestamp()) // self.interval)
+        local = _utc(now).astimezone(self.research_timezone)
+        if local.strftime("%H:%M") not in schedule.split(","):
+            return None
+        return local.strftime("%Y%m%d-%H%M-%z")
 
     def _job(self, session, job_id):
         job = session.scalar(select(ResearchJob).where(ResearchJob.job_id == job_id).with_for_update())
@@ -489,7 +508,9 @@ class Supervisor:
         if self.research_mode == "session":
             return self.status(now)  # Reconcile accepted results; never schedule cognition.
         for desk_id in ("chatgpt", "claude"):
-            self.enqueue(desk_id, now)
+            window = self._scheduled_window(desk_id, now)
+            if window is not None:
+                self.enqueue(desk_id, now, schedule_key=window)
         with self.store._tx() as session:
             rows = list(session.scalars(select(ResearchJob).where(
                 ResearchJob.round_id == self._round_id(), ResearchJob.state.in_(["queued", "retry"]))
