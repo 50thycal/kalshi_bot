@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-0927g
-# code 934823770e4aa7b594e783bce011524c672e4e76 · started 2026-09-27T19:52:46Z
-strategy  legs  settled  losses  pnl    games
---------  ----  -------  ------  -----  -----
-Rmmsell1  18    0        0       0.000  9    
-Rmmsell2  4     0        0       0.000  4    
-
-(2 rows)
