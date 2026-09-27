@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-0927d
-# code e40747b5b33029b863cca1a7ff4a72fffc637750 · started 2026-09-27T11:48:56Z
-contest                  legs                       r1  r2  entered   
------------------------  -------------------------  --  --  ----------
-KXMLSGAME-26SEP26LAGCOL  LAG:Rmmsell1 LAG:Rmmsell2  1   1   2026-09-27
-
-(1 row)
