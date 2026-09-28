@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "7575892474f12f5323c7393aa998ae08104bd8ea",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-28T12:46:04Z",
+  "id": "desk-aaa-1248",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-aaa-1248.receipt.json",
+  "result_file": "ops/results/desk-aaa-1248.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36423938313",
+  "service": null,
+  "started_at": "2026-09-28T12:46:04Z",
+  "targets": [],
+  "type": "script"
+}
