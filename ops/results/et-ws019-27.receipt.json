@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "e368ebc20b1e95e05615ad420fa319c138e3610b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-28T15:57:11Z",
+  "id": "et-ws019-27",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/et-ws019-27.receipt.json",
+  "result_file": "ops/results/et-ws019-27.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36447344660",
+  "service": null,
+  "started_at": "2026-09-28T15:56:25Z",
+  "targets": [],
+  "type": "script"
+}
