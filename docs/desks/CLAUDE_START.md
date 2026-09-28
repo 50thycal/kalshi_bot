@@ -54,6 +54,7 @@ price/spend caps, and expiration. Publish rejections and learning too.
 
 Current operator-selected mode is app sessions. Read docs/desks/APP_SESSIONS.md.
 When Calvin says go or continue, do the full research cycle in this active app session.
+Prefer the repository skill `/claude-desk-continue` for the guarded one-cycle workflow.
 Use the service bridge with only your own token; no hosted model login or API key is needed.
 Verify authenticated status reports research_mode=session. If not, report the deployment
 mismatch instead of setting runner-verification flags or changing shared configuration.

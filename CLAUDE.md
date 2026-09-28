@@ -192,7 +192,8 @@ never merged into the default branch. Full mechanism: **`docs/OPS_RUNBOOK.md`**.
 - Standing authorizations + closing brief → `docs/STANDING_AUTHORIZATIONS.md`
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
 - Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
-- Shared skills → `.claude/skills/` (process: `finite-work-handoff`, `session-brief`; research:
+- Shared skills → `.claude/skills/` (process: `finite-work-handoff`, `session-brief`; autonomous desk:
+  `claude-desk-continue`; research:
   `kalshi-idea-model`, `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
 - Evo fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`, `docs/EVO_SEARCH_CAPABILITY.md`
