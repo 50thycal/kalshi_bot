@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=AK","--find","Diesel","--window","250","--hits","6"],"id":"desk-aaa-ak-1249"}
+{"type":"noop"}
