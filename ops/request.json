@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-db-0435","sql":"select now(), (select count(*) from live_orders where strategy='Alimm1' and status='resting') resting"}
+{"type":"noop"}
