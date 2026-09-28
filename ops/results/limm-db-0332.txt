@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=cc-rmm-0928d
-# code f7218cb50dbcbe5b9d25ebdb86add91b5d1e1662 · started 2026-09-28T03:07:15Z
+# type=db  id=limm-db-0332
+# code f7218cb50dbcbe5b9d25ebdb86add91b5d1e1662 · started 2026-09-28T03:32:04Z
 Traceback (most recent call last):
   File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 619, in <module>
     raise SystemExit(serve())
