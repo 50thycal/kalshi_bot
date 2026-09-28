@@ -135,6 +135,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KXTOKENUSE` **graded 2026-09-24**: the week of 9/14 finalized at **128.895T** (summed from the market-share endpoint's now-closed 2026-09-14 bucket). The desk's pre-registered projection from Sunday evening (`D-2026-09-20-NP2`) was **128.6–130.2T** — the actual figure landed just inside the low end. The market's implied odds also called it right: >128 closed 98/98 (true, by 0.895T) and >130 closed near 0 (false). This is the first live test of the projection method and it held. The Saturday counterfactual (`D-2026-09-19-NP1`) is also confirmed: the >128 strike the desk passed on at 58¢ did clear, and the postmortem's lesson about a padded uncertainty band stands. |
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
 | `KXTOKENUSE` week of 9/21, **two-read confirmation, 2026-09-26**: 116.006T at 13:37Z, 121.521T at 19:14Z → interval pace **0.981 T/h**, *faster* than the week's own cumulative average (0.873 T/h), not slower. Both project 149.7–153.2T with 32.3h left to close, comfortably clearing 144T (would need the pace to fall to 0.695 T/h or below — beyond any hourly pace measured last week — to miss). The market moved some between reads (T142 56/74 → 77/88) but T144 was still only 33/56 (~44–56% implied) against a desk estimate near 0.85. Picked `D-2026-09-26-001`, YES @ 56¢. | `desk_fetch` market-share endpoint ×2 + two ladder reads, 2026-09-26 |
+| `D-2026-09-26-001` **graded 2026-09-28, correct call, WIN**: final week total **145.845T** (summed from the now-closed 2026-09-21 bucket), clearing 144T. But the actual figure landed much closer to the strike than the 149.7–153.2T the two-read pace math projected — the Saturday-evening interval pace (0.981 T/h) did not hold through the rest of the week. **First live test of the two-measurement method: directionally right, point estimate ran hot.** No money was ever risked (the operator never placed the order), so this grades the desk's judgment only. | `desk_fetch` market-share endpoint (final bucket), 2026-09-28 |
 | `KXDIESELD` daily ladder, 2026-09-24 check | AAA national diesel average has **turned down**, not up: $6.5276 (record, Tue 9/22) → $6.5217 (Wed 9/23) → $6.5141 (Thu 9/24), roughly −0.6 to −0.8¢/day. The T6.520 strike for Fri 9/25 traded ~9% implied YES, which lines up with a continued small decline landing just under $6.52 — the market looks efficient here, not mispriced. Worth recording because a naive trend read from the prior week (which was climbing) would have pointed the wrong way; checking the live print before trading averted a second R13-style error. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-24 |
 | `KXDIESELMON` (new series, first seen 2026-09-27) | Despite the "monthly" name, same single-day mechanism as `KXDIESELD`/`KXDIESELW` (R13: no source named, "the Diesel Price on \<date\>"). The decline continues but is **decelerating**: $6.5019 (Fri 9/25) → $6.4839 (Sat 9/26, −1.8¢) → $6.4709 (Sun 9/27, −1.3¢). A naive linear extrapolation to the Sep 30 strike lands ~$6.43–6.45, clearing the $6.40 line the market itself prices at 64–77% — no mispricing found with only two data points of a decelerating trend to go on. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-27 |
 
@@ -162,58 +163,47 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-27 ~13:39 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-28 ~04:09 UTC (Mon).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**No open real-money positions.** `D-2026-09-26-001` (`KXTOKENUSE-26SEP28-T144`, YES @ 56¢) was
-**never placed** — the operator confirmed Saturday evening (a live screenshot of the book, already
-trading ~84/16 by then) that the order never went in. It still grades at settlement as a judgment
-call either way (§5: "placed records what the operator did; a skipped pick still settles and still
-grades" — the desk's calibration is measured on its own read, not the subset that got executed).
-By the time the operator looked, the book had already moved most of the way to where the desk's own
-estimate (0.85) said it should be — the thesis is reading correctly so far, just with $0 actually
-at risk on it. **Settles Monday ~03:35 UTC — grade it first thing next session** (or this one, if
-the close has passed by the time this is read): `kalshi_desk_board --ticker
-KXTOKENUSE-26SEP28-T144` for the `result` field first, falling back to a fresh `desk_fetch` sum of
-the now-closed market-share bucket only if that's not yet posted.
+**No open real-money positions.** `D-2026-09-26-001` (`KXTOKENUSE-26SEP28-T144`, YES @ 56¢, never
+placed) **graded WIN** — final week total **145.845T**, clearing the 144T strike. Kalshi's own
+`result` field wasn't posted yet at grading time, so this rests on a direct sum of the now-closed
+market-share bucket. **Calibration note, worth remembering**: the actual figure landed much closer
+to the strike than the two-read pace math projected (149.7–153.2T) — the Saturday-evening interval
+pace (0.981 T/h) did not hold through the rest of the week. The *directional* call was right; the
+*point estimate* ran hot. No money was ever at risk on this one (operator never placed it), so this
+is a judgment-call grade only, not a real dollar.
 
-**Today's daily routine (13:34 UTC), zero-pick day, logged as `D-2026-09-27-NP1`:** branch
-restarted from `origin/claude/confident-goldberg-83u3q` (clean merge, unrelated autonomous-desks
-activity only). `KX*SHARE` and SOFR unchanged and still untradeable. One new instrument found:
-`KXDIESELMON-26SEP30` ("Diesel prices in Sep 2026") — despite the name, same single-day mechanism
-as `KXDIESELD`/`KXDIESELW` (R13, no source named). Checked the live AAA print before trusting the
-ladder: the decline continues but is **decelerating** ($6.5019 Fri → $6.4839 Sat, −1.8¢ → $6.4709
-Sun, −1.3¢). A naive extrapolation to the Sep 30 strike lands ~$6.43–6.45, clearing the $6.40 line
-the market already prices at 64–77% — no mispricing found with only two data points to go on.
-Climate/Weather empty again. Zero new picks.
+**Score so far: 3 correct calls out of 3 graded (2 with real money, +$1.65 realized; 1 judgment-call
+win, $0 at risk), 0 open, 6 no-picks logged.** Sample is still far too small to read as calibration
+(R6 — no claim before ~30 settled picks). The one real lesson from `D-2026-09-26-001`: a
+short-interval pace measured over ~5.6h can run hotter than the rest of the week actually delivers —
+worth padding the *low end* of a projection band a little more than this session's math did, without
+repeating the opposite (R14) mistake of padding it into meaninglessness. Next time this series is
+picked, treat the interval-pace projection as an upper bound, not a center.
 
-**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 0 open, 1 unplaced pick pending grade,
-6 no-picks logged.** Sample is still far too small to read as calibration (R6 — no claim before
-~30 settled picks); `D-2026-09-26-001` is the first pick made from a genuinely
-two-measurement-confirmed thesis rather than a single read or a book-vs-print check, and it grades
-Monday regardless of the operator not having risked money on it — worth watching for what it says
-about the method.
+**Today's daily routine has not yet run** (last ran 2026-09-27 13:34 UTC). This session's work so
+far is only the grading above; the board scan is still to do if this session continues, or it
+happens naturally at the next 13:34 UTC firing.
 
 **Standing windows:**
 
-- `KXTOKENUSE`: this week's pick (`D-2026-09-26-001`) grades Monday ~03:35 UTC — see above, top
-  priority for the next session. Next week's ladder opens Monday — repeat the two-read Saturday
-  plan, don't shortcut to one read.
+- `KXTOKENUSE`: this week's grade is done. Next week's ladder opens Monday — repeat the two-read
+  Saturday plan, but treat the interval pace as an upper bound per the calibration note above.
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
   the week. Pass.
 - `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
   live but only grades the day after — a same-day pick still needs a working forecast read, which
   doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further otherwise.
   Full detail in §6a.
-- `KXDIESELMON` / `KXDIESELMONAK`: new this week, same mechanism as the existing diesel series —
-  checked and passed today (above), not obviously mispriced. Re-check the live AAA print before any
-  future pick on either.
+- `KXDIESELMON` / `KXDIESELMONAK`: same mechanism as the existing diesel series, checked and passed
+  Sunday. Re-check the live AAA print before any future pick on either.
 
-**Scheduled check-ins bound to this session:** none armed beyond the daily routine. Grading
-`D-2026-09-26-001` is the next session's first job once Monday's close has passed. The "Desk:
-daily board read and picks" routine (13:30 UTC daily) is the only standing trigger and needs no
-action; a new session re-creates anything else it needs (playbook Startup Routine step 3).
+**Scheduled check-ins bound to this session:** none armed. The "Desk: daily board read and picks"
+routine (13:30 UTC daily) is the only standing trigger and needs no action; a new session re-creates
+anything else it needs (playbook Startup Routine step 3).
 
 **Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily,
 gridstatus.io and most data sites are blocked from the sandbox; `ercot.com` is now reachable
