@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-21","--window","900"],"id":"desk-20260928-final1"}
+{"type":"db","id":"limm-db-0435","sql":"select now(), (select count(*) from live_orders where strategy='Alimm1' and status='resting') resting"}
