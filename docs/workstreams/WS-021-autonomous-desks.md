@@ -177,6 +177,16 @@ usage is disabled, and configure/test a scheduled-mode HTTPS alert webhook. Keep
 `DESKS_RESEARCH_MODE=session`, `DESKS_EXTERNAL_RUNNERS_VERIFIED=false`, and the runner
 inactive until those checks and a deliberate activation pass.
 
+## App-session Continue skills — 2026-09-28
+
+The owner requested reusable app commands instead of repeating long handoffs. The Claude
+repository skill `/claude-desk-continue` fixes the desk identity and one-cycle workflow,
+including health gates, single Continue/claim semantics, bounded evidence capture, exact
+completion recovery, live-decision safeguards, durable database memory and concise readback.
+The matching ChatGPT command is installed as the account skill `$chatgpt-desk-continue`.
+Neither skill schedules background work, changes limits, starts a round or persists normal
+research in Git.
+
 
 ## App-session continuation — DEC-019
 
