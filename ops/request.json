@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-back-01","sql":"select 'order' k, market_ticker, side||' '||action||' '||limit_price||'x'||quantity v, status, created_at::text t from live_orders where strategy='Alimm1' and created_at > now()-interval '20 hours' union all select 'fill', market_ticker, side||' '||action||' '||yes_price||'x'||count, '', created_time::text from fills where created_time > now()-interval '20 hours' union all select 'now', '', '', '', now()::text order by t desc limit 60"}
+{"type":"noop"}
