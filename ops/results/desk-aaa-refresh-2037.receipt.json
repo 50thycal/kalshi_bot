@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "e368ebc20b1e95e05615ad420fa319c138e3610b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-28T20:38:46Z",
+  "id": "desk-aaa-refresh-2037",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-aaa-refresh-2037.receipt.json",
+  "result_file": "ops/results/desk-aaa-refresh-2037.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36480650842",
+  "service": null,
+  "started_at": "2026-09-28T20:38:46Z",
+  "targets": [],
+  "type": "script"
+}
