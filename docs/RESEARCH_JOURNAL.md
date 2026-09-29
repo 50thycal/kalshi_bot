@@ -1,5 +1,10 @@
 # Weather-markets research journal
 
+## MMSELL execution probes 2026-09-29 — RUNAWAY-CHASE and FLOW-VETO pre-registered, not yet run
+
+Calvin asked for new live-canary ideas for the MM cell and then for the two cheapest checks. The motivating read (ops `mmideas-q1b-0929`, `mmideas-parity-0929`): on Fmmsell10 since 2026-09-07, the twin trades live filled made +0.14¢ (n=674, 92.9% win). The ones live rested and never filled made +6.56¢ (n=197, 99.0% win). The matched-market gap is −0.09¢, so paper prices fills correctly and the whole gap is fill selection. Real money: +$1.02 over 22 days. Fills within 10 min lose (−0.73¢, n=404); later fills win (+1.46¢, n=270). Two read-only probes, bars frozen before any run: [RUNAWAY-CHASE](MMSELL_RUNAWAY_CHASE_THESIS.md) (take the orders the market runs away from) and [FLOW-VETO](MMSELL_FLOW_VETO_THESIS.md) (skip posting into active YES buying). A PROMOTE on either makes it a candidate treatment arm for a successor canary. It does not authorize arming.
+
+
 ## LIQUIDITY-INCENTIVE MM 2026-09-17 — shadow running; reward unit confirmed, share model not
 
 Enabled on the evo service at 12:24:54Z (ops `limm-on-1`, VERIFIED). First read 12:30Z:
