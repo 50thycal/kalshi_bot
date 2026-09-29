@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://www.ercot.com/api/1/services/read/dashboards/loadForecastVsActual.json","--raw","--max-chars","1800"],"id":"gridpin-recon-2"}
+{"type":"script","name":"desk_fetch","args":["https://www.ercot.com/api/1/services/read/dashboards/supply-demand.json","--raw","--max-chars","1800"],"id":"gridpin-recon-3"}
