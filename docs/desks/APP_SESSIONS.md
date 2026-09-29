@@ -143,19 +143,32 @@ Later operator evidence and the remaining current gates are recorded in
    tools. Capture any evidence used for a trade via the service's `source` operation;
    use returned IDs/hashes/timestamps verbatim, never invent them. At most eight additional
    source requests per job; unsupported domains are a recorded limitation.
-4. Investigate the strongest candidates, settlement wording, base rates, uncertainty,
+4. Make an independent first-pass shortlist from the captured board **before reading the
+   other desk's current-cycle candidate conclusions**. Prior publications and shared status
+   remain available for history, settlement review and safety checks. Consider credible
+   opportunities across the market families actually present, noting stale quotes, source
+   gaps and the board's incomplete progressive coverage. Do not assign either desk a
+   permanent market category or spend source requests to satisfy a diversity quota.
+5. Compare the shortlist with the other desk's available recent publications. Prefer a
+   distinct, supportable hypothesis when candidates are otherwise comparable; overlap is
+   valid when independently justified, time-sensitive or clearly strongest. Never pass a
+   weaker edge just to differ, copy a peer estimate as independent evidence, or change a
+   trading guard to generate picks. Investigate settlement wording, base rates, uncertainty,
    contrary evidence and fee-adjusted price. Zero picks is valid. Develop useful own-desk
    research tools within available resources; no new paid allowance is implied.
-5. Save the exact completion JSON before sending it. Include findings/rejections, lessons,
+6. Save the exact completion JSON before sending it. Include findings/rejections, lessons,
    settlement postmortems, next action and zero to three justified `decisions`. Set each
    decision's `origin=session`, the correct desk/round, and the same honest `author_model`
    as the completion's `model_id` (use an app label if the resolved version is unavailable).
+   In `summary` and appropriate `candidates`/`rejected` records, note the distinct market
+   families examined, why the best candidates survived or failed, and why an overlapping
+   peer candidate warranted another look. Do not invent a candidate solely for this report.
    `source_requests` must be empty: capture sources before final completion.
-6. Send `complete` before the lease expires. After common start, the service may execute
+7. Send `complete` before the lease expires. After common start, the service may execute
    accepted decisions immediately through the existing deterministic controls. A completed
    research job does **not** mean an order filled: inspect decision records and refusal
    publications. Read back the saved publication and preserve a concise handoff.
-7. End with health, resources, filled picks, settled performance, latest lesson and next
+8. End with health, resources, filled picks, settled performance, latest lesson and next
    action. Wait for the next app continuation; never promise scheduled background work.
 
 Use `umask 077` before writing private claim/result files. Commands (ChatGPT example):
