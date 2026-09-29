@@ -69,7 +69,7 @@ def _leg(side, price, qty, ticker="KXTEST-A"):
     )
 
 
-def _pair(yes=40, no=55, qty=None, ticker="KXTEST-A", no_qty=None):
+def _pair(yes=3, no=4, qty=None, ticker="KXTEST-A", no_qty=None):
     q = qty if qty is not None else limm.pair_quantity(yes, no)
     y, n = _leg(limm.SIDE_YES, yes, q, ticker), _leg(limm.SIDE_NO, no, no_qty or q, ticker)
     return limm.PairQuote(
@@ -146,8 +146,8 @@ def test_refuses_a_leg_above_the_per_leg_dollar_cap(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    too_many = int(limm.MAX_ORDER_DOLLARS * 100 // 55) + 1
-    assert _place(ex, settings, pair=_pair(yes=40, no=55, qty=too_many)) == "gate:size"
+    too_many = int(limm.MAX_ORDER_DOLLARS * 100 // 5) + 1
+    assert _place(ex, settings, pair=_pair(yes=4, no=5, qty=too_many)) == "gate:size"
     assert ex.client.placed == []
 
 
@@ -156,7 +156,7 @@ def test_refuses_unequal_legs_and_a_pair_with_no_edge(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    assert _place(ex, settings, pair=_pair(yes=40, no=55, qty=5, no_qty=6)) == "gate:size"
+    assert _place(ex, settings, pair=_pair(yes=3, no=4, qty=5, no_qty=6)) == "gate:size"
     assert _place(ex, settings, pair=_pair(yes=45, no=55, qty=5)) == "gate:size"
     assert ex.client.placed == []
 
@@ -239,19 +239,19 @@ def test_places_both_legs_post_only_with_the_right_yes_side_prices(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    pair = _pair(yes=40, no=55)
+    pair = _pair(yes=3, no=4)
     assert _place(ex, settings, pair=pair) == "placed"
     yes_order, no_order = ex.client.placed
-    assert (yes_order["side"], yes_order["price"]) == ("bid", "0.4000")    # buying YES
-    assert (no_order["side"], no_order["price"]) == ("ask", "0.4500")      # NO 55c == YES ask 45c
+    assert (yes_order["side"], yes_order["price"]) == ("bid", "0.0300")    # buying YES
+    assert (no_order["side"], no_order["price"]) == ("ask", "0.9600")      # NO 4c == YES ask 96c
     for o in (yes_order, no_order):
         assert o["count"] == f"{pair.quantity:.2f}"                        # decimal STRINGS
         assert o["post_only"] is True and o["time_in_force"] == "good_till_canceled"
     with db.session_scope() as s:
         rows = s.scalars(select(m.LiveOrder).order_by(m.LiveOrder.id)).all()
         assert [(r.side, r.action, r.limit_price, r.quantity, r.status) for r in rows] == [
-            ("yes", "buy", 40, pair.quantity, "resting"),
-            ("no", "buy", 55, pair.quantity, "resting")]
+            ("yes", "buy", 3, pair.quantity, "resting"),
+            ("no", "buy", 4, pair.quantity, "resting")]
 
 
 def test_a_failed_second_leg_leaves_the_first_resting_and_says_so(settings):

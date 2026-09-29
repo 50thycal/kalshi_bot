@@ -1179,3 +1179,11 @@ formula omitted Kalshi's $1-per-netted-contract credit — which tripped the SHA
 breaker and paused every live book. Fixed in the settlement P&L (with a one-time self-heal of
 the stored row) and in the reward ledger (positions carried between readings). Operator raised
 `MAX_DAILY_LOSS` 25 -> 50 (VERIFIED in production). [Thesis §9.40](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-29 — cheap pairs only: per-leg cap 90c -> 5c (§9.41)
+
+Operator decision: both legs of a new pair must be at or below 5c. Lopsided gas pairs were most
+of the realized loss (≈ $12.6 of ≈ $15.9) while cheap large pairs earned the reward. Exit legs are
+unaffected. Open question recorded: Kalshi reportedly withholds any program reward under $1.00,
+which would explain $0 paid so far; to be checked against the balance around Oct 1.
+[Thesis §9.41](../LIQUIDITY_INCENTIVE_THESIS.md).

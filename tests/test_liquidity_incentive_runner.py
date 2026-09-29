@@ -125,7 +125,7 @@ def test_not_armed_unless_every_switch_is_on(live_db, settings):
 
 def test_an_unarmed_cycle_fetches_no_books_and_places_nothing(live_db, settings):
     settings.liquidity_incentive_live_enabled = False
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
         out = _cycle(client, settings, s)
@@ -164,7 +164,7 @@ def test_a_book_that_cannot_be_fetched_is_an_outcome_not_an_exception(live_db, s
 @pytest.mark.parametrize("close_hours", [None, limm.MIN_HOURS_TO_CLOSE - 1,
                                          limm.MAX_HOURS_TO_CLOSE + 1, -190.0])
 def test_a_market_outside_the_close_window_is_never_fetched(live_db, settings, close_hours):
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A", close_hours=close_hours)
         out = _cycle(client, settings, s)
@@ -175,7 +175,7 @@ def test_a_market_outside_the_close_window_is_never_fetched(live_db, settings, c
 
 
 def test_places_a_pair_on_one_market(live_db, settings):
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
         out = _cycle(client, settings, s)
@@ -186,7 +186,7 @@ def test_places_a_pair_on_one_market(live_db, settings):
 
 
 def test_soonest_closing_first_and_stops_at_the_market_cap(live_db, settings):
-    books = {t: _book([(20, 500)], [(70, 500)]) for t in ("KXTEST-A", "KXTEST-B", "KXTEST-C")}
+    books = {t: _book([(3, 500)], [(4, 500)]) for t in ("KXTEST-A", "KXTEST-B", "KXTEST-C")}
     client = FakeClient(books)
     with db.session_scope() as s:
         _program(s, "KXTEST-A", close_hours=40.0)
@@ -199,10 +199,10 @@ def test_soonest_closing_first_and_stops_at_the_market_cap(live_db, settings):
 
 
 def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings):
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(75, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(4, 500)], [(5, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        # $40 committed elsewhere; a 20/75 pair commits ~$12 more, past the $50 ceiling.
+        # $40 committed elsewhere; a 4/5 pair commits $18 more, past the $50 ceiling.
         s.add(m.LiveOrder(market_ticker="KXOTHER-Z", strategy=limm.LIVE_TAG, side="yes",
                           action="buy", limit_price=40, quantity=100, status="resting",
                           created_at=NOW))
@@ -215,7 +215,7 @@ def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings
 
 def test_an_excluded_series_is_never_quoted(live_db, settings):
     settings.liquidity_incentive_excluded_series = "kxtest"   # case-insensitive on purpose
-    client = FakeClient({"KXTEST-A": _book([(10, 500)], [(85, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
         out = _cycle(client, settings, s)
@@ -225,7 +225,7 @@ def test_an_excluded_series_is_never_quoted(live_db, settings):
 
 
 def test_a_program_ending_too_soon_is_never_selected(live_db, settings):
-    client = FakeClient({"KXTEST-A": _book([(10, 500)], [(85, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A", hours=limm.MIN_PROGRAM_HOURS_REMAINING - 0.5)
         out = _cycle(client, settings, s)
@@ -235,7 +235,7 @@ def test_a_program_ending_too_soon_is_never_selected(live_db, settings):
 
 def test_book_fetches_are_bounded_per_cycle(live_db, settings):
     settings.liquidity_incentive_live_max_book_fetches = 2
-    books = {f"KXTEST-{i}": _book([(10, 500)], [(85, 500)]) for i in range(5)}
+    books = {f"KXTEST-{i}": _book([(3, 500)], [(4, 500)]) for i in range(5)}
     client = FakeClient(books)
     with db.session_scope() as s:
         for i, t in enumerate(books):
@@ -253,16 +253,16 @@ def test_both_legs_are_mirrored_to_the_twin(live_db, settings):
 
     settings.live_paper_twin_enabled = True
     settings.live_paper_twins = f"{limm.LIVE_TAG}:{limm.TWIN_TAG}"
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(75, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(2, 500)], [(5, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
         out = _cycle(client, settings, s, twin_harness=TwinHarness(settings))
     assert out["placed"] == 1 and out["twin_opened"] == 2
-    qty = limm.pair_quantity(20, 75)
+    qty = limm.pair_quantity(2, 5)
     with db.session_scope() as s:
         trades = s.query(m.PaperTrade).filter(m.PaperTrade.strategy == limm.TWIN_TAG).all()
         assert sorted((t.side, int(t.assumed_price), int(t.quantity)) for t in trades) == [
-            ("no", 75, qty), ("yes", 20, qty)]
+            ("no", 5, qty), ("yes", 2, qty)]
 
 
 # ------------------------------------------------------- event cap (thesis §9.15)
@@ -270,8 +270,8 @@ def test_both_legs_are_mirrored_to_the_twin(live_db, settings):
 
 def test_two_markets_of_one_event_are_one_commitment(live_db, settings):
     books = {
-        "KXRT-RES-93": _book([(3, 500)], [(90, 500)]),
-        "KXRT-RES-94": _book([(10, 500)], [(80, 500)]),
+        "KXRT-RES-93": _book([(3, 500)], [(4, 500)]),
+        "KXRT-RES-94": _book([(2, 500)], [(3, 500)]),
     }
     client = FakeClient(books)
     with db.session_scope() as s:
@@ -284,7 +284,7 @@ def test_two_markets_of_one_event_are_one_commitment(live_db, settings):
 
 
 def test_another_live_book_holding_the_event_blocks_it(live_db, settings):
-    client = FakeClient({"KXRT-RES-93": _book([(3, 500)], [(90, 500)])})
+    client = FakeClient({"KXRT-RES-93": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXRT-RES-93", event="KXRT-RES")
         s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
@@ -299,7 +299,7 @@ def test_another_live_book_holding_the_event_blocks_it(live_db, settings):
 
 
 def test_an_unrelated_event_is_not_blocked(live_db, settings):
-    client = FakeClient({"KXOTHER-1": _book([(4, 500)], [(90, 500)])})
+    client = FakeClient({"KXOTHER-1": _book([(4, 500)], [(5, 500)])})
     with db.session_scope() as s:
         _program(s, "KXOTHER-1", event="KXOTHER")
         s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
@@ -732,7 +732,7 @@ def test_a_portfolio_read_that_fails_cannot_stop_the_book_placing(live_db, setti
     exact failure that happened in production when the ledger was wired to the read-only shadow
     client — it recorded a loop_error and carried on, which is the behaviour kept here."""
     _clear_ledger()
-    client = LedgerClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])}, fail=True)
+    client = LedgerClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])}, fail=True)
     ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
@@ -777,7 +777,7 @@ def _stuck_quake(s, ticker, *, close_hours=-190.0):
 def test_closed_markets_awaiting_settlement_do_not_block_new_pairs(live_db, settings):
     """Production 2026-09-25: three closed, unsettled quake positions against a cap of two left
     `no_slots` on every cycle — the book could never quote again until Kalshi settled them."""
-    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         for t in ("KXQUAKE-1", "KXQUAKE-2", "KXQUAKE-3"):
             _stuck_quake(s, t)
@@ -821,8 +821,8 @@ def test_excluded_series_are_dropped_before_any_book_is_fetched(live_db, setting
     so the bounded fetch budget was spent on them every cycle and nothing was ever placed."""
     settings.liquidity_incentive_excluded_series = "KXOTHERBOOK"
     settings.liquidity_incentive_live_max_book_fetches = 2
-    books = {f"KXOTHERBOOK-{i}": _book([(20, 500)], [(70, 500)]) for i in range(3)}
-    books["KXTEST-OK"] = _book([(20, 500)], [(70, 500)])
+    books = {f"KXOTHERBOOK-{i}": _book([(3, 500)], [(4, 500)]) for i in range(3)}
+    books["KXTEST-OK"] = _book([(3, 500)], [(4, 500)])
     client = FakeClient(books)
     with db.session_scope() as s:
         for i in range(3):

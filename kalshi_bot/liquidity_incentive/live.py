@@ -65,9 +65,11 @@ MAX_OPEN_ORDERS = 2
 #: Total dollars committed at once. `MAX_OPEN_ORDERS * 2 * MAX_ORDER_DOLLARS` must stay within it.
 MAX_STRATEGY_EXPOSURE_USD = 50.00
 #: Refuse a leg priced above this. Was the one-sided book's 25c cheap-side cap; a pair always
-#: has a dear side, so the cap now bounds each leg instead, keeping a single-leg fill off the
-#: near-certain favourites where a fill is almost always the losing side of news.
-MAX_PRICE_CENTS = 90
+#: has a dear side, so the cap bounds each leg. 90 -> 5 (§9.41, operator decision 2026-09-29):
+#: only cheap-both-sides pairs. The lopsided pairs the 90c cap admitted (gas at 10c/28c NO legs)
+#: were ~$12.6 of the book's ~$16 realized loss while earning cents of reward; a 5c leg bounds a
+#: lone-leg loss to 5c a contract.
+MAX_PRICE_CENTS = 5
 #: A pair must lock at least this much if both legs fill: yes_bid + no_bid <= 100 - edge.
 MIN_PAIR_EDGE_CENTS = 1
 #: A program must still have at least this long to run, so the order can rest and be scored.
