@@ -144,4 +144,22 @@ sources exist. It did not look at any Kalshi price.
 
 ## RESULTS
 
-*(not yet run)*
+**Run 1, 2026-09-29 (ops `gridpin-census-20260929-1`): VOID — census defect, not a verdict.**
+
+The census read the event ticker date as the operating day. Kalshi actually labels
+`KXTXERCOTPEAKD` events by their **UTC close date**. `-26SEP28` is "peak electricity demand on
+Sep 27, 2026", opens 09-26 23:55 CT and closes 09-27 23:55 CT (ops `gridpin-diag-1`). That
+shifted every C1 grade and every C0 post-19:00-CT window by one day, which produced the
+impossible reads: 0 of 400 rungs traded after 19:00 CT on a market that trades until 23:55,
+85.1% reproduction, and a 4,612 MW maximum miss. The fix takes the operating day from the event
+title, falling back to the ticker date minus one. **No bar changed.**
+
+Run 1's C2 reads do not depend on event dating, so they stand as measurements:
+
+- The dashboard hourly value was posted 40 minutes after the hour ended.
+- The dashboard's previous-day maximum equalled NP6-346 exactly on 09-28 (0 of 19 rungs flipped).
+- The hourly mean of 5-minute demand reproduced the posted hourly value to 0.06% (max 0.11%).
+- Today's 5-minute peak minus hourly peak was +125 MW.
+
+The sibling grid series found were `KXTXERCOTPEAK`, `KXERCOTX`, `KXUTILITYERCOT` and
+several PJM series.
