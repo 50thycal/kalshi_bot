@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_survey","args":["--days","14","--top-series","60"],"id":"ideas0929-survey"}
+{"type":"script","name":"kalshi_market_probe","args":["KXTXERCOTPEAKD-26SEP26","KXTXERCOTPEAKD-26AUG14","KXTXERCOTPEAKD-26JUL15","KXTXERCOTPEAKD-26JUN15","KXTOKENUSE-26SEP28","KXTOKENUSE-26AUG03","KXTOKENUSE-26JUL06","KXTOKENUSE-26JUN01"],"id":"ideas0929-probe1"}
