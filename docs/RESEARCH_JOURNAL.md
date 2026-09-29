@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MMSELL execution probes 2026-09-29 — RUNAWAY-CHASE and FLOW-VETO both KILLED
+
+Both probes ran first time on production data, the same day they were registered, and both hit a pre-registered kill criterion.
+
+- **[RUNAWAY-CHASE](MMSELL_RUNAWAY_CHASE_THESIS.md):** mean Δ −0.40¢ at n=86. 62% of "passed" orders filled passively anyway, so chasing them cost the spread plus the fee. The 33 true misses gained +3.61¢, but they are a minority.
+- **[FLOW-VETO](MMSELL_FLOW_VETO_THESIS.md):** YES-taker flow before posting predicts fast fills (72% vs 44%) but not losing ones (+0.15¢ vs +0.32¢). It would have cut 59% of the book for a −$0.67 net effect.
+
+**What this leaves.** The fill gap is real (unfilled twin trades +6.56¢), but neither execution lever captures it. The losses in filled trades line up with *series* (MLB spread/total, MLS, WTA) rather than timing or flow. That points the next MM-cell test at universe and size (idea #3), not execution. Per the operator's plan, no multi-canary infrastructure is built on these results.
+
+
 ## MMSELL execution probes 2026-09-29 — RUNAWAY-CHASE and FLOW-VETO pre-registered, not yet run
 
 Calvin asked for new live-canary ideas for the MM cell and then for the two cheapest checks. The motivating read (ops `mmideas-q1b-0929`, `mmideas-parity-0929`): on Fmmsell10 since 2026-09-07, the twin trades live filled made +0.14¢ (n=674, 92.9% win). The ones live rested and never filled made +6.56¢ (n=197, 99.0% win). The matched-market gap is −0.09¢, so paper prices fills correctly and the whole gap is fill selection. Real money: +$1.02 over 22 days. Fills within 10 min lose (−0.73¢, n=404); later fills win (+1.46¢, n=270). Two read-only probes, bars frozen before any run: [RUNAWAY-CHASE](MMSELL_RUNAWAY_CHASE_THESIS.md) (take the orders the market runs away from) and [FLOW-VETO](MMSELL_FLOW_VETO_THESIS.md) (skip posting into active YES buying). A PROMOTE on either makes it a candidate treatment arm for a successor canary. It does not authorize arming.
