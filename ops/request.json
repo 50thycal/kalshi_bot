@@ -1,1 +1,1 @@
-{"type":"noop","id":"ideas0929-noop"}
+{"type":"script","name":"kalshi_seasonpin_census","args":["--max-event-pages","80"],"id":"seasonpin-census-20260929-1"}
