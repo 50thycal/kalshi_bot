@@ -2,8 +2,7 @@
 
 *Thesis written 2026-09-29, before the probe ran. The predictions, bars and kill criteria are
 pre-registered here and are not re-scoped after results. Operator request (Calvin, 2026-09-29):
-"build the checks for 1 and 2 first and see how those play out." Status: **PROBE BUILT — not
-yet run.** Companion probe: [`MMSELL_RUNAWAY_CHASE_THESIS.md`](MMSELL_RUNAWAY_CHASE_THESIS.md).*
+"build the checks for 1 and 2 first and see how those play out." Status: **KILL (probe run 2026-09-29) — family closed; see RESULTS.** Companion probe: [`MMSELL_RUNAWAY_CHASE_THESIS.md`](MMSELL_RUNAWAY_CHASE_THESIS.md).*
 
 ## One-liner
 
@@ -126,4 +125,36 @@ This is the same book as Fmmsell10. It is a selection filter, not a new edge.
 
 ## RESULTS
 
-*(not yet run)*
+**Probe run 2026-09-29 (ops `veto-probe-20260929-1`, code `131ae0f`). Verdict: KILL.**
+
+| gate | result |
+|---|---|
+| V0 instrument | tape fetched for 999 of 999 orders; 944 settled and scored → PASS |
+| V1 floor | 454 vetoed fills → PASS |
+| V2 vetoed fills | mean realized **+0.15¢** (bar ≤ −1.0¢) → fail |
+| V3 separation | kept +0.32¢ − vetoed +0.15¢ = **+0.17¢**, 5th percentile −3.14¢ → fail |
+| V4 capacity | veto rate **59.2%**, above 50%, and separation ≤ +2¢ → **KILL** |
+
+**What it found.** Pre-post flow does predict *speed*: 72.0% of vetoed fills landed within
+10 min, against 43.6% of kept fills, so the mechanism check passes. But in this book, speed
+does not predict *loss*. The vetoed fills made +0.15¢ and the kept fills +0.32¢, which is
+indistinguishable. The veto would have cost real money a net −$0.67 while cutting 59% of the
+book. YES-taker flow is simply the normal state of these markets (the longshot buying the
+strategy sells into); it is not a toxicity marker. This extends OFLOW's null (2026-07-22) from
+next-move prediction to maker fill selection.
+
+**Sensitivity (reported only; does not decide):**
+
+- W=5 min: separation +2.34¢, but the 5th percentile is −0.88¢ and the veto rate is 50.6%;
+- W=30 min: separation +0.26¢.
+
+The W=5 row fails the same bars and is not a basis for a re-run. A new window chosen after
+seeing it would be a re-scoped hypothesis, and would need a fresh sample.
+
+**Side observation, not a finding.** The vetoed fills by series repeat the in-sample loss cells
+already visible in the twin split (KXMLBSPREAD, KXMLSGAME, KXWTA*). The series explains the
+losses; flow does not. That is a universe question, which belongs to idea #3 or the existing
+universe work, not to this probe.
+
+**Decision (pre-committed).** Family closed: pre-post tape flow does not identify toxic mmsell
+fills.

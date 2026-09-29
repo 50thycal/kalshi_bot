@@ -2,8 +2,7 @@
 
 *Thesis written 2026-09-29, before the probe ran. The predictions, bars and kill criteria are
 pre-registered here and are not re-scoped after results. Operator request (Calvin, 2026-09-29):
-"build the checks for 1 and 2 first and see how those play out." Status: **PROBE BUILT — not
-yet run.** Companion probe: [`MMSELL_FLOW_VETO_THESIS.md`](MMSELL_FLOW_VETO_THESIS.md).*
+"build the checks for 1 and 2 first and see how those play out." Status: **KILL (probe run 2026-09-29) — family closed; see RESULTS.** Companion probe: [`MMSELL_FLOW_VETO_THESIS.md`](MMSELL_FLOW_VETO_THESIS.md).*
 
 ## One-liner
 
@@ -148,4 +147,32 @@ not a new edge, and adds no diversification.
 
 ## RESULTS
 
-*(not yet run)*
+**Probe run 2026-09-29 (ops `chase-probe-20260929-1`, code `131ae0f`). Verdict: KILL.**
+
+| gate | result |
+|---|---|
+| C0 instrument | 397 of 501 orders (79.2%) had a usable tick → PASS |
+| C1 floor | 86 triggered and settled (14 more still open) → PASS |
+| C2 primary | mean Δ **−0.40¢**, bootstrap 5th percentile −0.97¢, total −$0.35 → **KILL** (≤ 0 at n ≥ 40) |
+| C3 chase set | mean policy +2.88¢, win 98.8%, mean (C − L) +1.95¢ → pass, but C2 decides |
+
+**Why it fails.** The trigger does not isolate the winners we miss. Of the 86 triggered orders,
+**61.6% filled passively anyway** after the trigger (n=53). On those, chasing costs about 2.9¢
+each: the 2¢ worse price plus the 1¢ taker fee. On the 33 that never filled, the chase gained
++3.61¢ each, with a 100% win rate. The premise holds for those 33, but they are too rare
+against the orders that would have filled anyway. Being passed by a better NO bid is common
+and short-lived; it is not a sign the market has left us.
+
+**Sensitivity (reported only; it does not decide and does not re-open the family):**
+
+- K=3 −0.94¢ (n=144);
+- persistence 0 s −0.93¢ (n=122);
+- persistence 60 s +0.38¢ (n=50), 5th percentile −0.38¢;
+- K=1 n=4.
+
+No row clears the bar. Tuning persistence until one does would be re-scoping after results.
+
+**Decision (pre-committed).** Conditional taker chasing on the mmsell book is ruled out. What
+this closes is a *passing-trigger* chase. A trigger that could tell apart the orders that will
+never fill, rather than the ones that were merely passed, would be a mechanically new premise
+and would need its own pre-registration.
