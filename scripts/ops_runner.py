@@ -208,6 +208,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_quote_parity",
     "mmsell_queue_position",
     "mmsell_queue_cancel_baseline",
+    "mmsell_chase_probe",
+    "mmsell_flow_veto_probe",
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",
