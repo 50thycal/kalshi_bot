@@ -12,6 +12,19 @@ real volume both still unconfirmed. Full probe (`kalshi_seasonpin_study.py`) int
 yet written for either family — see "SEASONPIN CENSUS 2026-07-12" in `RESEARCH_JOURNAL.md` for
 the full readout and the recommended follow-up before a probe/no-probe call.
 
+**Re-run 2026-09-29 (ops `seasonpin-census-20260929-1`): KILL on the census's own latency gate.**
+The MLB season ended 09-27, so the census found 821 settled rungs across 47 win-total-shaped series
+(MLB, NFL, NCAAF, WNBA and others). Every sampled rung has `can_close_early: true`, a 300 s
+settlement timer, and a `close_time` within hours of the game that decided it. For example,
+`KXNFLWINS-27WAS-17` closed 2026-09-14 01:00Z, the night of Washington's first loss, and
+`KXMLBWINS-LAD-26-T110/T115` both closed 2026-09-08 19:00Z. So the post-decided window the thesis
+trades is the exchange's close latency, not days. That meets the pre-registered kill: "median
+decided→settled window <24h → KILL". Caveat: decided-dates are inferred from the close-time pattern
+(the NFL 17-win rungs close after week 1, 16-win after week 2), not reconciled against game
+results, and the census printed volume as 0
+for every series, which looks like a field-name issue and does not bear on the latency finding.
+Family closed.
+
 ## One-liner
 
 On Kalshi season win-total ladders (MLB now, NFL from September), each rung's outcome becomes

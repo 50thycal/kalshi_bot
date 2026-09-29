@@ -1,5 +1,10 @@
 # Weather-markets research journal
 
+## Idea model 2026-09-29 (outside the maker cell): GRIDPIN to census; SEASONPIN KILL; ECON-REACT still HOLD
+
+Calvin asked for ideas outside the MM cell after the chase/veto kills. The run screened 18 candidates ([report](IDEA_MODEL_20260929.md)). **GRIDPIN** is the one promotion: an ERCOT daily-peak pin with the PIN15 shape (settlement on hourly-integrated load, while the dashboard shows 5-minute demand), taken as a taker after the published value decides a rung. It goes to a census first ([thesis](GRIDPIN_THESIS.md)). The two fired holds were re-run the same day. **SEASONPIN is KILLED**: Kalshi closes win-total rungs within hours of their being decided (`can_close_early`), so the post-decided window it needed does not exist. **ECON-REACT stays HOLD**: the settled-events scan still reaches only 13 econ prints; the next run needs series-level enumeration. TOKENPIN is a new HOLD (5 settled weeks). 11 candidates were killed.
+
+
 ## MMSELL execution probes 2026-09-29 — RUNAWAY-CHASE and FLOW-VETO both KILLED
 
 Both probes ran first time on production data, the same day they were registered, and both hit a pre-registered kill criterion.
