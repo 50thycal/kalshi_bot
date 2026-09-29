@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## GRIDPIN census 2026-09-29 — HOLD (accrual); the mechanics check out
+
+Run 2 of the [ERCOT daily-peak census](GRIDPIN_THESIS.md), after a day-alignment fix (#490): Kalshi labels these events by UTC close date, so run 1 graded the wrong day. Results:
+
+- ERCOT's NP6-346 report reproduces **all 448** settled rungs (max miss 0.7 MW).
+- The same hourly number is posted on the dashboard within about an hour, and can be rebuilt from 5-minute demand to 0.06%.
+- The market does trade after the peak: 173 rungs printed after 19:00 CT.
+
+The only shortfall is 32 settled days against a floor of 40. Re-run at 60 days, around the end of October. One caution: on today's single reading, the 5-minute vs hourly gap was just +125 MW against 500 MW strikes, so any edge would have to come from rungs the hourly maximum has already decided that still trade at interior prices (P1), not from the dashboard-mismatch story (P3).
+
+
 ## MMSELL THIN-MARKET 2026-09-29 — KILL; every selection lever tried today is null
 
 [THIN-MARKET](MMSELL_THIN_MARKET_THESIS.md) tested whether mmsell fills in markets that traded little over the prior 24 h escape adverse selection. It ran out-of-sample on the pre-9/7 live books, with Fmmsell10 as confirmation. Thin-market fills were **worse**, not better (−0.53¢ and −1.36¢ separation), and the busiest tercile was the only positive one in both samples. Along with RUNAWAY-CHASE, FLOW-VETO and the series-persistence read, this closes the execution and selection search on the maker cell for now. The live edge is about +0.2¢/fill and no tested lever moves it.

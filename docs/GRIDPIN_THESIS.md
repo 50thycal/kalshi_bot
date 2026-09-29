@@ -2,7 +2,7 @@
 
 *Thesis written 2026-09-29, before any validation ran. The predictions below are pre-registered
 and are not re-scoped after results. Promoted from [`IDEA_MODEL_20260929.md`](IDEA_MODEL_20260929.md)
-(S1) on Calvin's request ("run the GRIDPIN next"). Status: **CENSUS BUILT — not yet run.**
+(S1) on Calvin's request ("run the GRIDPIN next"). Status: **CENSUS HOLD (accrual), run 2 on 2026-09-29. C1 and C2 pass; C0 is short only on days. See RESULTS.**
 Census script: `scripts/kalshi_gridpin_census.py`.*
 
 **One-liner.** Late in the Texas day, after the afternoon peak, the day's maximum *hourly-integrated*
@@ -163,3 +163,23 @@ Run 1's C2 reads do not depend on event dating, so they stand as measurements:
 
 The sibling grid series found were `KXTXERCOTPEAK`, `KXERCOTX`, `KXUTILITYERCOT` and
 several PJM series.
+
+**Run 2, 2026-09-29 (ops `gridpin-census-20260929-2`, code `c603161`): HOLD (accrual).**
+
+This run used the day fix from #490. No bar changed.
+
+| gate | result |
+|---|---|
+| C0 universe | 448 settled rungs over **32 event-days** (08-28 .. 09-28), below the floor of 40, so **short**. Settled rungs with volume: **413** (floor 150, pass). Rungs traded after 19:00 CT: **173 of 400 checked** (floor 60, pass). |
+| C1 grading source | NP6-346-CD reproduces **448 / 448 (100.0%)** settled rungs. Daily maximum minus Kalshi `expiration_value`: median +0.0 MW, maximum absolute difference 0.7 MW over 29 days. **PASS** |
+| C2 same-day timing | The hourly `systemLoad` was posted 48 min after the hour ended (bar ≤ 90). The 09-28 dashboard maximum equals NP6-346 exactly, with 0 of 19 rungs flipped. **PASS** |
+
+**Reported, never decides:**
+
+- Today's 5-minute peak was 81,037 MW against an hourly peak of 80,912 MW, a gap of **+125 MW**, which is small against the 500 MW strike spacing.
+- The hourly mean of the 5-minute demand reproduces the posted hourly value to 0.06% (maximum 0.11%), so the settlement value can be computed live, minutes after each hour closes.
+
+**What this means.** The mechanics hold up. The contract settles exactly on NP6-346's hourly maximum. The same number is available live from ERCOT's dashboard within about an hour, or within minutes if computed from the 5-minute feed. And the market does keep trading after the peak: 173 rungs printed after 19:00 CT. The only thing missing is history. On one day of data, the P3 "5-minute vs hourly" gap looks too small to carry the edge by itself (+125 MW against 500 MW spacing). If there is an edge, it would come from P1: rungs already decided by the hourly running maximum that still trade at interior prices.
+
+**Trigger (as pre-registered).** Re-run this census once the settled day count reaches 60, around the end of October 2026. At that point C0 clears on days as well, and the full probe (`scripts/kalshi_gridpin_study.py`, P1–P4) becomes buildable. Sibling series noted for sizing: `KXTXERCOTPEAK`, `KXERCOTX`, `KXUTILITYERCOT`, and PJM (`KXPAPJM`, `KXUTILITYPJMWEST`).
+
