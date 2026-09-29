@@ -5,6 +5,15 @@ validation ran; the falsifiable predictions below are pre-registered so the test
 quietly re-scoped after the fact. Status: **HOLD — testability-thin** (probe run 2026-07-21;
 see RESULTS).*
 
+## RE-RUN 2026-09-29 (ops `econ-react-20260929-1`): still HOLD, testability-thin
+
+16,000 settled events were scanned. The strict econ-print filter matched **13 settled** markets
+(against 1,222 open), and only **2** had candle coverage. Neither showed a detectable release
+jump, so P0 is still unmet. The binding constraint is how few settled markets the public
+settled-events scan reaches, not calendar time. The next run should enumerate by
+`series_ticker` (KXCPI, KXPAYROLLS, KXU3, KXGDP, and adding `KXJOBLESS`/`KXICSA` as the thesis
+says) rather than paging all settled events. That is a script change, not a re-run.
+
 ## RESULTS (2026-07-21 probe run — `econ_react_study`, de-contaminated v2)
 
 **Verdict: HOLD (P0 testability not yet met) — not a kill.** The first run (v1) appeared to

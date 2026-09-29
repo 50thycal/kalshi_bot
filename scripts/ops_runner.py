@@ -233,6 +233,7 @@ ALLOWED_SCRIPTS = (
     "marktangle2_probe",
     "kalshi_metalhalt_census",
     "kalshi_kpi_census",
+    "kalshi_gridpin_census",
 )
 
 
