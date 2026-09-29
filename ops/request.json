@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://www.ercot.com/misapp/servlets/IceDocListJsonWS?reportTypeId=14836","--raw","--max-chars","2500"],"id":"gridpin-recon-1"}
+{"type":"script","name":"desk_fetch","args":["https://www.ercot.com/api/1/services/read/dashboards/loadForecastVsActual.json","--raw","--max-chars","1800"],"id":"gridpin-recon-2"}
