@@ -13,7 +13,7 @@ def _p(**over):
     # The resting totals sit just above Target Size and inside the universe rule; the close is
     # a day out, inside the close-time window. Tests that care about either pass their own.
     base = dict(
-        market_ticker="KXTEST-A", best_yes_bid=40, best_no_bid=55,
+        market_ticker="KXTEST-A", best_yes_bid=3, best_no_bid=4,
         yes_resting_total=1500.0, no_resting_total=2000.0, target_size=1000.0,
         hours_to_close=24.0, program_hours_remaining=48.0,
     )
@@ -27,16 +27,16 @@ def _p(**over):
 def test_quotes_both_touches_with_one_quantity():
     q = _p()
     assert isinstance(q, lv.PairQuote)
-    assert (q.yes.side, q.yes.price_cents) == (lv.SIDE_YES, 40)
-    assert (q.no.side, q.no.price_cents) == (lv.SIDE_NO, 55)
+    assert (q.yes.side, q.yes.price_cents) == (lv.SIDE_YES, 3)
+    assert (q.no.side, q.no.price_cents) == (lv.SIDE_NO, 4)
     # Equal quantity is what makes it a hedge: both legs filled nets flat at the locked edge.
     assert q.yes.quantity == q.no.quantity == q.quantity
-    assert q.edge_cents == 5
+    assert q.edge_cents == 93
 
 
 def test_the_dear_leg_sets_the_quantity_and_neither_leg_exceeds_its_cap():
-    q = _p(best_yes_bid=20, best_no_bid=75)
-    expected = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 75))
+    q = _p(best_yes_bid=2, best_no_bid=5)
+    expected = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 5))
     assert q.quantity == expected
     assert q.no.collateral_usd <= lv.MAX_ORDER_DOLLARS
     assert q.yes.collateral_usd <= lv.MAX_ORDER_DOLLARS
@@ -47,7 +47,8 @@ def test_the_dear_leg_sets_the_quantity_and_neither_leg_exceeds_its_cap():
 
 def test_refuses_a_pair_with_no_edge():
     assert _p(best_yes_bid=45, best_no_bid=55).code == lv.REFUSE_NO_EDGE      # 100: nothing locked
-    assert isinstance(_p(best_yes_bid=45, best_no_bid=54), lv.PairQuote)    # 1c edge places
+    # 1c edge places (above the live 5c leg cap, so the cap is lifted to isolate the edge rule)
+    assert isinstance(_p(best_yes_bid=45, best_no_bid=54, max_price_cents=99), lv.PairQuote)
 
 
 def test_refuses_a_leg_above_the_per_leg_price_cap():
@@ -166,7 +167,7 @@ def test_exit_leg_joins_the_opposite_touch_but_never_gives_up_the_edge():
 # ------------------------------------------------------------------ ranking
 
 
-def _c(ticker, *, depth=1500.0, hours=24.0, yes=40, no=55):
+def _c(ticker, *, depth=1500.0, hours=24.0, yes=3, no=4):
     return {"market_ticker": ticker, "best_yes_bid": yes, "best_no_bid": no,
             "yes_resting_total": depth, "no_resting_total": depth, "target_size": 1000.0,
             "hours_to_close": hours, "program_hours_remaining": 48.0}
@@ -177,7 +178,7 @@ def test_ranking_prefers_thinner_then_sooner_close_then_wider_edge():
         _c("DEEP", depth=2900.0, hours=4.0),
         _c("LATE", hours=60.0),
         _c("SOON", hours=5.0),
-        _c("SOON_WIDE", hours=5.0, yes=40, no=50),
+        _c("SOON_WIDE", hours=5.0, yes=2, no=3),
     ])
     assert [c["market_ticker"] for c, _ in ranked] == ["SOON_WIDE", "SOON", "LATE", "DEEP"]
 
@@ -191,7 +192,7 @@ def test_caps_are_the_ones_the_risk_envelope_will_name():
     # $1 -> $20, 5 -> 2 markets, $10 -> $50 budget (§9.36); two-sided at $10 a leg with a per-leg
     # price cap of 90c replacing the one-sided 25c cheap-side cap (§9.37).
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
-            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 2, 50.00, 90)
+            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 2, 50.00, 5)
     assert (lv.MIN_HOURS_TO_CLOSE, lv.MAX_HOURS_TO_CLOSE, lv.FLATTEN_HOURS_BEFORE_CLOSE) == (
         3.0, 72.0, 1.0)
     assert (lv.STOP_LOSS_FRACTION, lv.TAKE_PROFIT_FRACTION, lv.EXIT_MIN_DISTANCE_CENTS) == (

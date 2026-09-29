@@ -2595,3 +2595,27 @@ which would also have hidden a real reward in those windows (the pattern first s
 - **Operator decision (2026-09-26):** shared `MAX_DAILY_LOSS` raised **25.0 → 50.0** in production
   (ops env request `limm-dailyloss-50`, VERIFIED), recorded in the package `settings`.
   `CASH_DIRECTION` is unchanged.
+
+
+### 9.41 Cheap pairs only — the per-leg cap 90c → 5c (2026-09-29)
+
+**Decision (operator, 2026-09-29).** `MAX_PRICE_CENTS` 90 → **5**: both legs of a pair must be at
+or below 5c. Enforced where the 90c cap was — `build_pair_quote` refuses (`too_expensive`) and
+`LiveExecutor._incentive_pair_within_caps` re-asserts (`gate:size`). Exit legs (the opposite-side
+bid that closes a held leg, `place_incentive_exit_leg`) are not entries and keep their own 1–99c
+bound, so positions already open can still be closed. Risk-reducing only; ahead of the frozen
+arm-time envelope by operator decision, like §9.34/§9.36/§9.37.
+
+**Why.** Realized to 2026-09-29 02:00Z (executor position snapshots, rounded): ≈ **−$15.9** net on
+≈ $47 bought. The lopsided gas pairs the 90c cap admitted — CO (NO 28c ×35, −$8.33) and CA (NO 10c
+×50, −$2.96) plus GA (−$1.29) — are ≈ $12.6 of it, while the reward estimate put the best earners
+at cheap large pairs (DEEPVREQ 2c/2c ×500, RANKLIST 2–3c ×333). A 5c leg bounds a lone-leg loss
+to 5c a contract, ≤ $10 per leg at the existing `MAX_ORDER_DOLLARS`.
+
+**Open question recorded, not acted on — reward payability.** Kalshi's LIP rules (help article
+13823851 and the CFTC rule filing, read through search extracts; not verified first-hand) state
+that a program's final reward **below $1.00 is not paid**, and that rewards are credited after the
+program ends in a later processing run. Our internal estimate of ≈ $2 total across many programs
+(best single program ≈ $0.83) would then pay **$0**. If confirmed by the Oct-1 balance, the
+selection rule should favour staying in fewer programs long enough to clear $1 each. That is an
+`OWNER DECISION`, not part of this change.
