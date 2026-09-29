@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "aca1712baa7a755e42bbd597b33afdd1abe411b6",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-29T12:11:52Z",
+  "id": "desk-aaa-morning-1222",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-aaa-morning-1222.receipt.json",
+  "result_file": "ops/results/desk-aaa-morning-1222.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36566504485",
+  "service": null,
+  "started_at": "2026-09-29T12:11:52Z",
+  "targets": [],
+  "type": "script"
+}
