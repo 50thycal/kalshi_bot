@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","0","--search","diesel","--top","20"],"id":"desk-search-diesel-1215"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELMON-26SEP30-T6.40"],"id":"desk-diesel-ticker-1219"}
