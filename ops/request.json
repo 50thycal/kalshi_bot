@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-1754","sql":"select 'order' k, market_ticker, side||' '||action||' '||limit_price||'x'||quantity v, status, created_at::text t from live_orders where strategy='Alimm1' and (created_at > '2026-09-29 15:52' or status='resting') union all select 'fill', market_ticker, side||' '||action||' '||price||'x'||quantity, '', filled_at::text from fills where filled_at > '2026-09-29 15:52' union all select 'now', '', '', '', now()::text order by t desc limit 60"}
