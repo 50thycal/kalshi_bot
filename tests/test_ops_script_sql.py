@@ -25,7 +25,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 # production; add new ones as they are written.
 CHECKED = ["experiment_os_status.py", "ops_doctor.py", "mmsell_series_pnl.py",
            "series_registry_review.py", "liquidity_incentive_report.py",
-           "mmsell_chase_probe.py", "mmsell_flow_veto_probe.py"]
+           "mmsell_chase_probe.py", "mmsell_flow_veto_probe.py",
+           "mmsell_thin_market_probe.py"]
 
 
 def _sql_literals(path: pathlib.Path) -> list[tuple[int, str]]:
