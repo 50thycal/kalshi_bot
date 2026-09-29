@@ -1187,3 +1187,10 @@ of the realized loss (≈ $12.6 of ≈ $15.9) while cheap large pairs earned the
 unaffected. Open question recorded: Kalshi reportedly withholds any program reward under $1.00,
 which would explain $0 paid so far; to be checked against the balance around Oct 1.
 [Thesis §9.41](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-29 (later) — weeks-out markets, fresh programs, one tick behind (§9.42)
+
+First reward paid ($2.21, one program, same day the event ended); other programs paid $0.
+Operator decision: new pairs only in markets closing 7–60 days out, in programs with ≥ 24h left,
+newest program first, resting one tick behind the touch where that still scores. Size and caps
+unchanged. [Thesis §9.42](../LIQUIDITY_INCENTIVE_THESIS.md).

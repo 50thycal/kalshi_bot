@@ -15,7 +15,7 @@ def _p(**over):
     base = dict(
         market_ticker="KXTEST-A", best_yes_bid=3, best_no_bid=4,
         yes_resting_total=1500.0, no_resting_total=2000.0, target_size=1000.0,
-        hours_to_close=24.0, program_hours_remaining=48.0,
+        hours_to_close=240.0, program_hours_remaining=48.0,
     )
     base.update(over)
     return lv.build_pair_quote(**base)
@@ -167,34 +167,60 @@ def test_exit_leg_joins_the_opposite_touch_but_never_gives_up_the_edge():
 # ------------------------------------------------------------------ ranking
 
 
-def _c(ticker, *, depth=1500.0, hours=24.0, yes=3, no=4):
+def _c(ticker, *, depth=1500.0, hours=240.0, yes=3, no=4, age=5.0):
     return {"market_ticker": ticker, "best_yes_bid": yes, "best_no_bid": no,
             "yes_resting_total": depth, "no_resting_total": depth, "target_size": 1000.0,
-            "hours_to_close": hours, "program_hours_remaining": 48.0}
+            "hours_to_close": hours, "program_hours_remaining": 48.0, "program_age_hours": age}
 
 
-def test_ranking_prefers_thinner_then_sooner_close_then_wider_edge():
+def test_ranking_prefers_fresher_then_thinner_then_wider_edge():
     ranked = lv.rank_candidates([
-        _c("DEEP", depth=2900.0, hours=4.0),
-        _c("LATE", hours=60.0),
-        _c("SOON", hours=5.0),
-        _c("SOON_WIDE", hours=5.0, yes=2, no=3),
+        _c("OLD_THIN", depth=1100.0, age=100.0),
+        _c("NEW_DEEP", depth=2900.0, age=2.0),
+        _c("NEW_THIN", depth=1100.0, age=3.0),
+        _c("NEW_THIN_WIDE", depth=1100.0, age=4.0, yes=2, no=3),
+        _c("UNKNOWN_AGE", depth=1100.0, age=None),
     ])
-    assert [c["market_ticker"] for c, _ in ranked] == ["SOON_WIDE", "SOON", "LATE", "DEEP"]
+    assert [c["market_ticker"] for c, _ in ranked] == [
+        "NEW_THIN_WIDE", "NEW_THIN", "NEW_DEEP", "OLD_THIN", "UNKNOWN_AGE"]
 
 
 def test_ranking_never_returns_a_refused_market():
-    assert lv.rank_candidates([_c("WAYDEEP", depth=80_000.0), _c("LATE", hours=500.0)]) == []
+    assert lv.rank_candidates([_c("WAYDEEP", depth=80_000.0), _c("SOON", hours=24.0)]) == []
+
+
+# ------------------------------------------------------------------ behind the touch (§9.42)
+
+
+def test_rests_one_tick_behind_the_touch_when_that_still_scores():
+    q = _p(best_yes_bid=4, best_no_bid=5, yes_touch_depth=200.0, no_touch_depth=300.0)
+    assert (q.yes.price_cents, q.no.price_cents) == (3, 4)
+
+
+def test_joins_the_touch_when_the_touch_alone_meets_target_size():
+    # Behind a touch that already fills Target Size, an order scores nothing.
+    q = _p(best_yes_bid=4, best_no_bid=5, yes_touch_depth=1000.0, no_touch_depth=999.0)
+    assert (q.yes.price_cents, q.no.price_cents) == (4, 4)
+
+
+def test_joins_the_touch_at_one_cent_and_when_depth_is_unknown():
+    assert lv.behind_touch_price(1, 10.0, 1000.0) == 1
+    assert lv.behind_touch_price(4, None, 1000.0) == 4
+    assert lv.behind_touch_price(4, 10.0, None) == 4
+    q = _p(best_yes_bid=1, best_no_bid=3, yes_touch_depth=10.0, no_touch_depth=10.0)
+    assert (q.yes.price_cents, q.no.price_cents) == (1, 2)
 
 
 def test_caps_are_the_ones_the_risk_envelope_will_name():
     # Pinned so a silent edit fails. History: MAX_OPEN_ORDERS 3 -> 5 (§9.34); 1 -> 500 contracts,
     # $1 -> $20, 5 -> 2 markets, $10 -> $50 budget (§9.36); two-sided at $10 a leg with a per-leg
-    # price cap of 90c replacing the one-sided 25c cheap-side cap (§9.37).
+    # price cap of 90c replacing the one-sided 25c cheap-side cap (§9.37); leg cap 90c -> 5c
+    # (§9.41); close window 3–72h -> 7–60 days (§9.42).
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
             lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 2, 50.00, 5)
     assert (lv.MIN_HOURS_TO_CLOSE, lv.MAX_HOURS_TO_CLOSE, lv.FLATTEN_HOURS_BEFORE_CLOSE) == (
-        3.0, 72.0, 1.0)
+        168.0, 1440.0, 1.0)
+    assert (lv.MIN_PROGRAM_HOURS_REMAINING, lv.QUOTE_TICKS_BEHIND_TOUCH) == (24.0, 1)
     assert (lv.STOP_LOSS_FRACTION, lv.TAKE_PROFIT_FRACTION, lv.EXIT_MIN_DISTANCE_CENTS) == (
         0.40, 0.40, 3)
 

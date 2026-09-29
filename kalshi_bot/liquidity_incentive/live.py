@@ -73,14 +73,17 @@ MAX_PRICE_CENTS = 5
 #: A pair must lock at least this much if both legs fill: yes_bid + no_bid <= 100 - edge.
 MIN_PAIR_EDGE_CENTS = 1
 #: A program must still have at least this long to run, so the order can rest and be scored.
-MIN_PROGRAM_HOURS_REMAINING = 2.0
+#: 2 -> 24 (§9.42): Kalshi pays nothing on a program whose reward is under $1.00, so a quote
+#: needs a day of resting to be worth placing at all.
+MIN_PROGRAM_HOURS_REMAINING = 24.0
 
 #: The close-time window, in hours from now. Outside it, no entry.
-#:   * the ceiling keeps capital out of markets that cannot resolve within days (§9.37: a
-#:     72-hour cutoff still leaves ~1,000 of ~6,300 live programs, measured 2026-09-25);
-#:   * the floor leaves time to rest before the pre-close flatten below takes the position off.
-MAX_HOURS_TO_CLOSE = 72.0
-MIN_HOURS_TO_CLOSE = 3.0
+#:   * 3–72h (§9.37) -> 7–60 days (§9.42, operator decision 2026-09-29). Near resolution is when
+#:     news lands and a cheap leg gets filled just before it loses (ANTH, GOOG, both FX pairs);
+#:     a market weeks from resolving barely moves, so a lone fill is rarer and less one-sided.
+#:   * the ceiling still keeps capital out of markets that cannot resolve within two months.
+MAX_HOURS_TO_CLOSE = 1440.0
+MIN_HOURS_TO_CLOSE = 168.0
 #: Flatten anything still held this close to the market's close.
 FLATTEN_HOURS_BEFORE_CLOSE = 1.0
 
@@ -106,6 +109,17 @@ POSITION_FRESH_SECONDS = 300.0
 #: `medium`/`deep` line `scripts/liquidity_incentive_report.py` always drew — chosen before the
 #: result, deliberately not tuned to it.
 MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0
+
+#: Rest this many ticks BEHIND the touch rather than at it (§9.42). The orders at the touch are
+#: the ones a sweep hits first, so sitting one tick back leaves them as a buffer. Applied only
+#: when the depth already at the touch is under Target Size — Kalshi scores only the orders that
+#: fill Target Size from the best price down, so behind a touch that alone meets it we would
+#: score nothing and join the touch instead. The cost is at most one tick of discount factor.
+QUOTE_TICKS_BEHIND_TOUCH = 1
+
+#: Freshness buckets for ranking (§9.42): programs pay most in their first hours and decay
+#: steeply after, so a newer program outranks a thinner book within the same bucket width.
+PROGRAM_AGE_BUCKET_HOURS = 12.0
 
 #: The live canary's tag, and the paper tag the PAPER stage registers.
 #:
@@ -230,7 +244,7 @@ def _leg(ticker: str, side: str, price: int, qty: int, ref: int | None) -> LiveQ
         market_ticker=ticker, side=side, price_cents=price, quantity=qty,
         collateral_usd=collateral, max_loss_usd=collateral,
         reference_price_cents=ref, at_or_above_reference=(ref is None or price >= ref),
-        reason=f"joined the {side} touch at {price}c as one leg of a pair",
+        reason=f"rested the {side} bid at {price}c as one leg of a pair",
     )
 
 
@@ -251,6 +265,8 @@ def build_pair_quote(
     open_orders_now: int = 0,
     strategy_exposure_now_usd: float = 0.0,
     max_price_cents: int = MAX_PRICE_CENTS,
+    yes_touch_depth: float | None = None,
+    no_touch_depth: float | None = None,
 ) -> PairQuote | Refusal:
     """The whole entry decision, as one pure function. Returns the pair to place, or why not.
 
@@ -302,6 +318,8 @@ def build_pair_quote(
                        f"{program_hours_remaining:.1f}h left, need {MIN_PROGRAM_HOURS_REMAINING}")
     if y < 1 or n < 1:
         return Refusal(REFUSE_NO_BOOK, f"touch yes {y} / no {n} is not a placeable pair")
+    y = behind_touch_price(y, yes_touch_depth, target_size)
+    n = behind_touch_price(n, no_touch_depth, target_size)
     edge = 100 - y - n
     if edge < MIN_PAIR_EDGE_CENTS:
         return Refusal(REFUSE_NO_EDGE, f"yes {y} + no {n} leaves {edge}c, need {MIN_PAIR_EDGE_CENTS}c")
@@ -327,6 +345,17 @@ def build_pair_quote(
         max_loss_usd=max(yes_leg.collateral_usd, no_leg.collateral_usd),
         hours_to_close=hours_to_close,
     )
+
+
+def behind_touch_price(touch: int, touch_depth: float | None, target_size: float | None) -> int:
+    """Where to rest one side: `QUOTE_TICKS_BEHIND_TOUCH` behind the touch when that still
+    scores, else at the touch. Unknown depth joins the touch — never guess a scoring position."""
+    behind = int(touch) - QUOTE_TICKS_BEHIND_TOUCH
+    if behind < 1 or touch_depth is None or target_size is None:
+        return int(touch)
+    if float(touch_depth) >= float(target_size):
+        return int(touch)
+    return behind
 
 
 # ------------------------------------------------------------------ exits
@@ -402,7 +431,16 @@ def quote_candidate(c: dict, *, excluded_series: frozenset[str] = frozenset(),
         excluded_series=excluded_series, max_price_cents=max_price_cents,
         event_ticker=c.get("event_ticker"),
         blocked_event_tickers=blocked_event_tickers,
+        yes_touch_depth=c.get("yes_touch_depth"), no_touch_depth=c.get("no_touch_depth"),
     )
+
+
+def _age_bucket(candidate: dict) -> float:
+    """Program age in `PROGRAM_AGE_BUCKET_HOURS` buckets; unknown age sorts last."""
+    age = candidate.get("program_age_hours")
+    if age is None:
+        return float("inf")
+    return float(max(0.0, float(age)) // PROGRAM_AGE_BUCKET_HOURS)
 
 
 def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] = frozenset(),
@@ -410,8 +448,9 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
                     max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, PairQuote]]:
     """Every candidate that yields a placeable pair, best first.
 
-    Order: THINNEST competing book (reward share per contract, §9.27), then SOONEST close
-    (capital comes back to be redeployed sooner), then WIDEST edge (more locked if both fill).
+    Order (§9.42): FRESHEST program (reward yield decays steeply with program age), then
+    THINNEST competing book (reward share per contract, §9.27), then WIDEST edge. Soonest close
+    is no longer a key: near resolution is where lone fills lose.
     Price is no longer a ranking key: a pair always holds both sides, so "the cheap side" is not
     a choice this book makes, and the dollar downside of a single-leg fill is capped per leg."""
     out: list[tuple[dict, PairQuote]] = []
@@ -421,7 +460,5 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
                             max_price_cents=max_price_cents)
         if isinstance(q, PairQuote):
             out.append((c, q))
-    out.sort(key=lambda cq: (_depth_ratio(cq[0]),
-                             cq[1].hours_to_close if cq[1].hours_to_close is not None else 1e9,
-                             -cq[1].edge_cents))
+    out.sort(key=lambda cq: (_age_bucket(cq[0]), _depth_ratio(cq[0]), -cq[1].edge_cents))
     return out

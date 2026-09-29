@@ -2619,3 +2619,30 @@ program ends in a later processing run. Our internal estimate of ≈ $2 total ac
 (best single program ≈ $0.83) would then pay **$0**. If confirmed by the Oct-1 balance, the
 selection rule should favour staying in fewer programs long enough to clear $1 each. That is an
 `OWNER DECISION`, not part of this change.
+
+### 9.42 Weeks-out markets, fresh programs, one tick behind the touch (2026-09-29)
+
+**Evidence that prompted it.** The first reward landed: **$2.21**, all from one program
+(`KXANTHVREQ-28SEP26`), credited the day the event ended. We rested there ~15h, and the exit-leg
+bid earned while it waited too. Every other program paid $0, which fits the reported $1.00
+per-program minimum. The same market's YES leg filled alone and settled at −$9.99, as did GOOG
+(−$3.32) and both pre-cap FX pairs (−$1.30). Realized trading loss to date is ≈ −$30.5, so
+net after rewards is ≈ −$28.3. Every lone fill came inside 72h of resolution, when news arrives
+and the cheap side is hit just before it loses.
+
+**Decision (operator, 2026-09-29):** replace the entry rules with ideas #1 + #2 and run them live
+at the existing size ($10/leg, 2 markets, $50 book, 5c leg cap all unchanged):
+- **Close window 3–72h → 7–60 days** (`MIN_HOURS_TO_CLOSE` 168, `MAX_HOURS_TO_CLOSE` 1440).
+- **Program must have ≥ 24h left** (`MIN_PROGRAM_HOURS_REMAINING` 2 → 24), so a quote can rest long
+  enough to clear $1.
+- **Freshest program first.** Ranking key is program age (12h buckets), then thinner book, then
+  wider edge; the runner's fetch order is newest program first. Soonest close is no longer a key.
+- **One tick behind the touch** (`QUOTE_TICKS_BEHIND_TOUCH` = 1) on each side, only when depth AT
+  the touch is below Target Size (else behind scores zero, so join the touch). At 1c, or with
+  unknown depth, join the touch. Cost: at most one tick of discount factor on the reward.
+
+Exits, stop/take-profit fractions and all dollar caps are unchanged. Risk-reducing or neutral on
+exposure; ahead of the frozen arm-time envelope by operator decision, as in §9.34–§9.41.
+
+**What would say it worked (read at the next review, not tuned after):** fewer lone-leg fills
+per market-day than under §9.37–§9.41, and reward per program ≥ $1 on the programs we rest in.
