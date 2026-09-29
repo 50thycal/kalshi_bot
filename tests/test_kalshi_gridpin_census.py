@@ -20,8 +20,12 @@ def test_allowlisted():
     assert "kalshi_gridpin_census" in ops_runner.ALLOWED_SCRIPTS
 
 
-def test_event_date():
-    assert g.event_date("KXTXERCOTPEAKD-26SEP02") == dt.date(2026, 9, 2)
+def test_event_date_is_the_operating_day_not_the_ticker_close_date():
+    title = "Texas ERCOT peak electricity demand on Sep 27, 2026"
+    assert g.event_date("KXTXERCOTPEAKD-26SEP28", title) == dt.date(2026, 9, 27)
+    # no title -> ticker (UTC close date) minus one day
+    assert g.event_date("KXTXERCOTPEAKD-26SEP28") == dt.date(2026, 9, 27)
+    assert g.event_date("KXTXERCOTPEAKD-26OCT01") == dt.date(2026, 9, 30)
     assert g.event_date("KXTXERCOTPEAKD-26XXX02") is None
     assert g.event_date("junk") is None
 

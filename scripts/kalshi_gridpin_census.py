@@ -92,12 +92,25 @@ def _num(v):
         return None
 
 
-def event_date(event_ticker: str) -> dt.date | None:
-    """KXTXERCOTPEAKD-26SEP02 -> 2026-09-02."""
+_TITLE_DAY = re.compile(r"on ([A-Z][a-z]{2})[a-z]* (\d{1,2}), (\d{4})")
+
+
+def event_date(event_ticker: str, title: str = "") -> dt.date | None:
+    """The OPERATING day an event settles on.
+
+    The ticker carries the UTC CLOSE date, not the operating day: KXTXERCOTPEAKD-26SEP28 is
+    "peak electricity demand on Sep 27, 2026" and closes 2026-09-28T04:55Z (23:55 CT on the
+    27th). The title is authoritative; the ticker date minus one day is the fallback. (The first
+    census run read the ticker date as the operating day, which shifted every grade and the
+    post-peak window by a day — docs/GRIDPIN_THESIS.md RESULTS.)"""
+    m = _TITLE_DAY.search(title or "")
+    if m and m.group(1).upper() in _MONTHS:
+        return dt.date(int(m.group(3)), _MONTHS[m.group(1).upper()], int(m.group(2)))
     m = re.search(r"-(\d{2})([A-Z]{3})(\d{2})$", event_ticker or "")
     if not m or m.group(2) not in _MONTHS:
         return None
-    return dt.date(2000 + int(m.group(1)), _MONTHS[m.group(2)], int(m.group(3)))
+    close = dt.date(2000 + int(m.group(1)), _MONTHS[m.group(2)], int(m.group(3)))
+    return close - dt.timedelta(days=1)
 
 
 def rung_result_from(value: float, strike: float, strike_type: str | None) -> str | None:
@@ -181,7 +194,7 @@ def kalshi_rungs() -> list[dict]:
                      f"&limit=200&cursor={cursor}")
         evs = (page or {}).get("events") or []
         for ev in evs:
-            day = event_date(ev.get("event_ticker", ""))
+            day = event_date(ev.get("event_ticker", ""), ev.get("title", ""))
             for m in ev.get("markets") or []:
                 out.append({
                     "ticker": m.get("ticker"), "day": day, "status": m.get("status"),
