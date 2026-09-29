@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "2e6574fb4c4814863b4ef6d335de28f2deb9e534",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-29T20:57:37Z",
+  "id": "ideas0929-survey",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ideas0929-survey.receipt.json",
+  "result_file": "ops/results/ideas0929-survey.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36629971246",
+  "service": null,
+  "started_at": "2026-09-29T20:57:25Z",
+  "targets": [],
+  "type": "script"
+}
