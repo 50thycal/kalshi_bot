@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=AK","--find","Diesel","--window","250","--hits","2"],"id":"desk-aaa-ak-morning-1229"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELMONAK-26SEP30-T6.6000"],"id":"desk-ak-t660-1232"}
