@@ -2,7 +2,7 @@
 
 *Thesis written 2026-09-29, before the probe ran. The predictions, bars and kill criteria are
 pre-registered here and are not re-scoped after results. Operator request (Calvin, 2026-09-29):
-"do 2 and 3 next". This is #2. Status: **PROBE BUILT — not yet run.***
+"do 2 and 3 next". This is #2. Status: **KILL (probe run 2026-09-29) — family closed; see RESULTS.***
 
 ## One-liner
 
@@ -112,4 +112,41 @@ This is the same book as Fmmsell10. It is a selection filter, not a new edge.
 
 ## RESULTS
 
-*(not yet run)*
+**Probe run 2026-09-29 (ops `thin-probe-20260929-1`, code `2e6574f`). Verdict: KILL, on both
+T2 and T3.**
+
+The V24 tercile cut points, frozen from the primary sample, were thin ≤ 1,589 and mid ≤ 11,365
+contracts.
+
+| sample | tercile | orders | fill rate | settled fills | realized/fill |
+|---|---|---|---|---|---|
+| primary (pre-9/7 books) | thin | 855 | 43.6% | 373 | −1.09¢ |
+| | mid | 854 | 56.1% | 479 | −1.71¢ |
+| | thick | 855 | 69.0% | 590 | **+0.38¢** |
+| confirmation (Fmmsell10) | thin | 264 | 58.0% | 145 | −0.85¢ |
+| | mid | 243 | 70.0% | 164 | −0.53¢ |
+| | thick | 493 | 76.9% | 374 | **+0.97¢** |
+
+| gate | result |
+|---|---|
+| T0 instrument | 2,564 / 2,564 primary orders had V24 → PASS |
+| T1 floor | 373 thin fills → PASS |
+| T2 primary | separation **−0.53¢**, bootstrap 5th percentile −3.19¢ → **KILL** (≤ 0) |
+| T3 confirmation | separation **−1.36¢** at n_thin = 145 → **KILL** (≤ 0) |
+
+**What it found.** Quiet markets fill less often and do not fill better. If anything the ordering
+runs the other way: in both samples, the only positive tercile is the *busiest*. That reversal is
+a post-hoc observation, and it is **not** a new hypothesis this probe can promote. It varies by
+book (mmsell10a thick +3.99¢, mmsell10b thick −4.11¢) and would need its own pre-registration on
+fresh data. The one clear, consistent point is negative: low recent activity does not mark
+retail-only flow on these markets. The "thin-history series" cell that motivated this probe
+(+2.28¢ on Fmmsell10) did not survive translation to a market-level, outcome-blind feature.
+
+**Cumulative volume** (reported only): separation −0.10¢, so there is no signal there either.
+
+**Decision (pre-committed).** Closed. Together with RUNAWAY-CHASE, FLOW-VETO and the
+series-persistence read the same day, every selection lever tried on 2026-09-29 is null. The
+mmsell book's live edge is about +0.2¢ per fill, and no tested filter moves it.
+
+*(A duplicate request, `thin-probe-20260929-2`, was queued when the first run looked lost. It runs
+the same frozen code on the same data and does not change this verdict.)*
