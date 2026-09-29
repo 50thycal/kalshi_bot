@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "131ae0f029e492635ec9d7aa7663e1b73b9d79e6",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-29T20:56:47Z",
+  "id": "ideas0929-ct",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ideas0929-ct.receipt.json",
+  "result_file": "ops/results/ideas0929-ct.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36629452501",
+  "service": null,
+  "started_at": "2026-09-29T20:53:02Z",
+  "targets": [],
+  "type": "xos"
+}
