@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=US"],"id":"desk-aaa-morning-1222"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=AK","--find","National","--window","400","--hits","2"],"id":"desk-aaa-ak-morning-1226"}
