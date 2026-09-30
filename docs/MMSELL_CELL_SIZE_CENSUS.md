@@ -3,9 +3,8 @@
 *Census pre-registered 2026-09-30, before any per-price-cell read of `Fmmsell10` was taken. Origin:
 Research Lab idea-model run [`IDEA_MODEL_20260930_MMSELL.md`](IDEA_MODEL_20260930_MMSELL.md),
 operator request (Calvin, 2026-09-29 handoff), open lead "size ×3 where fill selection is neutral
-(≤ 6¢ band)". Status: **pending census.** This is a recon census, not a full probe: one read-only
-DB query family, no new collection, no book. Running it is the next session's step; no script
-exists yet.*
+(≤ 6¢ band)". Status: **NO CELL PASSES (census run 2026-09-30) — sizing on this book is closed until a per-fill edge exists; see RESULTS.**
+Script: `scripts/mmsell_cell_size_census.py` (#497).*
 
 ## The question, stated once
 
@@ -85,5 +84,27 @@ Pure multiplier on the existing live book. No diversification credit.
 
 ## RESULTS
 
-*(empty until the census runs; recorded here, in `RESEARCH_JOURNAL.md` and in the scorecard row;
-the bars above are not edited)*
+**Census run 2026-09-30 (ops `cellsize-20260930-1`, code `6b5b9b2d`). Verdict: NO CELL PASSES.**
+
+`Fmmsell10` since the epoch start, 23.5 days: 793 NO-buy orders in cells 93–97 (a further 141
+orders rested below 93¢, outside the pre-registered cells, because the book joins the NO bid and
+the bid can sit 1–2¢ under `100 − maxyes`). C0: 567 of 584 filled orders settle-mapped (97.1%).
+
+| cell | orders | fill | settled fills | win | realized/fill | boot 95% LB | unfilled paper/ct | gap | median print | status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 93 | 446 | 70.6% | 315 | 92.4% | **−0.64¢** | −3.18¢ | +5.09¢ (n=114) | **+5.73¢** | 62 | fails C2, C3 |
+| 94 | 330 | 76.4% | 252 | 94.8% | **+0.84¢** | −1.54¢ | +5.92¢ (n=66) | **+5.07¢** | 43 | fails C2, C3 |
+| 95–97 | — | — | 0 | — | — | — | — | — | — | unreadable |
+
+Pooled (reference only): 567 fills, +0.02¢/fill. Context, pre-9/7 books, same cells: 93 −0.58¢
+(n=488), 94 −0.09¢ (n=476), 95 −0.66¢ (n=53).
+
+**What it found.** Neither readable cell earns +1.0¢ with a lower bound above zero, and in both
+the orders that never filled would have earned 5–6¢ more than the ones that did. Fill selection is
+**uniform across price cells** on this book; the July `mmsell3` reading that the 6¢ cell was
+fill-neutral does not hold on `Fmmsell10`. Taker prints at our level are large (median 43–62
+contracts), so a 3-lot would fill; it would simply fill on the same adversely selected flow, three
+times over.
+
+**Decision (pre-committed).** Sizing is closed until a per-fill edge exists somewhere on the book.
+Combined with YOUNG-SERIES (KILL, same day), no such edge is on record.

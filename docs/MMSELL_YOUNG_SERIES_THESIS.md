@@ -3,9 +3,8 @@
 *Thesis written 2026-09-30, before the probe ran. The predictions, bars and kill criteria are
 pre-registered here and are not re-scoped after results. Origin: Research Lab idea-model run
 [`IDEA_MODEL_20260930_MMSELL.md`](IDEA_MODEL_20260930_MMSELL.md), operator request (Calvin,
-2026-09-29 handoff): "how can the MMSELL book make real money?" Status: **pending probe.** No
-probe script exists yet; building it is a `kalshi-probe-builder` step, and its `ops_runner.py`
-allowlist entry is the operator's hard stop.*
+2026-09-29 handoff): "how can the MMSELL book make real money?" Status: **KILL (probe run 2026-09-30, Y2) — universe selection on this book is closed; see RESULTS.**
+Probe: `scripts/mmsell_young_series_probe.py` (#497).*
 
 ## One-liner
 
@@ -138,5 +137,39 @@ screened on that basis in the run doc.
 
 ## RESULTS
 
-*(empty until the probe runs; the verdict is recorded here, in `RESEARCH_JOURNAL.md` and in the
-scorecard row, and the pre-registered bars above are not edited)*
+**Probe run 2026-09-30 (ops `young-20260930-1`, code `6b5b9b2d`). Verdict: KILL on Y2.**
+
+| sample | group | orders | fill rate | settled fills | win | realized/fill |
+|---|---|---|---|---|---|---|
+| primary (7 pre-9/7 books, 2,564 orders) | YOUNG (≤ 30 d) | 1,759 | 52.2% | 919 | 91.9% | **−0.92¢** |
+| | MATURE (> 30 d) | 805 | 65.0% | 523 | 92.0% | −0.30¢ |
+| confirmation A (Fmmsell10 to 09-30; in-sample, reported only) | YOUNG | 54 | 68.5% | 34 | 97.1% | +4.03¢ |
+| | MATURE | 954 | 70.3% | 657 | 93.0% | +0.11¢ |
+| confirmation B (from 09-30) | YOUNG | 0 | — | 0 | — | — |
+
+| gate | result |
+|---|---|
+| Y0 instrument | AGE for 2,564 / 2,564 primary orders (100%) → PASS |
+| Y1 floor | 919 young fills → PASS |
+| Y2 primary | separation **−0.61¢**, bootstrap 5th percentile −3.01¢ → **KILL** (≤ 0 at the floor) |
+| Y3 forward | 0 young orders since 09-30 → not reached |
+| Y4 capacity | young fill rate 80% of mature; 21.3 young fills/day → would have passed |
+
+**What it found.** Out of sample, fills in series young to the bot's history are *worse* than fills
+in mature series, by 0.61¢, with the whole bootstrap interval below zero. Young series also fill
+less often (52% vs 65%). The confirmation-A separation of +3.92¢ is the 09-29 observation itself,
+on 34 fills, and its bootstrap 5th percentile is −2.03¢; it was a small-sample, post-hoc reading.
+Per book the sign flips (mmsell10 +2.90¢, Cmmsell10 −0.19¢, Lmmsell10 −3.62¢, mmsell10a −3.40¢,
+mmsell10b +0.96¢, Dmmsell10 +2.21¢), which is what noise looks like. The 31–60 day band was the
+only positive band in both primary (+0.73¢) and A (+1.22¢); that is a post-hoc observation and is
+not promoted.
+
+**Two honesty notes.** (1) `AGE` is age in the *bot's* history, not on the board; the bot's
+history starts in late June (paper) and mid-July (candidate ticks), so "young" in the primary
+window is partly "the bot had not seen it yet". The pre-registration said so and treated it as
+conservative; the result is a kill either way. (2) Confirmation B had 21 orders and no young ones,
+so the forward read never engaged; it is not needed, since Y2 alone kills.
+
+**Decision (pre-committed).** Closed. Series age joins series P&L (`mmnext-oos-0929`), market
+volume (THIN-MARKET) and pre-post flow (FLOW-VETO) as null selection levers on this book. Per the
+run doc's §5 table, this outcome selects **stop investing in MMSELL as a P&L line**.

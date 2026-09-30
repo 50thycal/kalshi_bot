@@ -228,6 +228,22 @@ operator's call and is outside this run's scope.
 script, touch `ops_runner.py`, change any book, relax any live bar, or propose arming. It appends
 two scorecard rows and one journal entry (the skill's own ledger step).
 
+## RESULTS (2026-09-30, same day)
+
+Both reads ran first time through ops after #497 merged (code `6b5b9b2d`).
+
+| read | verdict | the number |
+|---|---|---|
+| **CELL-SIZE** (`cellsize-20260930-1`) | **NO CELL PASSES** | cell 93 −0.64¢/fill (n=315), cell 94 +0.84¢ (n=252, boot LB −1.54¢); unfilled-minus-filled gap +5.7¢ and +5.1¢. Fill selection is uniform across cells. |
+| **YOUNG-SERIES** (`young-20260930-1`) | **KILL (Y2)** | out of sample, young −0.92¢ (n=919) vs mature −0.30¢ (n=523); separation −0.61¢, bootstrap 5th percentile −3.01¢. The +3.92¢ that motivated it was 34 in-sample fills. |
+
+Per the §5 table this is the **P1 KILL** row: **stop investing research effort in MMSELL as a
+P&L line.** Execution (offset, cancel, chase), selection (flow, volume, series P&L, series age) and
+sizing (no fill-neutral cell) are now all on record as null on the live book. The canary itself is
+unaffected by this verdict; standing it down or freeing its ~$25 at risk is the operator's call.
+The four holds above stay holds (none has a trigger fired), and the redeploy targets are unchanged:
+GRIDPIN (~end October), EARNBEAT (week of 11-09), the liquidity-incentive verdict.
+
 ## Scorecard rows appended (`IDEA_MODEL_SCORECARD.md`)
 
 YOUNG-SERIES (pending probe) and CELL-SIZE (pending census), both dated 2026-09-30, scope "Calvin
