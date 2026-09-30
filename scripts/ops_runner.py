@@ -211,6 +211,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_chase_probe",
     "mmsell_flow_veto_probe",
     "mmsell_thin_market_probe",
+    "mmsell_young_series_probe",
+    "mmsell_cell_size_census",
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",

@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MMSELL probes 2026-09-30 — YOUNG-SERIES and CELL-SIZE built, not yet run
+
+Calvin merged the pre-registrations (#495) and asked for the probes to run. Two read-only scripts
+implement the frozen bars verbatim: `mmsell_young_series_probe` ([thesis](MMSELL_YOUNG_SERIES_THESIS.md),
+bars Y0–Y4, samples primary / confirmation A / confirmation B) and `mmsell_cell_size_census`
+([census](MMSELL_CELL_SIZE_CENSUS.md), bars C0–C4 per NO-price cell). Both reuse the thin-market
+probe's order, fill and settlement reads; unfilled orders in the census are scored by the live tag's
+own `paper_trades` row. Unit tests pin the verdict rules to the documented thresholds. Verdicts land
+in the next entry once the ops runs complete.
+
 ## MMSELL idea model 2026-09-30 — two cheap reads promoted; "stop investing" is the likely answer
 
 Calvin asked one question: how can the MMSELL book (live tag `Fmmsell10`) make real money, with
