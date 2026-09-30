@@ -1,0 +1,204 @@
+{
+  "status": "NOT_EXECUTED_ACCESS_REQUIRED",
+  "selection": "Unchanged first five lexical tickers per event from prior outcome-masked census",
+  "authentication": "x-api-key from securely configured PREDEXON_API_KEY; never persist header",
+  "budget": "Only documented free historical snapshot endpoint; no paid tick routes",
+  "pagination": "Follow pagination_key while has_more; fail on partial/error rather than treating as no book",
+  "requests": [
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "official_scheduled_start": "2026-07-29T21:30:00+00:00",
+      "decision_ts_ms": 1785357000000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-ACTI",
+        "start_time": 1785356400000,
+        "end_time": 1785357000000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMSFT-26JUL29-ACTI&start_time=1785356400000&end_time=1785357000000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "official_scheduled_start": "2026-07-29T21:30:00+00:00",
+      "decision_ts_ms": 1785357000000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-AMD",
+        "start_time": 1785356400000,
+        "end_time": 1785357000000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMSFT-26JUL29-AMD&start_time=1785356400000&end_time=1785357000000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "official_scheduled_start": "2026-07-29T21:30:00+00:00",
+      "decision_ts_ms": 1785357000000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-ANTH",
+        "start_time": 1785356400000,
+        "end_time": 1785357000000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMSFT-26JUL29-ANTH&start_time=1785356400000&end_time=1785357000000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "official_scheduled_start": "2026-07-29T21:30:00+00:00",
+      "decision_ts_ms": 1785357000000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-CYBE",
+        "start_time": 1785356400000,
+        "end_time": 1785357000000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMSFT-26JUL29-CYBE&start_time=1785356400000&end_time=1785357000000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "official_scheduled_start": "2026-07-29T21:30:00+00:00",
+      "decision_ts_ms": 1785357000000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-FOUN",
+        "start_time": 1785356400000,
+        "end_time": 1785357000000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMSFT-26JUL29-FOUN&start_time=1785356400000&end_time=1785357000000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "official_scheduled_start": "2026-07-29T20:30:00+00:00",
+      "decision_ts_ms": 1785353400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-ADVE",
+        "start_time": 1785352800000,
+        "end_time": 1785353400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMETA-26JUL29-ADVE&start_time=1785352800000&end_time=1785353400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "official_scheduled_start": "2026-07-29T20:30:00+00:00",
+      "decision_ts_ms": 1785353400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-AGE",
+        "start_time": 1785352800000,
+        "end_time": 1785353400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMETA-26JUL29-AGE&start_time=1785352800000&end_time=1785353400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "official_scheduled_start": "2026-07-29T20:30:00+00:00",
+      "decision_ts_ms": 1785353400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-ALGO",
+        "start_time": 1785352800000,
+        "end_time": 1785353400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMETA-26JUL29-ALGO&start_time=1785352800000&end_time=1785353400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "official_scheduled_start": "2026-07-29T20:30:00+00:00",
+      "decision_ts_ms": 1785353400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-CLOU",
+        "start_time": 1785352800000,
+        "end_time": 1785353400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMETA-26JUL29-CLOU&start_time=1785352800000&end_time=1785353400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "official_scheduled_start": "2026-07-29T20:30:00+00:00",
+      "decision_ts_ms": 1785353400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-DIVI",
+        "start_time": 1785352800000,
+        "end_time": 1785353400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONMETA-26JUL29-DIVI&start_time=1785352800000&end_time=1785353400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "official_scheduled_start": "2026-08-26T21:00:00+00:00",
+      "decision_ts_ms": 1787774400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-ARIZ",
+        "start_time": 1787773800000,
+        "end_time": 1787774400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONNVDA-26AUG26-ARIZ&start_time=1787773800000&end_time=1787774400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "official_scheduled_start": "2026-08-26T21:00:00+00:00",
+      "decision_ts_ms": 1787774400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-AUTO",
+        "start_time": 1787773800000,
+        "end_time": 1787774400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONNVDA-26AUG26-AUTO&start_time=1787773800000&end_time=1787774400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "official_scheduled_start": "2026-08-26T21:00:00+00:00",
+      "decision_ts_ms": 1787774400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-COSM",
+        "start_time": 1787773800000,
+        "end_time": 1787774400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONNVDA-26AUG26-COSM&start_time=1787773800000&end_time=1787774400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "official_scheduled_start": "2026-08-26T21:00:00+00:00",
+      "decision_ts_ms": 1787774400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-DIVI",
+        "start_time": 1787773800000,
+        "end_time": 1787774400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONNVDA-26AUG26-DIVI&start_time=1787773800000&end_time=1787774400000&limit=2000&sources=spine"
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "official_scheduled_start": "2026-08-26T21:00:00+00:00",
+      "decision_ts_ms": 1787774400000,
+      "parameters": {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-DOME",
+        "start_time": 1787773800000,
+        "end_time": 1787774400000,
+        "limit": 2000,
+        "sources": "spine"
+      },
+      "url": "https://api.predexon.com/v2/kalshi/orderbooks-subcent?ticker=KXEARNINGSMENTIONNVDA-26AUG26-DOME&start_time=1787773800000&end_time=1787774400000&limit=2000&sources=spine"
+    }
+  ]
+}

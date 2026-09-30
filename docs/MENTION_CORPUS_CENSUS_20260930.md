@@ -198,3 +198,12 @@ No further NLP variants or broad archive acquisition are justified by this
 census alone. No live book, shared metric, platform revision, ops runner,
 experiment lifecycle or promotion tally changed. This closes the authorized
 bounded census with a narrower, documented blocker.
+
+### Subsequent export investigation
+
+The authorized [depth-export follow-up](MENTION_DEPTH_EXPORT_20260930.md) found a
+documented free historical snapshot endpoint with level quantities. Its exact
+earnings coverage is unverified because an API key is required and none is
+configured. Other public export attempts encountered access/server errors.
+C0 remains HOLD; the follow-up preserves an exact 15-contract sample request
+and a verification checklist without changing any gates.
