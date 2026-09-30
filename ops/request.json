@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--series","KXEARNINGSMENTION","--hours","2160","--min-volume","0","--top","40","--max-pages","40"],"id":"chatgpt-mention-board-0930"}
+{"type":"script","name":"kalshi_market_probe","args":["KXEARNINGSMENTIONCALM-26SEP30","KXEARNINGSMENTIONMU-26SEP30","KXEARNINGSMENTIONMSFT-26JUL29"],"id":"chatgpt-mention-rules-0930"}
