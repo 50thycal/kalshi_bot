@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-942-0102
-# code 08210f6ffb994f52fee13d12ddd7d39d0da2c2b8 · started 2026-09-30T01:01:06Z
-k      market_ticker              v              status   t                              close                 
------  -------------------------  -------------  -------  -----------------------------  ----------------------
-order  KXGRUBHUBAPP-26OCT08-T166  yes buy 5x200  resting  2026-09-30 00:18:48.573361+00  2026-10-08 03:59:00+00
-order  KXGRUBHUBAPP-26OCT08-T166  no buy 2x200   resting  2026-09-30 00:18:48.632699+00  2026-10-08 03:59:00+00
-
-(2 rows)
