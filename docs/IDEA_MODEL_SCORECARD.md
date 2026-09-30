@@ -130,3 +130,12 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 _Provenance: this scorecard was created 2026-07-12, backfilled from `RESEARCH_JOURNAL.md` +
 the `IDEA_MODEL_*` run docs, as the base-rate feedback loop recommendation from the six-run review._
+
+## Zero-promotion scoped screens
+
+- **2026-09-30, ChatGPT Research Lab — MMSELL live economics:** nine candidates
+  screened, **zero promotions**. BUSY-FLOW retained as a prospectively specified
+  HOLD; SIZE-6 and inverse offset remain conditional holds. Recommendation:
+  pause new MMSELL development, without changing live operation. No probe or XOS
+  action; no promotion added to the base-rate denominator. Evidence, six-axis
+  screen and reconciled queue: [run record](IDEA_MODEL_MMSELL_20260930_CHATGPT.md).
