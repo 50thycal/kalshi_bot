@@ -1,0 +1,50 @@
+{
+  "checked_on": "2026-09-30",
+  "sources": [
+    {
+      "name": "lerchen3/kalshi-orderbook-alpha",
+      "url": "https://huggingface.co/datasets/lerchen3/kalshi-orderbook-alpha",
+      "api_url": "https://huggingface.co/api/datasets/lerchen3/kalshi-orderbook-alpha",
+      "revision": "50d081abd394db128fc4557d2f0d76f3ec65c060",
+      "created_at": "2026-07-19T01:48:00.000Z",
+      "last_modified": "2026-07-19T14:27:10.000Z",
+      "data_file_count": 164,
+      "file_dates": [
+        "2026/07/19"
+      ],
+      "first_file": "data/2026/07/19/kalshi_orderbooks_20260719T022023.251189Z_ip-172-31-3-129_04de9e.jsonl.gz",
+      "last_file": "data/2026/07/19/kalshi_orderbooks_20260719T142653.376876Z_ip-172-31-3-129_33191b.jsonl.gz",
+      "decision": "Inspected metadata and README only; one calendar day cannot satisfy C0. Earnings coverage not established."
+    },
+    {
+      "name": "DepthFeed",
+      "url": "https://depthfeed.com/docs",
+      "decision": "Docs emphasize crypto and sports historical books; no verified earnings-call depth history. API key required. Related KalshiPriceData/KalshiBacktesting sites are not independent sources."
+    },
+    {
+      "name": "ProbSights",
+      "url": "https://probsights.com/p/kalshi-historical-data-api",
+      "decision": "Advertises Kalshi historical books/trades on Builder with 60-day history and 1m/5m sampling. No authenticated earnings sample or exact capture timestamps checked. A rolling 60-day window on September 30 is within Q3 and cannot alone meet the two-quarter floor."
+    },
+    {
+      "name": "KalshiBackTest",
+      "url": "https://kalshibacktest.com/free-kalshi-historical-data",
+      "decision": "Free sample is recent crypto 15-minute markets; not the earnings-mention universe."
+    },
+    {
+      "name": "Strux",
+      "url": "https://struxdata.github.io/dataset/",
+      "decision": "Published corpus covers 2017\u20132024; not the eight most recent prior calls for these 2026 fixtures. Associated investment labels were not used."
+    },
+    {
+      "name": "EarningsCall",
+      "url": "https://earningscall.biz/api-pricing",
+      "decision": "Paid transcript history and speaker features available; exact historical publication versions not demonstrated by product availability. Not purchased; would not resolve missing Kalshi depth."
+    },
+    {
+      "name": "Meta investor archive",
+      "url": "https://investor.atmeta.com/investor-events/default.aspx",
+      "decision": "Full quarterly call transcripts and separate follow-up-call transcripts available. Eight point-in-time versions not audited in this run. Do not concatenate follow-up calls unless contract rules include them."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "alternative-sources.json": "a39b41649d96562501ea4274feb83af916875170e40c1138e66d2a48f851e6e7",
+  "cutoff.json": "2cd56594960b857a6307ae75bbe2607181d6cccfca30867ab53aed37212b47ac",
+  "markets.jsonl.gz": "98b7dcd5bcaf604269c30dd1384b6f8c17de1a83a1c87654241091545df3bf46",
+  "msft-archive-audit.json": "da8bc49bd85c9a780b7681551351ef8a6ea4d1702ffe945da482a2ff0ea3bf24",
+  "quote-audit.json": "dffdf2ed126bd359b83c030cd90245cdc649c690f35c1ce4c82b1b1907626843",
+  "requests.json": "e108a6e9e0ffed33cc9ba0498e0fc8e66d2739cee7565ff514e2eeb91e62b98a",
+  "series.json": "f24c503fea16548df6057a2fb85fb633735e4cde653dfd2db6fb1a668d16edf4"
+}

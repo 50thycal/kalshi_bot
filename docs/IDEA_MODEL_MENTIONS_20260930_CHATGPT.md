@@ -346,3 +346,14 @@ cheap falsification questions, not a reason to invest in an earnings NLP stack.
 the historical denominator, probe verdict, journal claim of profit, experiment
 object or lifecycle transition. This document's conditional gates become a
 durable reference on its commit; they have not been evaluated.
+
+## Authorized coverage follow-up — September 30
+
+The subsequently authorized [bounded census](MENTION_CORPUS_CENSUS_20260930.md)
+recovered 5,718 finalized public contracts across 415 raw event tickers and
+eight archived prior Microsoft transcript versions. Ten of 15 sampled contracts
+have aligned pre-decision bid/ask candle closes, but none has resting-size
+evidence; independent-call/source reconciliation is incomplete. C0 remains HOLD,
+zero promotions. C1/P1/P2/P3 were not evaluated. The specification above is
+unchanged; the census and its outcome-masked evidence narrow the reopening
+trigger to a suitable historical earnings-market depth export.

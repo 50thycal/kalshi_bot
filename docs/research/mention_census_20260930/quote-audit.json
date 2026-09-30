@@ -1,0 +1,2484 @@
+[
+  {
+    "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+    "scheduled_start": "2026-07-29T21:30:00+00:00",
+    "decision_ts": 1785357000,
+    "tier": "historical",
+    "listed_contracts": 15,
+    "market_receipt": {
+      "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?event_ticker=KXEARNINGSMENTIONMSFT-26JUL29&limit=1000",
+      "fetched_at": "2026-09-30T12:48:47.110442+00:00",
+      "sha256": "50cbfcb4a904688b1ee74c059e33a7cc5418f08b710730bfef551ed6fcbde2f8"
+    },
+    "samples": [
+      {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-ACTI",
+        "occurrence_datetime": "2026-07-30T00:00:00Z",
+        "rules_primary": "If Activision / Blizzard is said by any Microsoft Corporation representative (including the operator of the call) during the next Microsoft Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Microsoft Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Microsoft Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMSFT-26JUL29-ACTI/candlesticks?start_ts=1785356400&end_ts=1785357000&period_interval=1",
+          "fetched_at": "2026-09-30T12:48:57.243364+00:00",
+          "sha256": "919ae31699cc77ff27920b2f669a125e7b0fd5ad747cdc7b7d21abcac50b82ac"
+        },
+        "candle_count": 2,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 0,
+            "bid": "0.2400",
+            "ask": "0.2600"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785356580,
+            "open_interest": "1283.80",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.2700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.2600",
+              "high": "0.2600",
+              "low": "0.2600",
+              "open": "0.2600"
+            },
+            "yes_bid": {
+              "close": "0.2300",
+              "high": "0.2300",
+              "low": "0.2200",
+              "open": "0.2200"
+            }
+          },
+          {
+            "end_period_ts": 1785357000,
+            "open_interest": "1293.80",
+            "price": {
+              "close": "0.2600",
+              "high": "0.2600",
+              "low": "0.2600",
+              "mean": "0.2600",
+              "open": "0.2600",
+              "previous": "0.2700"
+            },
+            "volume": "10.00",
+            "yes_ask": {
+              "close": "0.2600",
+              "high": "0.2600",
+              "low": "0.2600",
+              "open": "0.2600"
+            },
+            "yes_bid": {
+              "close": "0.2400",
+              "high": "0.2400",
+              "low": "0.2200",
+              "open": "0.2300"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-AMD",
+        "occurrence_datetime": "2026-07-30T00:00:00Z",
+        "rules_primary": "If AMD / Advanced Micro Devices is said by any Microsoft Corporation representative (including the operator of the call) during the next Microsoft Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Microsoft Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Microsoft Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMSFT-26JUL29-AMD/candlesticks?start_ts=1785356400&end_ts=1785357000&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:06.184111+00:00",
+          "sha256": "3abf13d00df4e52fdfc68e967b4156840358914b6133bd9b2f8dddd8a96f6d05"
+        },
+        "candle_count": 4,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785356400,
+            "open_interest": "2402.66",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.6600"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.6600",
+              "high": "0.6600",
+              "low": "0.6600",
+              "open": "0.6600"
+            },
+            "yes_bid": {
+              "close": "0.6500",
+              "high": "0.6500",
+              "low": "0.6500",
+              "open": "0.6500"
+            }
+          },
+          {
+            "end_period_ts": 1785356460,
+            "open_interest": "2402.66",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.6600"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.6600",
+              "high": "0.6600",
+              "low": "0.6600",
+              "open": "0.6600"
+            },
+            "yes_bid": {
+              "close": "0.6500",
+              "high": "0.6500",
+              "low": "0.6500",
+              "open": "0.6500"
+            }
+          },
+          {
+            "end_period_ts": 1785356760,
+            "open_interest": "2402.66",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.6600"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.6600",
+              "high": "0.6600",
+              "low": "0.6600",
+              "open": "0.6600"
+            },
+            "yes_bid": {
+              "close": "0.6500",
+              "high": "0.6500",
+              "low": "0.6500",
+              "open": "0.6500"
+            }
+          },
+          {
+            "end_period_ts": 1785356880,
+            "open_interest": "2402.66",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.6600"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.6600",
+              "high": "0.6600",
+              "low": "0.6600",
+              "open": "0.6600"
+            },
+            "yes_bid": {
+              "close": "0.6500",
+              "high": "0.6500",
+              "low": "0.6500",
+              "open": "0.6500"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-ANTH",
+        "occurrence_datetime": "2026-07-30T00:00:00Z",
+        "rules_primary": "If Anthropic is said by any Microsoft Corporation representative (including the operator of the call) during the next Microsoft Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Microsoft Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Microsoft Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMSFT-26JUL29-ANTH/candlesticks?start_ts=1785356400&end_ts=1785357000&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:16.832069+00:00",
+          "sha256": "eb0ecdfe690b8a3d924c15bd8ef6d4a69a2130502a18ec2d82f44a8bf6f0c56e"
+        },
+        "candle_count": 4,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785356400,
+            "open_interest": "3514.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7000"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            },
+            "yes_bid": {
+              "close": "0.7100",
+              "high": "0.7100",
+              "low": "0.7100",
+              "open": "0.7100"
+            }
+          },
+          {
+            "end_period_ts": 1785356460,
+            "open_interest": "3514.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7000"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            },
+            "yes_bid": {
+              "close": "0.7100",
+              "high": "0.7100",
+              "low": "0.7100",
+              "open": "0.7100"
+            }
+          },
+          {
+            "end_period_ts": 1785356700,
+            "open_interest": "3714.38",
+            "price": {
+              "close": "0.7500",
+              "high": "0.7500",
+              "low": "0.7200",
+              "mean": "0.7271",
+              "open": "0.7200",
+              "previous": "0.7000"
+            },
+            "volume": "200.00",
+            "yes_ask": {
+              "close": "0.8000",
+              "high": "0.8200",
+              "low": "0.7200",
+              "open": "0.7200"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7100",
+              "open": "0.7100"
+            }
+          },
+          {
+            "end_period_ts": 1785356760,
+            "open_interest": "3714.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7500"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7800",
+              "high": "0.8000",
+              "low": "0.7800",
+              "open": "0.8000"
+            },
+            "yes_bid": {
+              "close": "0.7400",
+              "high": "0.7400",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-CYBE",
+        "occurrence_datetime": "2026-07-30T00:00:00Z",
+        "rules_primary": "If Cybersecurity is said by any Microsoft Corporation representative (including the operator of the call) during the next Microsoft Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Microsoft Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Microsoft Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMSFT-26JUL29-CYBE/candlesticks?start_ts=1785356400&end_ts=1785357000&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:24.847719+00:00",
+          "sha256": "f648cf45533c90ee1b5be559fdcf0cb5515e51a9b6355b8616f1ab56d32641d2"
+        },
+        "candle_count": 8,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 60,
+            "bid": "0.4700",
+            "ask": "0.4800"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785356400,
+            "open_interest": "3078.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4600",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785356460,
+            "open_interest": "3078.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4600",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785356520,
+            "open_interest": "3078.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4600",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785356580,
+            "open_interest": "3078.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4600",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785356640,
+            "open_interest": "3162.23",
+            "price": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "mean": "0.4700",
+              "open": "0.4700",
+              "previous": "0.4700"
+            },
+            "volume": "84.00",
+            "yes_ask": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785356700,
+            "open_interest": "3162.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4800",
+              "open": "0.4800"
+            },
+            "yes_bid": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            }
+          },
+          {
+            "end_period_ts": 1785356760,
+            "open_interest": "3162.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4800",
+              "open": "0.4800"
+            },
+            "yes_bid": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            }
+          },
+          {
+            "end_period_ts": 1785356940,
+            "open_interest": "3162.23",
+            "price": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4800",
+              "mean": "0.4800",
+              "open": "0.4800",
+              "previous": "0.4700"
+            },
+            "volume": "25.00",
+            "yes_ask": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4800",
+              "open": "0.4800"
+            },
+            "yes_bid": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4700",
+              "open": "0.4700"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMSFT-26JUL29-FOUN",
+        "occurrence_datetime": "2026-07-30T00:00:00Z",
+        "rules_primary": "If Foundry is said by any Microsoft Corporation representative (including the operator of the call) during the next Microsoft Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Microsoft Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Microsoft Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMSFT-26JUL29-FOUN/candlesticks?start_ts=1785356400&end_ts=1785357000&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:34.360443+00:00",
+          "sha256": "53222773be284ed9e728d9596f7c3477226b3c26f2a0ff0e224728ebaea11cbe"
+        },
+        "candle_count": 7,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 60,
+            "bid": "0.9700",
+            "ask": "0.9800"
+          },
+          {
+            "age_seconds": 0,
+            "bid": "0.9700",
+            "ask": "0.9800"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785356460,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9800"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785356520,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9800"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785356760,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9800"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785356820,
+            "open_interest": "7275.51",
+            "price": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "mean": "0.9700",
+              "open": "0.9700",
+              "previous": "0.9800"
+            },
+            "volume": "68.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785356880,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785356940,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          },
+          {
+            "end_period_ts": 1785357000,
+            "open_interest": "7275.51",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.9700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.9800",
+              "high": "0.9800",
+              "low": "0.9800",
+              "open": "0.9800"
+            },
+            "yes_bid": {
+              "close": "0.9700",
+              "high": "0.9700",
+              "low": "0.9700",
+              "open": "0.9700"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "event": "KXEARNINGSMENTIONMETA-26JUL29",
+    "scheduled_start": "2026-07-29T20:30:00+00:00",
+    "decision_ts": 1785353400,
+    "tier": "historical",
+    "listed_contracts": 18,
+    "market_receipt": {
+      "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?event_ticker=KXEARNINGSMENTIONMETA-26JUL29&limit=1000",
+      "fetched_at": "2026-09-30T12:48:47.108965+00:00",
+      "sha256": "58cc33fe8fba016465bb44618fa4ec1f19b77e7a3d1a7123b71c693f476396ee"
+    },
+    "samples": [
+      {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-ADVE",
+        "occurrence_datetime": "2026-12-31T15:00:00Z",
+        "rules_primary": "If Advertising is said by any Meta Platforms, Inc. representative (including the operator of the call) during the next Meta Platforms, Inc. earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Meta Platforms, Inc. earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Meta Platforms, Inc. earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMETA-26JUL29-ADVE/candlesticks?start_ts=1785352800&end_ts=1785353400&period_interval=1",
+          "fetched_at": "2026-09-30T12:48:57.303465+00:00",
+          "sha256": "6174f3db28ce4ed58beb9296538eb3da7b22e6c560eb6bb4c51b5906210a9dc0"
+        },
+        "candle_count": 7,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785352800,
+            "open_interest": "3547.23",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7200"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7300",
+              "high": "0.7300",
+              "low": "0.7300",
+              "open": "0.7300"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785352860,
+            "open_interest": "3623.38",
+            "price": {
+              "close": "0.7700",
+              "high": "0.7700",
+              "low": "0.7300",
+              "mean": "0.7572",
+              "open": "0.7300",
+              "previous": "0.7200"
+            },
+            "volume": "103.28",
+            "yes_ask": {
+              "close": "0.7700",
+              "high": "0.7800",
+              "low": "0.7300",
+              "open": "0.7300"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785352920,
+            "open_interest": "3623.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7500",
+              "high": "0.7700",
+              "low": "0.7500",
+              "open": "0.7700"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785352980,
+            "open_interest": "3623.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7400",
+              "high": "0.7600",
+              "low": "0.7400",
+              "open": "0.7500"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785353040,
+            "open_interest": "3623.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7400",
+              "high": "0.7700",
+              "low": "0.7400",
+              "open": "0.7400"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785353100,
+            "open_interest": "3623.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7300",
+              "high": "0.7400",
+              "low": "0.7300",
+              "open": "0.7400"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          },
+          {
+            "end_period_ts": 1785353160,
+            "open_interest": "3623.38",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.7700"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.7300",
+              "high": "0.7700",
+              "low": "0.7300",
+              "open": "0.7300"
+            },
+            "yes_bid": {
+              "close": "0.7200",
+              "high": "0.7200",
+              "low": "0.7200",
+              "open": "0.7200"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-AGE",
+        "occurrence_datetime": "2026-12-31T15:00:00Z",
+        "rules_primary": "If Age Verification is said by any Meta Platforms, Inc. representative (including the operator of the call) during the next Meta Platforms, Inc. earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Meta Platforms, Inc. earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Meta Platforms, Inc. earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMETA-26JUL29-AGE/candlesticks?start_ts=1785352800&end_ts=1785353400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:06.064608+00:00",
+          "sha256": "904b2484b8c169ee39f84ee437efdd6aff26471f75f93f8e50a04c6b90e91131"
+        },
+        "candle_count": 4,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785352800,
+            "open_interest": "943.89",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.0900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.0900",
+              "high": "0.0900",
+              "low": "0.0900",
+              "open": "0.0900"
+            },
+            "yes_bid": {
+              "close": "0.0700",
+              "high": "0.0800",
+              "low": "0.0700",
+              "open": "0.0800"
+            }
+          },
+          {
+            "end_period_ts": 1785352860,
+            "open_interest": "943.89",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.0900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.0900",
+              "high": "0.0900",
+              "low": "0.0900",
+              "open": "0.0900"
+            },
+            "yes_bid": {
+              "close": "0.0700",
+              "high": "0.0700",
+              "low": "0.0700",
+              "open": "0.0700"
+            }
+          },
+          {
+            "end_period_ts": 1785352980,
+            "open_interest": "943.89",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.0900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.0900",
+              "high": "0.0900",
+              "low": "0.0900",
+              "open": "0.0900"
+            },
+            "yes_bid": {
+              "close": "0.0800",
+              "high": "0.0800",
+              "low": "0.0700",
+              "open": "0.0700"
+            }
+          },
+          {
+            "end_period_ts": 1785353040,
+            "open_interest": "943.89",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.0900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.1100",
+              "high": "0.1100",
+              "low": "0.0900",
+              "open": "0.0900"
+            },
+            "yes_bid": {
+              "close": "0.0800",
+              "high": "0.0800",
+              "low": "0.0800",
+              "open": "0.0800"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-ALGO",
+        "occurrence_datetime": "2026-12-31T15:00:00Z",
+        "rules_primary": "If Algorithm is said by any Meta Platforms, Inc. representative (including the operator of the call) during the next Meta Platforms, Inc. earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Meta Platforms, Inc. earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Meta Platforms, Inc. earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMETA-26JUL29-ALGO/candlesticks?start_ts=1785352800&end_ts=1785353400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:16.809674+00:00",
+          "sha256": "f3ea0fb3c026703421a80846c05a9959b154f4528767a0e5cae729ebb41cc6d8"
+        },
+        "candle_count": 9,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 60,
+            "bid": "0.5300",
+            "ask": "0.5700"
+          },
+          {
+            "age_seconds": 0,
+            "bid": "0.5300",
+            "ask": "0.5700"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785352800,
+            "open_interest": "3459.82",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4800"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4800",
+              "high": "0.4800",
+              "low": "0.4800",
+              "open": "0.4800"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4700",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785352860,
+            "open_interest": "3459.82",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.4800"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4700",
+              "high": "0.4800",
+              "low": "0.4700",
+              "open": "0.4800"
+            },
+            "yes_bid": {
+              "close": "0.4600",
+              "high": "0.4600",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785353040,
+            "open_interest": "4036.44",
+            "price": {
+              "close": "0.5300",
+              "high": "0.5300",
+              "low": "0.4700",
+              "mean": "0.5090",
+              "open": "0.4700",
+              "previous": "0.4800"
+            },
+            "volume": "576.62",
+            "yes_ask": {
+              "close": "0.5300",
+              "high": "0.6100",
+              "low": "0.4700",
+              "open": "0.4700"
+            },
+            "yes_bid": {
+              "close": "0.4700",
+              "high": "0.4700",
+              "low": "0.4600",
+              "open": "0.4600"
+            }
+          },
+          {
+            "end_period_ts": 1785353100,
+            "open_interest": "4036.44",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.5300"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.6000",
+              "high": "0.6100",
+              "low": "0.4900",
+              "open": "0.5300"
+            },
+            "yes_bid": {
+              "close": "0.5000",
+              "high": "0.5200",
+              "low": "0.4700",
+              "open": "0.4700"
+            }
+          },
+          {
+            "end_period_ts": 1785353160,
+            "open_interest": "4036.44",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.5300"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.5700",
+              "high": "0.6000",
+              "low": "0.5700",
+              "open": "0.6000"
+            },
+            "yes_bid": {
+              "close": "0.5200",
+              "high": "0.5200",
+              "low": "0.5000",
+              "open": "0.5000"
+            }
+          },
+          {
+            "end_period_ts": 1785353220,
+            "open_interest": "4036.44",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.5300"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.5700",
+              "high": "0.5700",
+              "low": "0.5700",
+              "open": "0.5700"
+            },
+            "yes_bid": {
+              "close": "0.5200",
+              "high": "0.5200",
+              "low": "0.5200",
+              "open": "0.5200"
+            }
+          },
+          {
+            "end_period_ts": 1785353280,
+            "open_interest": "4036.44",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.5300"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.5700",
+              "high": "0.5700",
+              "low": "0.5700",
+              "open": "0.5700"
+            },
+            "yes_bid": {
+              "close": "0.5300",
+              "high": "0.5400",
+              "low": "0.5200",
+              "open": "0.5200"
+            }
+          },
+          {
+            "end_period_ts": 1785353340,
+            "open_interest": "4036.44",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.5300"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.5700",
+              "high": "0.5700",
+              "low": "0.5700",
+              "open": "0.5700"
+            },
+            "yes_bid": {
+              "close": "0.5300",
+              "high": "0.5300",
+              "low": "0.5300",
+              "open": "0.5300"
+            }
+          },
+          {
+            "end_period_ts": 1785353400,
+            "open_interest": "4039.44",
+            "price": {
+              "close": "0.5700",
+              "high": "0.5700",
+              "low": "0.5700",
+              "mean": "0.5700",
+              "open": "0.5700",
+              "previous": "0.5300"
+            },
+            "volume": "3.00",
+            "yes_ask": {
+              "close": "0.5700",
+              "high": "0.5700",
+              "low": "0.5700",
+              "open": "0.5700"
+            },
+            "yes_bid": {
+              "close": "0.5300",
+              "high": "0.5300",
+              "low": "0.5300",
+              "open": "0.5300"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-CLOU",
+        "occurrence_datetime": "2026-12-31T15:00:00Z",
+        "rules_primary": "If Cloud is said by any Meta Platforms, Inc. representative (including the operator of the call) during the next Meta Platforms, Inc. earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Meta Platforms, Inc. earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Meta Platforms, Inc. earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMETA-26JUL29-CLOU/candlesticks?start_ts=1785352800&end_ts=1785353400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:24.701014+00:00",
+          "sha256": "176f6e134775d201539e7684d8369d27ebc5c28e94697c92048f8ba79245ad65"
+        },
+        "candle_count": 7,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 0,
+            "bid": "0.8800",
+            "ask": "0.8900"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785352800,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785352980,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785353040,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785353100,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785353220,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785353280,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          },
+          {
+            "end_period_ts": 1785353400,
+            "open_interest": "1593.25",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.8900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.8900",
+              "high": "0.8900",
+              "low": "0.8900",
+              "open": "0.8900"
+            },
+            "yes_bid": {
+              "close": "0.8800",
+              "high": "0.8800",
+              "low": "0.8800",
+              "open": "0.8800"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONMETA-26JUL29-DIVI",
+        "occurrence_datetime": "2026-12-31T15:00:00Z",
+        "rules_primary": "If Dividend is said by any Meta Platforms, Inc. representative (including the operator of the call) during the next Meta Platforms, Inc. earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the Meta Platforms, Inc. earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the Meta Platforms, Inc. earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets/KXEARNINGSMENTIONMETA-26JUL29-DIVI/candlesticks?start_ts=1785352800&end_ts=1785353400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:34.301211+00:00",
+          "sha256": "2e85d7f05033fa52cc085245a871fa70bbd79ba0b28e386498000d2e6e330b52"
+        },
+        "candle_count": 5,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest",
+          "price",
+          "volume",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 0,
+            "bid": "0.3900",
+            "ask": "0.4000"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1785352800,
+            "open_interest": "4540.05",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.3900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4000",
+              "high": "0.4000",
+              "low": "0.4000",
+              "open": "0.4000"
+            },
+            "yes_bid": {
+              "close": "0.3900",
+              "high": "0.3900",
+              "low": "0.3900",
+              "open": "0.3900"
+            }
+          },
+          {
+            "end_period_ts": 1785352860,
+            "open_interest": "4540.05",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.3900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4000",
+              "high": "0.4000",
+              "low": "0.4000",
+              "open": "0.4000"
+            },
+            "yes_bid": {
+              "close": "0.3900",
+              "high": "0.3900",
+              "low": "0.3900",
+              "open": "0.3900"
+            }
+          },
+          {
+            "end_period_ts": 1785353040,
+            "open_interest": "4540.05",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.3900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4000",
+              "high": "0.4000",
+              "low": "0.4000",
+              "open": "0.4000"
+            },
+            "yes_bid": {
+              "close": "0.3900",
+              "high": "0.3900",
+              "low": "0.3900",
+              "open": "0.3900"
+            }
+          },
+          {
+            "end_period_ts": 1785353220,
+            "open_interest": "4540.05",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.3900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4000",
+              "high": "0.4000",
+              "low": "0.4000",
+              "open": "0.4000"
+            },
+            "yes_bid": {
+              "close": "0.3900",
+              "high": "0.3900",
+              "low": "0.3900",
+              "open": "0.3900"
+            }
+          },
+          {
+            "end_period_ts": 1785353400,
+            "open_interest": "4540.05",
+            "price": {
+              "close": null,
+              "high": null,
+              "low": null,
+              "mean": null,
+              "open": null,
+              "previous": "0.3900"
+            },
+            "volume": "0.00",
+            "yes_ask": {
+              "close": "0.4000",
+              "high": "0.4000",
+              "low": "0.4000",
+              "open": "0.4000"
+            },
+            "yes_bid": {
+              "close": "0.3900",
+              "high": "0.3900",
+              "low": "0.3900",
+              "open": "0.3900"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+    "scheduled_start": "2026-08-26T21:00:00+00:00",
+    "decision_ts": 1787774400,
+    "tier": "live",
+    "listed_contracts": 19,
+    "market_receipt": {
+      "url": "https://api.elections.kalshi.com/trade-api/v2/markets?event_ticker=KXEARNINGSMENTIONNVDA-26AUG26&limit=1000",
+      "fetched_at": "2026-09-30T12:48:47.245464+00:00",
+      "sha256": "3e92016536bf4fe5e0a6df48aff500cb468286870b63e6b9170e025ab9a5cf77"
+    },
+    "samples": [
+      {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-ARIZ",
+        "occurrence_datetime": "2026-08-27T00:00:00Z",
+        "rules_primary": "If Arizona is said by any NVIDIA Corporation representative (including the operator of the call) during the next NVIDIA Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the NVIDIA Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the NVIDIA Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the underlying company. All trademarks, logos, and brand names are the property of their respective owners.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXEARNINGSMENTIONNVDA/markets/KXEARNINGSMENTIONNVDA-26AUG26-ARIZ/candlesticks?start_ts=1787773800&end_ts=1787774400&period_interval=1",
+          "fetched_at": "2026-09-30T12:48:57.245707+00:00",
+          "sha256": "6527e61c02ee1c988edf59275f702d74a40635035176d09541eac3f57251b891"
+        },
+        "candle_count": 5,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest_fp",
+          "price",
+          "volume_fp",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 60,
+            "bid": "0.1100",
+            "ask": "0.1300"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1787773800,
+            "open_interest_fp": "2108.36",
+            "price": {
+              "previous_dollars": "0.1200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1100",
+              "open_dollars": "0.1100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1000",
+              "high_dollars": "0.1000",
+              "low_dollars": "0.1000",
+              "open_dollars": "0.1000"
+            }
+          },
+          {
+            "end_period_ts": 1787773860,
+            "open_interest_fp": "2108.36",
+            "price": {
+              "previous_dollars": "0.1200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1100",
+              "open_dollars": "0.1100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1000",
+              "high_dollars": "0.1000",
+              "low_dollars": "0.1000",
+              "open_dollars": "0.1000"
+            }
+          },
+          {
+            "end_period_ts": 1787774160,
+            "open_interest_fp": "2108.36",
+            "price": {
+              "previous_dollars": "0.1200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1100",
+              "open_dollars": "0.1100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1000",
+              "high_dollars": "0.1000",
+              "low_dollars": "0.1000",
+              "open_dollars": "0.1000"
+            }
+          },
+          {
+            "end_period_ts": 1787774280,
+            "open_interest_fp": "2218.36",
+            "price": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1100",
+              "mean_dollars": "0.1100",
+              "open_dollars": "0.1100",
+              "previous_dollars": "0.1200"
+            },
+            "volume_fp": "110.00",
+            "yes_ask": {
+              "close_dollars": "0.1300",
+              "high_dollars": "0.1300",
+              "low_dollars": "0.1100",
+              "open_dollars": "0.1100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1000",
+              "open_dollars": "0.1000"
+            }
+          },
+          {
+            "end_period_ts": 1787774340,
+            "open_interest_fp": "2218.36",
+            "price": {
+              "previous_dollars": "0.1100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.1300",
+              "high_dollars": "0.1300",
+              "low_dollars": "0.1300",
+              "open_dollars": "0.1300"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1100",
+              "high_dollars": "0.1100",
+              "low_dollars": "0.1100",
+              "open_dollars": "0.1100"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-AUTO",
+        "occurrence_datetime": "2026-08-27T00:00:00Z",
+        "rules_primary": "If Automation is said by any NVIDIA Corporation representative (including the operator of the call) during the next NVIDIA Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the NVIDIA Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the NVIDIA Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the underlying company. All trademarks, logos, and brand names are the property of their respective owners.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXEARNINGSMENTIONNVDA/markets/KXEARNINGSMENTIONNVDA-26AUG26-AUTO/candlesticks?start_ts=1787773800&end_ts=1787774400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:06.127819+00:00",
+          "sha256": "ea35887d3ffa9825405975d7731dff524b418e032cc5faa886e12f293a860ae4"
+        },
+        "candle_count": 5,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest_fp",
+          "price",
+          "volume_fp",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 60,
+            "bid": "0.3100",
+            "ask": "0.3200"
+          },
+          {
+            "age_seconds": 0,
+            "bid": "0.3100",
+            "ask": "0.3200"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1787773800,
+            "open_interest_fp": "9730.61",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3100",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          },
+          {
+            "end_period_ts": 1787773860,
+            "open_interest_fp": "9739.55",
+            "price": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "mean_dollars": "0.3200",
+              "open_dollars": "0.3200",
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "8.94",
+            "yes_ask": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3100",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          },
+          {
+            "end_period_ts": 1787774160,
+            "open_interest_fp": "9739.55",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3100",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          },
+          {
+            "end_period_ts": 1787774340,
+            "open_interest_fp": "9739.55",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3100",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          },
+          {
+            "end_period_ts": 1787774400,
+            "open_interest_fp": "9739.55",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3100",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-COSM",
+        "occurrence_datetime": "2026-08-27T00:00:00Z",
+        "rules_primary": "If Cosmos is said by any NVIDIA Corporation representative (including the operator of the call) during the next NVIDIA Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the NVIDIA Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the NVIDIA Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the underlying company. All trademarks, logos, and brand names are the property of their respective owners.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXEARNINGSMENTIONNVDA/markets/KXEARNINGSMENTIONNVDA-26AUG26-COSM/candlesticks?start_ts=1787773800&end_ts=1787774400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:16.891235+00:00",
+          "sha256": "694ca54734b2127c40db90c332dcc1ed6dd2ab04db29bce5de7c2da01009dab0"
+        },
+        "candle_count": 5,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest_fp",
+          "price",
+          "volume_fp",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 0,
+            "bid": "0.7900",
+            "ask": "0.8000"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1787773860,
+            "open_interest_fp": "14007.04",
+            "price": {
+              "previous_dollars": "0.7900"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "open_dollars": "0.8000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.7900",
+              "high_dollars": "0.7900",
+              "low_dollars": "0.7900",
+              "open_dollars": "0.7900"
+            }
+          },
+          {
+            "end_period_ts": 1787773980,
+            "open_interest_fp": "14007.04",
+            "price": {
+              "previous_dollars": "0.7900"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "open_dollars": "0.8000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.7900",
+              "high_dollars": "0.7900",
+              "low_dollars": "0.7900",
+              "open_dollars": "0.7900"
+            }
+          },
+          {
+            "end_period_ts": 1787774160,
+            "open_interest_fp": "14007.04",
+            "price": {
+              "previous_dollars": "0.7900"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "open_dollars": "0.8000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.7900",
+              "high_dollars": "0.7900",
+              "low_dollars": "0.7900",
+              "open_dollars": "0.7900"
+            }
+          },
+          {
+            "end_period_ts": 1787774280,
+            "open_interest_fp": "14007.04",
+            "price": {
+              "previous_dollars": "0.7900"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "open_dollars": "0.8000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.7900",
+              "high_dollars": "0.7900",
+              "low_dollars": "0.7900",
+              "open_dollars": "0.7900"
+            }
+          },
+          {
+            "end_period_ts": 1787774400,
+            "open_interest_fp": "14019.36",
+            "price": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "mean_dollars": "0.8000",
+              "open_dollars": "0.8000",
+              "previous_dollars": "0.7900"
+            },
+            "volume_fp": "12.32",
+            "yes_ask": {
+              "close_dollars": "0.8000",
+              "high_dollars": "0.8000",
+              "low_dollars": "0.8000",
+              "open_dollars": "0.8000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.7900",
+              "high_dollars": "0.7900",
+              "low_dollars": "0.7900",
+              "open_dollars": "0.7900"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-DIVI",
+        "occurrence_datetime": "2026-08-27T00:00:00Z",
+        "rules_primary": "If Dividend (2+ times) is said by any NVIDIA Corporation representative (including the operator of the call) during the next NVIDIA Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the NVIDIA Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the NVIDIA Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the underlying company. All trademarks, logos, and brand names are the property of their respective owners.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXEARNINGSMENTIONNVDA/markets/KXEARNINGSMENTIONNVDA-26AUG26-DIVI/candlesticks?start_ts=1787773800&end_ts=1787774400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:24.791197+00:00",
+          "sha256": "93f2ca4dd1fe6af792eb1a6b4e4c6d05f01ddc4ff13248805102b7c36e2562fc"
+        },
+        "candle_count": 9,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest_fp",
+          "price",
+          "volume_fp",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [
+          {
+            "age_seconds": 0,
+            "bid": "0.3200",
+            "ask": "0.3400"
+          }
+        ],
+        "candlesticks": [
+          {
+            "end_period_ts": 1787773800,
+            "open_interest_fp": "6321.71",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3400",
+              "high_dollars": "0.3400",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3400"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787773860,
+            "open_interest_fp": "6321.71",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3500",
+              "high_dollars": "0.3600",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3400"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787773920,
+            "open_interest_fp": "6321.71",
+            "price": {
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3500",
+              "high_dollars": "0.3500",
+              "low_dollars": "0.3500",
+              "open_dollars": "0.3500"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787774040,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3100",
+              "mean_dollars": "0.3186",
+              "open_dollars": "0.3200",
+              "previous_dollars": "0.3200"
+            },
+            "volume_fp": "318.70",
+            "yes_ask": {
+              "close_dollars": "0.3500",
+              "high_dollars": "0.3500",
+              "low_dollars": "0.3500",
+              "open_dollars": "0.3500"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3100",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787774100,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3500",
+              "high_dollars": "0.3500",
+              "low_dollars": "0.3500",
+              "open_dollars": "0.3500"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3100",
+              "open_dollars": "0.3100"
+            }
+          },
+          {
+            "end_period_ts": 1787774160,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3400",
+              "high_dollars": "0.3500",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3500"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787774220,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3400",
+              "high_dollars": "0.3400",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3400"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787774280,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3400",
+              "high_dollars": "0.3400",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3400"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          },
+          {
+            "end_period_ts": 1787774400,
+            "open_interest_fp": "6624.24",
+            "price": {
+              "previous_dollars": "0.3100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.3400",
+              "high_dollars": "0.3400",
+              "low_dollars": "0.3400",
+              "open_dollars": "0.3400"
+            },
+            "yes_bid": {
+              "close_dollars": "0.3200",
+              "high_dollars": "0.3200",
+              "low_dollars": "0.3200",
+              "open_dollars": "0.3200"
+            }
+          }
+        ]
+      },
+      {
+        "ticker": "KXEARNINGSMENTIONNVDA-26AUG26-DOME",
+        "occurrence_datetime": "2026-08-27T00:00:00Z",
+        "rules_primary": "If Domestic is said by any NVIDIA Corporation representative (including the operator of the call) during the next NVIDIA Corporation earnings call (including the Q+A), then the market resolves to Yes.",
+        "rules_secondary": "Video of the NVIDIA Corporation earnings call will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, transcripts of the NVIDIA Corporation earnings call will be used according to the news publications listed in the contract. The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. Please see full rules for more details.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the underlying company. All trademarks, logos, and brand names are the property of their respective owners.",
+        "receipt": {
+          "url": "https://api.elections.kalshi.com/trade-api/v2/series/KXEARNINGSMENTIONNVDA/markets/KXEARNINGSMENTIONNVDA-26AUG26-DOME/candlesticks?start_ts=1787773800&end_ts=1787774400&period_interval=1",
+          "fetched_at": "2026-09-30T12:49:34.352786+00:00",
+          "sha256": "56ae5a42a72c9327fc3f1544a18620edfe7559b7039107607b7d3d245748d8aa"
+        },
+        "candle_count": 4,
+        "candle_fields": [
+          "end_period_ts",
+          "open_interest_fp",
+          "price",
+          "volume_fp",
+          "yes_ask",
+          "yes_bid"
+        ],
+        "eligible_quote_rows": [],
+        "candlesticks": [
+          {
+            "end_period_ts": 1787773860,
+            "open_interest_fp": "4132.37",
+            "price": {
+              "close_dollars": "0.1900",
+              "high_dollars": "0.1900",
+              "low_dollars": "0.1900",
+              "mean_dollars": "0.1900",
+              "open_dollars": "0.1900",
+              "previous_dollars": "0.1800"
+            },
+            "volume_fp": "89.00",
+            "yes_ask": {
+              "close_dollars": "0.2000",
+              "high_dollars": "0.2000",
+              "low_dollars": "0.1900",
+              "open_dollars": "0.1900"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1900",
+              "high_dollars": "0.1900",
+              "low_dollars": "0.1800",
+              "open_dollars": "0.1800"
+            }
+          },
+          {
+            "end_period_ts": 1787773920,
+            "open_interest_fp": "4141.83",
+            "price": {
+              "close_dollars": "0.2000",
+              "high_dollars": "0.2000",
+              "low_dollars": "0.2000",
+              "mean_dollars": "0.2000",
+              "open_dollars": "0.2000",
+              "previous_dollars": "0.1900"
+            },
+            "volume_fp": "9.46",
+            "yes_ask": {
+              "close_dollars": "0.2100",
+              "high_dollars": "0.2100",
+              "low_dollars": "0.2000",
+              "open_dollars": "0.2000"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1900",
+              "high_dollars": "0.1900",
+              "low_dollars": "0.1900",
+              "open_dollars": "0.1900"
+            }
+          },
+          {
+            "end_period_ts": 1787774100,
+            "open_interest_fp": "4186.95",
+            "price": {
+              "close_dollars": "0.2100",
+              "high_dollars": "0.2100",
+              "low_dollars": "0.2100",
+              "mean_dollars": "0.2100",
+              "open_dollars": "0.2100",
+              "previous_dollars": "0.2000"
+            },
+            "volume_fp": "45.12",
+            "yes_ask": {
+              "close_dollars": "0.2100",
+              "high_dollars": "0.2100",
+              "low_dollars": "0.2100",
+              "open_dollars": "0.2100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1900",
+              "high_dollars": "0.1900",
+              "low_dollars": "0.1900",
+              "open_dollars": "0.1900"
+            }
+          },
+          {
+            "end_period_ts": 1787774160,
+            "open_interest_fp": "4186.95",
+            "price": {
+              "previous_dollars": "0.2100"
+            },
+            "volume_fp": "0.00",
+            "yes_ask": {
+              "close_dollars": "0.2000",
+              "high_dollars": "0.2100",
+              "low_dollars": "0.2000",
+              "open_dollars": "0.2100"
+            },
+            "yes_bid": {
+              "close_dollars": "0.1900",
+              "high_dollars": "0.1900",
+              "low_dollars": "0.1900",
+              "open_dollars": "0.1900"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "market_positions_last_updated_ts": "2026-08-01T00:00:00Z",
+    "market_settled_ts": "2026-08-01T00:00:00Z",
+    "orders_updated_ts": "2026-09-16T00:00:00Z",
+    "trades_created_ts": "2026-08-01T00:00:00Z"
+  },
+  "receipt": {
+    "url": "https://api.elections.kalshi.com/trade-api/v2/historical/cutoff",
+    "fetched_at": "2026-09-30T12:44:54.112828+00:00",
+    "sha256": "456c3aadfe3176c538e0c1bafc5e9fd693709b2dbdf9ff5b6b885d0750dc80cc"
+  }
+}

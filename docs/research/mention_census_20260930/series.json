@@ -1,0 +1,2303 @@
+[
+  {
+    "ticker": "KXEARNINGSMENTIONAAL",
+    "title": "AAL Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "American Airlines Group Inc. Investor Events",
+        "url": "https://americanairlines.gcs-web.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAAOI",
+    "title": "Applied Optoelectronics Inc",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Applied Optoelectronics, Inc. Investor Events",
+        "url": "https://investors.ao-inc.com/news-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAAP",
+    "title": "Advance Auto Parts Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Advance Auto Parts, Inc. Investor Events",
+        "url": "https://ir.advanceautoparts.com/investors/news-and-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAAPL",
+    "title": "Apple earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Apple Inc. Earnings Call",
+        "url": "https://www.apple.com/investor/earnings-call/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONABNB",
+    "title": "ABNB Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Airbnb, Inc. Investor Events",
+        "url": "https://investors.airbnb.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAC",
+    "title": "Air Canada Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Air Canada Investor Events",
+        "url": "https://www.aircanada.com/media/events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONACA",
+    "title": "Air Canada Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Bloomberg",
+        "url": "https://www.bloomberg.com/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONACI",
+    "title": "Albertsons",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Albertsons Companies, Inc. Investor Events",
+        "url": "https://www.albertsonscompanies.com/investors/events-and-presentations/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONACN",
+    "title": "Accenture",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Accenture Investor Events",
+        "url": "https://investor.accenture.com/news-and-events/events-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONADBE",
+    "title": "Adobe Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Adobe Inc. Investor Events",
+        "url": "https://www.adobe.com/investor-relations.html"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONADOBE",
+    "title": "What will Adobe say during its earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Adobe Inc. Investor Events",
+        "url": "https://www.adobe.com/investor-relations.html"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONALIBABA",
+    "title": "alibaba earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Alibaba Group Holding Limited Investor Events",
+        "url": "https://www.alibabagroup.com/en-US/ir-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONALK",
+    "title": "Alaska Airlines Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Alaska Air Group, Inc. Investor Events",
+        "url": "https://news.alaskaair.com/investor-relations/events-presentations/webcasts-events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONALLY",
+    "title": "Ally Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ally Financial Inc. Investor Events",
+        "url": "https://www.ally.com/about/investor/events-presentations/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAMAT",
+    "title": "Applied Materials, Inc.",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Applied Materials, Inc. Investor Events",
+        "url": "https://ir.appliedmaterials.com/events?tab=upcoming"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAMC",
+    "title": "AMC earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "AMC Entertainment Holdings, Inc. Investor Events",
+        "url": "https://investor.amctheatres.com/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAMD",
+    "title": "AMD earnings menti",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Advanced Micro Devices, Inc. Investor Events",
+        "url": "https://ir.amd.com/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAMZN",
+    "title": "Amazon earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Amazon.com, Inc. Investor Events",
+        "url": "https://ir.aboutamazon.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONANF",
+    "title": "Abercrombie",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Abercrombie & Fitch Co. Investor Events",
+        "url": "https://corporate.abercrombie.com/investors/news-and-events/events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONARITZIA",
+    "title": "Aritzia",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Aritzia Inc. Investor Events",
+        "url": "https://investors.aritzia.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAS",
+    "title": "Amer Sports Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Amer Sports, Inc. Investor Events",
+        "url": "https://investors.amersports.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONASTS",
+    "title": "AST SpaceMobile",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "AST SpaceMobile, Inc. Investor Events",
+        "url": "https://investors.ast-science.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONATZ",
+    "title": "Aritzia Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Aritzia Inc. Investor Events",
+        "url": "https://investors.aritzia.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAVAV",
+    "title": "AeroVironment",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "AeroVironment, Inc. Investor Events",
+        "url": "https://investor.avinc.com/news-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAVGO",
+    "title": "Broadcom Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Broadcom Inc. Investor Events",
+        "url": "https://investors.broadcom.com/company-information/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAXP",
+    "title": "AMEX Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "American Express Company Investor Events",
+        "url": "https://ir.americanexpress.com/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONAZO",
+    "title": "Auto Zone",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "AutoZone, Inc. Investor Events",
+        "url": "https://about.autozone.com/investor-relations/news-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBA",
+    "title": "Boeing Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Boeing Company Investor Events",
+        "url": "https://investors.boeing.com/investors/events-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBAC",
+    "title": "Bank of America Earnings Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Bank of America Corporation Investor Events",
+        "url": "https://investor.bankofamerica.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBB",
+    "title": "BlackBerry Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "BlackBerry Limited Investor Events and Presentations",
+        "url": "https://investors.blackberry.com/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBJ",
+    "title": "BJ's Wholesale Club Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "BJ's Wholesale Club Holdings, Inc. Investor Events",
+        "url": "https://investors.bjs.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBLK",
+    "title": "What will BlackRock say at their earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "BlackRock, Inc. Investor Events",
+        "url": "https://ir.blackrock.com/news-and-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONBULL",
+    "title": "Webull Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Webull Corporation Earnings Calls and Presentations",
+        "url": "https://www.webullcorp.com/investor-relations/earnings"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONC",
+    "title": "Citi Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Citigroup Inc. Investor Events",
+        "url": "https://www.citigroup.com/global/investors/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCALM",
+    "title": "Cal-Maine Foods",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Cal-Maine Foods Investor Events",
+        "url": "https://investors.calmainefoods.com/events-presentation"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCAR",
+    "title": "Avis ",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Avis Budget Group, Inc. Investor Events",
+        "url": "https://ir.avisbudgetgroup.com/events-and-presentations/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCAVA",
+    "title": "Cava Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "CAVA Group, Inc. Investor Events",
+        "url": "https://investor.cava.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCBRL",
+    "title": "Cracker Barrel Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Cracker Barrel Old Country Store, Inc. Investor Events",
+        "url": "https://investor.crackerbarrel.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCBRS",
+    "title": "Cerebras",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Cerebras Systems Inc. Investor Events",
+        "url": "https://investors.cerebras.ai/news-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCCL",
+    "title": "Carnival Cruise Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Carnival Corporation Investor Events",
+        "url": "https://www.carnivalcorp.com/investors/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCELH",
+    "title": "Celsius Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Celsius Holdings, Inc. Investor Events",
+        "url": "https://ir.celsiusholdingsinc.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCHWY",
+    "title": "Chewy Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Chewy, Inc. Investor Events",
+        "url": "https://investor.chewy.com/news-and-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCIEN",
+    "title": "Ciena Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ciena Corporation Investor Events",
+        "url": "https://investor.ciena.com/events-and-presentations/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCMG",
+    "title": "Chipotle Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Chipotle Mexican Grill, Inc. Investor Events",
+        "url": "https://ir.chipotle.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCOHR",
+    "title": "Coherent Corp.",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Coherent Corp. Investor Events",
+        "url": "https://www.coherent.com/company/investor-relations/financial-webcasts"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCOINBASE",
+    "title": "coinbase earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Coinbase Global, Inc. Investor Events",
+        "url": "https://investor.coinbase.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCOST",
+    "title": "What will Costco say on their next earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Costco Wholesale Corporation Investor Events",
+        "url": "https://investor.costco.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCRCL",
+    "title": "Circle Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Circle Internet Group, Inc. Investor Events",
+        "url": "https://investor.circle.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCRM",
+    "title": "What Will Salesforce Say During Their Earnings Call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Salesforce, Inc. Investor Events",
+        "url": "https://investor.salesforce.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCRWD",
+    "title": "CrowdStrike Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "CrowdStrike Holdings, Inc. Investor Events",
+        "url": "https://ir.crowdstrike.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCRWV",
+    "title": "CoreWeave Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "CoreWeave, Inc. Investor Events",
+        "url": "https://investors.coreweave.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONCVNA",
+    "title": "Carvana",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Carvana Co. Investor Events",
+        "url": "https://investors.carvana.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDAL",
+    "title": "Delta Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Delta Air Lines, Inc. Investor Events",
+        "url": "https://ir.delta.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDASH",
+    "title": "DoorDash",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "DoorDash, Inc. Investor Events",
+        "url": "https://ir.doordash.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDE",
+    "title": "Deere",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Deere & Company Investor Events",
+        "url": "https://investor.deere.com/home/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDEER",
+    "title": "John Deere",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Deere & Company Investor Events",
+        "url": "https://investor.deere.com/home/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDELL",
+    "title": "Dell Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Dell Technologies Inc. Investor Events",
+        "url": "https://investors.delltechnologies.com/news-events/upcoming-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDIS",
+    "title": "disney earnings m",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Walt Disney Company Investor Events",
+        "url": "https://investors.thewaltdisneycompany.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDKNG",
+    "title": "DraftKings Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "DraftKings Inc. Investor Relations",
+        "url": "https://draftkings.gcs-web.com/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDKS",
+    "title": "What Will DICK\u2019S Sporting Goods Say During Their Earnings Call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "DICK\u2019S Sporting Goods Investor Relations",
+        "url": "https://investors.dicks.com/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDOCUSIGN",
+    "title": "What will Docusign say during its earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "DocuSign, Inc. Investor Events",
+        "url": "https://investor.docusign.com/news-and-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDOLLARGENERAL",
+    "title": "What will Dollar General say during its earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Dollar General Investor Events",
+        "url": "https://investor.dollargeneral.com/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDPZ",
+    "title": "Dominos",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Domino's Pizza, Inc. Investor Events",
+        "url": "https://ir.dominos.com/events-and-presentations/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONDUOL",
+    "title": "Duolingo Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Duolingo, Inc. Investor Events",
+        "url": "https://investors.duolingo.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONEA",
+    "title": "EA Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Electronic Arts Inc",
+        "url": "https://www.ea.com"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONEBAY",
+    "title": "Ebay Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "eBay Inc. Investor Events",
+        "url": "https://investors.ebayinc.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONETOR",
+    "title": "Etoro",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "eToro Group Ltd. Investor Events",
+        "url": "https://investors.etoro.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONF",
+    "title": "Ford earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ford Motor Company Investor Events",
+        "url": "https://shareholder.ford.com/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONFDX",
+    "title": "What will FedEx say during their earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "FedEx Corporation Investor Events",
+        "url": "https://investors.fedex.com/news-and-events/upcoming-events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONFIG",
+    "title": "Figma",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Figma, Inc. Investor Events",
+        "url": "https://investor.figma.com/news-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONFUTU",
+    "title": "Futu Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Futu Holdings Limited Investor Events",
+        "url": "https://ir.futuholdings.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGEV",
+    "title": "GE VERNOVA",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "GE Vernova Inc. Investor Events",
+        "url": "https://www.gevernova.com/investors/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGIS",
+    "title": "General Mills Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "General Mills, Inc. Investor Events",
+        "url": "https://investors.generalmills.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGM",
+    "title": "GM ",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "General Motors Company Investor Events",
+        "url": "https://investor.gm.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGME",
+    "title": "GME earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "GameStop Corp. Investor Events",
+        "url": "https://investor.gamestop.com/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGOOGL",
+    "title": "earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Alphabet Inc. Investor Events",
+        "url": "https://abc.xyz/investor/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGRAB",
+    "title": "Grab Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Grab Holdings Limited Investor Events",
+        "url": "https://investors.grab.com/news-and-events/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONGS",
+    "title": "Goldman Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Goldman Sachs Group, Inc. Investor Events",
+        "url": "https://www.goldmansachs.com/investor-relations/presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONHD",
+    "title": "Home Depot",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Home Depot, Inc. Investor Events",
+        "url": "https://ir.homedepot.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONHIMS",
+    "title": "Hims Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Hims & Hers Health, Inc. Investor Events",
+        "url": "https://investors.hims.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONHLT",
+    "title": "HILTON",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Hilton Worldwide Holdings Inc. Investor Events",
+        "url": "https://ir.hilton.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONHOOD",
+    "title": "Robinhood Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Robinhood Markets, Inc. Investor Events",
+        "url": "https://investors.robinhood.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONHPE",
+    "title": "Hewlett Packard Enterprise",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Hewlett Packard Enterprise Company Investor Events",
+        "url": "https://investors.hpe.com/news-and-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONINTC",
+    "title": "Intel Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Intel Corporation Investor Events",
+        "url": "https://www.intc.com/news-events/presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONINTU",
+    "title": "What Will Intuit Say During Their Earnings Call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Intuit Investor Relations",
+        "url": "https://investors.intuit.com/news-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONISRG",
+    "title": "Intuitive Surgical",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Intuitive Surgical, Inc. Investor Events",
+        "url": "https://investor.intuitivesurgical.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONJNJ",
+    "title": "JNJ",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Johnson & Johnson Investor Events",
+        "url": "https://www.investor.jnj.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONJPM",
+    "title": "JPM Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "JPMorgan Chase & Co. Investor Events",
+        "url": "https://www.jpmorganchase.com/ir/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKKR",
+    "title": "KKR",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "KKR Investor Events",
+        "url": "https://ir.kkr.com/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKLAR",
+    "title": "Klarna Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Klarna Group plc Investor Events",
+        "url": "https://investors.klarna.com/events-and-presentations/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKMX",
+    "title": "CarMax",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "CarMax Investor Events",
+        "url": "https://investors.carmax.com/news-and-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKO",
+    "title": "Coca Cola Earnings Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Coca-Cola Company Investor Events",
+        "url": "https://investors.coca-colacompany.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKR",
+    "title": "Kroger",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Kroger Co. Investor Events",
+        "url": "https://ir.kroger.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONKTOS",
+    "title": "Kratos",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Kratos Defense & Security Solutions, Inc. Investor Events",
+        "url": "https://ir.kratosdefense.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLEVI",
+    "title": "Levi's Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Levi Strauss & Co. Investor Events",
+        "url": "https://investors.levistrauss.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLLY",
+    "title": "Eli Lily",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Eli Lilly and Company Investor Events",
+        "url": "https://investor.lilly.com/webcasts-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLMT",
+    "title": "Lockheed Martin Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Lockheed Martin Corporation Investor Events",
+        "url": "https://investors.lockheedmartin.com/news-and-events/calendar-of-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLOW",
+    "title": "Lowe's Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Lowe's Companies, Inc. Investor Events",
+        "url": "https://corporate.lowes.com/investors/news-events/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLUCID",
+    "title": "lucid earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Lucid Group, Inc. Investor Events",
+        "url": "https://ir.lucidmotors.com/events-and-presentations/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLULU",
+    "title": "Lululemon Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "lululemon athletica Investor Events",
+        "url": "https://corporate.lululemon.com/investors/news-and-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLUNR",
+    "title": "Intuitive Machines earnings call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Intuitive Machines, Inc. Investor Events",
+        "url": "https://investors.intuitivemachines.com/news-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONLYFT",
+    "title": "Lyft Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Lyft, Inc. Investor Events",
+        "url": "https://investor.lyft.com/news-events-presentations/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONM",
+    "title": "Macy's Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Macy's, Inc. Investor Events",
+        "url": "https://www.macysinc.com/investors"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMA",
+    "title": "Mastercard",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Mastercard Incorporated Investor Events",
+        "url": "https://investor.mastercard.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMCD",
+    "title": "McDonalds Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "McDonald's Corporation Investor Events",
+        "url": "https://investor.mcdonalds.com/corpmcd/investors/events-and-presentations.html"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMCO",
+    "title": "Moodys",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Moody's Corporation Investor Events",
+        "url": "https://ir.moodys.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMDT",
+    "title": "Medtronic Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Medtronic plc Investor Events",
+        "url": "https://investorrelations.medtronic.com/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMELI",
+    "title": "Mercado Libre Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "MercadoLibre, Inc. Investor Events",
+        "url": "https://investor.mercadolibre.com/news-and-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMETA",
+    "title": "earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Meta Platforms, Inc. Investor Events",
+        "url": "https://investor.atmeta.com/investor-events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMKC",
+    "title": "McCormick",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "McCormick Investor Events",
+        "url": "https://ir.mccormick.com/events/event-details/q3-2026-mccormick-company-inc-earnings-conference-call"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMRVL",
+    "title": "Marvell Technology",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Marvell Technology, Inc. Investor Events",
+        "url": "https://investor.marvell.com/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMS",
+    "title": "Morgan Stanley Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Morgan Stanley Investor Events",
+        "url": "https://www.morganstanley.com/about-us-ir"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMSFT",
+    "title": "Microsoft earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Microsoft Investor Events",
+        "url": "https://www.microsoft.com/en-us/investor/events/events-upcoming"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMSTR",
+    "title": "Microstrategy Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Strategy Inc. Investor Events",
+        "url": "https://www.strategy.com/investor-relations/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMTN",
+    "title": "Vail Resorts",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Vail Resorts, Inc. Investor Events",
+        "url": "https://investors.vailresorts.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONMU",
+    "title": "Micron",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Micron Technology, Inc. Investor Events",
+        "url": "https://investors.micron.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNBIS",
+    "title": "Nebius Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Nebius Group Investor Events",
+        "url": "https://nebius.com/investor-hub"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNFLX",
+    "title": "What will netflix say on their next earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Netflix, Inc. Investor Events",
+        "url": "https://ir.netflix.net/investor-news-and-events/investor-events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNIO",
+    "title": "What will Nio say during their earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "NIO Inc. Investor Events",
+        "url": "https://ir.nio.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNKE",
+    "title": "What Will Nike Say During Their Earnings Call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "NIKE, Inc. Investor Events",
+        "url": "https://investors.nike.com/investors/news-events-and-reports/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNVDA",
+    "title": "NVDA Earnings Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "NVIDIA Corporation Investor Events",
+        "url": "https://investor.nvidia.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONNYT",
+    "title": "New York Times",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The New York Times Company Investor Events",
+        "url": "https://investors.nytco.com/news-and-events/events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONOKLO",
+    "title": "Oklo Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Oklo Inc. Investor Events",
+        "url": "https://oklo.com/investors/events-and-presentations/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONON",
+    "title": "ON Semi",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "onsemi Investor Events",
+        "url": "https://investor.onsemi.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONORCL",
+    "title": "What will Oracle say in their earnings call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Oracle Corporation Investor Events",
+        "url": "https://investor.oracle.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPANW",
+    "title": "Palo Alto Networks Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Palo Alto Networks, Inc. Investor Events",
+        "url": "https://investors.paloaltonetworks.com/news-and-events/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPATH",
+    "title": "UiPath Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "UiPath, Inc. Investor Events",
+        "url": "https://ir.uipath.com/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPEP",
+    "title": "Pepsi Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "PepsiCo, Inc. Investor Events",
+        "url": "https://www.pepsico.com/investors/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPG",
+    "title": "Proctor & Gamble Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Procter & Gamble Company Investor Events",
+        "url": "https://www.pginvestor.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPGR",
+    "title": "Progressive Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Progressive Corporation Investor Events",
+        "url": "https://investors.progressive.com/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPLTR",
+    "title": "Palantir earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Palantir Technologies Inc. Investor Events",
+        "url": "https://investors.palantir.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPSKY",
+    "title": "Paramount",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Paramount Skydance Corporation Investor Events",
+        "url": "https://ir.paramount.com/events-webcasts-annual-meetings"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONPYPL",
+    "title": "PayPal Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "PayPal Holdings, Inc. Investor Events",
+        "url": "https://investor.pypl.com/news-and-events/events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONQCOM",
+    "title": "Qualcomm",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "QUALCOMM Incorporated Investor Events",
+        "url": "https://investor.qualcomm.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONRACE",
+    "title": "Ferrari Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ferrari N.V. Investor Events",
+        "url": "https://www.ferrari.com/en-EN/corporate/investors/financial-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONRDDT",
+    "title": "Reddit Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Reddit, Inc. Investor Events",
+        "url": "https://investor.redditinc.com/news-events/investor-events/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONRIVN",
+    "title": "Rivian Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Rivian Automotive, Inc. Investor Events",
+        "url": "https://rivian.com/investors/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONRKLB",
+    "title": "Rocket Lab Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Rocket Lab Corporation Investor Events",
+        "url": "https://investors.rocketlabcorp.com/events-presentations/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONROKU",
+    "title": "Roku Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Roku, Inc. Investor Events",
+        "url": "https://www.roku.com/investor/investor-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONROST",
+    "title": "Ross Stores Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ross Stores, Inc. Investor Events",
+        "url": "https://investors.rossstores.com/events-and-presentations/upcoming-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONRY",
+    "title": "Royal Bank of Canada",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Royal Bank of Canada Investor Events",
+        "url": "https://www.rbc.com/investor-relations/events-and-presentations.html"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSBUX",
+    "title": "Starbucks Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Starbucks Corporation Investor Events",
+        "url": "https://investor.starbucks.com/events-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSFM",
+    "title": "Sprouts",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Sprouts Farmers Market, Inc. Investor Events",
+        "url": "https://investors.sprouts.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSHOP",
+    "title": "Shopify",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Shopify Inc. Investor Events",
+        "url": "https://www.shopify.com/investors/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSJM",
+    "title": "JM Smucker Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The J. M. Smucker Company Investor Events",
+        "url": "https://investors.jmsmucker.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSNAP",
+    "title": "SNAP earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Snap Inc. Investor Events",
+        "url": "https://investor.snap.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSNOW",
+    "title": "Snowflake Earnings",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Snowflake Inc. Investor Events",
+        "url": "https://investors.snowflake.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSPCX",
+    "title": "SpaceX Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "SpaceX Investor Events",
+        "url": "https://ir.spacex.com/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSPOT",
+    "title": "Spotify",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Spotify Technology S.A. Investor Events",
+        "url": "https://investors.spotify.com/events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSTZ",
+    "title": "Constellation Brands",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Constellation Brands, Inc. Investor Events",
+        "url": "https://ir.cbrands.com/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONSYUM",
+    "title": "Yum! Brands",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Bloomberg",
+        "url": "https://www.bloomberg.com/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTFC",
+    "title": "Truist Financial Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Truist Financial Corporation Investor Events",
+        "url": "https://ir.truist.com/events-and-presentation"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTGT",
+    "title": "Target",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Target Corporation Investor Events",
+        "url": "https://corporate.target.com/investors/events-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTLN",
+    "title": "Talen Energy Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Talen Energy Corporation Investor Events",
+        "url": "https://ir.talenenergy.com/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTOL",
+    "title": "Toll Brothers Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Toll Brothers, Inc. Investor Events",
+        "url": "https://investors.tollbrothers.com/news-and-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTOST",
+    "title": "Toast, Inc.",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Toast, Inc. Investor Events",
+        "url": "https://investors.toasttab.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTSLA",
+    "title": "Tesla earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Tesla, Inc. Investor Events",
+        "url": "https://ir.tesla.com/#quarterly-disclosure"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTSMC",
+    "title": "TSMC Earnings Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Taiwan Semiconductor Manufacturing Company Limited Investor Events",
+        "url": "https://investor.tsmc.com/english/financial-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONTTWO",
+    "title": "Take Two Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Take-Two Interactive Software, Inc. Investor Events",
+        "url": "https://www.take2games.com/ir/quarterly-earnings"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONUAL",
+    "title": "United Airlines Earnings Mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "United Airlines Holdings, Inc. Investor Events",
+        "url": "https://ir.united.com/news-and-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONUBER",
+    "title": "uber earnings mention",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Uber Technologies, Inc. Investor Events",
+        "url": "https://investor.uber.com/news-events/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONULTA",
+    "title": "What will ULTA Beauty say during its earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Ulta Beauty, Inc. Investor Events",
+        "url": "https://www.ulta.com/investor/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONURBN",
+    "title": "Urban Outfitters Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Urban Outfitters, Inc. Investor Events",
+        "url": "https://investor.urbn.com/financial-news-and-events/upcoming-events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONV",
+    "title": "WHAT WILL VISA SAY IN THEIR NEXT EARNINGS CALL",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Visa Inc. Investor Events",
+        "url": "https://investor.visa.com/events-calendar/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONVSCO",
+    "title": "Victoria Secret",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Victoria's Secret & Co. Investor Events",
+        "url": "https://www.victoriassecretandco.com/investors/financial-information/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONVST",
+    "title": "Vistra",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Vistra Corp. Investor Events",
+        "url": "https://investor.vistracorp.com/events-and-presentations"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONVZ",
+    "title": "Verizon",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Verizon Communications Inc. Investor Events",
+        "url": "https://www.verizon.com/about/investors/investor-webcasts"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONWEN",
+    "title": "Wendys",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "The Wendy's Company Investor Events",
+        "url": "https://www.irwendys.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONWFC",
+    "title": "Wells Fargo",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Wells Fargo & Company Investor Events",
+        "url": "https://www.wellsfargo.com/about/investor-relations/events/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONWING",
+    "title": "Wingstop",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Wingstop Inc. Investor Events",
+        "url": "https://ir.wingstop.com/news-and-events/events-and-presentations/"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONWMT",
+    "title": "What will Walmart say during their earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Walmart Inc. Investor Events",
+        "url": "https://corporate.walmart.com/investors/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONYETI",
+    "title": "Yeti earnings call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "YETI Holdings, Inc. Investor Events",
+        "url": "https://investors.yeti.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONYOU",
+    "title": "What will Clear say on their earnings call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Clear Secure, Inc. Investor Events",
+        "url": "https://ir.clearme.com/news-events/ir-calendar"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONYUM",
+    "title": "Yum! Brands",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Yum! Brands, Inc. Investor Events",
+        "url": "https://investors.yum.com/news-events/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONZETA",
+    "title": "Zeta",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Zeta Global Holdings Corp. Investor Events",
+        "url": "https://investors.zetaglobal.com/events-and-presentations/default.aspx"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONZM",
+    "title": "What Will Zoom Say During Their Earnings Call?",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Zoom Investor Relations",
+        "url": "https://investors.zoom.us/news-events/events"
+      }
+    ]
+  },
+  {
+    "ticker": "KXEARNINGSMENTIONZS",
+    "title": "Zscaler Earnings Call",
+    "category": "Mentions",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/EARNINGSMENTION.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/EARNINGSMENTION.pdf",
+    "settlement_sources": [
+      {
+        "name": "Zscaler, Inc. Investor Events",
+        "url": "https://ir.zscaler.com/news-events/events-presentations"
+      }
+    ]
+  }
+]

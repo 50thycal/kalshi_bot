@@ -155,3 +155,8 @@ the `IDEA_MODEL_*` run docs, as the base-rate feedback loop recommendation from 
   specified before validation; no predictive probe built or run. No denominator change.
   Six-axis screen, dollar hurdle and reconciled queue:
   [run record](IDEA_MODEL_MENTIONS_20260930_CHATGPT.md).
+  Authorized counts-only follow-up: [coverage census](MENTION_CORPUS_CENSUS_20260930.md)
+  recovered 5,718 finalized contracts / 415 raw event tickers and eight archived
+  Microsoft source versions; 10/15 sampled contracts have aligned bid/ask candle
+  closes, 0/15 have resting size. C0 stays HOLD; full independent-call joins
+  remain incomplete. No predictive test, promotion or denominator change.
