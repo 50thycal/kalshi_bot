@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## MMSELL QUEUE-DEPTH 2026-09-30 — KILL on the independent sample; a forward-only observation carried
+
+[QUEUE-DEPTH](MMSELL_QUEUE_DEPTH_THESIS.md) ran first time (ops `qdepth-20260930-1`). On the six
+pre-9/7 live books, fills that landed behind ≥ 500 contracts earned −0.06¢ (n=127) against +0.29¢
+(n=276) for the rest: separation −0.35¢, the whole bootstrap interval below zero, signs flipping
+by book. Under the pre-committed Q2 that is a KILL, and queue position is closed as a lever on
+this book. On the live book the same cut reads +1.13¢ vs −1.49¢ (+2.62¢) and declining shallow
+queues would have raised realized dollars at every cut point, but the bootstrap interval includes
+zero and the band shape is not monotone, so it is consistent with the null. The only clean version
+of the measurement (WS-019 `at_rest` readings within 90 s, +1.32¢) exists only on the live book.
+If anyone wants to look again, the honest route is a forward pre-registration on fills after
+2026-10-01 with `at_rest` readings and a positive-interval bar; none is scheduled. Every lever the
+telemetry can see has now been tested; the idea-model run's stop-investing recommendation stands.
+
 ## MMSELL QUEUE-DEPTH 2026-09-30 — pre-registered, not yet run
 
 Calvin kept the live canary open for its fill information and asked for the one lever the

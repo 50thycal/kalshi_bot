@@ -4,7 +4,7 @@
 pre-registered here and are not re-scoped after results. Operator request (Calvin, 2026-09-30):
 keep the live canary open for its fill information and pre-register the one lever the telemetry
 itself generated. Origin: [`IDEA_MODEL_20260930_MMSELL.md`](IDEA_MODEL_20260930_MMSELL.md)
-follow-up. Status: **pending probe.** Probe: `scripts/mmsell_queue_depth_probe.py`.*
+follow-up. Status: **KILL (probe run 2026-09-30, Q2) — queue position is closed as a lever on this book; see RESULTS, including the one observation carried forward.** Probe: `scripts/mmsell_queue_depth_probe.py` (#501).*
 
 ## One-liner
 
@@ -110,5 +110,41 @@ Same return driver as the live book; a refinement, no diversification credit.
 
 ## RESULTS
 
-*(empty until the probe runs; recorded here, in `RESEARCH_JOURNAL.md` and in the scorecard row;
-the bars above are not edited)*
+**Probe run 2026-09-30 (ops `qdepth-20260930-1`, code `078a9480`). Verdict: KILL on Q2.**
+
+| sample | group | orders | fill rate | settled fills | win | realized/fill |
+|---|---|---|---|---|---|---|
+| primary (6 pre-9/7 books from 08-14, 1,039 orders) | DEEP (≥ 500) | 279 | 45.5% | 127 | 92.9% | −0.06¢ |
+| | NOT-DEEP | 556 | 49.6% | 276 | 92.4% | +0.29¢ |
+| confirmation (Fmmsell10, 1,033 orders) | DEEP | 458 | 64.6% | 285 | 94.0% | **+1.13¢** |
+| | NOT-DEEP | 397 | 63.2% | 238 | 91.2% | **−1.49¢** |
+| robustness (`at_rest` reading ≤ 90 s, WS-019) | DEEP | 271 | 63.8% | 162 | 94.4% | +1.59¢ |
+| | NOT-DEEP | 167 | 65.9% | 97 | 92.8% | +0.27¢ |
+
+| gate | result |
+|---|---|
+| Q0 instrument | reading inside 600 s for 80.4% (primary) / 82.8% (confirmation) of orders → PASS at the 80% bar; censored-fast fills 161 of 564 and 178 of 725 |
+| Q1 floor | 127 deep / 276 not-deep settled fills → PASS |
+| Q2 primary | separation **−0.35¢**, bootstrap 5th percentile −4.93¢ → **KILL** (≤ 0 at the floor) |
+| Q3 confirmation | separation +2.62¢, bootstrap 5th percentile **−1.01¢** (would not have cleared a positive-interval bar; not reached under the rule) |
+| Q4 policy value | at every D the policy dollars exceed all-fills dollars ($6.42 vs $2.88 at D = 500) (not reached) |
+
+**What it found.** On the independent sample the effect is absent: deep and not-deep fills earn
+the same within noise, and the per-book signs flip (Cmmsell10 −0.69¢, Dmmsell10 −1.19¢,
+Lmmsell10 +0.39¢). The band shape is not monotone in either sample (primary: 500–1,999 +3.15¢ but
+≥ 2,000 −2.01¢; confirmation: 500–1,999 −2.42¢ but ≥ 2,000 +2.38¢). Under the pre-committed rule
+that is a KILL, and it stands.
+
+**The observation carried forward, stated as an observation.** On the live book the separation is
++2.62¢ with the whole policy-dollar curve above the all-fills line, and the WS-019 subset (readings
+within 90 s of landing, the cleanest measurement) reads +1.32¢. Its bootstrap interval includes
+zero at every cut, so it is consistent with the primary null. It is also the only sample whose
+readings are close to the landing instant; the primary's readings were up to 600 s late, which
+the thesis flagged as a bias against the hypothesis. That is a reason for a **forward** test on
+fills the idea has never seen, not a reason to reread this one: a new pre-registration on
+Fmmsell10 (or its successor) fills from 2026-10-01 with `at_rest` readings only, floors ≥ 100 per
+side, PASS only on a positive bootstrap interval. No such test is scheduled by this document.
+
+**Decision (pre-committed).** Closed. Queue position joins execution (offset, chase, cancel),
+selection (flow, volume, series P&L, series age) and sizing as null on this book under
+pre-registered bars.
