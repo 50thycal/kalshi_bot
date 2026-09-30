@@ -1,5 +1,23 @@
 # Weather-markets research journal
 
+## MMSELL idea model 2026-09-30 — two cheap reads promoted; "stop investing" is the likely answer
+
+Calvin asked one question: how can the MMSELL book (live tag `Fmmsell10`) make real money, with
+"stop investing and redeploy" allowed as an outcome. The run ([report](IDEA_MODEL_20260930_MMSELL.md))
+screened 15 in-scope candidates and promoted two, both read-only and both testable today:
+**[YOUNG-SERIES](MMSELL_YOUNG_SERIES_THESIS.md)** (rest in series that are new to the board; the
+one live cell with a positive number, tested outcome-blind on the pre-9/7 books it never touched)
+and **[CELL-SIZE](MMSELL_CELL_SIZE_CENSUS.md)** (is any price cell fill-neutral enough to carry size
+×3). The arithmetic frames everything: real money is about +$3/month (`mmideas-truth-0930`: +$2.49
+realized over 689 settled), the twin's fill-everything ceiling is about $30/month at one contract,
+and $100/month needs a per-fill edge at or above that ceiling *and* 3–5× size. No tested lever has
+moved the per-fill number by more than noise. Recommendation: run the two reads; if either fails,
+stop spending research on MMSELL as a P&L line, keep the canary running as pipeline proof, and
+redeploy to GRIDPIN (~end October), EARNBEAT (week of 11-09) and the liquidity-incentive verdict.
+Holds written: INVERSE-OFFSET (replay spec), STRANGLE v2 (powered floor), ENDGAME-TAKER (needs a
+forward clock persisted), BARRED-UNIVERSE canary (operator decision). Nothing registered, no probe
+script, no book changed.
+
 ## GRIDPIN census 2026-09-29 — HOLD (accrual); the mechanics check out
 
 Run 2 of the [ERCOT daily-peak census](GRIDPIN_THESIS.md), after a day-alignment fix (#490): Kalshi labels these events by UTC close date, so run 1 graded the wrong day. Results:
