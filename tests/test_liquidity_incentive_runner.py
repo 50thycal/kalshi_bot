@@ -59,14 +59,14 @@ def _book(yes, no):
     return {"orderbook": {"yes": [list(x) for x in yes], "no": [list(x) for x in no]}}
 
 
-def _program(session, ticker, *, target=200.0, hours=24.0, close_hours=24.0, series="KXTEST",
-             event=None):
+def _program(session, ticker, *, target=200.0, hours=48.0, close_hours=240.0, series="KXTEST",
+             event=None, age_hours=24.0):
     # `target` 200 against the 500-a-side fixture books is 2.5x — inside the universe rule.
-    # One event per market by default (§9.15). The close is a day out, inside the window.
+    # One event per market by default (§9.15). The close is ten days out, inside the window.
     row = m.IncentiveProgram(
         program_id=f"p-{ticker}", market_ticker=ticker, event_ticker=event or ticker,
         series_ticker=series, incentive_type="liquidity",
-        start_date=NOW - timedelta(days=1), end_date=NOW + timedelta(hours=hours),
+        start_date=NOW - timedelta(hours=age_hours), end_date=NOW + timedelta(hours=hours),
         close_time=None if close_hours is None else NOW + timedelta(hours=close_hours),
         period_reward_raw=1_000_000, period_reward_unit="centi_cents", period_reward_usd=100.0,
         target_size=target, discount_factor_bps=9000, market_status="active",
@@ -139,14 +139,16 @@ def test_an_unarmed_cycle_fetches_no_books_and_places_nothing(live_db, settings)
 
 def test_candidate_carries_native_prices_references_and_the_close(live_db, settings):
     with db.session_scope() as s:
-        program = _program(s, "KXTEST-A", target=100.0, close_hours=30.0)
+        program = _program(s, "KXTEST-A", target=100.0, close_hours=300.0, age_hours=6.0)
         c = run.candidate_from_book(
             program, _book([(20, 60), (19, 200)], [(70, 300), (69, 50)]), now=NOW)
     assert c["best_yes_bid"] == 20 and c["best_no_bid"] == 70
     assert c["yes_resting_total"] == 260.0 and c["no_resting_total"] == 350.0
     assert c["reference_price_by_side"] == {limm.SIDE_YES: 20, limm.SIDE_NO: 70}
-    assert c["program_hours_remaining"] == pytest.approx(24.0)
-    assert c["hours_to_close"] == pytest.approx(30.0)
+    assert c["program_hours_remaining"] == pytest.approx(48.0)
+    assert c["hours_to_close"] == pytest.approx(300.0)
+    assert c["program_age_hours"] == pytest.approx(6.0)
+    assert (c["yes_touch_depth"], c["no_touch_depth"]) == (60.0, 300.0)
 
 
 def test_a_book_that_cannot_be_fetched_is_an_outcome_not_an_exception(live_db, settings):
@@ -185,13 +187,13 @@ def test_places_a_pair_on_one_market(live_db, settings):
     assert client.placed[0]["count"] == client.placed[1]["count"]
 
 
-def test_soonest_closing_first_and_stops_at_the_market_cap(live_db, settings):
+def test_newest_program_first_and_stops_at_the_market_cap(live_db, settings):
     books = {t: _book([(3, 500)], [(4, 500)]) for t in ("KXTEST-A", "KXTEST-B", "KXTEST-C")}
     client = FakeClient(books)
     with db.session_scope() as s:
-        _program(s, "KXTEST-A", close_hours=40.0)
-        _program(s, "KXTEST-B", close_hours=6.0)
-        _program(s, "KXTEST-C", close_hours=20.0)
+        _program(s, "KXTEST-A", age_hours=40.0)
+        _program(s, "KXTEST-B", age_hours=1.0)
+        _program(s, "KXTEST-C", age_hours=13.0)
         out = _cycle(client, settings, s)
     assert out["placed"] == limm.MAX_OPEN_ORDERS
     placed_markets = list(dict.fromkeys(o["ticker"] for o in client.placed))
@@ -239,7 +241,7 @@ def test_book_fetches_are_bounded_per_cycle(live_db, settings):
     client = FakeClient(books)
     with db.session_scope() as s:
         for i, t in enumerate(books):
-            _program(s, t, close_hours=10.0 + i)
+            _program(s, t, age_hours=10.0 + i)
         out = _cycle(client, settings, s)
     assert out["considered"] == 5 and out["fetched"] == 2
     assert client.asked == ["KXTEST-0", "KXTEST-1"]
@@ -817,7 +819,7 @@ def test_closed_markets_still_count_against_the_budget(live_db, settings):
 
 
 def test_excluded_series_are_dropped_before_any_book_is_fetched(live_db, settings):
-    """Production 2026-09-25: the eight soonest-closing programmes were all in excluded series,
+    """Production 2026-09-25: the eight first-ranked programmes were all in excluded series,
     so the bounded fetch budget was spent on them every cycle and nothing was ever placed."""
     settings.liquidity_incentive_excluded_series = "KXOTHERBOOK"
     settings.liquidity_incentive_live_max_book_fetches = 2
@@ -826,8 +828,8 @@ def test_excluded_series_are_dropped_before_any_book_is_fetched(live_db, setting
     client = FakeClient(books)
     with db.session_scope() as s:
         for i in range(3):
-            _program(s, f"KXOTHERBOOK-{i}", series="KXOTHERBOOK", close_hours=4.0 + i)
-        _program(s, "KXTEST-OK", close_hours=40.0)
+            _program(s, f"KXOTHERBOOK-{i}", series="KXOTHERBOOK", age_hours=1.0 + i)
+        _program(s, "KXTEST-OK", age_hours=40.0)
         out = _cycle(client, settings, s)
     assert out["considered"] == 1
     assert client.asked == ["KXTEST-OK"]

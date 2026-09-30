@@ -76,6 +76,8 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
     hours_left = None if end is None else (end - now).total_seconds() / 3600.0
     close = _aware(program.close_time)
     hours_to_close = None if close is None else (close - now).total_seconds() / 3600.0
+    start = _aware(program.start_date)
+    age = None if start is None else (now - start).total_seconds() / 3600.0
     return {
         "market_ticker": program.market_ticker,
         "program_row_id": program.id,
@@ -91,6 +93,10 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
         },
         "program_hours_remaining": hours_left,
         "hours_to_close": hours_to_close,
+        # Depth AT the touch per side decides whether resting one tick behind still scores.
+        "yes_touch_depth": yes_map[max(yes_map)] if yes_map else None,
+        "no_touch_depth": no_map[max(no_map)] if no_map else None,
+        "program_age_hours": age,
     }
 
 
@@ -416,12 +422,12 @@ class IncentiveLiveRunner:
 
     def _candidate_programs(self, session, *, now: datetime,
                             excluded_series: frozenset[str] = frozenset()) -> list:
-        """Current liquidity programs worth fetching a book for, SOONEST-CLOSING first.
+        """Current liquidity programs worth fetching a book for, NEWEST program first.
 
         The close-time window is applied here as well as in `live.build_pair_quote`, so the
         bounded book fetches are never spent on a market the decision would refuse anyway.
-        Soonest-closing first because capital that resolves sooner is capital redeployed
-        sooner (thesis §9.37).
+        Newest first because a program pays most in its first hours (§9.42); it was
+        soonest-closing first under §9.37.
 
         Excluded series are dropped HERE, before any book is fetched. Filtering them only in
         the decision layer spent the whole bounded fetch budget on markets that could never be
@@ -445,9 +451,11 @@ class IncentiveLiveRunner:
             to_close = (close - now).total_seconds() / 3600.0
             if not (limm.MIN_HOURS_TO_CLOSE <= to_close <= limm.MAX_HOURS_TO_CLOSE):
                 continue
-            out.append((to_close, row))
-        out.sort(key=lambda hr: hr[0])
-        return [row for _h, row in out]
+            start = _aware(row.start_date)
+            age = (now - start).total_seconds() / 3600.0 if start is not None else float("inf")
+            out.append((age, to_close, row))
+        out.sort(key=lambda r: (r[0], r[1]))
+        return [row for _a, _c, row in out]
 
     def _open_twin(self, session, leg) -> bool:
         """The twin's mirror of one leg just placed: same ticker, side, price and size, assumed
