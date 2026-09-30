@@ -2,7 +2,7 @@
 from decimal import Decimal
 
 from .contracts import DeskError, utcnow
-from .exchange import KalshiDeskExchange, _decimal
+from .exchange import KalshiDeskExchange, _balance_dollars, _decimal
 
 
 class SharedAccountExchange(KalshiDeskExchange):
@@ -67,7 +67,7 @@ class SharedAccountExchange(KalshiDeskExchange):
 
     def check_isolation(self):
         self.audit()
-        balance = _decimal(self._request("GET", "/portfolio/balance", params={"subaccount": 0}).get("balance")) / 100
+        balance = _balance_dollars(self._request("GET", "/portfolio/balance", params={"subaccount": 0}))
         # Allocations are liabilities of this pooled account, not deposits.
         books = self.store.snapshot(utcnow())["desks"]
         required = sum((Decimal(b["available_cash"]) for b in books), Decimal(0))

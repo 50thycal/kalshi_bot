@@ -73,6 +73,18 @@ def _decimal(value) -> Decimal:
         raise DeskError("invalid_exchange_number") from exc
 
 
+def _balance_dollars(payload: dict) -> Decimal:
+    """Prefer fixed-point dollars; legacy integer cents lose sub-cent cash.
+
+    A present but invalid precise field must fail closed, not fall back to cents.
+    """
+    balance = (_decimal(payload["balance_dollars"]) if "balance_dollars" in payload
+               else _decimal(payload.get("balance")) / 100)
+    if balance < 0:
+        raise DeskError("invalid_exchange_balance")
+    return balance
+
+
 def _date(value) -> datetime:
     try:
         result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
@@ -145,9 +157,7 @@ class KalshiDeskExchange:
         that is a separate operator deployment attestation.
         """
         own = self._request("GET", "/portfolio/balance", params={"subaccount": self.subaccount})
-        balance = _decimal(own.get("balance")) / 100
-        if balance < 0:
-            raise DeskError("invalid_exchange_balance")
+        balance = _balance_dollars(own)
         for other in (0, 1 if self.subaccount != 1 else 2):
             try:
                 self._request("GET", "/portfolio/balance", params={"subaccount": other})

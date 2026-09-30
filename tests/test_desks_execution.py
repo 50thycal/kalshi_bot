@@ -343,6 +343,28 @@ def test_isolation_requires_denied_other_account(rsa_keypair):
     assert adapter(rsa_keypair, restricted).check_isolation()["verified"]
 
 
+@pytest.mark.parametrize('payload,expected', [
+    ({'balance': 2812, 'balance_dollars': '28.1234'}, D('28.1234')),
+    ({'balance_dollars': '28.1234'}, D('28.1234')),
+    ({'balance': 2812}, D('28.12')),
+])
+def test_isolation_preserves_precise_cash_and_legacy_fallback(rsa_keypair, payload, expected):
+    def restricted(req):
+        return (httpx.Response(200, json=payload)
+                if req.url.params['subaccount'] == '1' else httpx.Response(403))
+    report = adapter(rsa_keypair, restricted).check_isolation()
+    assert report['verified']
+    assert D(report['balance']) == expected
+
+
+@pytest.mark.parametrize('value', [None, '', 'NaN', 'Infinity', '-0.0001'])
+def test_isolation_invalid_precise_balance_never_falls_back(rsa_keypair, value):
+    exchange = adapter(rsa_keypair, lambda req: httpx.Response(
+        200, json={'balance': 3000, 'balance_dollars': value}))
+    with pytest.raises(DeskError, match='invalid_exchange_(number|balance)'):
+        exchange.check_isolation()
+
+
 def test_quote_reads_current_rules_and_event_fee_override(rsa_keypair):
     from kalshi_bot.desks.exchange import rules_hash
 

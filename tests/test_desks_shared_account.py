@@ -49,7 +49,10 @@ def shared(tmp_path, settings, ownership):
         if path.endswith('/positions'):
             return httpx.Response(200, json={'market_positions': data['market_positions']})
         if path.endswith('/balance'):
-            return httpx.Response(200, json={'balance': data['balance']})
+            payload = {'balance': data['balance']}
+            if 'balance_dollars' in data:
+                payload['balance_dollars'] = data['balance_dollars']
+            return httpx.Response(200, json=payload)
         return httpx.Response(200, json={'market': {'ticker': 'MARKET', 'status': 'open'}})
     exchange = SharedAccountExchange('https://demo-api.kalshi.co/trade-api/v2',
                                     settings.kalshi_api_key_id, settings.private_key_pem,
@@ -65,6 +68,16 @@ def test_shared_cash_is_not_counted_as_two_separate_deposits(shared):
     with pytest.raises(DeskError, match='cash_shortfall'):
         exchange.check_isolation()
     assert all(r.method == 'GET' for r in requests)
+
+
+def test_shared_precise_balance_keeps_shortfall_check_strict(shared):
+    exchange, data, _ = shared
+    data.update(balance=5999, balance_dollars='60.0000')
+    assert exchange.check_isolation()['balance'] == '60.0000'
+    # Even a sub-cent shortage blocks, despite a sufficient legacy cents field.
+    data.update(balance=6000, balance_dollars='59.9999')
+    with pytest.raises(DeskError, match='cash_shortfall'):
+        exchange.check_isolation()
 
 
 @pytest.mark.parametrize('activity', ['orders', 'market_positions'])
