@@ -33,6 +33,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select
+
+from .. import models as m
 from .. import repository as repo
 from ..scanner.metrics import parse_orderbook
 from . import live as limm
@@ -53,6 +56,11 @@ SKIP_NO_SLOTS = "no_slots"
 #: 2026-09-30 the eight newest programmes were all `book_too_deep`, so each cycle fetched those
 #: eight, refused all eight, and never reached the other ~1,150 (§9.43; §9.39 was the same shape).
 BOOK_REFUSAL_COOLDOWN_SECONDS = 3600.0
+#: The cooldown map is also written to `system_events` (at most this often) and read back on the
+#: first cycle after a restart, so a redeploy does not send the fetch budget back to the top of
+#: the ranking (§9.44). Production redeploys several times a day as other work merges.
+COOLDOWN_COMPONENT = "limm_book_cooldown"
+COOLDOWN_PERSIST_EVERY_SECONDS = 300.0
 BOOK_REFUSAL_CODES = frozenset({
     limm.REFUSE_NO_BOOK, limm.REFUSE_NOT_TWO_SIDED, limm.REFUSE_TARGET_NOT_MET,
     limm.REFUSE_TOO_EXPENSIVE, limm.REFUSE_BOOK_TOO_DEEP, limm.REFUSE_POST_ONLY_CROSS,
@@ -125,6 +133,8 @@ class IncentiveLiveRunner:
         self._exit_exhausted: set[str] = set()
         #: Ticker -> when its book may be fetched again, after the book refused a pair.
         self._book_refused_until: dict[str, datetime] = {}
+        self._cooldown_loaded = False
+        self._cooldown_saved_at: datetime | None = None
 
     # --- arming ---------------------------------------------------------------
 
@@ -177,6 +187,8 @@ class IncentiveLiveRunner:
         excluded = self.excluded_series()
         candidates = self._candidate_programs(session, now=now, excluded_series=excluded)
         summary["considered"] = len(candidates)
+        if not self._cooldown_loaded:
+            self._load_cooldown(session, now)
         self._book_refused_until = {t: u for t, u in self._book_refused_until.items() if u > now}
         cooling = [p for p in candidates if p.market_ticker in self._book_refused_until]
         if cooling:
@@ -220,6 +232,7 @@ class IncentiveLiveRunner:
             if code in BOOK_REFUSAL_CODES:
                 self._book_refused_until[c["market_ticker"]] = now + timedelta(
                     seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
+        self._save_cooldown(session, now)
 
         for candidate, pair in ranked:
             if slots <= 0:
@@ -440,6 +453,38 @@ class IncentiveLiveRunner:
             except Exception:  # noqa: BLE001 — recording a failure must not raise either
                 logger.exception("incentive reward ledger: could not record its own failure")
             return None
+
+    def _load_cooldown(self, session, now: datetime) -> None:
+        """Restore the cooldown map from the newest persisted copy, once per process. Any failure
+        leaves it empty — the pre-§9.44 behaviour — rather than stopping the cycle."""
+        self._cooldown_loaded = True
+        try:
+            row = session.scalar(
+                select(m.SystemEvent)
+                .where(m.SystemEvent.component == COOLDOWN_COMPONENT)
+                .order_by(m.SystemEvent.id.desc()).limit(1))
+            until = (row.raw_json or {}).get("until", {}) if row is not None else {}
+            for ticker, iso in until.items():
+                t = _aware(datetime.fromisoformat(iso))
+                if t is not None and t > now:
+                    self._book_refused_until[ticker] = t
+        except Exception:  # noqa: BLE001 — a bad saved copy must not stop the book
+            logger.warning("incentive live: cooldown restore failed", exc_info=True)
+
+    def _save_cooldown(self, session, now: datetime) -> None:
+        if not self._book_refused_until:
+            return
+        last = self._cooldown_saved_at
+        if last is not None and (now - last).total_seconds() < COOLDOWN_PERSIST_EVERY_SECONDS:
+            return
+        self._cooldown_saved_at = now
+        try:
+            repo.log_system_event(
+                session, level="info", component=COOLDOWN_COMPONENT,
+                message=f"{len(self._book_refused_until)} markets cooling down",
+                raw={"until": {t: u.isoformat() for t, u in self._book_refused_until.items()}})
+        except Exception:  # noqa: BLE001 — persistence is a convenience, never the guard
+            logger.warning("incentive live: cooldown save failed", exc_info=True)
 
     def _candidate_programs(self, session, *, now: datetime,
                             excluded_series: frozenset[str] = frozenset()) -> list:

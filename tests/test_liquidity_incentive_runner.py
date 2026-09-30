@@ -870,3 +870,37 @@ def test_the_cooldown_expires(live_db, settings):
         later = NOW + timedelta(seconds=run.BOOK_REFUSAL_COOLDOWN_SECONDS + 1)
         again = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=later)
     assert again["fetched"] == 1 and client.asked == ["KXTEST-DEEP", "KXTEST-DEEP"]
+
+
+def test_the_cooldown_survives_a_restart(live_db, settings):
+    """§9.44: production redeploys several times a day; a fresh runner must pick the cooldown
+    up from the last saved copy instead of refetching the same refused books."""
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    books = {f"KXTEST-DEEP{i}": _book([(3, 5000)], [(4, 5000)]) for i in range(2)}
+    books["KXTEST-OK"] = _book([(3, 500)], [(4, 500)])
+    client = FakeClient(books)
+    with db.session_scope() as s:
+        for i in range(2):
+            _program(s, f"KXTEST-DEEP{i}", age_hours=1.0 + i)
+        _program(s, "KXTEST-OK", age_hours=40.0)
+        run.IncentiveLiveRunner(client, settings).cycle(
+            s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+    with db.session_scope() as s:
+        restarted = run.IncentiveLiveRunner(client, settings)
+        out = restarted.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
+                              now=NOW + timedelta(minutes=3))
+    assert out["cooling_down"] == 2 and out["placed"] == 1
+
+
+def test_an_expired_saved_cooldown_is_ignored(live_db, settings):
+    settings.liquidity_incentive_live_max_book_fetches = 1
+    client = FakeClient({"KXTEST-DEEP": _book([(3, 5000)], [(4, 5000)])})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-DEEP")
+        run.IncentiveLiveRunner(client, settings).cycle(
+            s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+    with db.session_scope() as s:
+        later = NOW + timedelta(seconds=run.BOOK_REFUSAL_COOLDOWN_SECONDS + 1)
+        out = run.IncentiveLiveRunner(client, settings).cycle(
+            s, _exec(settings, client), {"cash_balance": 500.0}, now=later)
+    assert "cooling_down" not in out and out["fetched"] == 1

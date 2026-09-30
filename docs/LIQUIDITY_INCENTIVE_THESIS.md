@@ -2657,3 +2657,13 @@ ordering put the same eight at the top of every cycle, so the other ≈1,150 wer
 pair (`no_book`, `not_two_sided`, `target_not_met`, `too_expensive`, `book_too_deep`,
 `post_only_would_cross`, `no_pair_edge`) is not fetched again for `BOOK_REFUSAL_COOLDOWN_SECONDS`
 (1h), so the budget walks down the ranking. Selection rules and caps are unchanged.
+
+### 9.44 Faster scan and a cooldown that survives redeploys (2026-09-30)
+
+With §9.43 live the runner rotated, but at 8 books a cycle it needed ≈6h to cover ≈1,160
+candidates, and production redeploys several times a day as other work merges — each restart
+emptied the in-memory cooldown and sent the scan back to the top. Two changes, operator-approved:
+- `LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES` 8 → **30** (ops env request `limm-fetch30`, VERIFIED
+  2026-09-30T14:31Z). Read-only GETs; no change to exposure or entry rules.
+- The cooldown map is saved to `system_events` (component `limm_book_cooldown`, at most every
+  5 min) and restored on the first cycle after a restart. Any failure falls back to an empty map.
