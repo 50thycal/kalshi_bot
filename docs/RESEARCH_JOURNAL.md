@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MMSELL QUEUE-DEPTH 2026-09-30 — pre-registered, not yet run
+
+Calvin kept the live canary open for its fill information and asked for the one lever the
+telemetry itself generated to be pre-registered. [QUEUE-DEPTH](MMSELL_QUEUE_DEPTH_THESIS.md): fills
+that land behind a deep queue (true `contracts_ahead` ≥ 500 on the first reading) should be less
+adversely selected than fills near the front, the mirror of the +1¢ offset kill and consistent with
+the fill-age and queue-cancel reads. The scan-time depth column is not used (it is not queue
+position). Bars Q0–Q4 frozen; probe `mmsell_queue_depth_probe`; primary sample is the pre-9/7
+live books from 08-14, confirmation Fmmsell10. Verdict in the next entry.
+
 ## MMSELL probes 2026-09-30 — YOUNG-SERIES KILL, CELL-SIZE no cell passes; stop investing in MMSELL as a P&L line
 
 Both pre-registered reads ran first time after #497 merged. **[CELL-SIZE](MMSELL_CELL_SIZE_CENSUS.md)**
