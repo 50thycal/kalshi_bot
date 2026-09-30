@@ -1199,3 +1199,8 @@ unchanged. [Thesis §9.42](../LIQUIDITY_INCENTIVE_THESIS.md).
 
 After §9.42 placed two pairs, every cycle fetched the same eight too-deep books and placed
 nothing. A market whose book refuses a pair is now skipped for an hour. [Thesis §9.43](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-30 — 30 book fetches a cycle; cooldown survives redeploys (§9.44)
+
+Operator approved raising the per-cycle book fetches 8 → 30 (env, VERIFIED). The refused-book
+cooldown is now saved and restored across restarts. [Thesis §9.44](../LIQUIDITY_INCENTIVE_THESIS.md).
