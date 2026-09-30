@@ -1,0 +1,26 @@
+{
+  "type": "public_documentation_receipts_not_export_receipts",
+  "receipts": [
+    {
+      "url": "https://docs.predexon.com/api-reference/kalshi/orderbooks-subcent.md",
+      "status": 200,
+      "fetched_at": "2026-09-30T14:33:21.748756+00:00",
+      "bytes": 11974,
+      "sha256": "078a7b2f3372554a5a53fe1d520ec48e1d21a953fbb9c22190a1a9144e325823"
+    },
+    {
+      "url": "https://docs.predexon.com/data-signals/ticks/kalshi.md",
+      "status": 200,
+      "fetched_at": "2026-09-30T14:33:27.358121+00:00",
+      "bytes": 16083,
+      "sha256": "54b8fcd55f612bef356ff9a4474bc1df9b10f3a1448e3117aad03f8955883548"
+    },
+    {
+      "url": "https://docs.predexon.com/data-signals/ticks/data-credits.md",
+      "status": 200,
+      "fetched_at": "2026-09-30T14:33:41.274051+00:00",
+      "bytes": 9720,
+      "sha256": "d8df1e95007baaff00e45ef8194754de64a940e5731d6e09e1758d244d8f33be"
+    }
+  ]
+}
