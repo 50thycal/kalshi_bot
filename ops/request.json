@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELMON-26SEP30-T6.40"],"id":"desk-diesel-result-1218"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=US"],"id":"desk-aaa-result-1222"}
