@@ -1,0 +1,215 @@
+[
+  {
+    "fiscal_year": 2026,
+    "fiscal_quarter": 3,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2026%2Fearnings-fy-2026-q3&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260725004038",
+    "archive_url": "https://web.archive.org/web/20260725004038id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+    "bytes": 49616,
+    "sha256": "07890b521594f7e10221edd5d4c3c9c71cc7c84685de6eef1eafefa7af7295f3",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2026 Third Quarter Earnings Conference Call"
+    ],
+    "decoded_bytes": 337502,
+    "visible_text_chars": 56246,
+    "next_question_count": 5,
+    "final_url": "https://web.archive.org/web/20260725004038id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+    "memento_datetime": "Sat, 25 Jul 2026 00:40:38 GMT",
+    "head_status": 200,
+    "capture_count": 28,
+    "chosen_cdx_record": [
+      "20260725004038",
+      "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+      "MDSF4TVFHXUUPT4BTKQKDCB5PLMX72TM"
+    ]
+  },
+  {
+    "fiscal_year": 2026,
+    "fiscal_quarter": 2,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2026%2Fearnings-fy-2026-q2&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260715170645",
+    "archive_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2",
+    "bytes": 48847,
+    "sha256": "6adc3c1115e0f4f5d1f4ceba010409574acde0884c956d272156bdf6e2f46168",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2026 Second Quarter Earnings Conference Call"
+    ],
+    "decoded_bytes": 334206,
+    "visible_text_chars": 52679,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2",
+    "memento_datetime": "Wed, 15 Jul 2026 17:06:45 GMT",
+    "head_status": 200,
+    "capture_count": 32,
+    "chosen_cdx_record": [
+      "20260715170645",
+      "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2",
+      "JFBS6OYQ7GT4BCGZ5C273EL7RR75KDQH"
+    ]
+  },
+  {
+    "fiscal_year": 2026,
+    "fiscal_quarter": 1,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2026%2Fearnings-fy-2026-q1&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260715170645",
+    "archive_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1",
+    "bytes": 49301,
+    "sha256": "a5a1c96aa57ff4e7d401db5a99f99f57b92d4b23298fa471268467a64fef38e9",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2026 First Quarter Earnings Conference Call"
+    ],
+    "visible_text_chars": 53813,
+    "next_question_count": 5,
+    "final_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1",
+    "memento_datetime": "Wed, 15 Jul 2026 17:06:45 GMT",
+    "head_status": 200,
+    "capture_count": 28,
+    "chosen_cdx_record": [
+      "20260715170645",
+      "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1",
+      "NCAKRVLSP2O6BQGD6ASIFID5W3KNH7II"
+    ]
+  },
+  {
+    "fiscal_year": 2025,
+    "fiscal_quarter": 4,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q4",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2025%2Fearnings-fy-2025-q4&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260623161809",
+    "archive_url": "https://web.archive.org/web/20260623161809id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q4",
+    "bytes": 47977,
+    "sha256": "e28e577e2214b23fdae1cb393c881f8fb7eec15a50d6e72e27edbe9c4fa785eb",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2025 Fourth Quarter Earnings Conference Call"
+    ],
+    "decoded_bytes": 331380,
+    "visible_text_chars": 49543,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260623161809id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q4",
+    "memento_datetime": "Tue, 23 Jun 2026 16:18:09 GMT",
+    "head_status": 200,
+    "capture_count": 30,
+    "chosen_cdx_record": [
+      "20260623161809",
+      "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q4",
+      "ZAUQ5GF3F77P5WYTIXPXVMEJE2NI7OLA"
+    ]
+  },
+  {
+    "fiscal_year": 2025,
+    "fiscal_quarter": 3,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q3",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2025%2Fearnings-fy-2025-q3&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260715170645",
+    "archive_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q3",
+    "bytes": 48359,
+    "sha256": "9229c5e3dfc498552e0067ed007a5b552e794f83961dd904ec029461241270d8",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2025 Third Quarter Earnings Conference Call"
+    ],
+    "visible_text_chars": 49727,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q3",
+    "memento_datetime": "Wed, 15 Jul 2026 17:06:45 GMT",
+    "head_status": 200,
+    "capture_count": 32,
+    "chosen_cdx_record": [
+      "20260715170645",
+      "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q3",
+      "EURCD5NQ3Y7MV5G6GOVGIUWSERXL2UAW"
+    ]
+  },
+  {
+    "fiscal_year": 2025,
+    "fiscal_quarter": 2,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2025%2Fearnings-fy-2025-q2&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260715170645",
+    "archive_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2",
+    "bytes": 49320,
+    "sha256": "b5781bdd82c08e27b67ba81b7152d224063304a614fe205100e8c5ab01608d83",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2025 Second Quarter Earnings Conference Call"
+    ],
+    "decoded_bytes": 336883,
+    "visible_text_chars": 53255,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260715170645id_/https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2",
+    "memento_datetime": "Wed, 15 Jul 2026 17:06:45 GMT",
+    "head_status": 200,
+    "capture_count": 39,
+    "chosen_cdx_record": [
+      "20260715170645",
+      "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q2",
+      "SGF44YADFC4JJTCI47PUQMALJUYX67IG"
+    ]
+  },
+  {
+    "fiscal_year": 2025,
+    "fiscal_quarter": 1,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2025/earnings-fy-2025-q1",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2025%2Fearnings-fy-2025-q1&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260514093522",
+    "archive_url": "https://web.archive.org/web/20260514093522id_/https://www.microsoft.com/en-us/Investor/events/FY-2025/earnings-fy-2025-q1",
+    "bytes": 332362,
+    "sha256": "d7cc0e7697969b7530ab3989780645a3dcf23b74e077bb2521ccbcd1a189062d",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2025 First Quarter Earnings Conference Call"
+    ],
+    "decoded_bytes": 332047,
+    "visible_text_chars": 56939,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260514093522id_/https://www.microsoft.com/en-us/Investor/events/FY-2025/earnings-fy-2025-q1",
+    "memento_datetime": "Thu, 14 May 2026 09:35:22 GMT",
+    "head_status": 200,
+    "capture_count": 27,
+    "chosen_cdx_record": [
+      "20260514093522",
+      "https://www.microsoft.com/en-us/Investor/events/FY-2025/earnings-fy-2025-q1",
+      "53OTUUJ2XLE4PT5M3O7CLFYGLR4DVESK"
+    ]
+  },
+  {
+    "fiscal_year": 2024,
+    "fiscal_quarter": 4,
+    "url": "https://www.microsoft.com/en-us/investor/events/fy-2024/earnings-fy-2024-q4",
+    "cdx_url": "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Finvestor%2Fevents%2Ffy-2024%2Fearnings-fy-2024-q4&output=json&filter=statuscode%3A200&fl=timestamp%2Coriginal%2Cdigest&collapse=digest&to=20260728235959",
+    "capture_timestamp": "20260615051159",
+    "archive_url": "https://web.archive.org/web/20260615051159id_/https://www.microsoft.com/en-us/investor/events/FY-2024/earnings-fy-2024-q4",
+    "bytes": 330754,
+    "sha256": "5df80af04a405a989c35312dee28c7b79cfad73c2c29df920a7bc48c5e809fa6",
+    "qa_marker": true,
+    "fiscal_title": true,
+    "title": [
+      "Microsoft Fiscal Year 2024 Fourth Quarter Earnings Conference Call"
+    ],
+    "visible_text_chars": 53510,
+    "next_question_count": 6,
+    "final_url": "https://web.archive.org/web/20260615051159id_/https://www.microsoft.com/en-us/investor/events/FY-2024/earnings-fy-2024-q4",
+    "memento_datetime": "Mon, 15 Jun 2026 05:11:59 GMT",
+    "head_status": 200,
+    "capture_count": 26,
+    "chosen_cdx_record": [
+      "20260615051159",
+      "https://www.microsoft.com/en-us/investor/events/FY-2024/earnings-fy-2024-q4",
+      "CKCHTJS23APLBAJX3WFK7WCNG65WVUYT"
+    ]
+  }
+]

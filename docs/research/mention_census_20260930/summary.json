@@ -1,0 +1,67 @@
+{
+  "retrieval_start": "2026-09-30T12:44:59.558114+00:00",
+  "retrieval_end": "2026-09-30T12:54:20.955476+00:00",
+  "series_discovered": 177,
+  "market_page_requests": 354,
+  "request_errors": 0,
+  "truncated_queries": 0,
+  "returned_rows_before_dedup": 6832,
+  "unique_markets": 6586,
+  "historical_tier_markets": 4499,
+  "live_tier_markets": 2333,
+  "tier_overlap": 246,
+  "unique_settled_markets": 5718,
+  "raw_settled_event_tickers": 415,
+  "raw_settled_series": 165,
+  "settlement_timestamp_range": [
+    "2025-02-27T15:20:33.299284Z",
+    "2026-09-29T16:03:16.452573Z"
+  ],
+  "settled_contracts_by_settlement_month_not_call_month": {
+    "2025-02": 23,
+    "2025-03": 97,
+    "2025-04": 56,
+    "2025-05": 244,
+    "2025-07": 54,
+    "2025-08": 237,
+    "2025-09": 92,
+    "2025-10": 355,
+    "2025-11": 269,
+    "2025-12": 190,
+    "2026-01": 286,
+    "2026-02": 568,
+    "2026-03": 186,
+    "2026-04": 493,
+    "2026-05": 482,
+    "2026-06": 243,
+    "2026-07": 624,
+    "2026-08": 907,
+    "2026-09": 312
+  },
+  "quote_fixtures": [
+    {
+      "event": "KXEARNINGSMENTIONMSFT-26JUL29",
+      "listed_contracts": 15,
+      "sampled_contracts": 5,
+      "aligned_bid_ask_candle_closes": 3,
+      "contracts_with_observed_resting_size": 0
+    },
+    {
+      "event": "KXEARNINGSMENTIONMETA-26JUL29",
+      "listed_contracts": 18,
+      "sampled_contracts": 5,
+      "aligned_bid_ask_candle_closes": 3,
+      "contracts_with_observed_resting_size": 0
+    },
+    {
+      "event": "KXEARNINGSMENTIONNVDA-26AUG26",
+      "listed_contracts": 19,
+      "sampled_contracts": 5,
+      "aligned_bid_ask_candle_closes": 4,
+      "contracts_with_observed_resting_size": 0
+    }
+  ],
+  "prior_msft_source_versions_retrieved": 8,
+  "strict_C0_fully_qualified_calls_demonstrated": 0,
+  "verdict": "HOLD: resting size unavailable; full independent-call join incomplete"
+}

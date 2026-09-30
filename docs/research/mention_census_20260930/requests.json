@@ -1,0 +1,4958 @@
+[
+  {
+    "series": "KXEARNINGSMENTIONAAL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAAL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.912755+00:00",
+        "sha256": "a34995074d4c54be32bf7d6040f4815eef5df3bdbcbb4626a8f28e87fd591060"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 39
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAAL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.884892+00:00",
+        "sha256": "ee83ae598889628d3d3f274e95c5d428de3f6d63ff37ce4416a325dc168d5a4f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAOI",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAAOI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:06.009487+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAOI",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAAOI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:06.047654+00:00",
+        "sha256": "be5b5fe79b823103e2e3975efa9e018d6158bb0fa874299bd862c7f9e6382efe"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAP",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAAP&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.631708+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAP",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAAP&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.695075+00:00",
+        "sha256": "0c94407bf344b3290172113c02c9207ef03163086277316e24f954667ba8aa52"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAPL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAAPL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.423150+00:00",
+        "sha256": "a434270dd7b229aa5839bebf1be6dbcfd3f54d32dd8cf01e30f96eaa94be4e54"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 108
+  },
+  {
+    "series": "KXEARNINGSMENTIONAAPL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAAPL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.337773+00:00",
+        "sha256": "d79bd8662f28410227f54b908171d3746b826a2caf008834a27d177eb269ca30"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 35
+  },
+  {
+    "series": "KXEARNINGSMENTIONABNB",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONABNB&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.651223+00:00",
+        "sha256": "0469355972f2d9ebe9410d1003d7cef73953a777cd11a8b7fc33faefd78b6321"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 32
+  },
+  {
+    "series": "KXEARNINGSMENTIONABNB",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONABNB&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.520774+00:00",
+        "sha256": "7a15968f966633ba2aa9fdd286751cc0364439ea58cab44aa7d99d58abf1030c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONAC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.264077+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.176742+00:00",
+        "sha256": "e79e490bf9e63aceed123367b906b061ab3e99ae37227ed28387ad0af0dca89c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONACA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONACA&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.797196+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONACA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONACA&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.759784+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONACI",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONACI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.149966+00:00",
+        "sha256": "66fa5c05162042a539fe42eef4a316ca5442022a95af2d0739c91b88c0af59ba"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONACI",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONACI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.112869+00:00",
+        "sha256": "22fef5e49964749289616e2fadf2463300a467a76a5e1ee9a20efabd08b8c697"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONACN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONACN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.874593+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONACN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONACN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.809619+00:00",
+        "sha256": "a4477ae4f0009cf9527d2203b23e3e7868a0c7c321c356cda5fb04743fa7435f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONADBE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONADBE&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.935734+00:00",
+        "sha256": "c77b3e78eef9a9ce488d9122adaa0218507c0ab2fa118d87578accc37947875d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 36
+  },
+  {
+    "series": "KXEARNINGSMENTIONADBE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONADBE&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.829059+00:00",
+        "sha256": "c374bf345d298c0042c61654562f094964768af27b429f6d90f5a6d95c01f5c0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONADOBE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONADOBE&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.819814+00:00",
+        "sha256": "acde01f744b6326d711dc71db3e078979547e08e6e6c4604023a1564e84666b8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONADOBE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONADOBE&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.836777+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONALIBABA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONALIBABA&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.192742+00:00",
+        "sha256": "80cd024f64f6a69159c5ae404585cd52b47c606c8ad95b00c33e557ec540ba89"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONALIBABA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONALIBABA&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.191925+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONALK",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONALK&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.226167+00:00",
+        "sha256": "e2bff8fb80be90e7502e57a891e913a1abde979f365255e5119897399a22659e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 26
+  },
+  {
+    "series": "KXEARNINGSMENTIONALK",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONALK&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.143336+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONALLY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONALLY&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.000983+00:00",
+        "sha256": "1a33484aadff6d42cd9a20c478a95e769cbf74264df76f11e3eb6b147f598e16"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 22
+  },
+  {
+    "series": "KXEARNINGSMENTIONALLY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONALLY&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.038223+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMAT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAMAT&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.955476+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMAT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAMAT&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.866175+00:00",
+        "sha256": "79f772201032546042a3194a566f5ed5dcf3ab5284eee94df84ef044e7f2423c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAMC&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.297448+00:00",
+        "sha256": "700817ffabdc35f73db4fb751fdc166989caa5b5819f59daaec218ac3837877d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 32
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAMC&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.368412+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMD",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAMD&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.433786+00:00",
+        "sha256": "c0dffeb6a32ee2656b7187edc75f9c9237ad444b539f7870ea90604e5954289f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 35
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMD",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAMD&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.389290+00:00",
+        "sha256": "bdd396055debcc6e8f2af1124655d20f5533e78fe400f85a8594eb36f1abb5f8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMZN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAMZN&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.777556+00:00",
+        "sha256": "e7e2ceffb1120c32abb7c215f499d2dbf509433ffd197f58f5abc5946d08b91e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 117
+  },
+  {
+    "series": "KXEARNINGSMENTIONAMZN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAMZN&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.826233+00:00",
+        "sha256": "c7d3f35e8c43fe30219205a322bdb47f0038c09530beb8f9865c555cafb0735c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 45
+  },
+  {
+    "series": "KXEARNINGSMENTIONANF",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONANF&limit=1000",
+        "fetched_at": "2026-09-30T12:53:06.048308+00:00",
+        "sha256": "ff0c14f8ce16299617f3670cf527a488b9890a3c767e2f59e34658dcb95d7397"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONANF",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONANF&limit=1000",
+        "fetched_at": "2026-09-30T12:53:06.046942+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONARITZIA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONARITZIA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.447341+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONARITZIA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONARITZIA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.362269+00:00",
+        "sha256": "dd40d11f9150d53d1f89e444493e1ee720846979c72d3a1ea584ed83ceb7e7c1"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONAS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAS&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.146184+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAS&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.009694+00:00",
+        "sha256": "269929fef3e21ba37c2690c5643887cdbbf498ae5e5988ab2902093e4f680703"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONASTS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONASTS&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.574562+00:00",
+        "sha256": "b7925172c877233ac9c06a93e398ebd7621bddaeb001c85afbce7ead9533112e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 8
+  },
+  {
+    "series": "KXEARNINGSMENTIONASTS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONASTS&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.504008+00:00",
+        "sha256": "ccc0e675154c6834115c8077b15c82c73d50701959b8980d56b9de2f6496456b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONATZ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONATZ&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.327998+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONATZ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONATZ&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.340284+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAVAV",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAVAV&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.413068+00:00",
+        "sha256": "f14ef2be9cc7a62ee401d2d81d5262eff81c044cdb1e228450faef2f0a184947"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONAVAV",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAVAV&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.323689+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAVGO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAVGO&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.345315+00:00",
+        "sha256": "a5d8dfaa4dff40b5a489f4beb76182c5bd6dbb4ff742ad6948d4ce5265ba9eba"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONAVGO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAVGO&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.331617+00:00",
+        "sha256": "81ca6615f0e57a44452a6a23264019ab5738b5069daaf3fd76b2b6fb96268b77"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONAXP",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAXP&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.387746+00:00",
+        "sha256": "06dc9265b926cc4a4c464833f6899a1aace2230e2402cbd04a60cabeb0a98ee9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 49
+  },
+  {
+    "series": "KXEARNINGSMENTIONAXP",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAXP&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.279001+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAZO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONAZO&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.812329+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONAZO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONAZO&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.761291+00:00",
+        "sha256": "20852d5fc3aa70738f0e6cda06e429e1d85f7d6f85380ec6194761685a818061"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 29
+  },
+  {
+    "series": "KXEARNINGSMENTIONBA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBA&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.182087+00:00",
+        "sha256": "72d4bdb0c62d7a758c9475c23a2719e958b75bf339c3e334c9a892c569d9afea"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONBA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBA&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.147116+00:00",
+        "sha256": "48bd0d5fd3d976fab3a62f11493ed55ea36dcd37669a08f08ddb78e63a72bff9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONBAC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBAC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.747764+00:00",
+        "sha256": "ff847d290a570274250cef2727e75e651c58134490da989d91552a2fd8b64852"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 55
+  },
+  {
+    "series": "KXEARNINGSMENTIONBAC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBAC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.636558+00:00",
+        "sha256": "66d0528005a875ea91bf5653f4240f980f5fd7a9a3e7b6f63d8fad45e5a7befa"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONBB",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBB&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.221281+00:00",
+        "sha256": "e5a8aa4dc372508465c95ff4a36e364a3e8d4ec56641621bc259095e77559840"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONBB",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBB&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.152325+00:00",
+        "sha256": "6167ada8802eea6d6821abdf3b6091ca232aa7fd3cc6d2a273d8f4ba53b6613c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 27
+  },
+  {
+    "series": "KXEARNINGSMENTIONBJ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBJ&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.848212+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONBJ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBJ&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.764459+00:00",
+        "sha256": "f981add79122a7c81dd64c02617bb1ee0dc489d28d122dc499fa4384043e8e2c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONBLK",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBLK&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.073496+00:00",
+        "sha256": "100ee2062d8b5e590c67e635856ff22d527c7a9641ed024823cc2adb6153adcd"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 23
+  },
+  {
+    "series": "KXEARNINGSMENTIONBLK",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBLK&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.106830+00:00",
+        "sha256": "ad6b3a2155cafb57865503374d1a6058735371556e842757e3e524bc4610c8b6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONBULL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONBULL&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.863985+00:00",
+        "sha256": "e333e00a6719fe0a10a380c617ec2ef1bc5e5c2021363181ca3b025d9a559527"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONBULL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONBULL&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.867185+00:00",
+        "sha256": "44b57670cbfe71a190da9f981135fdef7dcfcd56cb50b5aa42c4da215064ecca"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONC&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.023712+00:00",
+        "sha256": "8e8f1c7ae5ea0204170a306baeec516cf6651b0bc1fbab47d3fc4a705879d8b7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 27
+  },
+  {
+    "series": "KXEARNINGSMENTIONC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONC&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.154534+00:00",
+        "sha256": "67e33bca90e13809643e2d9af63f9a0d49fb00baa782148a4f61b648111bd99a"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONCALM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCALM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.561661+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCALM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCALM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.591385+00:00",
+        "sha256": "9b861fe481fb1a22d9ef824ad61a7ec6f2276285e26b3a68b989d46d19835b40"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONCAR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCAR&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.179224+00:00",
+        "sha256": "12fec3fdcc15839e92fa35db965a109d961e6e011caaa921bcd56265f23892de"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONCAR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCAR&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.089921+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCAVA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCAVA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.635807+00:00",
+        "sha256": "9f9815e3d8f96734c458f098b6c68bf4073568e6d09ea473420698be1f7f6fcd"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONCAVA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCAVA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.636194+00:00",
+        "sha256": "6573f5554ad61b6e7ce7ef199508ceb15131982adb7e45e19b5f38108907103d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONCBRL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCBRL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.771979+00:00",
+        "sha256": "36aa5e0c6b3d6886826877f6070f9c99746b216dd59e2700bea2aabd3def1c94"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 29
+  },
+  {
+    "series": "KXEARNINGSMENTIONCBRL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCBRL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.808483+00:00",
+        "sha256": "285ccd38db85231465de7dc0a0dc7d23f6f1d8a647deb4ad4505a27c40d2dc31"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 20
+  },
+  {
+    "series": "KXEARNINGSMENTIONCBRS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCBRS&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.183851+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCBRS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCBRS&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.204814+00:00",
+        "sha256": "c5b0a226fc3c4f9a85a731704f502d81813302df8b31cbecc862c88fb3c725bf"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONCCL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCCL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.939151+00:00",
+        "sha256": "c9b3646ae24dc533367a8b40a3fe31204b4ef83196d058fe809d37ffca0f97e8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONCCL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCCL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.884189+00:00",
+        "sha256": "f11badfb0a9760133195625f52f07ab1198ef3eb75af8e703414c0294be59032"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 29
+  },
+  {
+    "series": "KXEARNINGSMENTIONCELH",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCELH&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.824726+00:00",
+        "sha256": "b1acd814e6869559ee00b36c0469b9effb824e4366028ea04eafde848a601c52"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONCELH",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCELH&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.923437+00:00",
+        "sha256": "0ee88cd05a55b81914a596036b1d3a828b1c29441f74c6c147f43615c13a2919"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONCHWY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCHWY&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.147687+00:00",
+        "sha256": "faf80aadc8a22dc232b50d149080a4f6a1876c66d78bc23da3bcfc8390badae0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONCHWY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCHWY&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.242811+00:00",
+        "sha256": "1bef4aa2418be57ae61f40957c5b1820dfd494aa8c45e6ef13ab0de7e2410963"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONCIEN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCIEN&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.837216+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCIEN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCIEN&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.874726+00:00",
+        "sha256": "bc9a4359fd5958bd3df7288c2adad2e940b74c7cc65b7a7fc01e73b945f42934"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONCMG",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCMG&limit=1000",
+        "fetched_at": "2026-09-30T12:50:12.985516+00:00",
+        "sha256": "488c187f3399e3f7490be9f9ee40e75924f5619b0108e5ca7b76189cd5ae15ae"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 53
+  },
+  {
+    "series": "KXEARNINGSMENTIONCMG",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCMG&limit=1000",
+        "fetched_at": "2026-09-30T12:50:13.121714+00:00",
+        "sha256": "71d7199154ed0bf4e75d304766d473170649134c0e61b5c8eacf9abddbae44d2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOHR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCOHR&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.338680+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOHR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCOHR&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.224833+00:00",
+        "sha256": "dcf57475ec83a3961dd101b77182b910e7391b55b4fc1cfd5c25518c8f12c3c2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOINBASE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCOINBASE&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.400011+00:00",
+        "sha256": "3deb1ff00b71f11a14963974d7cc0039d310235858e389f667cc7ae98ec72c4c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 47
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOINBASE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCOINBASE&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.333416+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOST",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCOST&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.158078+00:00",
+        "sha256": "65f8e4b741e5e575320bcfad917c8e57fba36320af7050aab213d9298bb7706d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 66
+  },
+  {
+    "series": "KXEARNINGSMENTIONCOST",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCOST&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.363410+00:00",
+        "sha256": "94b548a893a7ce22375135dddf5cacf74dd694710d1381d3f792aab8a9481d0d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 42
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRCL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCRCL&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.800848+00:00",
+        "sha256": "a54a261c89ae5d736d4911e26fee547b3069955660a05b2614fde245be428251"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 26
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRCL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCRCL&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.723100+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCRM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.896684+00:00",
+        "sha256": "fd6dcd5a1a577e7b227dd7172004bf8294348ebf05b417b947fbb77387f8a0d4"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 22
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCRM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.966172+00:00",
+        "sha256": "cab0b7cf24dbb26c96d7f822526b26e56d5794ef9dd9a0ead6dce96ad6f5b188"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRWD",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCRWD&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.167043+00:00",
+        "sha256": "7afa59a696a51d85229a315c52fbc2af09941f4f68026f455bfc8ccd8781f024"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 40
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRWD",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCRWD&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.180407+00:00",
+        "sha256": "8a9330eb3d66e752d62bd92060b1d7fd712d1441b64bea4a14ce79d391e0ff9e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRWV",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCRWV&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.205073+00:00",
+        "sha256": "d3b48277ca52dd79f536cee1e169d8447306f9641f3173a74f1a79b7af57054d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONCRWV",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCRWV&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.126592+00:00",
+        "sha256": "8ee8eb9dcbffc3094f5d2dac2a481d1f9ffa07bedea8764ebf700a58047b93df"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONCVNA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONCVNA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.316129+00:00",
+        "sha256": "e1fd95a6302bd8fa83a2530929131725308eebc238fa17152aad46810236af65"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 37
+  },
+  {
+    "series": "KXEARNINGSMENTIONCVNA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONCVNA&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.346392+00:00",
+        "sha256": "5fb455f66cc9fc560c56e8f1a53c784ad84220009dc4afde89da58d2a4ac5cdb"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 27
+  },
+  {
+    "series": "KXEARNINGSMENTIONDAL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDAL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.251148+00:00",
+        "sha256": "74590b890d0ce4926d255a4fd5329a2b5fd581ae8c78f27f17fa5408dd257515"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 37
+  },
+  {
+    "series": "KXEARNINGSMENTIONDAL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDAL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:07.151202+00:00",
+        "sha256": "c741d9de16f0d00e60776cd455b05efb94c2e409f925ec0e704a205ac07cd535"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONDASH",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDASH&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.940116+00:00",
+        "sha256": "3fb9795120c9c389a962fa78e1e63d3703b3b6813551e790f730002c5cee82c8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 8
+  },
+  {
+    "series": "KXEARNINGSMENTIONDASH",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDASH&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.814035+00:00",
+        "sha256": "025b9b06cae87cd36aedb4b654460458ccb47e5452745b15d8bd0bf976afd7b3"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONDE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDE&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.759613+00:00",
+        "sha256": "90a62ea2c771c7672d47bda0b8bd3c8a8b7c041900f90eff2f5f543ae9426bcf"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONDE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDE&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.876155+00:00",
+        "sha256": "3802fcda9c6a27ade1ff7c4828efbec9f064102955bd12831a95842c0fb7529d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONDEER",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDEER&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.104509+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDEER",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDEER&limit=1000",
+        "fetched_at": "2026-09-30T12:52:44.103248+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDELL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDELL&limit=1000",
+        "fetched_at": "2026-09-30T12:53:14.955371+00:00",
+        "sha256": "9905443d53165279c2c87d641124efd6984e205f205e3363b62acdb825150739"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 42
+  },
+  {
+    "series": "KXEARNINGSMENTIONDELL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDELL&limit=1000",
+        "fetched_at": "2026-09-30T12:53:15.058285+00:00",
+        "sha256": "167b71cd98477614bf627d0386a5b27a1419f6aebd37865e0dab86a4784797ed"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONDIS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDIS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.969034+00:00",
+        "sha256": "0acfad3c41e14196aa5b7a9bfc8ad4468620fa5106f9b99454eff9ea7ac93e6d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 77
+  },
+  {
+    "series": "KXEARNINGSMENTIONDIS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDIS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.941235+00:00",
+        "sha256": "805f230e428b25ec9413cd423e3de1c98295189bad6b55858b4fdeed56f2fd8c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONDKNG",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDKNG&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.102841+00:00",
+        "sha256": "d7ff739a3903747f69e1820757c48b7de8e49424155d62b5741423413c1d3748"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 26
+  },
+  {
+    "series": "KXEARNINGSMENTIONDKNG",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDKNG&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.145905+00:00",
+        "sha256": "f0ce01e624a0b7e4b1c55b1babab1ce554d90cbd9dafabce165d757e1e212233"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONDKS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDKS&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.847244+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDKS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDKS&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.892552+00:00",
+        "sha256": "4081f2af9208131052b594cb16d01e0fb089622d3b6d9ddefb2058abebc0a6ac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONDOCUSIGN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDOCUSIGN&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.894531+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDOCUSIGN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDOCUSIGN&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.894017+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDOLLARGENERAL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDOLLARGENERAL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.082410+00:00",
+        "sha256": "bad2c0f328c098708c98ec9ac6a795089218a3ecea584f05b51e4e350703dd24"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONDOLLARGENERAL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDOLLARGENERAL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.154661+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDPZ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDPZ&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.939847+00:00",
+        "sha256": "4e5df1128ba610d75a893bdd18408b69275022f8b30dd252a6b93c27685a3517"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONDPZ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDPZ&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.940094+00:00",
+        "sha256": "c7feab850303574da49cf9c889432140ac97773dad3c7405f14ada507f25a761"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONDUOL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONDUOL&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.880798+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONDUOL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONDUOL&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.860882+00:00",
+        "sha256": "7563c1c0298344d2f9833d0afde5c1fbfd633e444c745b27e1cca57a816690c6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONEA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONEA&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.642835+00:00",
+        "sha256": "857720dd760e89612a5ae7dcb3ff7bf3e9c9cdca846d4f118cc1c6e55a2400a0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONEA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONEA&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.599079+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONEBAY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONEBAY&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.600272+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONEBAY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONEBAY&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.620971+00:00",
+        "sha256": "9117e1f5c965c52b2210460e611f2f6db57ad825c0a82054578ef280ef94d63c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONETOR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONETOR&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.075607+00:00",
+        "sha256": "5364d4375da57238013331615ce4930bfc3c809d6bf5e86eb96aeb254bebb7ab"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 9
+  },
+  {
+    "series": "KXEARNINGSMENTIONETOR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONETOR&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.029302+00:00",
+        "sha256": "c4c63fdea0764865f43dfedabf0a29869fb3c1e1ae5ab3c63623039b785864f4"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONF",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONF&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.277523+00:00",
+        "sha256": "2b0c979312f149c796d6ce58c9daead24bcb8113dee58abe41b21b033df0c1c4"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 30
+  },
+  {
+    "series": "KXEARNINGSMENTIONF",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONF&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.418812+00:00",
+        "sha256": "a8925ddcf9f94e742e67b9977b2177c092f8d72785c36e75a1105d522218fac8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONFDX",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONFDX&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.810944+00:00",
+        "sha256": "21fda07c11d734dbcd9e3af51927f9620f6beba247ff6d1c2880b37820087efb"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 56
+  },
+  {
+    "series": "KXEARNINGSMENTIONFDX",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONFDX&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.837663+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONFIG",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONFIG&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.640535+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONFIG",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONFIG&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.621856+00:00",
+        "sha256": "d75fcd7a491f1ae84126dc99cf6befbd9bea0f124670698a69b750da59d706a3"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONFUTU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONFUTU&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.454214+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONFUTU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONFUTU&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.612547+00:00",
+        "sha256": "92fd4a0e1b1a38a26c648b349e43c911abdbf80a2ca882144d6225f01bb39d0f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONGEV",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGEV&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.558869+00:00",
+        "sha256": "1e974cf3726a5af7f3e9876a31d241709425e68a3635960d6f513dcea19ad5dc"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONGEV",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGEV&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.516302+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONGIS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGIS&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.831267+00:00",
+        "sha256": "d71058f10caa07ba82466557850dad5dde60e5da616e88e39f0bf57faf0f2d57"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONGIS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGIS&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.928446+00:00",
+        "sha256": "b1dfeccb1334ad1e5c98e64a2e79e5852b7f8fb6895c001de25fec8ad0d6ed6c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 34
+  },
+  {
+    "series": "KXEARNINGSMENTIONGM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.598734+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONGM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.576831+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONGME",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGME&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.674823+00:00",
+        "sha256": "e81b1feefcb6f48bbd2680c9073efc00d2307b7167b042917816eba0ba446585"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONGME",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGME&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.726024+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONGOOGL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGOOGL&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.855465+00:00",
+        "sha256": "78a24815bdcdea58d09c22bc2895d1e9b4d62132c31a8ecd2fe4103775773100"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 102
+  },
+  {
+    "series": "KXEARNINGSMENTIONGOOGL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGOOGL&limit=1000",
+        "fetched_at": "2026-09-30T12:52:36.809075+00:00",
+        "sha256": "8070470880882dc08019b7530e0b0a7ebda80a141f104a20ea5df649c91606b8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 19
+  },
+  {
+    "series": "KXEARNINGSMENTIONGRAB",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGRAB&limit=1000",
+        "fetched_at": "2026-09-30T12:53:14.990482+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONGRAB",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGRAB&limit=1000",
+        "fetched_at": "2026-09-30T12:53:15.021004+00:00",
+        "sha256": "940019c3a58e3da5e9e6831866d500af41a2d2868ffc2db6cf8de28094325d02"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONGS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONGS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.335787+00:00",
+        "sha256": "d09b36bb9343da50eb089b9af7f5d206cef4910db8fa4263de941ed55fe3061b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 49
+  },
+  {
+    "series": "KXEARNINGSMENTIONGS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONGS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.283564+00:00",
+        "sha256": "7d34c30cab9268c16f226a6da26a876ab499f16698e009dccad81bea26ede22e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONHD",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONHD&limit=1000",
+        "fetched_at": "2026-09-30T12:53:15.021917+00:00",
+        "sha256": "ce30129f9aab812971a49f53cd3b20c21b7ed9c1fd5bd7025af3941e271a09a2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 34
+  },
+  {
+    "series": "KXEARNINGSMENTIONHD",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONHD&limit=1000",
+        "fetched_at": "2026-09-30T12:53:15.056561+00:00",
+        "sha256": "62b4788374965e8760b999532398b6edd1f6b85d841d3e5f79ec4883cea70a92"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONHIMS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONHIMS&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.154545+00:00",
+        "sha256": "4fa4e1a0d4185a878bd7ebb7c1f69a9a07716765745205adf62d5231d03a5e0b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 41
+  },
+  {
+    "series": "KXEARNINGSMENTIONHIMS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONHIMS&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.117472+00:00",
+        "sha256": "68c70616b4443d07724db2fe807e7868549791d51f7f3027054aed9629e3e0a5"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONHLT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONHLT&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.629698+00:00",
+        "sha256": "e563cc62cc876a870f5f4d9c325bf48d730ad8c99ff8f3ec48e8b48016d779f7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONHLT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONHLT&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.584263+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONHOOD",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONHOOD&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.438682+00:00",
+        "sha256": "6a7235b50a946ffdf1c3de0f2659e699dad76d91add08c9cc3f007e8b3fd727e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 54
+  },
+  {
+    "series": "KXEARNINGSMENTIONHOOD",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONHOOD&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.451102+00:00",
+        "sha256": "cc8a6a3346eb0bcc02faba097f6c8d6bfe7918ddc78a6f72753e5ac1b53c8684"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONHPE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONHPE&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.245717+00:00",
+        "sha256": "c9524cf3a8ebd76a0877cb7c306a15c3549638a18b3a87091747af71f6d3f813"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 30
+  },
+  {
+    "series": "KXEARNINGSMENTIONHPE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONHPE&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.194852+00:00",
+        "sha256": "9b0789d821b5db9ee2edee5e5d27583c7b20f56742643ff6ad372ca9681348ae"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONINTC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONINTC&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.678587+00:00",
+        "sha256": "62519d7619492ac1fec419eeb0255ef22fdd43abd6816bcaa459729efc51204c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 56
+  },
+  {
+    "series": "KXEARNINGSMENTIONINTC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONINTC&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.735223+00:00",
+        "sha256": "dcb2857b828ad4b103c7c6be1f35bb2de3d29fc5e20195f1b7e313814b87c44f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONINTU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONINTU&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.646004+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONINTU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONINTU&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.647918+00:00",
+        "sha256": "688fe60fc0d6ff7126c675a4c88120052bf3e9cf0e888486fd6134c3e8f6bcb1"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONISRG",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONISRG&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.856581+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONISRG",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONISRG&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.910375+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONJNJ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONJNJ&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.137222+00:00",
+        "sha256": "aa15706f6f20a97cbf0b81aa6c5e9e1bf0d2d1a3a3c91993787dd3f4333300a0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 42
+  },
+  {
+    "series": "KXEARNINGSMENTIONJNJ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONJNJ&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.125751+00:00",
+        "sha256": "ab07c04b622508e585d848a9425d18d3dea85bbdb504f1ee572297bb90ca28e6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONJPM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONJPM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.571470+00:00",
+        "sha256": "ef8ff7fd714307cdc01d43bbbc41108a43bda54a4136518a429c5cbc753ecf16"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 60
+  },
+  {
+    "series": "KXEARNINGSMENTIONJPM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONJPM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.531368+00:00",
+        "sha256": "b51faacb88233311c3802f2af038c3145adcaa8c89603a03b1c082c2016111df"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONKKR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKKR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.881989+00:00",
+        "sha256": "7306c6333e52f16cfe41e48d1c55ef92543d42868618ed4bd2b10e783b9436f5"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 9
+  },
+  {
+    "series": "KXEARNINGSMENTIONKKR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKKR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.811148+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONKLAR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKLAR&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.598183+00:00",
+        "sha256": "fa7222b95e178ec0f01e2c5c5e3ef0dddfdffeaf22f1b6f8333bf07ed220d3b8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONKLAR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKLAR&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.601091+00:00",
+        "sha256": "0a098c5823b7840fddbf1efa3886cda0117cac4e7e20f9c3cc6806f546e50cb0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONKMX",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKMX&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.633567+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONKMX",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKMX&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.665435+00:00",
+        "sha256": "1ef3398f3f79bc1bfb4945d2014fc753f487e892a943005214cd2c63fa92e246"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 30
+  },
+  {
+    "series": "KXEARNINGSMENTIONKO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKO&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.647234+00:00",
+        "sha256": "a37bcaa81d8b74953d7293fc1faacc2bdb5444e926d2351e5fe26698d36bd41d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 32
+  },
+  {
+    "series": "KXEARNINGSMENTIONKO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKO&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.558114+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONKR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.742461+00:00",
+        "sha256": "f5d583c85a46637d4cb5eef02cb779fc6b108c5a5b04623f5adfcd40020ab9be"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 39
+  },
+  {
+    "series": "KXEARNINGSMENTIONKR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.793794+00:00",
+        "sha256": "7a41757a1c150cfc2d2b12bb628a45477cab5de3b8c857f33c2f2622246b82ff"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONKTOS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONKTOS&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.866931+00:00",
+        "sha256": "3f331d2fa33f3637fc1d34266c762de8051dcb620560bff8bf23e94db1d3bba7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 9
+  },
+  {
+    "series": "KXEARNINGSMENTIONKTOS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONKTOS&limit=1000",
+        "fetched_at": "2026-09-30T12:54:02.693416+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONLEVI",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLEVI&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.205139+00:00",
+        "sha256": "6c95cbe3a69bedda2df277b9d8475e9d9f02a23f5d7ec2279130f11995b7facd"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONLEVI",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLEVI&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.319364+00:00",
+        "sha256": "80f354b75207863ad7041006c9bee27d97b2c8c4ef2064bf40e75c65ca52654f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONLLY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLLY&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.622774+00:00",
+        "sha256": "9afe785fb199fc1c35738d3bc677b2cf42f3b793cd530aeed16ad1d691072ea5"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 23
+  },
+  {
+    "series": "KXEARNINGSMENTIONLLY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLLY&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.544685+00:00",
+        "sha256": "989e7173a84e040880a6eb4ba3c295f6231e0f8135ac49b564522fcc257dda09"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONLMT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLMT&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.335725+00:00",
+        "sha256": "47499fb1053e28c79e3ca89bde2ccc7e12cbfdfdeccc129a14d6fe356e8dbdad"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONLMT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLMT&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.314536+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONLOW",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLOW&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.383849+00:00",
+        "sha256": "0bc290cbfdd946579d6a6f58e13626af1fae6eaa2d59cc98d99c0e050a6e10ae"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONLOW",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLOW&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.412417+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONLUCID",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLUCID&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.895827+00:00",
+        "sha256": "8c81077042ad2f572c7e47077ce7259cffeb7fce670d3c63bc9fa487b436dc98"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONLUCID",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLUCID&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.861271+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONLULU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLULU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.716696+00:00",
+        "sha256": "19ff2a36f6038d975b2f94cb5137b166190847283ff99e3e9dbffb33d8e5f1ad"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONLULU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLULU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.704991+00:00",
+        "sha256": "6b6722e0952ea7cf12dcdc26884a93a35dd5b4bcc168b36413e4cc1d5c600560"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONLUNR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLUNR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.607724+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONLUNR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLUNR&limit=1000",
+        "fetched_at": "2026-09-30T12:48:22.589260+00:00",
+        "sha256": "97be494d73620f5e68f0dca6d77627a7ea9f280328e93a75e3e3915821de6862"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONLYFT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONLYFT&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.278672+00:00",
+        "sha256": "bdae7428f800fb4f539cdebde7aaad8ce87c0d4e64adeca4b8a5916b1d800275"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 37
+  },
+  {
+    "series": "KXEARNINGSMENTIONLYFT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONLYFT&limit=1000",
+        "fetched_at": "2026-09-30T12:49:03.301877+00:00",
+        "sha256": "cb407f1b36e4996c83e2286474886375b771274f783f1fd3a5e0a2b90e895da2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 18
+  },
+  {
+    "series": "KXEARNINGSMENTIONM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONM&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.115566+00:00",
+        "sha256": "2c8bae3cdadb8f9f1d88ea24ec4b782b26d2f7a1d2902c1b337c468c3a4d02f3"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONM&limit=1000",
+        "fetched_at": "2026-09-30T12:52:24.181731+00:00",
+        "sha256": "addb9a90b1f8a9e1f46ba0a44b01a221d41eb4571a04dd37c2445b2b4672646f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONMA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.172602+00:00",
+        "sha256": "6e37e66650c9b8a531d9b3adf2c821bd3721174f6bb8c80d850a39268ee2558e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONMA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:26.070852+00:00",
+        "sha256": "49cb11ff0f47f3121b513553826ae8c2df25350cb2dbb420100ab00598997c4d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONMCD",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMCD&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.402821+00:00",
+        "sha256": "ac2b924f2f224d13e35f694e7d4ea1ab41f01ff1ba73f25a7e34991c54029ba9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 41
+  },
+  {
+    "series": "KXEARNINGSMENTIONMCD",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMCD&limit=1000",
+        "fetched_at": "2026-09-30T12:53:53.403677+00:00",
+        "sha256": "c9f275245910ccd9146777bf9acb1d6ed9f4f7e67e4705f9417fdf3f5883e3ff"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 41
+  },
+  {
+    "series": "KXEARNINGSMENTIONMCO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMCO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.383139+00:00",
+        "sha256": "575d8eb08067dec050d559bf1acf3879bc444c0d309b99934e9a5e5f78a2f4e3"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONMCO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMCO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.324467+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONMDT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMDT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.856527+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONMDT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMDT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.873326+00:00",
+        "sha256": "4bc5cb3f0dc1a4768b4bc856f9ebbe2631ee004dc98bb3b6eabd806250f7d0ca"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONMELI",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMELI&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.899384+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONMELI",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMELI&limit=1000",
+        "fetched_at": "2026-09-30T12:49:19.902471+00:00",
+        "sha256": "74689fb1d79b1ec6cb4b3ed69d657b71e904de23a21f6888faf76c38fc57866b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONMETA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMETA&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.408065+00:00",
+        "sha256": "b0a7da83d2f4faf3bfbde66e47f935009abec49cb9e47a1e9d4c8f5c767aaec7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 103
+  },
+  {
+    "series": "KXEARNINGSMENTIONMETA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMETA&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.301411+00:00",
+        "sha256": "d71735e4f4917789472fe9eb00b6ca920649f440b1fe9eda9b6f0d0aa8fce1ca"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 18
+  },
+  {
+    "series": "KXEARNINGSMENTIONMKC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMKC&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.916592+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONMKC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMKC&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.893107+00:00",
+        "sha256": "b907eae31b26dad8831730a633559de9b28a33d5881c296c584c5a09c6ba3670"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONMRVL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMRVL&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.566468+00:00",
+        "sha256": "31e463a46fa163a0abd504bc321442cc08b5bc980da128d937c64d084d325cca"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 35
+  },
+  {
+    "series": "KXEARNINGSMENTIONMRVL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMRVL&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.708240+00:00",
+        "sha256": "75ab74537bde617b5f31368ceff03ae582f45ded8bc6f8d7d45cfe7da4dd9ee8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONMS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:12.960268+00:00",
+        "sha256": "cafbcb257af2221bf4e2fc9cc749e80ab4ea46cf0167f12905e88f76118686d7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 26
+  },
+  {
+    "series": "KXEARNINGSMENTIONMS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:13.006255+00:00",
+        "sha256": "68491bca0d662ca7861d37722620312b2bfc1752663362e7aebd15e2bd19c49b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONMSFT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMSFT&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.004439+00:00",
+        "sha256": "4ef45cb573661caaee6415b5b250f4bb2916cda0da9c2fdfd434cb5841d68872"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 96
+  },
+  {
+    "series": "KXEARNINGSMENTIONMSFT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMSFT&limit=1000",
+        "fetched_at": "2026-09-30T12:52:11.121186+00:00",
+        "sha256": "6d2b2e63f3db3e49e1524084dc6dbcec29df513df87085c985f9794ec96138b9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONMSTR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMSTR&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.090245+00:00",
+        "sha256": "fd09b8340c69ca47dadca582dc2b1549a7cf6e143e8fc44c23f9f3c56de5361f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 21
+  },
+  {
+    "series": "KXEARNINGSMENTIONMSTR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMSTR&limit=1000",
+        "fetched_at": "2026-09-30T12:46:37.159892+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONMTN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMTN&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.773389+00:00",
+        "sha256": "68ab63d4f3acfefc36678bd9e7df58981a09c4395378c10d3bda09c63a4336db"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONMTN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMTN&limit=1000",
+        "fetched_at": "2026-09-30T12:48:07.757997+00:00",
+        "sha256": "b26bbb39fc2981ea2428a75ece8e61119c49c9d552bf94bdb94670bfcdc24d7f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 28
+  },
+  {
+    "series": "KXEARNINGSMENTIONMU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONMU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.322536+00:00",
+        "sha256": "f8d6fba9cda4c15307a415f25e151f1453b70907537ea18aaf5c6c3a08031398"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 47
+  },
+  {
+    "series": "KXEARNINGSMENTIONMU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONMU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.376388+00:00",
+        "sha256": "c50bf3fa0fdb22f8903b4ff48d71a8073b612b84348f3b31f9b4a5eaf265dbad"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONNBIS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNBIS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.304217+00:00",
+        "sha256": "b37fbfabe906de12dc6a1ef7d4ddfa0033f3fa1af2c6f9a373e63290f50abbf0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 31
+  },
+  {
+    "series": "KXEARNINGSMENTIONNBIS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNBIS&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.401712+00:00",
+        "sha256": "cf31944d76b7697d9fa716d99a8d759c9081d2716193b9c4d20286015b2dae1d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 17
+  },
+  {
+    "series": "KXEARNINGSMENTIONNFLX",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNFLX&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.843521+00:00",
+        "sha256": "3b38947dd1207e9ac71b18bab2f5e737a3b6141c6e66551ba910382a94ee61c0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 89
+  },
+  {
+    "series": "KXEARNINGSMENTIONNFLX",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNFLX&limit=1000",
+        "fetched_at": "2026-09-30T12:48:50.840480+00:00",
+        "sha256": "7be45132828c26ace93a776b64886ee430486c61cb4f6ec8e0e683f88bc9717e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONNIO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNIO&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.087335+00:00",
+        "sha256": "48b15c4a85836833c38c93d4e09a74a4305a1364309f75fd7a78ff60ce6215ac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONNIO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNIO&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.153690+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONNKE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNKE&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.288236+00:00",
+        "sha256": "1f01e0bb7dfec3f6b3a9591b75f4675a17a817ef1ce16bf806531e4f28302875"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 65
+  },
+  {
+    "series": "KXEARNINGSMENTIONNKE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNKE&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.317281+00:00",
+        "sha256": "dc93516e32c123421ee9c95fcfabf1817e0d399db2c19cacc32858826307d718"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONNVDA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNVDA&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.099689+00:00",
+        "sha256": "1e20029ff0c600dbfbc5b5c9301cc2ad5241ce3e66ef618398f72951475119b8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 109
+  },
+  {
+    "series": "KXEARNINGSMENTIONNVDA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNVDA&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.141350+00:00",
+        "sha256": "3af9edae4208e1dc7b0ce8473f75738be3140c81399d2edd4991e905c19a4660"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONNYT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONNYT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.133214+00:00",
+        "sha256": "e31ad4260bbe1e2243edabd41ce79047a875f59076b7a2f98578b22ccbccc649"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONNYT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONNYT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.159299+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONOKLO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONOKLO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.146604+00:00",
+        "sha256": "aee9f618e7eeacd9a8f644780661b521b389de17f09fc3dcc27d8bd6004a1320"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONOKLO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONOKLO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:35.149249+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONON",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONON&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.857505+00:00",
+        "sha256": "bd6c792a267c67b0e368ab3f5041837ad01b50a95416ae96e48fd3907dd11870"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 18
+  },
+  {
+    "series": "KXEARNINGSMENTIONON",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONON&limit=1000",
+        "fetched_at": "2026-09-30T12:51:11.821130+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONORCL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONORCL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.725776+00:00",
+        "sha256": "63af11c5cc727afec3169b639f572e2a31faf037267318d75c306702cec5edc4"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 54
+  },
+  {
+    "series": "KXEARNINGSMENTIONORCL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONORCL&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.784573+00:00",
+        "sha256": "5acd375ffb639c166c023901114544584914cddf77f90ae1471e17d8a6480d09"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONPANW",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPANW&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.604057+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONPANW",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPANW&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.658749+00:00",
+        "sha256": "d73e095513fdd60a6d5d5d8a652f45d3b759b2c2e6a701e4e35e27df6edab97b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONPATH",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPATH&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.363022+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONPATH",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPATH&limit=1000",
+        "fetched_at": "2026-09-30T12:51:24.274167+00:00",
+        "sha256": "ac211cfae07ae8a5f069a5e86549d6ac4c49296362555cced033df505f4af697"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONPEP",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPEP&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.799869+00:00",
+        "sha256": "f5a4a919948227b587fe0c499b437c07d611af322de4077f8847957508acaeda"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 52
+  },
+  {
+    "series": "KXEARNINGSMENTIONPEP",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPEP&limit=1000",
+        "fetched_at": "2026-09-30T12:52:53.833294+00:00",
+        "sha256": "3de750f1627794114d93cc05ee7d8468e4355a0a19113b57178bfbda954d1fb8"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONPG",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPG&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.184308+00:00",
+        "sha256": "5da5f4ed96f4e65578ca68cc80e0efd8df90d0803163adc10a060e4bafc0c972"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 37
+  },
+  {
+    "series": "KXEARNINGSMENTIONPG",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPG&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.118474+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONPGR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPGR&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.733374+00:00",
+        "sha256": "bb711d56bec286d7448e4779b55e50e37bde7ae1c6334c1648496062135d2b13"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONPGR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPGR&limit=1000",
+        "fetched_at": "2026-09-30T12:45:30.637571+00:00",
+        "sha256": "1581ea2124af6025d95813978aeddc7ee586405fdf3b2dfec5bb72802d79b6c2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONPLTR",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPLTR&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.646093+00:00",
+        "sha256": "f411694d6c9f8e1f4bcdabbbc6fb3263aeac7b70ca9f46aae3860eb6463ead22"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 87
+  },
+  {
+    "series": "KXEARNINGSMENTIONPLTR",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPLTR&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.655779+00:00",
+        "sha256": "0d1b4138377555294a285901d012bbf44e67c58b898040865e12b11213cd75e2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONPSKY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPSKY&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.362558+00:00",
+        "sha256": "3c72dd7fc8b9fa1fb1d8001e236ac2915234b0ab0425737a82eb1e97d03000d7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONPSKY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPSKY&limit=1000",
+        "fetched_at": "2026-09-30T12:50:48.330306+00:00",
+        "sha256": "0735654d586aa673e2496dc830868c027e71ced7bdac1f14b80d809be51e9f5b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONPYPL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONPYPL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.533142+00:00",
+        "sha256": "2eb07dd0006992b05857cbdffd0bee04d0cf435ed765b4ef467669bbcc287956"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 59
+  },
+  {
+    "series": "KXEARNINGSMENTIONPYPL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONPYPL&limit=1000",
+        "fetched_at": "2026-09-30T12:51:46.604799+00:00",
+        "sha256": "07c05804c44bb9e2650228c3d47cc50c82a92ada866bb5b3b8d502d19e532711"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONQCOM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONQCOM&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.665620+00:00",
+        "sha256": "8d9a2452c655cc42da6a67c4f5885dc7b48ed04a42e3065d1bb10c0d50315a85"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONQCOM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONQCOM&limit=1000",
+        "fetched_at": "2026-09-30T12:47:15.678363+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONRACE",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONRACE&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.860908+00:00",
+        "sha256": "efc3e308e8777625bb62c89ac3bb008149d499a68844827b76b48f8fc78b7d6e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 27
+  },
+  {
+    "series": "KXEARNINGSMENTIONRACE",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONRACE&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.845340+00:00",
+        "sha256": "e4eaf9db0a11568217fa1a51e57b099aa74bc50cca38f4bd81df701b410a64ab"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONRDDT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONRDDT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.368596+00:00",
+        "sha256": "547f3c36f60146227b338e364940c25a21603bd15ff5f0f7da4366c238fc5760"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 49
+  },
+  {
+    "series": "KXEARNINGSMENTIONRDDT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONRDDT&limit=1000",
+        "fetched_at": "2026-09-30T12:45:51.416604+00:00",
+        "sha256": "dffb96dae0d2d2230825c8f934c1e2359c1a514e029067ee79eed64a650b4d74"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 31
+  },
+  {
+    "series": "KXEARNINGSMENTIONRIVN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONRIVN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.658475+00:00",
+        "sha256": "215c78dadcb995b584ffe7b08cd8776f51a04bf5736884224a76d47ae0dab067"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONRIVN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONRIVN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.713847+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONRKLB",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONRKLB&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.913855+00:00",
+        "sha256": "cb856b053222d378d62ce732a13dbc34b1bc8f86c215f33e73a4a19092620ded"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONRKLB",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONRKLB&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.912579+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONROKU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONROKU&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.474488+00:00",
+        "sha256": "d3e1fb7438d281899cba1c2649e81389dc79ed8e6d146e88c8bac9134385210c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONROKU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONROKU&limit=1000",
+        "fetched_at": "2026-09-30T12:47:26.492120+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONROST",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONROST&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.564730+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONROST",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONROST&limit=1000",
+        "fetched_at": "2026-09-30T12:51:57.648528+00:00",
+        "sha256": "e49cb1fad2fed2456c85c997bb820dd6cb47c363be58fa0dc44dbd8c00612cb2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONRY",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONRY&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.830835+00:00",
+        "sha256": "0137b02e6ecbe51aac778bfaf6173c414bd5c6dcf3821de6c2bc57d21a6b2afe"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 32
+  },
+  {
+    "series": "KXEARNINGSMENTIONRY",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONRY&limit=1000",
+        "fetched_at": "2026-09-30T12:54:20.869855+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONSBUX",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSBUX&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.899360+00:00",
+        "sha256": "1ad28fbfc990c4329f0c8fedcda06b3c0c5f437d0732ca1eed51456275a08dc6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 63
+  },
+  {
+    "series": "KXEARNINGSMENTIONSBUX",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSBUX&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.804354+00:00",
+        "sha256": "6abf790d0a9bad6dbb0c27a0e20ab64c94b97664b691ac106248cf93e96c0213"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 36
+  },
+  {
+    "series": "KXEARNINGSMENTIONSFM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSFM&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.373764+00:00",
+        "sha256": "dde9690b463030f45856ce0b422cff47fec69685c4c6fdef66cb814e85376886"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 9
+  },
+  {
+    "series": "KXEARNINGSMENTIONSFM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSFM&limit=1000",
+        "fetched_at": "2026-09-30T12:51:37.346016+00:00",
+        "sha256": "c21990375f957f6d4132f2b816e08938897d50c927273b242a2cdb2039d64884"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONSHOP",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSHOP&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.919990+00:00",
+        "sha256": "68c167bcba5d060588f2ba83a439b80fe933061ad220d7e41785c7fcc3f3f102"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 18
+  },
+  {
+    "series": "KXEARNINGSMENTIONSHOP",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSHOP&limit=1000",
+        "fetched_at": "2026-09-30T12:48:38.797134+00:00",
+        "sha256": "ecd9f850164033a599bba97ec5dd5319c00cca03388e0f3e6a3b8d293190f7b9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONSJM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSJM&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.636160+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONSJM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSJM&limit=1000",
+        "fetched_at": "2026-09-30T12:45:44.574483+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONSNAP",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSNAP&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.055903+00:00",
+        "sha256": "650d5d28e514df845acf76ba3bbe6769f58d3239d514d1f70a623a02b31f7310"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONSNAP",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSNAP&limit=1000",
+        "fetched_at": "2026-09-30T12:52:31.091500+00:00",
+        "sha256": "28985108fc626a7993f6fe0506da2446e9c837ab047fa0f4ed26fcec8e9d6a6e"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONSNOW",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSNOW&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.579297+00:00",
+        "sha256": "9a3915daabb79d58739dfefb9a1b4744b99aa521a4cf7d5243ffb217660f2dea"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONSNOW",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSNOW&limit=1000",
+        "fetched_at": "2026-09-30T12:46:20.540968+00:00",
+        "sha256": "5567f7aac57e946202c89d4ece54a993ef6b7aa1eed3d785cd0713dc1eee8925"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONSPCX",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSPCX&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.364893+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONSPCX",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSPCX&limit=1000",
+        "fetched_at": "2026-09-30T12:51:01.369902+00:00",
+        "sha256": "c79bebd4c9daf2893244dc87570ee9f5219773ca1102bfaf2eb50edfab2a8279"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 43
+  },
+  {
+    "series": "KXEARNINGSMENTIONSPOT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSPOT&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.276802+00:00",
+        "sha256": "2598b638ac57ed65a4b8e06e3003c71d42c9c24ffe015d2aa59c42c70e922d4f"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 27
+  },
+  {
+    "series": "KXEARNINGSMENTIONSPOT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSPOT&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.349520+00:00",
+        "sha256": "0a18c2bced2f96c226dc6ad46565c9b7bd55fcdef34bd09b3545795df19c7569"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 34
+  },
+  {
+    "series": "KXEARNINGSMENTIONSTZ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSTZ&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.174467+00:00",
+        "sha256": "0af51eec92e92859bbf7fbea10a5745b35f8c46b21893031e6e563d7f36acef6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 38
+  },
+  {
+    "series": "KXEARNINGSMENTIONSTZ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSTZ&limit=1000",
+        "fetched_at": "2026-09-30T12:47:10.129560+00:00",
+        "sha256": "f7dc2e785ba6d6de670c66f3754ee00dd3e418fa071b14886747ae6e81985152"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONSYUM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONSYUM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.382010+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONSYUM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONSYUM&limit=1000",
+        "fetched_at": "2026-09-30T12:46:00.386764+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTFC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTFC&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.602258+00:00",
+        "sha256": "fbd140651c518771c05ae4147ef5747557accea0b6edd0119e82fd292ca9ea21"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONTFC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTFC&limit=1000",
+        "fetched_at": "2026-09-30T12:50:04.557244+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTGT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTGT&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.857775+00:00",
+        "sha256": "5bb4c7b9715b5c4ab110e86862a4d998a298085b21b7c583be6ea872fbf8c69a"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 37
+  },
+  {
+    "series": "KXEARNINGSMENTIONTGT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTGT&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.889955+00:00",
+        "sha256": "5219ce99373f664d369accce9c3717d5e573c1a74c426d151176105909479df4"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 29
+  },
+  {
+    "series": "KXEARNINGSMENTIONTLN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTLN&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.383336+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTLN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTLN&limit=1000",
+        "fetched_at": "2026-09-30T12:53:21.288598+00:00",
+        "sha256": "8e57d7782460076cdd36d6f740d11c508f1e4e9ec525a4ee237c0393834cc48a"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONTOL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTOL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.821097+00:00",
+        "sha256": "7db21e1807ca84594714ba94eeac8d8790cfeaa485cf3ff5d789e963e75ffa4d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONTOL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTOL&limit=1000",
+        "fetched_at": "2026-09-30T12:46:44.917906+00:00",
+        "sha256": "d1c2bddf32ae0d4e4436f57f9b82ba3464219d8a9628a47f6a95778fec80d6d6"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONTOST",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTOST&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.712261+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTOST",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTOST&limit=1000",
+        "fetched_at": "2026-09-30T12:50:24.582622+00:00",
+        "sha256": "e2d467de10cf07ab24e9702da1f13c345d7eaa82fcaa9361f8bf79fc9aa71e30"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONTSLA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTSLA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.635583+00:00",
+        "sha256": "208ceb378eb752a5aa28aef825be6caf6887a25128e60cdc0c7e0312524bd42b"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 125
+  },
+  {
+    "series": "KXEARNINGSMENTIONTSLA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTSLA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:09.574018+00:00",
+        "sha256": "95153a6a9e292e28f17c286fa432a468ba2c61d4192cc1bf675da4bce258f9c9"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 25
+  },
+  {
+    "series": "KXEARNINGSMENTIONTSMC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTSMC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.698741+00:00",
+        "sha256": "61538bb2d4e8879e126ea35b54517a103db3ad1b201d27630bf7a365a064ad85"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONTSMC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTSMC&limit=1000",
+        "fetched_at": "2026-09-30T12:47:56.712659+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTTWO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONTTWO&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.357019+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONTTWO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONTTWO&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.342721+00:00",
+        "sha256": "016fcc1cbe86d54f46b904ac9c1045404826989acd8dd8696124aa1633e05c2a"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONUAL",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONUAL&limit=1000",
+        "fetched_at": "2026-09-30T12:50:13.029207+00:00",
+        "sha256": "f4a52785be9f1ab66c45dc4927632ecccb1b8911a4f33c63b0a57db7a936bd33"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 59
+  },
+  {
+    "series": "KXEARNINGSMENTIONUAL",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONUAL&limit=1000",
+        "fetched_at": "2026-09-30T12:50:13.004965+00:00",
+        "sha256": "bdf33370ce0e5d941bbf6f662d8ab7e23d61e1f8853e0d0043b3a8d208961df2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONUBER",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONUBER&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.942768+00:00",
+        "sha256": "123430c908c3243e1ca819f3109168cd7397df9edc4fef271ac775baed264dd2"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 93
+  },
+  {
+    "series": "KXEARNINGSMENTIONUBER",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONUBER&limit=1000",
+        "fetched_at": "2026-09-30T12:50:39.997459+00:00",
+        "sha256": "b95632b600c91ac1657d752dfae8c7edbdfe0e39300be003f6254f354288f027"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 20
+  },
+  {
+    "series": "KXEARNINGSMENTIONULTA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONULTA&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.096951+00:00",
+        "sha256": "802624bc098c74e3c8199027b304eb6ec819ff124c485d463dc4a78b983b9f55"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 42
+  },
+  {
+    "series": "KXEARNINGSMENTIONULTA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONULTA&limit=1000",
+        "fetched_at": "2026-09-30T12:49:28.034057+00:00",
+        "sha256": "45cff0368960c29fdd97b28b748dee91529b454527f5ad2925a1b4eeff70c455"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONURBN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONURBN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.828574+00:00",
+        "sha256": "fbc3faf97e85ecabcf2c266b4da403f575638d32a4f9249b53dd390a422eee89"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 11
+  },
+  {
+    "series": "KXEARNINGSMENTIONURBN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONURBN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:36.895325+00:00",
+        "sha256": "428d122f9568d3c0fbb140d9528d40240a428126dbb1e096db734db1b6f63e77"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONV",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONV&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.715734+00:00",
+        "sha256": "af226bc5e31454d3f0ede42c94ce4b5764ddfb9645b303fe37ae80ad45148256"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 28
+  },
+  {
+    "series": "KXEARNINGSMENTIONV",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONV&limit=1000",
+        "fetched_at": "2026-09-30T12:49:41.788811+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONVSCO",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONVSCO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.288391+00:00",
+        "sha256": "07b287f509912d23a3ae574bf4547c91ad6d14215d8b0feb50a8aa736921c203"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 24
+  },
+  {
+    "series": "KXEARNINGSMENTIONVSCO",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONVSCO&limit=1000",
+        "fetched_at": "2026-09-30T12:53:46.325968+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONVST",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONVST&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.680354+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONVST",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONVST&limit=1000",
+        "fetched_at": "2026-09-30T12:44:59.645481+00:00",
+        "sha256": "8e2614a969f52c9599ef2225b52ea21ff199b14020577c91b3ba58a0a38bacd0"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONVZ",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONVZ&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.853267+00:00",
+        "sha256": "24cc20755fabdcda31f5c7ce5b70deb146a386a495411d47bdf254761b795b04"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 36
+  },
+  {
+    "series": "KXEARNINGSMENTIONVZ",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONVZ&limit=1000",
+        "fetched_at": "2026-09-30T12:49:52.850287+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONWEN",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONWEN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.370358+00:00",
+        "sha256": "b34d37cd255abc69ed598313daf67aad49317e59c1d466bbf8b802288fc7b859"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONWEN",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONWEN&limit=1000",
+        "fetched_at": "2026-09-30T12:47:49.319273+00:00",
+        "sha256": "2e43e9d7eaa02cca153a76153de8fa02b2a0b307738f02a565df0db21bf45655"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 16
+  },
+  {
+    "series": "KXEARNINGSMENTIONWFC",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONWFC&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.894503+00:00",
+        "sha256": "fc6792d6a533279a0768bf0706b74ae49790bdedf0faf599711188ee71840d6d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 39
+  },
+  {
+    "series": "KXEARNINGSMENTIONWFC",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONWFC&limit=1000",
+        "fetched_at": "2026-09-30T12:45:36.819791+00:00",
+        "sha256": "617d1fd8f9f8ba53cb00aa2cb3603701bd084b32ceb19fcb554e4310b2e2e71a"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 15
+  },
+  {
+    "series": "KXEARNINGSMENTIONWING",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONWING&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.899518+00:00",
+        "sha256": "f3e3d15497f93be8c939a6e398a0f92734c216b51cdac59bdc95a16cfcf10fa1"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 33
+  },
+  {
+    "series": "KXEARNINGSMENTIONWING",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONWING&limit=1000",
+        "fetched_at": "2026-09-30T12:54:12.856590+00:00",
+        "sha256": "505abef796112dedb82e1f5bcfd0389a687118d361041ffa45a16930d2ac9898"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 30
+  },
+  {
+    "series": "KXEARNINGSMENTIONWMT",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONWMT&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.237900+00:00",
+        "sha256": "7ef2571b0a19c376f3eb731eabe04354fe0b04daae9ee392fd5bb45da97b85e3"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 59
+  },
+  {
+    "series": "KXEARNINGSMENTIONWMT",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONWMT&limit=1000",
+        "fetched_at": "2026-09-30T12:47:03.285500+00:00",
+        "sha256": "585f87c69a1ed2cfb3901d4ec2f1a70f5d61e33d5326d79b3a91d6c2e8c2e0ff"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONYETI",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONYETI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:05.979850+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONYETI",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONYETI&limit=1000",
+        "fetched_at": "2026-09-30T12:53:06.079435+00:00",
+        "sha256": "1baef9e5699466ec08720d8349603ab870189cd14d5502ff0d6ad57edc4b03f7"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 10
+  },
+  {
+    "series": "KXEARNINGSMENTIONYOU",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONYOU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.746257+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONYOU",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONYOU&limit=1000",
+        "fetched_at": "2026-09-30T12:45:20.921190+00:00",
+        "sha256": "cd1c47135226d4a522c71b3e662b76250df1640361b0067d65637fbb1dac05e1"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  },
+  {
+    "series": "KXEARNINGSMENTIONYUM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONYUM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.372508+00:00",
+        "sha256": "3417577e2ea0233fd70191789125b07fbc2d05bdc0ecee7864028d82c5cede1d"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 18
+  },
+  {
+    "series": "KXEARNINGSMENTIONYUM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONYUM&limit=1000",
+        "fetched_at": "2026-09-30T12:50:32.371774+00:00",
+        "sha256": "cbc5c29577d621647b2a2c54f9dce86daafe9ea27960af0a8089b13e5ea83c9c"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 35
+  },
+  {
+    "series": "KXEARNINGSMENTIONZETA",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONZETA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.460901+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONZETA",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONZETA&limit=1000",
+        "fetched_at": "2026-09-30T12:46:54.389347+00:00",
+        "sha256": "b0c2434e4d7cc0d4bd1781d5feade7426b38cac240d28dc6aea3a9407e0bf585"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 14
+  },
+  {
+    "series": "KXEARNINGSMENTIONZM",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONZM&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.143547+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONZM",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONZM&limit=1000",
+        "fetched_at": "2026-09-30T12:45:15.180355+00:00",
+        "sha256": "99404e56f34df785cbd4774ec6532b2f497b88df9fef29230078151583679f70"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 12
+  },
+  {
+    "series": "KXEARNINGSMENTIONZS",
+    "tier": "historical",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/historical/markets?series_ticker=KXEARNINGSMENTIONZS&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.923979+00:00",
+        "sha256": "50699ea1db13415ea46ec367dcfa58decd9660083271c5dc061561f38337fbac"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 0
+  },
+  {
+    "series": "KXEARNINGSMENTIONZS",
+    "tier": "live",
+    "receipts": [
+      {
+        "url": "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXEARNINGSMENTIONZS&limit=1000",
+        "fetched_at": "2026-09-30T12:53:28.919083+00:00",
+        "sha256": "6267954219bfb41382bd2605572238af44ca199ec981036f3dbdebb64c900a90"
+      }
+    ],
+    "error": null,
+    "truncated": false,
+    "row_count": 13
+  }
+]
