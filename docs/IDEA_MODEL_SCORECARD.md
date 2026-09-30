@@ -146,3 +146,12 @@ the `IDEA_MODEL_*` run docs, as the base-rate feedback loop recommendation from 
   pause new MMSELL development, without changing live operation. No probe or XOS
   action; no promotion added to the base-rate denominator. Evidence, six-axis
   screen and reconciled queue: [run record](IDEA_MODEL_MMSELL_20260930_CHATGPT.md).
+
+- **2026-09-30, ChatGPT Research Lab — corporate earnings mentions:** nine
+  candidates screened outside market making, **zero promotions**. Existing
+  MENTION-corpus remains HOLD: official archives partly resolve source access,
+  but point-in-time source/quote joins are unproved and four checked retained
+  tables have zero `KXEARNINGSMENTION%` rows. One conditional recurrence rule
+  specified before validation; no predictive probe built or run. No denominator change.
+  Six-axis screen, dollar hurdle and reconciled queue:
+  [run record](IDEA_MODEL_MENTIONS_20260930_CHATGPT.md).
