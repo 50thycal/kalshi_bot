@@ -1194,3 +1194,8 @@ First reward paid ($2.21, one program, same day the event ended); other programs
 Operator decision: new pairs only in markets closing 7–60 days out, in programs with ≥ 24h left,
 newest program first, resting one tick behind the touch where that still scores. Size and caps
 unchanged. [Thesis §9.42](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-30 — refused books cool down so the fetch budget reaches past them (§9.43)
+
+After §9.42 placed two pairs, every cycle fetched the same eight too-deep books and placed
+nothing. A market whose book refuses a pair is now skipped for an hour. [Thesis §9.43](../LIQUIDITY_INCENTIVE_THESIS.md).

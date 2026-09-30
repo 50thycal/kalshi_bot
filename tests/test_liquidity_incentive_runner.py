@@ -834,3 +834,39 @@ def test_excluded_series_are_dropped_before_any_book_is_fetched(live_db, setting
     assert out["considered"] == 1
     assert client.asked == ["KXTEST-OK"]
     assert out["placed"] == 1
+
+
+# --- a refused book is not fetched again for a while (thesis §9.43) ---------------------------
+
+
+def test_a_book_refused_market_cools_down_so_the_fetch_budget_reaches_the_next_ones(live_db,
+                                                                                   settings):
+    """Production 2026-09-30: the eight newest programmes were all too deep, so every cycle
+    fetched the same eight and never reached the rest."""
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    books = {f"KXTEST-DEEP{i}": _book([(3, 5000)], [(4, 5000)]) for i in range(2)}
+    books["KXTEST-OK"] = _book([(3, 500)], [(4, 500)])
+    client = FakeClient(books)
+    with db.session_scope() as s:
+        for i in range(2):
+            _program(s, f"KXTEST-DEEP{i}", age_hours=1.0 + i)
+        _program(s, "KXTEST-OK", age_hours=40.0)
+        runner = run.IncentiveLiveRunner(client, settings)
+        first = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+        assert first["placed"] == 0 and first["outcomes"] == {limm.REFUSE_BOOK_TOO_DEEP: 2}
+        second = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
+                              now=NOW + timedelta(minutes=3))
+    assert second["cooling_down"] == 2 and second["placed"] == 1
+    assert client.asked[-1] == "KXTEST-OK"
+
+
+def test_the_cooldown_expires(live_db, settings):
+    settings.liquidity_incentive_live_max_book_fetches = 1
+    client = FakeClient({"KXTEST-DEEP": _book([(3, 5000)], [(4, 5000)])})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-DEEP")
+        runner = run.IncentiveLiveRunner(client, settings)
+        runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+        later = NOW + timedelta(seconds=run.BOOK_REFUSAL_COOLDOWN_SECONDS + 1)
+        again = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=later)
+    assert again["fetched"] == 1 and client.asked == ["KXTEST-DEEP", "KXTEST-DEEP"]

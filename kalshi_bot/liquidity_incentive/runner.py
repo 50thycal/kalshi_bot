@@ -31,7 +31,7 @@ refuses every order unless the tag is in `LIVE_STRATEGIES` with both master swit
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .. import repository as repo
 from ..scanner.metrics import parse_orderbook
@@ -47,6 +47,17 @@ logger = logging.getLogger(__name__)
 PLACED = "placed"
 SKIP_BOOK_ERROR = "book_error"
 SKIP_NO_SLOTS = "no_slots"
+
+#: A market whose BOOK refused a pair is skipped for this long before its book is fetched again.
+#: Without it the bounded fetch budget is spent on the same first-ranked books every cycle: on
+#: 2026-09-30 the eight newest programmes were all `book_too_deep`, so each cycle fetched those
+#: eight, refused all eight, and never reached the other ~1,150 (§9.43; §9.39 was the same shape).
+BOOK_REFUSAL_COOLDOWN_SECONDS = 3600.0
+BOOK_REFUSAL_CODES = frozenset({
+    limm.REFUSE_NO_BOOK, limm.REFUSE_NOT_TWO_SIDED, limm.REFUSE_TARGET_NOT_MET,
+    limm.REFUSE_TOO_EXPENSIVE, limm.REFUSE_BOOK_TOO_DEEP, limm.REFUSE_POST_ONLY_CROSS,
+    limm.REFUSE_NO_EDGE,
+})
 
 #: A balance reading whose unexplained remainder is worth a human look (see `reward_ledger`).
 EV_REWARD_RESIDUAL = "reward_residual"
@@ -112,6 +123,8 @@ class IncentiveLiveRunner:
         self._last_balance_at: datetime | None = None
         #: Tickers already reported as past their exit-attempt cap, so the log says it once.
         self._exit_exhausted: set[str] = set()
+        #: Ticker -> when its book may be fetched again, after the book refused a pair.
+        self._book_refused_until: dict[str, datetime] = {}
 
     # --- arming ---------------------------------------------------------------
 
@@ -164,6 +177,11 @@ class IncentiveLiveRunner:
         excluded = self.excluded_series()
         candidates = self._candidate_programs(session, now=now, excluded_series=excluded)
         summary["considered"] = len(candidates)
+        self._book_refused_until = {t: u for t, u in self._book_refused_until.items() if u > now}
+        cooling = [p for p in candidates if p.market_ticker in self._book_refused_until]
+        if cooling:
+            summary["cooling_down"] = len(cooling)
+            candidates = [p for p in candidates if p.market_ticker not in self._book_refused_until]
         max_fetch = max(1, int(getattr(self.settings,
                                        "liquidity_incentive_live_max_book_fetches", 8)))
         built: list[dict] = []
@@ -199,6 +217,9 @@ class IncentiveLiveRunner:
                                            blocked_event_tickers=frozenset(blocked_events))
             code = getattr(refusal, "code", "unknown")
             summary["outcomes"][code] = summary["outcomes"].get(code, 0) + 1
+            if code in BOOK_REFUSAL_CODES:
+                self._book_refused_until[c["market_ticker"]] = now + timedelta(
+                    seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
 
         for candidate, pair in ranked:
             if slots <= 0:

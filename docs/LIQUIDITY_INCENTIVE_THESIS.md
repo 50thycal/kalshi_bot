@@ -2646,3 +2646,14 @@ exposure; ahead of the frozen arm-time envelope by operator decision, as in §9.
 
 **What would say it worked (read at the next review, not tuned after):** fewer lone-leg fills
 per market-day than under §9.37–§9.41, and reward per program ≥ $1 on the programs we rest in.
+
+### 9.43 The fetch budget starved again — refused books now cool down for an hour (2026-09-30)
+
+§9.42 placed two pairs (Grubhub app, Yum), both timed out unfilled after 4h, and from ≈04:20Z
+nothing more was placed. Logs: every cycle `considered 1160, fetched 8, outcomes
+{book_too_deep: 8}`. The eight newest programmes all had books over 3× Target Size, and newest-first
+ordering put the same eight at the top of every cycle, so the other ≈1,150 were never read — the
+§9.39 shape, with a book refusal instead of an excluded series. Fix: a market whose book refused a
+pair (`no_book`, `not_two_sided`, `target_not_met`, `too_expensive`, `book_too_deep`,
+`post_only_would_cross`, `no_pair_edge`) is not fetched again for `BOOK_REFUSAL_COOLDOWN_SECONDS`
+(1h), so the budget walks down the ranking. Selection rules and caps are unchanged.
