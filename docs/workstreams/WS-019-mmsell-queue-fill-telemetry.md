@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-16
-**Updated:** 2026-09-17
+**Updated:** 2026-09-30
 **Build OS:** v0.12
 
 ## Goal
@@ -121,6 +121,9 @@ matched REST, 99.6 % of queue ticks readable, zero 429s).
 - `fills.filled_at` provenance (reconcile time vs exchange time) — Platform Change Review.
 - Phase 2 analysis (fill funnel, queue-conditioned fill curves, adverse-selection and economic
   curves) — Research Lab, once 2–4 weeks of ticks have accrued.
+- Decision-context rows for the liquidity-incentive book (`Alimm1`): not written, because its
+  placement path never calls the hook. Known limit by operator decision 2026-09-30; see
+  `docs/MMSELL_QUEUE_FILL_TELEMETRY.md` §12. Owned by the incentive workstream if ever wanted.
 
 ## Open Decisions — operator
 

@@ -360,3 +360,13 @@ touches the live executor (`docs/STANDING_AUTHORIZATIONS.md`).
 - A second Railway service for the collector — a third writer needs Railway config the
   sandbox cannot perform, and one worker process already holds the credentials.
 - Archiving markets we have no order in.
+- **Decision-context rows for any book other than MMSELL.** The decision-time hook lives in
+  `mirror_mmsell_entry` only. The liquidity-incentive book (`Alimm1`) places through
+  `mirror_incentive_pair`, which never calls it, so **every** Alimm1 order has no
+  `execution_order_context` row while every mmsell order has one (checked 2026-09-30: 76 of 76
+  Alimm1 orders missing, 385 of 385 mmsell present). The queue ticks, book and trade tapes and
+  WebSocket fills are captured for Alimm1 regardless. The context columns are also mmsell-shaped
+  (band, regime, review tier), so an incentive quote would need its own feature set rather than
+  a one-line hook. **Left as a known limit by operator decision (2026-09-30).**
+  Reading consequence: the pooled "decision context row" percentage in `execution_telemetry`
+  COVERAGE falls as Alimm1's share of orders rises, and that is not a fault. Read it per book.
