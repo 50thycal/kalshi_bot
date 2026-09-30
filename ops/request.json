@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELMONAK-26SEP30-T6.6000"],"id":"desk-ak-late-0308"}
+{"type":"db","id":"cc-rmm-0930a","sql":"SELECT strategy, status, count(*) AS n, round(coalesce(sum(pnl),0)::numeric,2) AS pnl, count(*) FILTER (WHERE pnl<0) AS losses, max(created_at) AS last_entry FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') GROUP BY strategy, status ORDER BY strategy, status"}
