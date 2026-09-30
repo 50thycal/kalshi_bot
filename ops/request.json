@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=AK","--find","Diesel","--window","250","--hits","2"],"id":"desk-ak-result-1225"}
+{"type":"capabilities","id":"chatgpt-mention-cap-0930"}
