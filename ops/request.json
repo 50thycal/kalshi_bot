@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","500","--top","80"],"id":"desk-scan-0930-1338"}
+{"type":"script","name":"kalshi_desk_board","args":["--hours","240","--min-volume","0","--search","diesel","--top","20"],"id":"desk-diesel-oct-1342"}
