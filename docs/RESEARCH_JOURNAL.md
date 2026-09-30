@@ -1,5 +1,20 @@
 # Weather-markets research journal
 
+## MMSELL probes 2026-09-30 — YOUNG-SERIES KILL, CELL-SIZE no cell passes; stop investing in MMSELL as a P&L line
+
+Both pre-registered reads ran first time after #497 merged. **[CELL-SIZE](MMSELL_CELL_SIZE_CENSUS.md)**
+(ops `cellsize-20260930-1`): on `Fmmsell10` the two readable cells earn −0.64¢ (93¢, n=315) and
++0.84¢ (94¢, n=252, bootstrap lower bound −1.54¢), and in both the rests that never filled would have
+earned 5–6¢ more than the fills. There is no fill-neutral cell to size into; sizing is closed.
+**[YOUNG-SERIES](MMSELL_YOUNG_SERIES_THESIS.md)** (ops `young-20260930-1`): out of sample on the
+seven pre-9/7 live books, fills in series young to the bot's history are *worse* (−0.92¢, n=919) than
+in mature ones (−0.30¢, n=523); separation −0.61¢ with the whole bootstrap interval below zero. The
++3.92¢ that motivated it was 34 in-sample fills. Universe selection on this book is closed alongside
+series P&L, market volume and pre-post flow. Per the [run doc](IDEA_MODEL_20260930_MMSELL.md) §5,
+the recommendation is now unconditional: **stop spending research on MMSELL as a profit line**; keep
+the canary as pipeline proof unless the operator prefers to stand it down; redeploy to GRIDPIN,
+EARNBEAT and the liquidity-incentive verdict.
+
 ## MMSELL probes 2026-09-30 — YOUNG-SERIES and CELL-SIZE built, not yet run
 
 Calvin merged the pre-registrations (#495) and asked for the probes to run. Two read-only scripts
