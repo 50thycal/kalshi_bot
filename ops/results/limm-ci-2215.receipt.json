@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "236d651317a57c5d9d00068b9bcb9943951ed3ed",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-01T22:15:39Z",
+  "id": "limm-ci-2215",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-ci-2215.receipt.json",
+  "result_file": "ops/results/limm-ci-2215.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36933943772",
+  "service": null,
+  "started_at": "2026-10-01T22:15:39Z",
+  "targets": [],
+  "type": "db"
+}
