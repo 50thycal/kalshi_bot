@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-0725","sql":"SELECT market_ticker, side, status, coalesce(kalshi_order_id,'-') koid, coalesce(cancel_reason,'') r, created_at::text FROM live_orders WHERE market_ticker LIKE 'KXWTIMAX%' AND created_at > now() - interval '2 days' ORDER BY created_at"}
+{"type":"logs","id":"limm-ci-0721l","filter":"KXWTIMAX","lines":40}
