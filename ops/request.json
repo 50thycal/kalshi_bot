@@ -1,1 +1,1 @@
-{"type":"logs","id":"limm-ci-0721l","filter":"KXWTIMAX","lines":40}
+{"type":"db","id":"limm-ci-0726","sql":"SELECT 'O' k, market_ticker, side, status, coalesce(kalshi_order_id,'-') koid, coalesce(cancel_reason,'') r, created_at::text t FROM live_orders WHERE strategy='Alimm1' AND created_at > now() - interval '6 hours' UNION ALL SELECT 'P', market_ticker, quantity::text, '', '', '', max(captured_at)::text FROM positions WHERE market_ticker LIKE 'KXWTIMAX%' AND captured_at > now() - interval '1 hour' GROUP BY market_ticker, quantity ORDER BY 1,7"}
