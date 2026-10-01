@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-1231
-# code 1a4c2d5dcc39119f7dd15cc094d359637a2faeb1 · started 2026-09-30T12:31:38Z
-k    market_ticker  v  status  t                            
----  -------------  -  ------  -----------------------------
-now                            2026-09-30 12:31:39.629868+00
-
-(1 row)
