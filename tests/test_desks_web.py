@@ -173,7 +173,8 @@ def decision(source, excerpt, now, settlement=SETTLE):
         invalidation="Agency revises the value below 400.", edge_class="information",
         evidence=[{"url": source["url"], "retrieved_at": source["retrieved_at"], "excerpt": excerpt,
                    "sha256": source["sha256"]}],
-        created_at=now, expires_at=now + timedelta(minutes=5), author_model="offline", origin="session")
+        created_at=now + timedelta(minutes=1), expires_at=now + timedelta(minutes=6),
+        author_model="offline", origin="session")
 
 
 def test_decision_citing_an_arbitrary_captured_page_verifies_and_tampering_is_refused(tmp_path):

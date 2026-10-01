@@ -143,7 +143,8 @@ def handler_for(service):
                     return self.send(200, result) if result is not None else self.send(404, {"error": "not_found"})
                 except DeskError as exc:
                     status = {"market_not_found": 404, "market_data_unavailable": 503,
-                              "market_data_too_large": 503, "market_browse_unavailable": 503}.get(exc.code, 400)
+                              "market_data_too_large": 503, "market_browse_unavailable": 503,
+                              "market_data_timeout": 503, "market_data_rate_limited": 429}.get(exc.code, 400)
                     return self.send(status, {"error": exc.code})
                 except Exception:
                     return self.send(503, {"error": "market_data_unavailable"})

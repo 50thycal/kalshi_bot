@@ -28,6 +28,7 @@ import httpx
 
 from .contracts import DeskError
 from .exchange import rules_hash
+from .web import retry_delay
 
 PUBLIC_BASE = "https://api.elections.kalshi.com/trade-api/v2"
 INDEX_TTL_SECONDS = 300
@@ -192,9 +193,8 @@ def _float(params: dict, key: str) -> float | None:
 class PublicKalshiReader:
     """Fixed-host public GET; no credentials, redirects, cookies or environment proxies."""
 
-    def __init__(self, base=PUBLIC_BASE, *, transport=None, retries=3):
+    def __init__(self, base=PUBLIC_BASE, *, transport=None):
         self.base = base
-        self.retries = retries
         self.client = httpx.Client(timeout=httpx.Timeout(30, connect=10), follow_redirects=False,
                                    transport=transport, trust_env=False,
                                    headers={"User-Agent": "KalshiDeskBrowse/2.0",
@@ -206,35 +206,39 @@ class PublicKalshiReader:
     def __call__(self, path: str, params: dict | None = None) -> dict:
         query = urlencode({k: v for k, v in (params or {}).items() if v not in (None, "")})
         url = self.base + path + ("?" + query if query else "")
-        for attempt in range(self.retries + 1):
+        for attempt in range(3):
             try:
                 with self.client.stream("GET", url) as response:
-                    if response.status_code == 404:
-                        raise DeskError("market_not_found")
-                    if response.status_code in (429, 500, 502, 503, 504) and attempt < self.retries:
-                        time.sleep(min(8, 2 ** attempt))
-                        continue
-                    if response.status_code != 200:
-                        raise DeskError("market_data_unavailable")
-                    body = bytearray()
-                    for chunk in response.iter_bytes():
-                        body.extend(chunk)
-                        if len(body) > MAX_RESPONSE_BYTES:
-                            raise DeskError("market_data_too_large")
-                value = json.loads(body)
-                if not isinstance(value, dict):
-                    raise DeskError("market_data_unavailable")
-                return value
+                    status, retry_after = response.status_code, response.headers.get("retry-after")
+                    if status == 200:
+                        body = bytearray()
+                        for chunk in response.iter_bytes():
+                            body.extend(chunk)
+                            if len(body) > MAX_RESPONSE_BYTES:
+                                raise DeskError("market_data_too_large")
+            except httpx.TimeoutException:
+                raise DeskError("market_data_timeout") from None
             except httpx.HTTPError:
-                if attempt < self.retries:
-                    time.sleep(min(8, 2 ** attempt))
-                    continue
                 raise DeskError("market_data_unavailable") from None
-            except ValueError as exc:
-                if isinstance(exc, DeskError):
-                    raise
+            if status == 429:
+                # Same bounded policy as evidence capture (#506): <=3 attempts, short waits only.
+                delay = retry_delay(retry_after, attempt)
+                if attempt == 2 or delay is None:
+                    raise DeskError("market_data_rate_limited")
+                time.sleep(delay)
+                continue
+            if status == 404:
+                raise DeskError("market_not_found")
+            if status != 200:
+                raise DeskError("market_data_unavailable")
+            try:
+                value = json.loads(body)
+            except ValueError:
                 raise DeskError("market_data_unavailable") from None
-        raise DeskError("market_data_unavailable")
+            if not isinstance(value, dict):
+                raise DeskError("market_data_unavailable")
+            return value
+        raise DeskError("market_data_rate_limited")
 
 
 class MarketBrowser:

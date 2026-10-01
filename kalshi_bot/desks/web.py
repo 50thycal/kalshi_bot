@@ -19,7 +19,8 @@ import re
 import socket
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
@@ -124,6 +125,33 @@ class PinnedTransport(httpx.BaseTransport):
         return self.inner.handle_request(pinned)
 
 
+def retry_delay(header, attempt):
+    """Seconds to wait before retrying a 429, or None when the cooldown is too long.
+
+    Never retry before a server-requested cooldown. Long cooldowns require a later
+    operator-authorized cycle, not a sleep inside the claim route (#506).
+    """
+    delay = 2 ** (attempt + 1)
+    if header is not None:
+        try:
+            delay = float(header)
+        except ValueError:
+            try:
+                delay = (parsedate_to_datetime(header) - datetime.now(timezone.utc)).total_seconds()
+            except (ValueError, TypeError, OverflowError):
+                pass
+    if not 0 <= delay <= 10:
+        return None
+    return max(1, delay)
+
+
+def _market_read(url: str) -> bool:
+    """Only safe, public Kalshi market GETs are retried on 429."""
+    parts = urlsplit(url)
+    return (parts.hostname == "api.elections.kalshi.com"
+            and (parts.path == "/trade-api/v2/markets" or parts.path.startswith("/trade-api/v2/markets/")))
+
+
 def _html_text(raw: str) -> str:
     raw = re.sub(r"(?is)<(script|style|noscript|template|svg)[^>]*>.*?</\1>", " ", raw)
     raw = re.sub(r"(?is)<!--.*?-->", " ", raw)
@@ -181,17 +209,27 @@ class PublicFetcher:
                 return response, bytes(body)
             finally:
                 response.close()
+        except httpx.TimeoutException:
+            raise DeskError("source_timeout") from None
         except httpx.HTTPError:
-            raise DeskError("source_network_failure") from None
+            raise DeskError("source_connection_failure") from None
         finally:
             if self.inner is None:
                 transport.close()  # per-hop pool; see PinnedTransport
 
     def __call__(self, url: str, now: datetime | None = None) -> dict:
         requested, _host = check_url(url)
-        current, redirects, started = requested, [], time.monotonic()
+        current, redirects, started, limited = requested, [], time.monotonic(), 0
         while True:
             response, body = self._get(current, started)
+            if response.status_code == 429:
+                # The response is already closed; wait, then repeat the same safe GET.
+                delay = retry_delay(response.headers.get("retry-after"), limited)
+                if not _market_read(current) or limited == 2 or delay is None:
+                    raise DeskError("source_rate_limited")
+                limited += 1
+                time.sleep(delay)
+                continue
             location = response.headers.get("location")
             if response.status_code in (301, 302, 303, 307, 308) and location:
                 if len(redirects) >= MAX_REDIRECTS:
@@ -235,7 +273,9 @@ class PublicFetcher:
                 pass
         return {**metadata, "source_id": uuid.uuid4().hex, "url": url,
                 "final_url": current, "redirects": redirects,
-                "retrieved_at": (now or datetime.now(timezone.utc)).isoformat(),
+                # Capture time includes any rate-limit wait inside this request.
+                "retrieved_at": (now + timedelta(seconds=max(0, time.monotonic() - started))
+                                 if now is not None else datetime.now(timezone.utc)).isoformat(),
                 "content_type": content_type[:200], "kind": kind,
                 "bytes": len(body), "chars": len(stored), "truncated": truncated,
                 "excerpt": stored, "sha256": hashlib.sha256(stored.encode()).hexdigest()}

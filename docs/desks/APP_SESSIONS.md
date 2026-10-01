@@ -132,6 +132,21 @@ Later operator evidence and the remaining current gates are recorded in
 
 ## Each Go / Continue in the app
 
+Public Kalshi market GETs handle HTTP 429 within the original claim/source request:
+at most three attempts, with 2/4-second fallback delays or a valid `Retry-After`
+of at most ten seconds per wait. Longer cooldowns stop immediately; responses
+are closed before waiting. Other HTTP failures, provider calls and order writes
+are not retried by this mechanism. Source capture times include the elapsed wait.
+
+If claim context still fails, its durable job remains failed. Status distinguishes
+`market_context_rate_limited`, `market_context_timeout`,
+`market_context_connection_failure`, `market_context_http_failure`, and scan
+contention/lease errors; unclassified failures remain `market_context_unavailable`.
+Do not repeat Continue or claim in the same session to work around a failed job,
+clear safety pauses, or mark the failure completed. An operator-authorized recovery
+attempt is a separate cycle after the upstream issue/cooldown is resolved, with
+fresh status checks; a prior failed job and its evidence remain intact.
+
 1. Read the startup packet, this guide, historical evidence and authenticated `status`.
    Resume the existing round and own desk; inspect prior publications, open/unknown orders,
    settlement-review backlog and resource limits. Do not reset or replenish the book.

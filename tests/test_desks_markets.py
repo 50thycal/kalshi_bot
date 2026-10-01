@@ -259,3 +259,27 @@ def test_client_builds_browse_paths_and_renders_a_handoff():
     text = desk_client.render_handoff(status, "claude", "desks-round-1")
     assert "Take two time-spaced reads." in text and "KXHIGHNY-T72" in text
     assert "peer" not in text and "other" not in text
+
+
+def test_public_reader_rate_limit_is_bounded_and_classified(monkeypatch):
+    import httpx
+
+    from kalshi_bot.desks.markets import PublicKalshiReader
+    waits, calls = [], []
+    monkeypatch.setattr("kalshi_bot.desks.markets.time.sleep", waits.append)
+
+    def handle(request):
+        calls.append(request)
+        if len(calls) < 3:
+            return httpx.Response(429)
+        return httpx.Response(200, json={"events": []})
+    assert PublicKalshiReader(transport=httpx.MockTransport(handle))("/events") == {"events": []}
+    assert waits == [2, 4] and len(calls) == 3
+    long_cooldown = PublicKalshiReader(transport=httpx.MockTransport(
+        lambda r: httpx.Response(429, headers={"Retry-After": "120"})))
+    with pytest.raises(DeskError, match="market_data_rate_limited"):
+        long_cooldown("/events")
+    failing = PublicKalshiReader(transport=httpx.MockTransport(lambda r: httpx.Response(503)))
+    with pytest.raises(DeskError, match="market_data_unavailable"):
+        failing("/events")
+    assert waits == [2, 4]  # no retry on long cooldowns or other HTTP failures
