@@ -5,7 +5,7 @@ import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 from pydantic import ValidationError
 
@@ -97,14 +97,56 @@ def handler_for(service):
                     return role
             return None
 
+        def browse(self, path, query):
+            """Read-only public market discovery for any authenticated role (DEC-024)."""
+            if service.browser is None:
+                raise DeskError("market_browse_unavailable")
+            pairs = parse_qsl(query, keep_blank_values=False)
+            if len(pairs) > 20 or any(len(k) > 40 or len(v) > 200 for k, v in pairs):
+                raise DeskError("invalid_query")
+            params = dict(pairs)
+            parts = path.strip("/").split("/")[1:]
+            browser = service.browser
+            if parts == ["markets"]:
+                return browser.markets(params)
+            if parts == ["categories"]:
+                return browser.categories()
+            if parts == ["events"]:
+                return browser.events(params)
+            if parts == ["series"]:
+                return browser.series(params)
+            if len(parts) == 2 and parts[0] == "markets":
+                return browser.market(parts[1])
+            if len(parts) == 3 and parts[0] == "markets" and parts[2] == "orderbook":
+                return browser.orderbook(parts[1], params.get("depth", 10))
+            if len(parts) == 3 and parts[0] == "markets" and parts[2] == "trades":
+                return browser.trades(parts[1], params.get("limit", 50), params.get("cursor"))
+            if len(parts) == 2 and parts[0] == "events":
+                return browser.event(parts[1])
+            if len(parts) == 2 and parts[0] == "series":
+                return browser.series_detail(parts[1])
+            return None
+
         def do_GET(self):  # noqa: N802
-            path = urlsplit(self.path).path
+            split = urlsplit(self.path)
+            path = split.path
             if path == "/":
                 return self.send(200, _INDEX.read_bytes(), "text/html; charset=utf-8")
             if path == "/healthz":
                 return self.send(200, {"service": "desks", "status": "up"})
             if not self.role():
                 return self.send(401, {"error": "authentication_required"})
+            if path.split("/")[1:3] in (["api", "markets"], ["api", "events"], ["api", "series"],
+                                        ["api", "categories"]):
+                try:
+                    result = self.browse(path, split.query)
+                    return self.send(200, result) if result is not None else self.send(404, {"error": "not_found"})
+                except DeskError as exc:
+                    status = {"market_not_found": 404, "market_data_unavailable": 503,
+                              "market_data_too_large": 503, "market_browse_unavailable": 503}.get(exc.code, 400)
+                    return self.send(status, {"error": exc.code})
+                except Exception:
+                    return self.send(503, {"error": "market_data_unavailable"})
             try:
                 if path in ("/api/status", "/api/context"):
                     return self.send(200, service.status())

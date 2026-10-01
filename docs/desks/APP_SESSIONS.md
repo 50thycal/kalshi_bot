@@ -139,16 +139,20 @@ Later operator evidence and the remaining current gates are recorded in
    with a stable worker ID (`chatgpt-app` or `claude-app`). A null claim means another
    active/completed job owns the work: inspect status, do not generate competing claims.
 3. Save the claim locally with private permissions outside the repository. It includes a
-   30-minute lease and captured market-board context. Research candidates with the app's
-   tools. Capture any evidence used for a trade via the service's `source` operation;
-   use returned IDs/hashes/timestamps verbatim, never invent them. At most eight additional
-   source requests per job; unsupported domains are a recorded limitation.
-4. Make an independent first-pass shortlist from the captured board **before reading the
+   lease (`lease_until`, 60 minutes by default) and a 20-market convenience board. Browse
+   the whole board with the bridge's market commands and discover with the app's own web
+   tools ([RESEARCH_V2.md](RESEARCH_V2.md)). Capture any evidence used for a trade — any
+   public HTTPS page or API, and a market's `capture_url` — via the service's `source`
+   operation; use returned IDs/hashes/timestamps verbatim, never invent them. The job's
+   capture limit is `research_tools.max_source_captures` (50 by default). Browsing is
+   discovery and never counts as evidence. (DEC-024 replaced the eight-request host
+   allowlist.)
+4. Make an independent first-pass shortlist from the whole board **before reading the
    other desk's current-cycle candidate conclusions**. Prior publications and shared status
    remain available for history, settlement review and safety checks. Consider credible
-   opportunities across the market families actually present, noting stale quotes, source
-   gaps and the board's incomplete progressive coverage. Do not assign either desk a
-   permanent market category or spend source requests to satisfy a diversity quota.
+   opportunities across the market families actually present, noting quote times and source
+   gaps. Do not assign either desk a permanent market category or spend captures to satisfy
+   a diversity quota.
 5. Compare the shortlist with the other desk's available recent publications. Prefer a
    distinct, supportable hypothesis when candidates are otherwise comparable; overlap is
    valid when independently justified, time-sensitive or clearly strongest. Never pass a
@@ -177,7 +181,9 @@ Use `umask 077` before writing private claim/result files. Commands (ChatGPT exa
 python scripts/desk_client.py status
 python scripts/desk_client.py schema
 python scripts/desk_client.py --desk chatgpt claim --worker-id chatgpt-app
-python scripts/desk_client.py --desk chatgpt source --file /private/path/source-request.json
+python scripts/desk_client.py markets --sort volume --limit 50
+python scripts/desk_client.py market --ticker MARKET-TICKER
+python scripts/desk_client.py --desk chatgpt source --claim-file /private/path/claim.json --url https://example.org/page --out /private/path/src.json
 python scripts/desk_client.py --desk chatgpt complete --file /private/path/research-result.json
 python scripts/desk_client.py --desk chatgpt ready
 ```
@@ -191,7 +197,8 @@ If the completion acknowledgement is lost, resend the **identical saved completi
 its durable result is idempotent, even after the lease expires. Do not create a new
 trade/decision ID for an uncertain outcome. An expired unaccepted job cannot submit:
 read status, preserve findings as a handoff, and obtain fresh evidence in a new job.
-Long research should be split into bounded cycles. Publication recovery can preserve
+Long research should be split into bounded cycles (the lease is 60 minutes by default,
+`DESKS_RESEARCH_LEASE_MINUTES`). Publication recovery can preserve
 notes after expiry, but cannot renew authority to place a new session order.
 
 ## Fixed controls

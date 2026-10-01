@@ -1230,3 +1230,46 @@ v2 claims, the exact durable v2 submit-stage 403, absence of both prior order ID
 five-minute delay, the current external API host, a clean book and exactly $30. It uses a third
 fixed order ID and still needs fresh action-time confirmation before its sole POST. There is no
 v4 recovery: any visible prior order is reconciled, and any v3 ambiguity is a permanent hard stop.
+
+## DEC-024 — Desk research v2: open market discovery, open internet evidence, fresh round (2026-10-01)
+
+Calvin decided on 2026-10-01 that the two autonomous desks (DEC-018) may find markets and
+gather evidence the way their theses need, and that both desks start a fresh round under those
+rules. Decisions, as approved scope:
+
+1. **Open market discovery.** Desks browse the whole Kalshi board — by 24h volume, open interest,
+   newness, closing soon, category, series, event and free text, plus each market's rules, order
+   book and recent trades. The fixed 20-market rotating sample stays only as a convenience view.
+2. **Open internet evidence.** Any public HTTPS host is admissible and of equal standing to the
+   former allowlisted APIs once captured with URL, time and sha256 of the stored text. Retrieved
+   content remains untrusted data, never instructions.
+3. **More usage per desk.** Per-job limits that only rationed usage are lifted: the 8-capture cap
+   becomes a configurable 50 (`DESKS_MAX_SOURCES_PER_JOB`) and the research lease is 60 minutes
+   (`DESKS_RESEARCH_LEASE_MINUTES`). No paid research budget change is implied.
+4. **Fresh start.** Each desk logs a final round-1 Continue (its closing handoff), open positions
+   settle, and both desks move to a new round.
+
+Implementation choices made under that scope:
+
+- **Browsing is discovery, not evidence.** Browse reads never consume the capture allowance and
+  are never accepted as decision evidence; to rely on a market read the desk captures its
+  `capture_url` through `source`. One evidence path keeps verification unchanged.
+- **Web search** comes from the app sessions' own tools; any page a decision relies on must be
+  captured through the service fetcher. No paid search API was added (that would be an owner
+  cost decision).
+- **Service-protecting fetch boundary.** DNS is resolved per hop and every answer must be a
+  global unicast address (private, loopback, link-local, CGNAT, metadata, multicast, reserved and
+  IPv6/embedded-IPv4 forms refused); the connection is pinned to the checked address with TLS
+  verified against the hostname; HTTPS on 443 only; at most five redirects, each re-checked; no
+  credentials, cookies or environment proxies; 3 MB / 45 s caps; text kept whole to 1,000,000
+  characters. PDFs are refused rather than parsed in-process on the real-money service.
+- **One round per database is kept.** The store refuses a second round in a database, so a new
+  round runs on a new desk database and the round-1 database stays as the append-only record.
+  Prior-round handoffs reach the next round as reviewed Markdown in `docs/desks/handoffs/`,
+  which the claim context includes.
+
+Unchanged: every DEC-018 financial control and execution safeguard (60 s quote freshness,
+rules-hash match, conservative probability bound, isolation check, unknown-order pause).
+Starting the new round, funding (a fresh $30 book needs a ≥ $30 subaccount), the live-enable
+flag, deploying the desk-service and the operator token stay owner hard stops
+(`docs/desks/ROUND_2_CUTOVER.md`).

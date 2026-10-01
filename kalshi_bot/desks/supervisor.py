@@ -43,8 +43,14 @@ class Supervisor:
     def __init__(self, store, providers: dict[str, HTTPProvider] | None = None,
                  market_reader=None, source_fetcher=None, submit_decision=None,
                  interval_seconds=3600, monthly_budget_usd="0", external_runners_verified=False,
-                 research_mode="scheduled", research_timezone="UTC", research_schedules=None):
+                 research_mode="scheduled", research_timezone="UTC", research_schedules=None,
+                 max_sources_per_job=50, lease_minutes=60):
         self.store = store
+        # DEC-024: capture and lease limits protect the service, not research volume.
+        if not 1 <= int(max_sources_per_job) <= 500 or not 15 <= int(lease_minutes) <= 240:
+            raise ValueError("research source/lease limits out of range")
+        self.max_sources = int(max_sources_per_job)
+        self.lease = timedelta(minutes=int(lease_minutes))
         if research_mode not in {"scheduled", "session"}:
             raise ValueError("invalid research mode")
         if research_mode == "session" and providers:
@@ -181,6 +187,14 @@ class Supervisor:
         context = {"desk_id": desk_id, "round_id": self._round_id(), "now": now.isoformat(),
                    "board": {**board, "sources": [{**source, "excerpt": source["excerpt"][:1000]} for source in board.get("sources", [])]},
                    "research_mode": self.research_mode,
+                   "research_tools": {
+                       "board_scope": "20-market convenience sample; browse the full board with the market tools",
+                       "market_browse": ["markets", "categories", "events", "event", "series", "market",
+                                         "orderbook", "trades"],
+                       "browse_is_evidence": False,
+                       "source_capture": "any public HTTPS URL via the job's source operation",
+                       "max_source_captures": self.max_sources,
+                       "lease_minutes": int(self.lease.total_seconds() // 60)},
                    "archive": shared_archive(), "desks": snapshot.get("desks", []),
                    "recent_decisions": decisions, "own_unreviewed_settlements": backlog,
                    "peer_and_own_publications": chosen_publications}
@@ -197,7 +211,7 @@ class Supervisor:
                 return None
             job.context = {**(job.context or {}), "research_mode": self.research_mode}
             job.state, job.worker_id, job.claim_token = "claimed", worker_id[:200], uuid.uuid4().hex
-            job.lease_until, job.updated_at = now + timedelta(minutes=30), now
+            job.lease_until, job.updated_at = now + self.lease, now
             token = job.claim_token
         try:
             context = self._context(job_id, now)
@@ -205,14 +219,14 @@ class Supervisor:
             self._fail(job_id, "market_context_unavailable", now, unknown=False)
             raise DeskError("market_context_unavailable") from None
         return {"job_id": job_id, "claim_token": token, "desk_id": desk_id,
-                "lease_until": (now + timedelta(minutes=30)).isoformat(),
+                "lease_until": (now + self.lease).isoformat(),
                 "context": context, "system": charter(desk_id)}
 
     def fetch_external_source(self, job_id, claim_token, desk_id, url, now):
         with self.store._tx() as session:
             job = self._owned(session, job_id, claim_token, desk_id, now)
             count = int((job.context or {}).get("source_request_count", 0))
-            if count >= 8:
+            if count >= self.max_sources:
                 raise DeskError("source_request_limit")
             job.context = {**job.context, "source_request_count": count + 1}
         source = self.fetcher(url, now)
@@ -249,11 +263,15 @@ class Supervisor:
             raise DeskError("unfinished_source_requests")
 
     def verify_decision_sources(self, decision):
+        # Only sources whose URL is cited can match; filtering in SQL keeps this check
+        # cheap now that captures store full pages (DEC-024). Matching is unchanged.
+        urls = sorted({evidence.url for evidence in decision.evidence} | {decision.settlement_source})
         with self.store._tx() as session:
             sources = [row.payload for row in session.scalars(select(ResearchSource).join(
                 ResearchJob, ResearchSource.job_id == ResearchJob.job_id).where(
                 ResearchJob.desk_id == decision.desk_id,
-                ResearchJob.round_id == decision.round_id))]
+                ResearchJob.round_id == decision.round_id,
+                ResearchSource.payload["url"].as_string().in_(urls)))]
         for evidence in decision.evidence:
             if not any(source["url"] == evidence.url and source["sha256"] == evidence.sha256
                        and _utc(datetime.fromisoformat(source["retrieved_at"])) == _utc(evidence.retrieved_at)

@@ -161,12 +161,15 @@ def test_scheduled_windows_never_overlap_or_duplicate(tmp_path):
 
 
 def test_sources_refuse_credentials_redirects_private_hosts_and_oversized():
-    fetcher = PublicFetcher(transport=httpx.MockTransport(lambda request: httpx.Response(
-        302, headers={"location": "http://127.0.0.1/private"})))
-    for url in ("http://api.weather.gov", "https://127.0.0.1", "https://api.weather.gov:444/a", "https://user:pass@api.weather.gov"):
-        with pytest.raises(DeskError, match="source_not_allowlisted"):
+    fetcher = PublicFetcher(resolver=lambda host: ["93.184.216.34"],
+                            transport=httpx.MockTransport(lambda request: httpx.Response(
+                                302, headers={"location": "http://127.0.0.1/private"})))
+    for url in ("http://api.weather.gov", "https://api.weather.gov:444/a", "https://user:pass@api.weather.gov"):
+        with pytest.raises(DeskError, match="source_url_refused"):
             fetcher(url, NOW)
-    with pytest.raises(DeskError, match="source_http_failure"):
+    with pytest.raises(DeskError, match="source_address_refused"):
+        fetcher("https://127.0.0.1", NOW)
+    with pytest.raises(DeskError, match="source_url_refused"):  # redirect to plain HTTP
         fetcher("https://api.weather.gov/a", NOW)
 
 
@@ -338,7 +341,7 @@ def test_publication_recovery_does_not_resubmit_a_recorded_refusal(tmp_path):
     # Simulate a process crash after publications and refusal were durable but
     # before the job transitioned to completed.
     sup._publish(job["job_id"], output, "chatgpt", "test", NOW)
-    sup.tick(NOW + timedelta(minutes=31))
+    sup.tick(NOW + timedelta(minutes=61))
     assert len(calls) == 1
     refusals = [p for p in sup.store.snapshot(NOW)["publications"] if p["kind"] == "decision_refused"]
     assert len(refusals) == 1

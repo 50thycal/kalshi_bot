@@ -3,10 +3,11 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-27 (WS-021 app-session proxy compatibility) · **Build OS v0.12**
+**Updated:** 2026-10-01 (WS-022 desk research v2 admitted) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-022](WS-022-desk-research-v2.md) | Desk research v2: open market discovery, open web evidence, fresh round | REVIEW | Active | Owner merges/deploys to desk-service, then runs `docs/desks/ROUND_2_CUTOVER.md` (funding D1 and round start are hard stops) | v2 PR (this branch) |
 | [WS-021](WS-021-autonomous-desks.md) | Autonomous ChatGPT and Claude desks | REVIEW | Active | Merge/deploy the bounded chunked-request compatibility fix, then rerun the blocked ChatGPT Continue cycle | [#456](https://github.com/50thycal/kalshi_bot/pull/456), [#455](https://github.com/50thycal/kalshi_bot/pull/455) |
 | [WS-020](WS-020-liquidity-incentive-shadow.md) | Liquidity-incentive shadow market maker — Phase 0 instrumentation, no orders | REVIEW | Active — **RUNNING** | Shadow RUNNING on evo since 2026-09-17 12:24Z; first outcomes ended at hour 1.5 with **P(both|one)=0.000 at n=15** and single-leg marks ~160x the reward — thin, HOLD, recorded in thesis §9.2, not acted on. Phase 1a added on operator authorization: the one-sided live smoke test (<=$1/order, <=25c, 3 resting, $10 book) with its own XOS package, gates and paper twin — **ARMED AND LIVE** 2026-09-17 15:57Z (#420, #422); first three bids rested 16:00:47Z for $0.05 total, all caps held, twin mirrored. Operator: thesis §10.6 arming sequence (steps 2 and 4 are hard stops); separately, day-one check 3 before any `est_` reward figure is believed | [#415](https://github.com/50thycal/kalshi_bot/pull/415), [#416](https://github.com/50thycal/kalshi_bot/pull/416) merged |
 | [WS-019](WS-019-mmsell-queue-fill-telemetry.md) | MMSELL queue / fill telemetry — Phase 1 instrumentation, no behaviour change | RUNNING | Active | Merged and collecting; let ticks accrue and read `execution_telemetry` weekly. Operator decision open: raw-event retention | [#411](https://github.com/50thycal/kalshi_bot/pull/411), [#412](https://github.com/50thycal/kalshi_bot/pull/412), [#417](https://github.com/50thycal/kalshi_bot/pull/417), [#419](https://github.com/50thycal/kalshi_bot/pull/419) |
@@ -44,6 +45,8 @@ has been asked which rows pause — that remains the operator's WS-016 D1 answer
 WS-021 is the eighth Active row, admitted on Calvin's explicit 2026-09-20 build request.
 The board is four over its declared limit. This admission does not silently pause an existing
 workstream or resolve WS-016's allocation question.
+WS-022 is the ninth Active row, admitted on Calvin's explicit 2026-10-01 handoff (DEC-024). The
+board is five over its declared limit; no existing row is paused by inference.
 
 ## What is deliberately not on this board
 

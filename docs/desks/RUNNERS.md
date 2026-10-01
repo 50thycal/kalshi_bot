@@ -247,7 +247,9 @@ runner asks the service to capture them, then makes at most one final model call
 remaining source requests. Sources must come through the authenticated source endpoint;
 the model cannot invent source IDs, timestamps, hashes, market rules, or external facts.
 Both desks use the same schema and acquisition path. A rejected source is a research
-limitation to record, not permission to bypass server allowlists.
+limitation to record, not permission to bypass the server's address and size guards.
+(DEC-024 opened capture to any public HTTPS host; the scheduled runner keeps its two-call,
+eight-request shape, which bounds paid model calls, not sources.)
 
 The model does not receive exchange credentials or call the exchange executor directly.
 The runner validates and sends the completion; the desk service validates provenance and
