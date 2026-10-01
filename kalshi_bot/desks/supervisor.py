@@ -201,9 +201,18 @@ class Supervisor:
             token = job.claim_token
         try:
             context = self._context(job_id, now)
-        except Exception:
-            self._fail(job_id, "market_context_unavailable", now, unknown=False)
-            raise DeskError("market_context_unavailable") from None
+        except Exception as exc:
+            # Keep only known safe categories, never raw URLs/response bodies or
+            # arbitrary exception text. The claim remains terminal on failure.
+            causes = {"source_rate_limited": "market_context_rate_limited",
+                      "source_timeout": "market_context_timeout",
+                      "source_connection_failure": "market_context_connection_failure",
+                      "source_http_failure": "market_context_http_failure",
+                      "market_scan_in_progress": "market_scan_in_progress",
+                      "market_scan_lease_lost": "market_scan_lease_lost"}
+            code = causes.get(exc.code, "market_context_unavailable") if isinstance(exc, DeskError) else "market_context_unavailable"
+            self._fail(job_id, code, now, unknown=False)
+            raise DeskError(code) from None
         return {"job_id": job_id, "claim_token": token, "desk_id": desk_id,
                 "lease_until": (now + timedelta(minutes=30)).isoformat(),
                 "context": context, "system": charter(desk_id)}
