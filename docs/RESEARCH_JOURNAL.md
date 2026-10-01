@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## MMSELL size-up idea model 2026-10-01 — series ranking untestable; sizing is a multiplier; TYPE-RANK pre-registered
+
+Calvin asked whether to find MMSELL's best markets and put more size on them. Two outcome-blind
+censuses answered most of it before any P&L was read ([run doc](IDEA_MODEL_20261001_MMSELL_SIZEUP.md)).
+Per-series ranking cannot be tested on this book: only 5 series have ≥ 20 live fills in both the
+pre-9/7 books and Fmmsell10, and the scorecard work had already shown a series needs ~70 contests
+just to flag a disaster. Sizing itself is close to a pure multiplier: the takers that fill us sweep
+a median 59 contracts, so a 3-lot fills on the same events as a 1-lot (a first census read every
+fill as size 1 because Kalshi records each maker match separately; summing matches per instant
+fixed it). What a multiplier multiplies is a per-fill edge indistinguishable from zero. One form is
+testable: [TYPE-RANK](MMSELL_TYPE_RANK_THESIS.md) ranks the five readable market types on live
+fills; its retrospective leg can kill today and its forward leg from 10-01 decides. Ceiling about
+$18/month even on a pass.
+
 ## MMSELL QUEUE-DEPTH 2026-09-30 — KILL on the independent sample; a forward-only observation carried
 
 [QUEUE-DEPTH](MMSELL_QUEUE_DEPTH_THESIS.md) ran first time (ops `qdepth-20260930-1`). On the six
