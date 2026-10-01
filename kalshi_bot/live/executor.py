@@ -651,6 +651,13 @@ class LiveExecutor:
                 or repo.live_open_order_exists(session, ticker)):
             self.summary.skipped_dedup += 1
             return "gate:dedup", []
+        # 4b. default matching-engine shard only (§9.45). An order for a market on another shard
+        #     is answered 409 and never rests — on 2026-10-01 two oil pairs (exchange_index 2)
+        #     came back 409, never landed, and held both of this book's slots for hours. An
+        #     index we could not read is let through: the reconcile backstop clears a phantom.
+        if self._exchange_index_for(ticker) not in (None, 0):
+            self.summary.skipped_gate += 1
+            return limm_live.GATE_NON_DEFAULT_SHARD, []
         # 5. this strategy's OWN open-market cap. Closed markets awaiting settlement do not hold
         #    a slot (they cannot trade); their money still counts in gate 6.
         if repo.count_live_book_open_tradeable(
@@ -1535,9 +1542,28 @@ class LiveExecutor:
         by_koid = {o.get("order_id"): o for o in orders if o.get("order_id")}
 
         # Resolve in-flight local orders against the exchange.
+        now_utc = datetime.now(timezone.utc)
         for row in repo.get_nonterminal_live_orders(session):
             exch = by_coid.get(row.client_order_id) or (
                 by_koid.get(row.kalshi_order_id) if row.kalshi_order_id else None)
+            if exch is None and _is_unconfirmed_incentive_409(row, now_utc):
+                # The liquidity-incentive book's resting bids are v2 orders, which DO appear in
+                # this feed. One answered 409 that is still absent after the grace period never
+                # landed (§9.45): left 'submitted' it holds a slot and the ticker's dedup
+                # forever, because the timeout below only cancels 'resting'. A fill or a
+                # position still wins — that is real exposure, never a phantom.
+                fill = self._fill_for_order(row, fills)
+                if fill is not None:
+                    repo.update_live_order_status(
+                        session, row, status="filled",
+                        kalshi_order_id=row.kalshi_order_id or fill.get("order_id"))
+                elif not self._executed_on_exchange(row, fills, positions):
+                    repo.update_live_order_status(session, row, status="not_landed",
+                                                  cancel_reason="409_not_found_on_exchange")
+                    logger.warning(
+                        f"incentive 409 order never landed -> not_landed: {row.market_ticker} "
+                        f"{row.side} coid={row.client_order_id}")
+                continue
             if exch is None:
                 # A v1 order (fractional entry / bucket close) is NEVER visible in the v2 orders
                 # feed, so 'not found here' is not proof of anything. Resolve it from Kalshi's
@@ -2491,6 +2517,30 @@ def _ack_ts_ms(resp) -> int | None:
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+#: How long a liquidity-incentive order answered 409 may stay unconfirmed before reconcile
+#: treats it as never landed (§9.45). Several reconcile cycles, so a slow exchange is not misread.
+INCENTIVE_409_GRACE_SECONDS = 900.0
+
+
+def _is_unconfirmed_incentive_409(row, now: datetime) -> bool:
+    """A liquidity-incentive order answered 409, with no exchange id, older than the grace period.
+
+    Scoped to that book on purpose: other books' 409 rows include v1 orders, which never appear
+    in the v2 orders feed, so 'absent from the feed' proves nothing for them."""
+    if not limm_live.owns_tag(row.strategy):
+        return False
+    if row.status != "submitted" or row.kalshi_order_id:
+        return False
+    if (row.cancel_reason or "") != "409_already_exists":
+        return False
+    created = row.created_at
+    if created is None:
+        return False
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return (now - created).total_seconds() > INCENTIVE_409_GRACE_SECONDS
 
 
 def _map_status(kalshi_status: str | None) -> str:

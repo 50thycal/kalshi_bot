@@ -228,6 +228,10 @@ def test_caps_are_the_ones_the_risk_envelope_will_name():
 class TestTheUniverseRule:
     """The competing-depth cap — the one lever this book has on its own reward share (§9.27)."""
 
+    def test_the_multiple_is_the_operator_approved_ten(self):
+        # §9.45: raised 3x -> 10x by the operator. A change here is a rule change, not a tweak.
+        assert lv.MAX_COMPETING_DEPTH_TARGET_MULTIPLE == 10.0
+
     def test_a_book_far_deeper_than_target_is_refused(self):
         q = _p(yes_resting_total=30_000.0, no_resting_total=40_000.0, target_size=1000.0)
         assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_BOOK_TOO_DEEP

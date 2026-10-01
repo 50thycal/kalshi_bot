@@ -254,6 +254,13 @@ class IncentiveLiveRunner:
                 ticker=pair.market_ticker, pair=pair, account_state=account_state,
             )
             summary["outcomes"][outcome] = summary["outcomes"].get(outcome, 0) + 1
+            if outcome == limm.GATE_NON_DEFAULT_SHARD:
+                # The shard is a property of the market, not of this minute's book: rest it so
+                # the fetch budget goes to markets this book can actually quote (§9.45).
+                self._book_refused_until[pair.market_ticker] = now + timedelta(
+                    seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
+                self._cooldown_saved_at = None
+                self._save_cooldown(session, now)
             if not legs:
                 continue
             summary["placed"] += 1
