@@ -1204,3 +1204,9 @@ nothing. A market whose book refuses a pair is now skipped for an hour. [Thesis 
 
 Operator approved raising the per-cycle book fetches 8 → 30 (env, VERIFIED). The refused-book
 cooldown is now saved and restored across restarts. [Thesis §9.44](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-10-01 — depth rule 3x → 10x; oil-shard phantom orders cleared (§9.45)
+
+Operator approved both. The competing-depth cap is now 10x target. Markets on a non-default
+exchange shard are skipped (they were answered 409 and never rested), and a 409 order still
+unconfirmed after 15 min is cleared so it stops holding a slot. [Thesis §9.45](../LIQUIDITY_INCENTIVE_THESIS.md).

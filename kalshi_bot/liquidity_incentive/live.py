@@ -108,7 +108,11 @@ POSITION_FRESH_SECONDS = 300.0
 #: pays a rounding error while the adverse selection is the same (§9.27). 3.0 is the
 #: `medium`/`deep` line `scripts/liquidity_incentive_report.py` always drew — chosen before the
 #: result, deliberately not tuned to it.
-MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0
+#:
+#: Raised 3.0 -> 10.0 by the operator (§9.45). Since §9.42 we rest one tick BEHIND the touch, so
+#: a deep book now puts other orders between us and a sweep instead of adding risk, and 3x left
+#: nearly every weeks-out market refused. 10x still guarantees a share of at least ~9%.
+MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 10.0
 
 #: Rest this many ticks BEHIND the touch rather than at it (§9.42). The orders at the touch are
 #: the ones a sweep hits first, so sitting one tick back leaves them as a buffer. Applied only
@@ -166,6 +170,9 @@ REFUSE_TOO_EXPENSIVE = "too_expensive"
 REFUSE_PROGRAM_ENDING = "program_ending"
 REFUSE_NO_TARGET_SIZE = "no_target_size"
 REFUSE_BOOK_TOO_DEEP = "book_too_deep"
+#: The executor's outcome for a market on a non-default matching-engine shard (§9.45). Such an
+#: order is answered 409 and never rests, so the runner cools the market down instead of retrying.
+GATE_NON_DEFAULT_SHARD = "gate:shard"
 REFUSE_POST_ONLY_CROSS = "post_only_would_cross"
 REFUSE_NO_EDGE = "no_pair_edge"
 REFUSE_NO_CLOSE_TIME = "no_close_time"

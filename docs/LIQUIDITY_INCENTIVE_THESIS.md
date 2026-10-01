@@ -2667,3 +2667,27 @@ emptied the in-memory cooldown and sent the scan back to the top. Two changes, o
   2026-09-30T14:31Z). Read-only GETs; no change to exposure or entry rules.
 - The cooldown map is saved to `system_events` (component `limm_book_cooldown`, at most every
   5 min) and restored on the first cycle after a restart. Any failure falls back to an empty map.
+
+### 9.45 Depth rule 3x → 10x; oil-shard phantom orders (2026-10-01)
+
+Two operator-approved changes, one decision each.
+
+**Universe rule.** With §9.42–§9.44 live, ~95% of the 30 books fetched each cycle were refused
+`book_too_deep`, and the book sat flat for hours. Since §9.42 we rest one tick behind the touch,
+so competing depth now sits between us and a sweep instead of adding risk. The operator approved
+`MAX_COMPETING_DEPTH_TARGET_MULTIPLE` 3.0 → **10.0**. 10x still guarantees a reward share of at
+least ~9% (our target-size order against up to 10x of others). Caps, sizes and slots unchanged.
+
+**Phantom orders.** On 2026-10-01 two pairs (KXWTIMAX-26OCT30-T105.00 07:17Z, KXWTIMIN-26OCT30-T76.50
+08:06Z) were answered `409` on create and recorded `submitted` with no exchange id. They never
+appeared in the orders feed, and the 4h timeout only cancels `resting`, so they held both
+`MAX_OPEN_ORDERS` slots indefinitely — the book placed nothing for ~7h. Both oil markets report
+`exchange_index` 2 (`kalshi_market_probe`); every pair that rested was on shard 0. No money was at
+risk: nothing rested. Fixes:
+- `mirror_incentive_pair` refuses a market whose known `exchange_index` is not 0
+  (`gate:shard`); the runner cools that market down for an hour instead of retrying it.
+- Reconcile marks a **this-book** order answered 409, still absent from the orders feed after
+  15 min, with no fill and no position on the market, as `not_landed`
+  (`409_not_found_on_exchange`). Scoped to this book's tags: other books' 409 rows include v1
+  orders that never appear in the v2 feed. This also clears the two existing phantoms on the
+  first reconcile after deploy.

@@ -904,3 +904,39 @@ def test_an_expired_saved_cooldown_is_ignored(live_db, settings):
         out = run.IncentiveLiveRunner(client, settings).cycle(
             s, _exec(settings, client), {"cash_balance": 500.0}, now=later)
     assert "cooling_down" not in out and out["fetched"] == 1
+
+
+# --- a market on another matching-engine shard is rested, not retried (thesis §9.45) ----------
+
+
+class ShardedFakeClient(FakeClient):
+    def __init__(self, books, shards):
+        super().__init__(books)
+        self.shards = shards
+
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker, "exchange_index": self.shards.get(ticker, 0)}}
+
+    def get_market_exchange_index(self, ticker):
+        return self.shards.get(ticker, 0)
+
+
+def test_a_non_default_shard_market_cools_down_and_the_next_one_is_placed(live_db, settings):
+    """Production 2026-10-01: two oil pairs (exchange_index 2) were answered 409, never rested,
+    and held both slots for hours."""
+    settings.liquidity_incentive_live_max_book_fetches = 1
+    books = {"KXTEST-OIL": _book([(3, 500)], [(4, 500)]),
+             "KXTEST-OK": _book([(3, 500)], [(4, 500)])}
+    client = ShardedFakeClient(books, {"KXTEST-OIL": 2})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OIL", age_hours=1.0)
+        _program(s, "KXTEST-OK", age_hours=40.0)
+        runner = run.IncentiveLiveRunner(client, settings)
+        first = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+        assert first["placed"] == 0
+        assert first["outcomes"] == {limm.GATE_NON_DEFAULT_SHARD: 1}
+        assert client.placed == []
+        second = runner.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
+                              now=NOW + timedelta(minutes=3))
+    assert second["cooling_down"] == 1 and second["placed"] == 1
+    assert client.asked == ["KXTEST-OIL", "KXTEST-OK"]

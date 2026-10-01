@@ -591,3 +591,145 @@ def test_open_events_share_the_definition_of_open(settings):
                           status="canceled", created_at=NOW))
         s.flush()
         assert repo.live_book_open_events(s, "Alimm1") == {"KXRT-RES"}
+
+
+# ------------------------------------------------------------------ shards and 409 phantoms (§9.45)
+
+
+class ShardClient(FakeLiveClient):
+    """A client whose markets carry `exchange_index`, and whose reconcile feeds are canned."""
+
+    def __init__(self, exchange_index=0, fail=None, orders=(), fills=(), positions=()):
+        super().__init__(fail=fail)
+        self.exchange_index = exchange_index
+        self.orders, self.fills, self.positions = list(orders), list(fills), list(positions)
+
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker, "exchange_index": self.exchange_index}}
+
+    def get_market_exchange_index(self, ticker):
+        return self.exchange_index
+
+    def get_orders(self, **kw):
+        return {"orders": self.orders}
+
+    def get_fills(self, **kw):
+        return {"fills": self.fills}
+
+    def get_positions(self, **kw):
+        return {"market_positions": self.positions}
+
+    def get_settlements(self, **kw):
+        return {"settlements": []}
+
+    def get_balance(self):
+        return {"balance": 50_000}
+
+
+def _limm_settings(settings):
+    _live_settings(settings)
+    settings.live_strategies = limm.LIVE_TAG
+    return settings
+
+
+def test_a_market_on_another_shard_places_nothing(settings):
+    _db(settings)
+    _limm_settings(settings)
+    ex = _exec(settings, client=ShardClient(exchange_index=2))
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == limm.GATE_NON_DEFAULT_SHARD
+    assert ex.client.placed == []
+
+
+def test_the_default_shard_still_places(settings):
+    _db(settings)
+    _limm_settings(settings)
+    ex = _exec(settings, client=ShardClient(exchange_index=0))
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "placed"
+    assert len(ex.client.placed) == 2
+
+
+def _a_409_pair(settings, client):
+    from kalshi_bot.kalshi.errors import KalshiAPIError
+
+    client.fail = KalshiAPIError(409, "order_already_exists", "/portfolio/events/orders")
+    ex = _exec(settings, client=client)
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "placed"
+    client.fail = None
+    return ex
+
+
+def _age_orders(minutes):
+    from datetime import timedelta
+
+    with db.session_scope() as s:
+        for row in s.scalars(select(m.LiveOrder)):
+            row.created_at = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+
+
+def _statuses():
+    with db.session_scope() as s:
+        return sorted((r.status, r.cancel_reason) for r in s.scalars(select(m.LiveOrder)))
+
+
+def test_a_409_that_never_landed_is_cleared_after_the_grace_period(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient()
+    ex = _a_409_pair(settings, client)
+    assert {st for st, _ in _statuses()} == {"submitted"}
+    _age_orders(16)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+    assert _statuses() == [("not_landed", "409_not_found_on_exchange")] * 2
+    with db.session_scope() as s:  # the slot and the ticker's dedup are free again
+        assert repo.count_live_book_open_tradeable(
+            s, limm.LIVE_TAG, datetime.now(timezone.utc)) == 0
+        assert not repo.live_open_order_exists(s, "KXTEST-A")
+
+
+def test_a_409_inside_the_grace_period_is_left_alone(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient()
+    ex = _a_409_pair(settings, client)
+    _age_orders(5)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+    assert {st for st, _ in _statuses()} == {"submitted"}
+
+
+def test_a_409_that_did_land_is_picked_up_not_cleared(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient()
+    ex = _a_409_pair(settings, client)
+    _age_orders(30)
+    with db.session_scope() as s:
+        coids = [r.client_order_id for r in s.scalars(select(m.LiveOrder))]
+    client.orders = [{"client_order_id": c, "order_id": f"K-{i}", "status": "resting"}
+                     for i, c in enumerate(coids)]
+    with db.session_scope() as s:
+        ex.reconcile(s)
+    assert {st for st, _ in _statuses()} == {"resting"}
+
+
+def test_a_409_with_a_position_on_the_market_is_never_cleared(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient(positions=[{"ticker": "KXTEST-A", "position_fp": "5.00"}])
+    ex = _a_409_pair(settings, client)
+    _age_orders(30)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+    assert {st for st, _ in _statuses()} == {"submitted"}
+
+
+def test_another_books_409_is_not_touched(settings):
+    from kalshi_bot.live.executor import _is_unconfirmed_incentive_409
+
+    row = m.LiveOrder(strategy="mmsell10", status="submitted", kalshi_order_id=None,
+                      cancel_reason="409_already_exists",
+                      created_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+    assert not _is_unconfirmed_incentive_409(row, datetime.now(timezone.utc))
+    row.strategy = limm.LIVE_TAG
+    assert _is_unconfirmed_incentive_409(row, datetime.now(timezone.utc))
