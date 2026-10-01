@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-reward-1001b","sql":"SELECT at::text, balance_cents, delta_cents, residual_cents, presumed_transfer FROM incentive_balance_observations WHERE at > '2026-09-25' AND residual_cents IS NOT NULL AND abs(residual_cents) >= 20 ORDER BY at"}
+{"type":"noop"}
