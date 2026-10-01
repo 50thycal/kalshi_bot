@@ -30,22 +30,23 @@ desk session ──GET /api/markets|events|series|categories──▶ MarketBrow
                                                    → ResearchSource(url, retrieved_at, sha256, excerpt)
 completion/decision ──▶ verify_decision_sources (unchanged matching; SQL pre-filter by cited URL)
                     ──▶ executor (unchanged: 60 s quote, rules hash, bound check, isolation, caps)
-round N DB (append-only) ──handoff-export──▶ docs/desks/handoffs/<desk>-round-N.md ──▶ round N+1 claim archive
+desk DB: rounds side by side; DESKS_ROUND_ID selects the trading round; new round only when the
+         old one is flat; books carry prior cash (≤ $30); publications span rounds → prior_round_record
 ```
 
 ## Decisions Made
 
 - DEC-024 records the owner scope and the implementation choices (browse ≠ evidence; app-session
-  web search, no paid search API; SSRF boundary; PDFs refused; one round per database).
+  web search, no paid search API; SSRF boundary; PDFs refused; rounds share the database).
+- Owner, 2026-10-01: carry each desk's balance into round 2; keep the same database.
 - Lease 60 minutes, 50 captures per job, both configurable (`DESKS_RESEARCH_LEASE_MINUTES`,
   `DESKS_MAX_SOURCES_PER_JOB`).
 
 ## Open Decisions
 
-- **D1 (owner, hard stop).** Round-2 funding: fresh $30 per desk (top-up; fits the code) or carry
-  balances (needs a separate code change). Recommendation: fresh $30. Runbook step 4.
+- **D1 — resolved 2026-10-01:** carry balances (capped at $30), same database.
 - **D2 (owner, hard stop).** Deploy v2 to the desk-service, then schedule the final round-1
-  Continue per desk, the database switch and the round-2 start. Runbook steps 0, 5, 7.
+  Continue per desk, the `DESKS_ROUND_ID` switch and the round-2 start. Runbook steps 0, 3, 5.
 
 ## Assumptions
 
@@ -98,7 +99,6 @@ The v2 PR on `claude/intelligent-einstein-99enpn`.
 
 - PDF evidence capture via an isolated, time-limited parser (refused today to protect the
   real-money service process).
-- Configurable initial bankroll so a round can carry a desk's balance (only if D1 chooses carry).
 
 ## Next Step
 

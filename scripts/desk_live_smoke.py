@@ -55,6 +55,7 @@ def main(argv=None) -> int:
             settings.chatgpt_subaccount,
         )
         store = DeskStore(settings.database_url.get_secret_value())
+        store.use_round(settings.round_id)
         result = run_chatgpt_smoke(
             store,
             exchange,

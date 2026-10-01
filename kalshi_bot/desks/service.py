@@ -40,7 +40,10 @@ class DeskService:
             if refresh:
                 try:
                     report = executor.exchange.check_isolation()
-                    minimum = Decimal(row.get("available_cash", "30")) if snapshot.get("started_at") else Decimal("30")
+                    # Before start the subaccount must hold at least the book's bankroll
+                    # ($30 fresh, or the carried balance, DEC-024); after start, available cash.
+                    minimum = Decimal(row["available_cash"] if snapshot.get("started_at")
+                                      else row["initial_bankroll"])
                     if not report.get("verified") or Decimal(report["balance"]) < minimum:
                         raise DeskError("funding_or_isolation_not_ready")
                     if not snapshot.get("started_at"):

@@ -359,15 +359,6 @@ def shared_archive() -> list[dict]:
             text = path.read_text(encoding="utf-8")
             result.append({"path": name, "sha256": hashlib.sha256(text.encode()).hexdigest(),
                            "excerpt": text[-5000:]})
-    # Closing handoffs of earlier rounds (DEC-024): each round has its own database, so a
-    # desk's prior findings and lessons reach the next round only through these files.
-    handoffs = root / "docs" / "desks" / "handoffs"
-    if handoffs.is_dir():
-        for path in sorted(handoffs.glob("*.md")):
-            text = path.read_text(encoding="utf-8")
-            result.append({"path": str(path.relative_to(root)), "kind": "prior_round_handoff",
-                           "sha256": hashlib.sha256(text.encode()).hexdigest(),
-                           "excerpt": text[:20000]})
     return result
 
 

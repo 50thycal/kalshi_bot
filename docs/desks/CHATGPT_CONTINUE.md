@@ -9,8 +9,8 @@ fixed controls — never a new round, configuration change, safeguard change or 
 
 Read `CLAUDE.md`, `.claude/sessions/autonomous-desk.md`, `docs/desks/CHATGPT_START.md`,
 `docs/desks/APP_SESSIONS.md` and `docs/desks/RESEARCH_V2.md`. In a round's first cycles, read
-`docs/desks/handoffs/chatgpt-round-*.md` (also in the claim `archive` as `prior_round_handoff`)
-and apply its lessons. Do not edit the repository during an operating cycle.
+`prior_round_record` in the claim context (own prior-round handoff, lessons and postmortems) and
+apply its lessons. Do not edit the repository during an operating cycle.
 
 ## Gate
 

@@ -1248,6 +1248,9 @@ rules. Decisions, as approved scope:
    (`DESKS_RESEARCH_LEASE_MINUTES`). No paid research budget change is implied.
 4. **Fresh start.** Each desk logs a final round-1 Continue (its closing handoff), open positions
    settle, and both desks move to a new round.
+5. **Same database, carried funding** (owner follow-up, same day). The new round lives in the
+   existing desk database — no second database to configure — and each desk's book carries its
+   round-1 cash rather than being topped up.
 
 Implementation choices made under that scope:
 
@@ -1263,13 +1266,20 @@ Implementation choices made under that scope:
   verified against the hostname; HTTPS on 443 only; at most five redirects, each re-checked; no
   credentials, cookies or environment proxies; 3 MB / 45 s caps; text kept whole to 1,000,000
   characters. PDFs are refused rather than parsed in-process on the real-money service.
-- **One round per database is kept.** The store refuses a second round in a database, so a new
-  round runs on a new desk database and the round-1 database stays as the append-only record.
-  Prior-round handoffs reach the next round as reviewed Markdown in `docs/desks/handoffs/`,
-  which the claim context includes.
+- **Several rounds per database.** The service trades only the round named by `DESKS_ROUND_ID`.
+  A new round is created only when every earlier order is terminal and every filled position is
+  settled (`prior_round_not_closed` otherwise), so nothing of an earlier round is left
+  unreconciled. Books, decisions and readiness are per round; publications span rounds, so
+  desks keep their memory (`prior_round_record` in each claim) and one-shot claims such as the
+  live smoke stay visible to their guards.
+- **Carried bankroll, capped at $30.** `DESKS_NEW_ROUND_BANKROLL=carry` (default) starts each
+  new book at the prior book's cash, never above $30 (no size increase); `fresh` starts at $30.
+  Preflight before start requires the subaccount to hold the book's own bankroll instead of a
+  fixed $30 — the same invariant (exchange holds what the book claims). An operator pause
+  carries across the boundary.
 
 Unchanged: every DEC-018 financial control and execution safeguard (60 s quote freshness,
 rules-hash match, conservative probability bound, isolation check, unknown-order pause).
-Starting the new round, funding (a fresh $30 book needs a ≥ $30 subaccount), the live-enable
-flag, deploying the desk-service and the operator token stay owner hard stops
+Switching `DESKS_ROUND_ID`, starting the new round, funding, the live-enable flag, deploying the
+desk-service and the operator token stay owner hard stops
 (`docs/desks/ROUND_2_CUTOVER.md`).

@@ -28,7 +28,7 @@ def build_service(settings):
     elif url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     store = DeskStore(url)
-    store.initialize(settings.round_id, utcnow())
+    store.initialize(settings.round_id, utcnow(), bankroll_mode=settings.new_round_bankroll)
     providers = {}
     executors = {}
     ownership = None

@@ -15,8 +15,8 @@ It does not authorize a new round, configuration change, safeguard change, or a 
 2. Read `CLAUDE.md`, `.claude/sessions/autonomous-desk.md`,
    `docs/desks/CLAUDE_START.md`, `docs/desks/APP_SESSIONS.md` and
    `docs/desks/RESEARCH_V2.md` (DEC-024 discovery and evidence rules).
-   In a round's first cycles, also read own prior-round handoff in `docs/desks/handoffs/`
-   (`claude-round-*.md`, also in the claim `archive` as `prior_round_handoff`) and apply its lessons.
+   In a round's first cycles, also read `prior_round_record` in the claim context (own
+   prior-round handoff, lessons and postmortems) and apply its lessons.
 3. Adopt the Autonomous Desk role. Do not edit the repository during an operating cycle.
 
 ## Gate the cycle

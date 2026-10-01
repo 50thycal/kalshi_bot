@@ -82,6 +82,10 @@ caps 3 MB/45 s per capture. HTML is stored as text and JSON/CSV/XML/text verbati
 (`DESKS_MAX_SOURCES_PER_JOB`) and a 60-minute lease (`DESKS_RESEARCH_LEASE_MINUTES`).
 App sessions may use their own web search for discovery; a page a decision relies on must be
 captured. Fetch the live market and settlement-source evidence before a trading decision.
+*Rounds:* several rounds share the desk database; the service trades only `DESKS_ROUND_ID`. A new
+round opens only once every earlier order and position is closed, and its books carry the prior
+cash capped at $30 (`DESKS_NEW_ROUND_BANKROLL=carry`, default; `fresh` = $30). Cutover:
+[desks/ROUND_2_CUTOVER.md](desks/ROUND_2_CUTOVER.md).
 
 Every decision uses the strict `Decision` schema in `contracts.py`: desk/round identity,
 market and event, side, quote timestamp, observed and maximum prices, fee-inclusive spend,

@@ -184,6 +184,15 @@ class Supervisor:
                               reverse=True)
         chosen_publications = [p for p in publications if p.get("desk_id") == desk_id][:6]
         chosen_publications += [p for p in publications if p.get("desk_id") != desk_id][:4]
+        # Earlier rounds live in the same database (DEC-024): hand each desk its own closing
+        # handoff, lessons, cycles and postmortems from them, plus a few of the peer's.
+        carried = [{"round_id": p.get("round_id"), "desk_id": p.get("desk_id"), "kind": p.get("kind"),
+                    "created_at": p.get("created_at"),
+                    "payload_excerpt": json.dumps(p.get("payload"), default=str)[:1500]}
+                   for p in publications if p.get("round_id") not in (None, self._round_id())
+                   and p.get("kind") in ("handoff", "lesson", "research_cycle", "postmortem")]
+        prior_round_record = {"own": [p for p in carried if p["desk_id"] == desk_id][:40],
+                              "peer": [p for p in carried if p["desk_id"] != desk_id][:10]}
         context = {"desk_id": desk_id, "round_id": self._round_id(), "now": now.isoformat(),
                    "board": {**board, "sources": [{**source, "excerpt": source["excerpt"][:1000]} for source in board.get("sources", [])]},
                    "research_mode": self.research_mode,
@@ -197,7 +206,8 @@ class Supervisor:
                        "lease_minutes": int(self.lease.total_seconds() // 60)},
                    "archive": shared_archive(), "desks": snapshot.get("desks", []),
                    "recent_decisions": decisions, "own_unreviewed_settlements": backlog,
-                   "peer_and_own_publications": chosen_publications}
+                   "peer_and_own_publications": chosen_publications,
+                   "prior_round_record": prior_round_record}
         with self.store._tx() as session:
             job = self._job(session, job_id)
             job.context = context
@@ -453,6 +463,8 @@ class Supervisor:
         for document in result.get("archive", []):
             document["excerpt"] = document.get("excerpt", "")[-2000:]
         result["peer_and_own_publications"] = result.get("peer_and_own_publications", [])[:8]
+        prior = result.get("prior_round_record") or {}
+        result["prior_round_record"] = {"own": prior.get("own", [])[:10], "peer": prior.get("peer", [])[:3]}
         for item in result["peer_and_own_publications"]:
             if "payload" in item:
                 item["payload_excerpt"] = json.dumps(item.pop("payload"), default=str)[:1000]

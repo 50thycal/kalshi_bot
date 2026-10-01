@@ -109,6 +109,6 @@ bound to hold under recent model-verification weights.
 
 ## 4. Round boundary
 
-Each round has its own desk database. A new round's desk reads its own prior-round closing
-handoff and lessons from `docs/desks/handoffs/` (included in the claim's `archive` as
-`prior_round_handoff`) before its first cycle. Cutover procedure: [ROUND_2_CUTOVER.md](ROUND_2_CUTOVER.md).
+Rounds share the desk database. A new round's desk reads `prior_round_record` in its claim
+context (its own prior-round closing handoff, lessons, cycles and postmortems, plus some of the
+peer's) before its first cycle. Books carry the prior cash, capped at $30. Cutover procedure: [ROUND_2_CUTOVER.md](ROUND_2_CUTOVER.md).

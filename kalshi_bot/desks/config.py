@@ -14,6 +14,9 @@ class DeskSettings(BaseSettings):
 
     database_url: SecretStr
     round_id: str = Field(default="desks-round-1", pattern=r"^[A-Za-z0-9_-]{1,100}$")
+    # How a NEW round's books are funded when earlier rounds exist in the database:
+    # carry = each desk keeps its prior book cash (capped at $30); fresh = $30 each.
+    new_round_bankroll: Literal["carry", "fresh"] = "carry"
     operator_token: SecretStr
     chatgpt_token: SecretStr
     claude_token: SecretStr
