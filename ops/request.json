@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--event","KX30YMORTW-26OCT01"],"id":"desk-mort-1001-1340"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/?state=US"],"id":"desk-aaa-1001-1342"}
