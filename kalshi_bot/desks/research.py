@@ -8,10 +8,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_CEILING, Decimal
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlencode, urlsplit
@@ -205,7 +207,45 @@ class PublicFetcher:
     def close(self):
         self.client.close()
 
+    @staticmethod
+    def _retry_delay(header, attempt):
+        # Never retry before a server-requested cooldown. Long cooldowns require
+        # a later operator-authorized cycle, not a sleep inside the claim route.
+        delay = 2 ** (attempt + 1)
+        if header is not None:
+            try:
+                delay = float(header)
+            except ValueError:
+                try:
+                    delay = (parsedate_to_datetime(header) - datetime.now(timezone.utc)).total_seconds()
+                except (ValueError, TypeError, OverflowError):
+                    pass
+        if not 0 <= delay <= 10:
+            return None
+        return max(1, delay)
+
+    def _read(self, url, retry_market_reads):
+        for attempt in range(3):
+            with self.client.stream("GET", url, headers={"User-Agent": "KalshiDeskResearch/1.0"}) as response:
+                if response.status_code == 429:
+                    delay = self._retry_delay(response.headers.get("Retry-After"), attempt)
+                    if not retry_market_reads or attempt == 2 or delay is None:
+                        raise DeskError("source_rate_limited")
+                else:
+                    if response.status_code != 200:
+                        raise DeskError("source_http_failure")
+                    chunks = bytearray()
+                    for chunk in response.iter_bytes():
+                        chunks.extend(chunk)
+                        if len(chunks) > MAX_SOURCE_BYTES:
+                            raise DeskError("source_too_large")
+                    return chunks.decode("utf-8", errors="replace"), response.headers.get("content-type", "")
+            # Close the response before waiting. Only safe, public market GETs
+            # are retried; provider calls and exchange writes use other paths.
+            time.sleep(delay)
+
     def __call__(self, url: str, now: datetime | None = None) -> dict:
+        started = time.monotonic()
         try:
             parts = urlsplit(url)
             allowed = (parts.scheme == "https" and parts.hostname in PUBLIC_HOSTS
@@ -214,20 +254,20 @@ class PublicFetcher:
             allowed = False
         if not allowed or len(url) > 2048:
             raise DeskError("source_not_allowlisted")
-        with self.client.stream("GET", url, headers={"User-Agent": "KalshiDeskResearch/1.0"}) as response:
-            if response.status_code != 200:
-                raise DeskError("source_http_failure")
-            chunks = bytearray()
-            for chunk in response.iter_bytes():
-                chunks.extend(chunk)
-                if len(chunks) > MAX_SOURCE_BYTES:
-                    raise DeskError("source_too_large")
-            raw = chunks.decode("utf-8", errors="replace")
-            if "html" in response.headers.get("content-type", ""):
-                raw = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", raw)
-                raw = re.sub(r"(?s)<[^>]*>", " ", raw)
-                raw = re.sub(r"\s+", " ", raw)
-            excerpt = raw[:12000]
+        retry_market_reads = (parts.hostname == "api.elections.kalshi.com"
+                              and (parts.path == "/trade-api/v2/markets"
+                                   or parts.path.startswith("/trade-api/v2/markets/")))
+        try:
+            raw, content_type = self._read(url, retry_market_reads)
+        except httpx.TimeoutException:
+            raise DeskError("source_timeout") from None
+        except httpx.HTTPError:
+            raise DeskError("source_connection_failure") from None
+        if "html" in content_type:
+            raw = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", raw)
+            raw = re.sub(r"(?s)<[^>]*>", " ", raw)
+            raw = re.sub(r"\s+", " ", raw)
+        excerpt = raw[:12000]
         metadata = {}
         if parts.hostname == "api.elections.kalshi.com":
             try:
@@ -241,8 +281,10 @@ class PublicFetcher:
                     metadata["rules_sha256"] = rules_hash(market)
             except (ValueError, TypeError, AttributeError):
                 pass
+        retrieved_at = (now + timedelta(seconds=max(0, time.monotonic() - started))
+                        if now is not None else datetime.now(timezone.utc))
         return {**metadata, "source_id": uuid.uuid4().hex, "url": url,
-                "retrieved_at": (now or datetime.now(timezone.utc)).isoformat(),
+                "retrieved_at": retrieved_at.isoformat(),
                 "excerpt": excerpt, "sha256": hashlib.sha256(excerpt.encode()).hexdigest()}
 
 

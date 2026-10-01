@@ -170,6 +170,89 @@ def test_sources_refuse_credentials_redirects_private_hosts_and_oversized():
         fetcher("https://api.weather.gov/a", NOW)
 
 
+def test_market_rate_limit_recovers_with_bounded_backoff(monkeypatch):
+    waits, requests = [], []
+    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', waits.append)
+    def handle(request):
+        requests.append(request)
+        return (httpx.Response(429) if len(requests) < 3 else
+                httpx.Response(200, json={'markets': [], 'cursor': ''}))
+    fetcher = PublicFetcher(transport=httpx.MockTransport(handle))
+    source = fetcher('https://api.elections.kalshi.com/trade-api/v2/markets', NOW)
+    assert len(requests) == 3 and waits == [2, 4]
+    assert all(request.method == 'GET' for request in requests)
+    assert source['_market_data'] == []
+
+
+@pytest.mark.parametrize('header,waits,attempts', [
+    ('3', [3, 3], 3), ('120', [], 1), ('NaN', [], 1),
+    ('invalid', [2, 4], 3), ('10', [10, 10], 3),
+])
+def test_market_rate_limit_exhaustion_honors_cooldown_bounds(monkeypatch, header, waits, attempts):
+    observed, requests = [], []
+    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', observed.append)
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(429, headers={'Retry-After': header})
+    fetcher = PublicFetcher(transport=httpx.MockTransport(handle))
+    with pytest.raises(DeskError, match='source_rate_limited'):
+        fetcher('https://api.elections.kalshi.com/trade-api/v2/markets/TICKER', NOW)
+    assert observed == waits and len(requests) == attempts
+
+
+@pytest.mark.parametrize('url,status,code', [
+    ('https://api.weather.gov/a', 429, 'source_rate_limited'),
+    ('https://api.elections.kalshi.com/trade-api/v2/markets', 403, 'source_http_failure'),
+])
+def test_retry_does_not_expand_to_other_sources_or_http_errors(monkeypatch, url, status, code):
+    requests = []
+    def unexpected_sleep(delay):
+        pytest.fail('unexpected retry')
+    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', unexpected_sleep)
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(status)
+    with pytest.raises(DeskError, match=code):
+        PublicFetcher(transport=httpx.MockTransport(handle))(url, NOW)
+    assert len(requests) == 1
+
+
+def test_retry_capture_time_includes_backoff(monkeypatch):
+    ticks = iter([100, 106])
+    monkeypatch.setattr('kalshi_bot.desks.research.time.monotonic', lambda: next(ticks))
+    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', lambda delay: None)
+    requests = []
+    def handle(request):
+        requests.append(request)
+        return (httpx.Response(429) if len(requests) == 1 else
+                httpx.Response(200, json={'market': {'ticker': 'TICKER'}}))
+    source = PublicFetcher(transport=httpx.MockTransport(handle))(
+        'https://api.elections.kalshi.com/trade-api/v2/markets/TICKER', NOW)
+    assert source['retrieved_at'] == (NOW + timedelta(seconds=6)).isoformat()
+
+
+@pytest.mark.parametrize('cause,expected', [
+    ('source_rate_limited', 'market_context_rate_limited'),
+    ('source_timeout', 'market_context_timeout'),
+    ('source_connection_failure', 'market_context_connection_failure'),
+    ('source_http_failure', 'market_context_http_failure'),
+    ('market_scan_in_progress', 'market_scan_in_progress'),
+    ('private_exception_text', 'market_context_unavailable'),
+])
+def test_failed_claim_preserves_only_safe_context_error(tmp_path, cause, expected):
+    store = store_at(tmp_path)
+    def failing_reader(now):
+        raise DeskError(cause)
+    sup = Supervisor(store, market_reader=failing_reader, research_mode='session')
+    with pytest.raises(DeskError, match=expected):
+        sup.claim_external('chatgpt', 'chatgpt-app', NOW)
+    with store._tx() as session:
+        job = session.scalar(select(ResearchJob))
+        assert job.state == 'failed' and job.error == expected
+        assert job.actual_microusd in (None, 0) and job.reserved_microusd == 0
+    assert not store.snapshot(NOW)['decisions']
+
+
 def test_provider_http_request_and_usage_parsing():
     def handle(request):
         body = json.loads(request.content)
@@ -197,6 +280,39 @@ def test_unregistered_source_ids_cannot_support_research(tmp_path):
                                    "reason": "A fabricated source", "source_ids": ["invented"]}]}
     with pytest.raises(DeskError, match="unverified_source_id"):
         sup.complete_external(job["job_id"], job["claim_token"], bad, "test", NOW, desk_id="chatgpt")
+
+
+def test_claim_rate_limit_recovery_uses_one_job_and_preserves_scan_on_failure(tmp_path, monkeypatch):
+    from kalshi_bot.desks.research import PublicMarketReader
+    from kalshi_bot.desks.research_models import ResearchBoard
+
+    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', lambda delay: None)
+    requests = []
+    limited = False
+    def handle(request):
+        requests.append(request)
+        if limited or len(requests) < 3:
+            return httpx.Response(429)
+        return httpx.Response(200, json={'markets': [], 'cursor': ''})
+    store = store_at(tmp_path)
+    reader = PublicMarketReader(PublicFetcher(transport=httpx.MockTransport(handle)), store=store)
+    sup = Supervisor(store, market_reader=reader, research_mode='session')
+    claim = sup.claim_external('chatgpt', 'chatgpt-app', NOW)
+    with store._tx() as session:
+        assert len(list(session.scalars(select(ResearchJob)))) == 1
+    assert len(requests) == 3
+    sup.complete_external(claim['job_id'], claim['claim_token'], OUTPUT, 'test-model', NOW,
+                          desk_id='chatgpt')
+    limited = True
+    with pytest.raises(DeskError, match='market_context_rate_limited'):
+        sup.claim_external('chatgpt', 'chatgpt-app', NOW + timedelta(hours=1))
+    assert len(requests) == 6
+    with store._tx() as session:
+        board = session.scalar(select(ResearchBoard))
+        assert board.lease_until is None
+        assert board.pages_seen == 1 and board.completed_passes == 1
+        assert board.snapshot['coverage']['as_of'] == NOW.isoformat()
+    assert not store.snapshot(NOW)['decisions']
 
 
 def test_progressive_scanner_continues_cursor_and_shares_snapshot(tmp_path):
