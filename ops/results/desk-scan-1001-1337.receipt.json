@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "236d651317a57c5d9d00068b9bcb9943951ed3ed",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-01T13:36:28Z",
+  "id": "desk-scan-1001-1337",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-scan-1001-1337.receipt.json",
+  "result_file": "ops/results/desk-scan-1001-1337.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36869863486",
+  "service": null,
+  "started_at": "2026-10-01T13:36:15Z",
+  "targets": [],
+  "type": "script"
+}
