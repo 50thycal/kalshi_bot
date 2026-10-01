@@ -4,8 +4,8 @@
 kill criteria are pre-registered here and are not re-scoped after results. Operator request
 (Calvin, 2026-10-01): "review which markets give us the best results and increase our position
 size on those." Run doc: [`IDEA_MODEL_20261001_MMSELL_SIZEUP.md`](IDEA_MODEL_20261001_MMSELL_SIZEUP.md).
-Status: **pending probe** (no script yet; building it is a `kalshi-probe-builder` step and its
-`ops_runner.py` allowlist entry is the operator's hard stop).*
+Status: **HOLD (accrual) — leg R did not kill (2026-10-01); leg F accrues from 10-01, re-run
+weekly.** Probe: `scripts/mmsell_type_rank_probe.py` (#509).*
 
 ## One-liner
 
@@ -133,5 +133,43 @@ Same return driver as the live book; a multiplier on part of it. No diversificat
 
 ## RESULTS
 
-*(empty until the probe runs; recorded here, in `RESEARCH_JOURNAL.md` and in the scorecard row;
-the bars above are not edited)*
+### Run 1 — 2026-10-01 (ops `typerank-20261001-1`, code `baeb74eb`). Verdict: **HOLD (accrual)**.
+
+| gate | result |
+|---|---|
+| T0 instrument | A: classify 95.4%, settle-map 100.0%. B: classify 100.0%, settle-map 97.4% → PASS |
+| T1 cells | 5 readable in A and in A ∪ B → PASS |
+| T2 retrospective | TOP (h2h, player_prop) **+0.73¢** (n=493) vs REST (price_strike, spread, total) **−1.83¢** (n=171): separation **+2.56¢** → **not killed**. Date-block 5th percentile −2.33¢ |
+| T3 forward floor | 2 TOP / 0 REST settled fills since 10-01 → **HOLD (accrual)** |
+
+Rankings (readable cells, realized ¢/fill):
+
+| type | A | B | A ∪ B (leg F ranking) |
+|---|---|---|---|
+| h2h | +1.12 (272) | +0.67 (356) | **+0.86 (628)** |
+| player_prop | −1.71 (357) | +0.89 (137) | **−0.99 (494)** |
+| total | −2.64 (199) | +1.18 (51) | −1.86 (250) |
+| price_strike | −2.43 (189) | −1.49 (96) | −2.12 (285) |
+| spread | −4.95 (149) | −9.58 (24) | −5.59 (173) |
+
+**What it says, plainly.** The ranking was not reversed: the two types that led in A also led
+as a pair in B, by 2.56¢. That is the only thing leg R can establish, and it is not evidence of
+an edge: the date-block interval runs from −2.3¢ upward, and most of the separation comes from
+`spread` (−9.58¢ on 24 fills) and `price_strike`. Of the five readable cells, **only h2h was
+positive in both windows**. `player_prop` is in TOP because it was the least bad in A, and it is
+89% `KXMLBHR`, whose regular season ended 09-28; the forward leg will be h2h against the rest in
+practice.
+
+**Reported dollars (never decisive).** Window-B TOP fills ran 20.6/day at +0.73¢: about **$4.50
+a month at one contract**, **+$9 a month more at three**.
+
+**An observation from the same tables, recorded as an observation only.** The small cells below
+the 100-fill readability floor (`event_stat` mostly `KXRAIN`, `mention`, `exact_score`,
+`outright`, `game_prop`) were +3¢ to +8¢ per fill with win rates near 100% in *both* windows,
+on roughly 150 fills in A and 50 in B; `rank_culture` was the exception (−6.6¢ and −26¢).
+These are mostly scheduled or discrete markets rather than in-play ones. This was seen after the
+fact and decides nothing here. If it is worth testing, it is a new pre-registration scored only
+on fills after the day it is written.
+
+**Next read.** Re-run weekly; leg F needs 150 TOP and 100 REST settled fills from 10-01
+(roughly two to four weeks, slower if MLB props vanish from TOP).

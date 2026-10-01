@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## MMSELL TYPE-RANK 2026-10-01 — retrospective leg did not kill; HOLD for forward fills
+
+[TYPE-RANK](MMSELL_TYPE_RANK_THESIS.md) ran first time (ops `typerank-20261001-1`). Ranking the
+five readable market types on the pre-9/7 live books put h2h and player props on top; on
+Fmmsell10 that pair earned +0.73¢/fill (n=493) against −1.83¢ for totals, spreads and price
+strikes (n=171), a separation of +2.56¢. The pre-registered retrospective leg can only kill, and
+it did not. Its date-block interval reaches −2.3¢, most of the gap is spreads (−9.6¢ on 24
+fills), and only h2h was positive in both windows; player props are mostly MLB home runs, now
+out of season. The forward leg, which alone can promote, has two fills; re-run weekly. At current
+flow the top pair is worth about $4.50 a month at one contract and $9 more at three. Seen in the
+same tables and recorded only as an observation: the small scheduled and discrete cells (rain,
+mentions, exact scores, outrights) ran +3¢ to +8¢ per fill in both windows on about 200 fills.
+
 ## MMSELL size-up idea model 2026-10-01 — series ranking untestable; sizing is a multiplier; TYPE-RANK pre-registered
 
 Calvin asked whether to find MMSELL's best markets and put more size on them. Two outcome-blind
