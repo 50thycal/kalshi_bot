@@ -1,0 +1,3 @@
+# Install only in an isolated archive job; no live worker dependency change.
+psycopg[binary]>=3.1,<4.0
+boto3>=1.35,<2.0

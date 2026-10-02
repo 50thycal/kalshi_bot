@@ -1,4 +1,5 @@
 -r requirements.txt
+-r requirements-archive.txt
 pytest>=8.0
 respx>=0.21
 ruff>=0.5
