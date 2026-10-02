@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-post512-a","sql":"SELECT market_ticker, side, limit_price::text p, status, coalesce(kalshi_order_id,'-') koid, coalesce(cancel_reason,'') r, created_at::text t FROM live_orders WHERE strategy='Alimm1' AND (status IN ('resting','submitted','pending','unknown') OR created_at > '2026-10-01 23:40' OR cancel_reason='409_not_found_on_exchange') ORDER BY created_at"}
+{"type":"logs","id":"limm-post512-l","filter":"incentive smoke cycle","lines":6}
