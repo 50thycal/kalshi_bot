@@ -70,6 +70,7 @@ the report, not a failed request.
 | `capabilities` | read | this channel's generated capability surface |
 | `doctor` | read | one-request operating snapshot |
 | `incident` | read | bounded investigation bundle for one service |
+| `desks` | read | sanitized desk-service diagnostic (needs a unique `id`; `docs/desks/DIAGNOSTICS.md`) |
 | `env` | read **or MUTATING** | read allowlisted Railway variables — or change them |
 
 ```jsonc
@@ -78,6 +79,7 @@ the report, not a failed request.
 {"type": "script", "name": "live_paper_parity", "args": [], "id": "s-1"}
 {"type": "xos",    "command": "control-tower", "id": "ct-1"}
 {"type": "incident", "service": "main", "window_minutes": 30, "id": "inc-1"}
+{"type": "desks",  "id": "desk-diag-20261002T120000Z"}
 {"type": "env",    "service": "evo", "id": "env-1"}
 {"type": "noop",   "id": "idle"}
 ```

@@ -136,6 +136,11 @@ jobs:
           # operator adds the secret, and an unset service reports that rather than failing
           # obscurely — so shipping this ahead of the secret is safe.
           RAILWAY_LIVEDASH_SERVICE_ID: ${{ secrets.RAILWAY_LIVEDASH_SERVICE_ID }}
+          # desk-service diagnostic-role token for `{"type":"desks"}`: it can read ONLY the
+          # sanitized GET /api/diagnostics (no status, claims, Continue, orders, pause/resume).
+          # Never put the operator or a desk token here. Unset until the operator adds the
+          # secret; the request then answers not_configured. docs/desks/DIAGNOSTICS.md.
+          DESKS_DIAGNOSTIC_TOKEN: ${{ secrets.DESKS_DIAGNOSTIC_TOKEN }}
         run: |
           set -o pipefail
           # Snapshot the triggering request BEFORE running: the robust publish step

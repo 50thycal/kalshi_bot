@@ -91,11 +91,22 @@ def handler_for(service):
             token = header[7:]
             if not token.isascii():
                 return None
-            for role in ("operator", "chatgpt", "claude"):
+            for role in ("operator", "chatgpt", "claude", "diagnostic"):
                 expected = getattr(service.settings, f"{role}_token").get_secret_value()
-                if hmac.compare_digest(token, expected):
+                if expected and hmac.compare_digest(token, expected):
                     return role
             return None
+
+        def diagnostics(self, query):
+            """Sanitized read-only report for any role; the only route `diagnostic` reaches."""
+            pairs = parse_qsl(query, keep_blank_values=True)
+            if len(pairs) > 1 or any(k != "market_probe" or v not in ("0", "1") for k, v in pairs):
+                return self.send(400, {"error": "invalid_query"})
+            from .diagnostics import build_report
+            try:
+                return self.send(200, build_report(service, probe=dict(pairs).get("market_probe", "1") == "1"))
+            except Exception:
+                return self.send(503, {"error": "diagnostics_unavailable"})
 
         def browse(self, path, query):
             """Read-only public market discovery for any authenticated role (DEC-024)."""
@@ -134,8 +145,14 @@ def handler_for(service):
                 return self.send(200, _INDEX.read_bytes(), "text/html; charset=utf-8")
             if path == "/healthz":
                 return self.send(200, {"service": "desks", "status": "up"})
-            if not self.role():
+            role = self.role()
+            if not role:
                 return self.send(401, {"error": "authentication_required"})
+            if path == "/api/diagnostics":
+                return self.diagnostics(split.query)
+            if role == "diagnostic":
+                # Least privilege: no status, decisions, schema or market browsing.
+                return self.send(403, {"error": "role_forbidden"})
             if path.split("/")[1:3] in (["api", "markets"], ["api", "events"], ["api", "series"],
                                         ["api", "categories"]):
                 try:
@@ -165,6 +182,8 @@ def handler_for(service):
             role = self.role()
             if not role:
                 return self.send(401, {"error": "authentication_required"})
+            if role == "diagnostic":
+                return self.send(403, {"error": "role_forbidden"})  # never a writer
             try:
                 if self.headers.get_content_type() != "application/json":
                     return self.send(415, {"error": "json_required"})

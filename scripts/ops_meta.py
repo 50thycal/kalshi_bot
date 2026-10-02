@@ -97,6 +97,12 @@ REQUEST_TYPES: tuple[RequestType, ...] = (
         example='{"type":"incident","service":"main","window_minutes":30,"id":"inc-1"}',
     ),
     RequestType(
+        "desks",
+        "Sanitized read-only desk-service diagnostic: health, pauses, blockers, research "
+        "jobs, board cache and one bounded public market GET. Needs a unique id.",
+        example='{"type":"desks","id":"desk-diag-1"}',
+    ),
+    RequestType(
         "env",
         "Read allowlisted Railway variables; with an explicit set action, CHANGE them "
         "and redeploy the service.",
@@ -292,6 +298,12 @@ def capability_snapshot() -> dict:
             "run_url": os.environ.get("OPS_RUN_URL", "") or "(none)",
         },
         "services": services,
+        # The desk-service diagnostic credential: whether it reached the runner, never
+        # its value. Unset means `{"type":"desks"}` answers not_configured.
+        "desk_diagnostics": {
+            "token_secret": "DESKS_DIAGNOSTIC_TOKEN",
+            "configured": bool(os.environ.get("DESKS_DIAGNOSTIC_TOKEN", "").strip()),
+        },
         "request_types": [
             {
                 "type": r.name,
@@ -349,6 +361,9 @@ def render_capabilities(snap: dict) -> str:
     for name, svc in snap["services"].items():
         state = "configured" if svc["configured"] else "NOT CONFIGURED"
         add(f"  {name:<10} {state:<15} (id secret: {svc['id_secret']})")
+    desk = snap.get("desk_diagnostics") or {}
+    add(f"  {'desks':<10} {'configured' if desk.get('configured') else 'NOT CONFIGURED':<15} "
+        f"(token secret: {desk.get('token_secret')}; desk-service diagnostics)")
     add("")
     add("EXPERIMENT OS READ COMMANDS (canonical CLI)")
     add("-" * 72)

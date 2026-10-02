@@ -191,7 +191,9 @@ load that file. Set the dedicated environment through the hosting platform's sec
 workers. For deployment use `DESKS_HOST=0.0.0.0` and match `DESKS_PORT` to the platform's
 assigned `PORT` (or omit the explicit port to use its fallback). Core settings
 are `DESKS_DATABASE_URL`, three distinct cryptographically random tokens of at least 32 characters:
-`DESKS_OPERATOR_TOKEN`, `DESKS_CHATGPT_TOKEN`, and `DESKS_CLAUDE_TOKEN`, plus `DESKS_ROUND_ID`. `DESKS_LIVE_ENABLED` defaults false. Bind the
+`DESKS_OPERATOR_TOKEN`, `DESKS_CHATGPT_TOKEN`, and `DESKS_CLAUDE_TOKEN`, plus `DESKS_ROUND_ID`.
+An optional fourth distinct token, `DESKS_DIAGNOSTIC_TOKEN`, reaches only the sanitized
+`GET /api/diagnostics` and is the only desk credential the GitHub ops channel may hold. `DESKS_LIVE_ENABLED` defaults false. Bind the
 service behind an authenticated TLS reverse proxy; the local default host is loopback.
 The public `/healthz` only proves the HTTP process responds. It does not prove desks are
 ready, funded, conducting research, or allowed to trade.
@@ -227,6 +229,7 @@ tokens in URLs. The UI shell is public but data APIs require authentication.
 | Method/path | Role and purpose |
 |---|---|
 | GET `/api/status` or `/api/context` | Any authenticated role; shared desk state and readiness |
+| GET `/api/diagnostics` | Any role, including the optional read-only `diagnostic` role; sanitized health/jobs/board/market-probe report ([DIAGNOSTICS.md](desks/DIAGNOSTICS.md)) |
 | GET `/api/research/schema` | Any authenticated role; strict research completion schema |
 | POST `/api/round/preflight` | Operator only; refresh read-only launch checks without starting |
 | GET `/api/decisions/{decision_id}` | Any authenticated role; immutable decision and execution state |
