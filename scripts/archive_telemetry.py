@@ -1,6 +1,6 @@
 """Export one UTC day of raw telemetry using a SELECT-only Postgres credential.
 
-This tool deliberately has no database write, deletion, bucket upload, or scheduling path.
+This tool deliberately has no database write, deletion, or scheduling path.
 The resulting CSV is PostgreSQL COPY format, suitable for a restore test against an
 isolated database with the matching schema. Do not use the trading worker's DATABASE_URL.
 """
@@ -161,6 +161,80 @@ def export(table: str, day: str, output_dir: Path) -> dict:
         temp_path.unlink(missing_ok=True)
 
 
+def upload(data_path: Path, manifest_path: Path) -> dict:
+    """Upload validated files to the private archive and read the bytes back.
+
+    The manifest is uploaded last, so its presence denotes a verified pair.
+    Existing keys are read back and checked, never overwritten.
+    """
+    manifest = verify(data_path, manifest_path)
+    table = manifest.get("table")
+    if table not in TABLE_CLOCKS:
+        raise ValueError("Table is not in the raw-telemetry export allowlist")
+    start, end = utc_day(manifest["utc_start"][:10])
+    if (manifest["utc_start"], manifest["utc_end_exclusive"]) != (
+        start.isoformat(), end.isoformat()
+    ):
+        raise ValueError("Manifest must cover one complete UTC day")
+    variables = (
+        "ARCHIVE_S3_ENDPOINT", "ARCHIVE_S3_BUCKET", "ARCHIVE_S3_ACCESS_KEY_ID",
+        "ARCHIVE_S3_SECRET_ACCESS_KEY", "ARCHIVE_S3_REGION",
+    )
+    values = {name: os.environ.get(name, "") for name in variables}
+    if not all(values.values()):
+        raise ValueError("Archive bucket endpoint, bucket, region and credentials are required")
+    style = os.environ.get("ARCHIVE_S3_ADDRESSING_STYLE", "virtual")
+    if style not in {"virtual", "path"}:
+        raise ValueError("Invalid archive bucket addressing style")
+
+    import boto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+
+    client = boto3.client(
+        "s3", endpoint_url=values["ARCHIVE_S3_ENDPOINT"],
+        region_name=values["ARCHIVE_S3_REGION"],
+        aws_access_key_id=values["ARCHIVE_S3_ACCESS_KEY_ID"],
+        aws_secret_access_key=values["ARCHIVE_S3_SECRET_ACCESS_KEY"],
+        config=Config(s3={"addressing_style": style}),
+    )
+    bucket = values["ARCHIVE_S3_BUCKET"]
+    prefix = f"telemetry/v1/{table}/{start.date().isoformat()}/"
+
+    def exists(key: str) -> bool:
+        try:
+            client.head_object(Bucket=bucket, Key=key)
+        except ClientError as error:
+            if error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
+                return False
+            raise
+        return True
+
+    def remote_sha256(key: str) -> str:
+        digest = hashlib.sha256()
+        response = client.get_object(Bucket=bucket, Key=key)
+        body = response["Body"]
+        try:
+            for block in body.iter_chunks(chunk_size=1024 * 1024):
+                digest.update(block)
+        finally:
+            body.close()
+        return digest.hexdigest()
+
+    data_key = prefix + data_path.name
+    manifest_key = prefix + manifest_path.name
+    if not exists(data_key):
+        client.upload_file(str(data_path), bucket, data_key)
+    if remote_sha256(data_key) != manifest["sha256"]:
+        raise ValueError("Archive bucket data readback checksum mismatch")
+    if not exists(manifest_key):
+        client.upload_file(str(manifest_path), bucket, manifest_key)
+    if remote_sha256(manifest_key) != file_sha256(manifest_path):
+        raise ValueError("Archive bucket manifest readback checksum mismatch")
+    return {"bucket": bucket, "data_key": data_key, "manifest_key": manifest_key,
+            "row_count": manifest["row_count"], "sha256": manifest["sha256"]}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -171,11 +245,16 @@ def main() -> int:
     verify_cmd = commands.add_parser("verify")
     verify_cmd.add_argument("data_path", type=Path)
     verify_cmd.add_argument("manifest_path", type=Path)
+    upload_cmd = commands.add_parser("upload")
+    upload_cmd.add_argument("data_path", type=Path)
+    upload_cmd.add_argument("manifest_path", type=Path)
     args = parser.parse_args()
-    result = (
-        export(args.table, args.day, args.output_dir)
-        if args.command == "export" else verify(args.data_path, args.manifest_path)
-    )
+    if args.command == "export":
+        result = export(args.table, args.day, args.output_dir)
+    elif args.command == "verify":
+        result = verify(args.data_path, args.manifest_path)
+    else:
+        result = upload(args.data_path, args.manifest_path)
     print(json.dumps(result, indent=2))
     return 0
 
