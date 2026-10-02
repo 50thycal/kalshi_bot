@@ -15,9 +15,10 @@ DESKS = ("chatgpt", "claude")
 
 class DeskService:
     def __init__(self, settings: DeskSettings, store, supervisor, executors=None, notifier=None,
-                 browser=None):
+                 browser=None, market_probe=None):
         self.settings, self.store, self.supervisor = settings, store, supervisor
         self.browser = browser  # read-only public market discovery (DEC-024)
+        self.market_probe = market_probe  # one bounded public GET for /api/diagnostics
         self.executors = executors or {}
         self.notifier = notifier
         self._isolation = {}

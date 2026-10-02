@@ -10,6 +10,7 @@ import threading
 
 from .config import DeskSettings
 from .contracts import utcnow
+from .diagnostics import MarketProbe
 from .exchange import KalshiDeskExchange
 from .execution import DeskExecutor
 from .markets import MarketBrowser
@@ -73,7 +74,7 @@ def build_service(settings):
                             lease_minutes=settings.research_lease_minutes)
     notifier = AlertNotifier(store, settings.alert_webhook_url.get_secret_value())
     service = DeskService(settings, store, supervisor, executors, notifier=notifier,
-                          browser=MarketBrowser())
+                          browser=MarketBrowser(), market_probe=MarketProbe())
     supervisor.submit_decision = service.submit
     return service
 

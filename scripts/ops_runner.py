@@ -19,6 +19,7 @@ ops/request.json shapes:
   {"type": "capabilities"}                              # what this channel can do, generated
   {"type": "doctor"}                                    # one-request operating snapshot
   {"type": "incident", "service": "main", "window_minutes": 30}
+  {"type": "desks", "id": "desk-diag-1"}               # sanitized desk-service diagnostic
   {"type": "noop"}   # placeholder; do nothing
 
 Any request may carry public-safe provenance — "actor", "purpose", "workstream",
@@ -587,6 +588,15 @@ def _dispatch(rtype: str, req: dict, receipt: dict) -> int:
         import ops_doctor
 
         return ops_doctor.incident(req)
+
+    if rtype == "desks":
+        # One read-only GET of the desk service's sanitized /api/diagnostics with the
+        # diagnostic-role token (never the operator or a desk token), re-sanitized
+        # before printing because this result is published on a public branch.
+        import desk_diag
+
+        results_dir = os.path.join(os.path.dirname(os.path.abspath(REQUEST_PATH)), "results")
+        return desk_diag.run(req, results_dir=results_dir)
 
     if rtype == "script":
         name = (req.get("name") or "").strip()

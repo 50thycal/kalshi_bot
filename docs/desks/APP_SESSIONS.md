@@ -138,6 +138,11 @@ of at most ten seconds per wait. Longer cooldowns stop immediately; responses
 are closed before waiting. Other HTTP failures, provider calls and order writes
 are not retried by this mechanism. Source capture times include the elapsed wait.
 
+Development sessions diagnosing a failure (rather than doing research) use the read-only
+ops request `{"type":"desks","id":"<unique>"}` — job states, error categories, pauses,
+board/scan-lease state and one bounded public market GET, sanitized for the public ops
+branch ([DIAGNOSTICS.md](DIAGNOSTICS.md)). It never Continues, claims or clears anything.
+
 If claim context still fails, its durable job remains failed. Status distinguishes
 `market_context_rate_limited`, `market_context_timeout`,
 `market_context_connection_failure`, `market_context_http_failure`, and scan

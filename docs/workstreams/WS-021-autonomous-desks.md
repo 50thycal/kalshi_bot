@@ -380,3 +380,26 @@ malformed and ambiguous framing remains a fixed redacted 413; normal fixed-lengt
 unchanged; the doctor can use an allowlisted cloud proxy; no limit, trading rule, start authority,
 desk isolation or financial exposure changes. Deployment is required before retrying ChatGPT's
 Continue cycle.
+
+## Read-only desk diagnostics continuation — 2026-10-02
+
+After #505 (precise exchange balance) and #506 (bounded market-read 429 retries), diagnosing a
+desk-service failure still meant the operator copying Railway console output into a session.
+
+Build card: one allowlisted ops request, `{"type":"desks","id":"<unique>"}`, reads a new
+sanitized `GET /api/diagnostics` on desk-service with a new optional fourth role token
+(`DESKS_DIAGNOSTIC_TOKEN`). That role reaches only this route; every other GET and every POST
+is `403 role_forbidden`. The report is codes, counts, booleans, bounded numbers and timestamps:
+health, pause category, readiness blockers (cached, never refreshed), worker error, recent job
+IDs/states/timestamps/error categories, claim-board and browse-index coverage, cache age and
+scan lease, and one bounded public market GET (single attempt, 60 s reuse, Retry-After
+cooldown). The ops runner re-projects the report through its own fixed schema before it
+reaches the public branch. Operator and desk tokens never reach GitHub Actions. Choice: a new
+least-privilege token rather than reusing a desk token (which can claim and complete) or any
+unrelated production credential. Detail: `docs/desks/DIAGNOSTICS.md`.
+
+Acceptance: refusal before any network call for a missing/reused id or unknown field; one GET,
+no retry; failures labelled `DIAGNOSTIC : FAILED` and never a health verdict; no DB writes, no
+Continue/claim/source/complete/trade/pause/resume/preflight; no secret, balance, payload or raw
+body in output. Remaining operator steps (private): deploy + set the Railway variable, add the
+GitHub secret, commit the one-line passthrough onto `ops` (ops workflow file hard stop).

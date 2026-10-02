@@ -20,6 +20,9 @@ class DeskSettings(BaseSettings):
     operator_token: SecretStr
     chatgpt_token: SecretStr
     claude_token: SecretStr
+    # Optional fourth role: GET /api/diagnostics only (sanitized, read-only). Unset = disabled.
+    # It is the only desk credential the GitHub ops channel may hold (`{"type":"desks"}`).
+    diagnostic_token: SecretStr = SecretStr("")
     host: str = "127.0.0.1"
     port: int = Field(default=8090, ge=1, le=65535)
     live_enabled: bool = False
@@ -85,6 +88,9 @@ class DeskSettings(BaseSettings):
                   for role in ("operator", "chatgpt", "claude")]
         if any(len(t) < 32 for t in tokens) or len(set(tokens)) != 3:
             raise ValueError("three distinct authentication tokens of at least 32 characters required")
+        diagnostic = self.diagnostic_token.get_secret_value()
+        if diagnostic and (len(diagnostic) < 32 or diagnostic in tokens):
+            raise ValueError("the diagnostic token must be distinct and at least 32 characters")
         allowed = {
             "https://external-api.kalshi.com/trade-api/v2",
             "https://demo-api.kalshi.co/trade-api/v2",

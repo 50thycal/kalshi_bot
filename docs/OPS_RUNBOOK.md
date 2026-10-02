@@ -48,6 +48,7 @@ To run a request:
    {"type": "capabilities", "id": "cap-1"}                  # what this channel can do, generated
    {"type": "doctor", "id": "doc-1"}                        # one-request operating snapshot
    {"type": "incident", "service": "main", "window_minutes": 30, "id": "inc-1"}
+   {"type": "desks", "id": "desk-diag-<unique>"}            # sanitized desk-service diagnostic
    {"type": "env"}                                          # read allowlisted Railway vars
    {"type": "env", "action": "set", "values": {"KILL_SWITCH": "false"}}  # MUTATING + redeploy
    {"type": "noop"}
@@ -57,6 +58,13 @@ To run a request:
    the channel can currently do (generated from the allowlists, so it cannot go
    stale the way this document can), the second says what production is currently
    doing. Everything below is detail.
+
+   `desks` diagnoses the separate **desk-service** (autonomous desks): health, pauses,
+   readiness blockers, worker errors, recent research jobs, board cache/scan lease and one
+   bounded public market GET from the service's own egress — sanitized for this public
+   branch, read-only, one GET with no retry. `id` is required and must be unused. It needs
+   the `DESKS_DIAGNOSTIC_TOKEN` secret (a diagnostic-only role, never the operator or a desk
+   token). Format, fields, failure codes and provisioning: `docs/desks/DIAGNOSTICS.md`.
 
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
@@ -1118,7 +1126,9 @@ unavailable.
 Live in **GitHub Actions secrets**, not the repo: `DATABASE_URL_RO`,
 `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT_ID`,
 `RAILWAY_SERVICE_ID` (main/live worker), `RAILWAY_EVO_SERVICE_ID` (the evo
-worker — enables `{"service":"evo"}` env/logs requests), and
+worker — enables `{"service":"evo"}` env/logs requests),
+`DESKS_DIAGNOSTIC_TOKEN` (the desk-service diagnostic role — enables `{"type":"desks"}`;
+it reads one sanitized endpoint and nothing else), and
 `RAILWAY_LIVEDASH_SERVICE_ID` (the live-vs-paper dashboard — enables
 `{"service":"livedash"}`). Human setup instructions are in `docs/REMOTE_ACCESS.md`.
 
