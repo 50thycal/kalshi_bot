@@ -14,6 +14,9 @@ class DeskSettings(BaseSettings):
 
     database_url: SecretStr
     round_id: str = Field(default="desks-round-1", pattern=r"^[A-Za-z0-9_-]{1,100}$")
+    # How a NEW round's books are funded when earlier rounds exist in the database:
+    # carry = each desk keeps its prior book cash (capped at $30); fresh = $30 each.
+    new_round_bankroll: Literal["carry", "fresh"] = "carry"
     operator_token: SecretStr
     chatgpt_token: SecretStr
     claude_token: SecretStr
@@ -40,6 +43,9 @@ class DeskSettings(BaseSettings):
     chatgpt_research_schedule: str = "interval"
     claude_research_schedule: str = "interval"
     tick_seconds: int = Field(default=15, ge=1, le=60)
+    # DEC-024: generous, configurable research limits that protect the service, not usage.
+    max_sources_per_job: int = Field(default=50, ge=1, le=500)
+    research_lease_minutes: int = Field(default=60, ge=15, le=240)
     monthly_research_budget_usd: Decimal = Field(default=Decimal(0), ge=0)
     chatgpt_provider: Literal["external", "openai"] = "external"
     claude_provider: Literal["external", "anthropic"] = "external"

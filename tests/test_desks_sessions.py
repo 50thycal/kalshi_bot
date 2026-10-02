@@ -77,9 +77,9 @@ def test_expired_unaccepted_claim_never_publishes_or_executes(tmp_path):
     job = sup.claim_external('chatgpt', 'app', NOW)
     with pytest.raises(DeskError, match='research_claim_expired'):
         sup.complete_external(job['job_id'], job['claim_token'], OUTPUT, 'model',
-                              NOW + timedelta(minutes=31), desk_id='chatgpt')
+                              NOW + timedelta(minutes=61), desk_id='chatgpt')
     assert not sup.store.snapshot(NOW)['publications']
-    result = sup.tick(NOW + timedelta(minutes=31))
+    result = sup.tick(NOW + timedelta(minutes=61))
     assert len(result['jobs']) == 1 and result['jobs'][0]['state'] == 'failed'
 
 
@@ -103,7 +103,7 @@ def test_recovery_preserves_notes_but_never_extends_trade_authority(tmp_path, mo
         sup.verify_session_decision(value, now)
         orders.append(value)
     sup.submit_decision = guarded
-    sup.tick(NOW + timedelta(minutes=31))
+    sup.tick(NOW + timedelta(minutes=61))
     assert not orders
     snapshot = store.snapshot(NOW)
     assert any(p['kind'] == 'research_cycle' for p in snapshot['publications'])

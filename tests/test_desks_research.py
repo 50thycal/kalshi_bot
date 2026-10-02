@@ -20,6 +20,7 @@ from kalshi_bot.desks.store import DeskStore
 from kalshi_bot.desks.supervisor import Supervisor
 
 NOW = datetime(2026, 9, 20, 12, tzinfo=timezone.utc)
+PUBLIC_DNS = lambda host: ["93.184.216.34"]  # noqa: E731 — offline tests never resolve real DNS
 OUTPUT = {"summary": "No information edge today.", "next_action": "Review the next government release."}
 
 
@@ -161,23 +162,26 @@ def test_scheduled_windows_never_overlap_or_duplicate(tmp_path):
 
 
 def test_sources_refuse_credentials_redirects_private_hosts_and_oversized():
-    fetcher = PublicFetcher(transport=httpx.MockTransport(lambda request: httpx.Response(
-        302, headers={"location": "http://127.0.0.1/private"})))
-    for url in ("http://api.weather.gov", "https://127.0.0.1", "https://api.weather.gov:444/a", "https://user:pass@api.weather.gov"):
-        with pytest.raises(DeskError, match="source_not_allowlisted"):
+    fetcher = PublicFetcher(resolver=lambda host: ["93.184.216.34"],
+                            transport=httpx.MockTransport(lambda request: httpx.Response(
+                                302, headers={"location": "http://127.0.0.1/private"})))
+    for url in ("http://api.weather.gov", "https://api.weather.gov:444/a", "https://user:pass@api.weather.gov"):
+        with pytest.raises(DeskError, match="source_url_refused"):
             fetcher(url, NOW)
-    with pytest.raises(DeskError, match="source_http_failure"):
+    with pytest.raises(DeskError, match="source_address_refused"):
+        fetcher("https://127.0.0.1", NOW)
+    with pytest.raises(DeskError, match="source_url_refused"):  # redirect to plain HTTP
         fetcher("https://api.weather.gov/a", NOW)
 
 
 def test_market_rate_limit_recovers_with_bounded_backoff(monkeypatch):
     waits, requests = [], []
-    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', waits.append)
+    monkeypatch.setattr('kalshi_bot.desks.web.time.sleep', waits.append)
     def handle(request):
         requests.append(request)
         return (httpx.Response(429) if len(requests) < 3 else
                 httpx.Response(200, json={'markets': [], 'cursor': ''}))
-    fetcher = PublicFetcher(transport=httpx.MockTransport(handle))
+    fetcher = PublicFetcher(transport=httpx.MockTransport(handle), resolver=PUBLIC_DNS)
     source = fetcher('https://api.elections.kalshi.com/trade-api/v2/markets', NOW)
     assert len(requests) == 3 and waits == [2, 4]
     assert all(request.method == 'GET' for request in requests)
@@ -190,11 +194,11 @@ def test_market_rate_limit_recovers_with_bounded_backoff(monkeypatch):
 ])
 def test_market_rate_limit_exhaustion_honors_cooldown_bounds(monkeypatch, header, waits, attempts):
     observed, requests = [], []
-    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', observed.append)
+    monkeypatch.setattr('kalshi_bot.desks.web.time.sleep', observed.append)
     def handle(request):
         requests.append(request)
         return httpx.Response(429, headers={'Retry-After': header})
-    fetcher = PublicFetcher(transport=httpx.MockTransport(handle))
+    fetcher = PublicFetcher(transport=httpx.MockTransport(handle), resolver=PUBLIC_DNS)
     with pytest.raises(DeskError, match='source_rate_limited'):
         fetcher('https://api.elections.kalshi.com/trade-api/v2/markets/TICKER', NOW)
     assert observed == waits and len(requests) == attempts
@@ -208,25 +212,27 @@ def test_retry_does_not_expand_to_other_sources_or_http_errors(monkeypatch, url,
     requests = []
     def unexpected_sleep(delay):
         pytest.fail('unexpected retry')
-    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', unexpected_sleep)
+    monkeypatch.setattr('kalshi_bot.desks.web.time.sleep', unexpected_sleep)
     def handle(request):
         requests.append(request)
         return httpx.Response(status)
     with pytest.raises(DeskError, match=code):
-        PublicFetcher(transport=httpx.MockTransport(handle))(url, NOW)
+        PublicFetcher(transport=httpx.MockTransport(handle), resolver=PUBLIC_DNS)(url, NOW)
     assert len(requests) == 1
 
 
 def test_retry_capture_time_includes_backoff(monkeypatch):
-    ticks = iter([100, 106])
-    monkeypatch.setattr('kalshi_bot.desks.research.time.monotonic', lambda: next(ticks))
-    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', lambda delay: None)
+    clock = {'t': 100}
+    def sleep(delay):
+        clock['t'] += 6
+    monkeypatch.setattr('kalshi_bot.desks.web.time.monotonic', lambda: clock['t'])
+    monkeypatch.setattr('kalshi_bot.desks.web.time.sleep', sleep)
     requests = []
     def handle(request):
         requests.append(request)
         return (httpx.Response(429) if len(requests) == 1 else
                 httpx.Response(200, json={'market': {'ticker': 'TICKER'}}))
-    source = PublicFetcher(transport=httpx.MockTransport(handle))(
+    source = PublicFetcher(transport=httpx.MockTransport(handle), resolver=PUBLIC_DNS)(
         'https://api.elections.kalshi.com/trade-api/v2/markets/TICKER', NOW)
     assert source['retrieved_at'] == (NOW + timedelta(seconds=6)).isoformat()
 
@@ -286,7 +292,7 @@ def test_claim_rate_limit_recovery_uses_one_job_and_preserves_scan_on_failure(tm
     from kalshi_bot.desks.research import PublicMarketReader
     from kalshi_bot.desks.research_models import ResearchBoard
 
-    monkeypatch.setattr('kalshi_bot.desks.research.time.sleep', lambda delay: None)
+    monkeypatch.setattr('kalshi_bot.desks.web.time.sleep', lambda delay: None)
     requests = []
     limited = False
     def handle(request):
@@ -295,7 +301,7 @@ def test_claim_rate_limit_recovery_uses_one_job_and_preserves_scan_on_failure(tm
             return httpx.Response(429)
         return httpx.Response(200, json={'markets': [], 'cursor': ''})
     store = store_at(tmp_path)
-    reader = PublicMarketReader(PublicFetcher(transport=httpx.MockTransport(handle)), store=store)
+    reader = PublicMarketReader(PublicFetcher(transport=httpx.MockTransport(handle), resolver=PUBLIC_DNS), store=store)
     sup = Supervisor(store, market_reader=reader, research_mode='session')
     claim = sup.claim_external('chatgpt', 'chatgpt-app', NOW)
     with store._tx() as session:
@@ -454,7 +460,7 @@ def test_publication_recovery_does_not_resubmit_a_recorded_refusal(tmp_path):
     # Simulate a process crash after publications and refusal were durable but
     # before the job transitioned to completed.
     sup._publish(job["job_id"], output, "chatgpt", "test", NOW)
-    sup.tick(NOW + timedelta(minutes=31))
+    sup.tick(NOW + timedelta(minutes=61))
     assert len(calls) == 1
     refusals = [p for p in sup.store.snapshot(NOW)["publications"] if p["kind"] == "decision_refused"]
     assert len(refusals) == 1

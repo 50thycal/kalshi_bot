@@ -62,12 +62,30 @@ Exchange state, not an AI's text, supplies fills, fees, and settlement cash flow
 A useful cycle narrows the available board to roughly ten candidates, investigates three
 to five, and submits zero to three decisions. Those are research guidelines, not quotas.
 A well-supported no-pick is successful research. A large note count is not progress.
-The shared public board reader progressively scans two bounded pages per interval and
-persists its cursor and market cache. Both desks receive the same interval snapshot;
-coverage reports pages, cached markets, and completed passes. Binary-market shortlists
-are diversified across events/series; combinations are excluded. Cached quote timestamps
-remain visible. Do not describe an incomplete pass as the entire exchange, and fetch fresh
-full market rules and settlement-source evidence before a trading decision.
+
+**v2 rules (DEC-024; detail in [desks/RESEARCH_V2.md](desks/RESEARCH_V2.md)).**
+*Discovery:* authenticated, read-only market endpoints browse the whole open board — sorted by
+24h volume, total volume, open interest, newest, closing soon or liquidity; filtered by
+category, series, event, text, volume, open interest, close/open horizon and spread; exact
+pagination within a board snapshot — plus live market (full rules and `rules_sha256`),
+order book, trades, event ladder and series reads. The list views come from a whole-board
+index rebuilt at most every five minutes; combinations are excluded. Browsing is discovery:
+it does not consume the capture allowance and is never decision evidence. The progressive
+20-market board in each claim remains as a convenience sample only.
+*Evidence:* any public HTTPS host on port 443 may be captured through the job's `source`
+operation and is evidence of equal standing to the former allowlisted APIs. The service
+resolves DNS and refuses non-global addresses (private, loopback, link-local, CGNAT,
+metadata, multicast, reserved, IPv6 and embedded-IPv4 forms), connects to the address it
+checked, re-checks every redirect hop (at most five), sends no credentials or cookies, and
+caps 3 MB/45 s per capture. HTML is stored as text and JSON/CSV/XML/text verbatim, whole up to
+1,000,000 characters; PDFs are refused. Each job allows 50 captures by default
+(`DESKS_MAX_SOURCES_PER_JOB`) and a 60-minute lease (`DESKS_RESEARCH_LEASE_MINUTES`).
+App sessions may use their own web search for discovery; a page a decision relies on must be
+captured. Fetch the live market and settlement-source evidence before a trading decision.
+*Rounds:* several rounds share the desk database; the service trades only `DESKS_ROUND_ID`. A new
+round opens only once every earlier order and position is closed, and its books carry the prior
+cash capped at $30 (`DESKS_NEW_ROUND_BANKROLL=carry`, default; `fresh` = $30). Cutover:
+[desks/ROUND_2_CUTOVER.md](desks/ROUND_2_CUTOVER.md).
 
 Every decision uses the strict `Decision` schema in `contracts.py`: desk/round identity,
 market and event, side, quote timestamp, observed and maximum prices, fee-inclusive spend,
@@ -119,7 +137,7 @@ Two additional scheduled cognition transports are implemented:
 
 The service and runner do not keep an ordinary chat alive, install/authenticate model
 clients, deploy themselves, or provide unlimited browsing/code execution to a model API. Provider cycles use
-bounded market context and allowlisted source fetching. External sessions can develop
+bounded market context and SSRF-guarded public-HTTPS source fetching (DEC-024). External sessions can develop
 additional desk-owned research tools within their allowed environment. Tool or network
 limitations are recorded, never bypassed by quietly changing another worker's permissions.
 
@@ -217,7 +235,12 @@ tokens in URLs. The UI shell is public but data APIs require authentication.
 | POST `/api/desks/{desk}/decisions` | Own desk or operator; strict `Decision` JSON |
 | POST `/api/desks/{desk}/publications` | Own desk or operator; `kind`, object `payload`, optional `record_id` |
 | POST `/api/desks/{desk}/claim` | Own desk or operator; `worker_id`; lease next external job |
-| POST `/api/desks/{desk}/source` | Own desk or operator; `job_id`, `claim_token`, `url`; capture allowlisted source evidence |
+| POST `/api/desks/{desk}/source` | Own desk or operator; `job_id`, `claim_token`, `url`; capture public HTTPS source evidence (DEC-024) |
+| GET `/api/markets` | Any authenticated role; whole-board browse: `sort`, `category`, `series`, `event`, `search`, `min_volume`, `min_open_interest`, `close_within_hours`, `opened_within_hours`, `max_spread`, `limit`, `cursor`, `refresh` |
+| GET `/api/markets/{ticker}` | Any authenticated role; live market, full rules, `rules_sha256`, series settlement sources, `capture_url` |
+| GET `/api/markets/{ticker}/orderbook` / `/trades` | Any authenticated role; live book (`depth`) / recent trades (`limit`, `cursor`) |
+| GET `/api/events`, `/api/events/{event}` | Any authenticated role; event list over the index / live whole ladder |
+| GET `/api/series`, `/api/series/{series}`, `/api/categories` | Any authenticated role; series and category rollups / live series detail |
 | POST `/api/desks/{desk}/complete` | Own desk or operator; `job_id`, `claim_token`, `model_id`, `payload` |
 | POST `/api/desks/{desk}/pause` | Operator only; `reason` |
 | POST `/api/desks/{desk}/resume` | Operator only; `{}`; never fixes underlying readiness failures |
@@ -242,7 +265,9 @@ result files private because they may contain account state or temporary claim t
 python scripts/desk_client.py status
 python scripts/desk_client.py --desk chatgpt ready
 python scripts/desk_client.py --desk chatgpt claim --worker-id scheduled-chatgpt
-python scripts/desk_client.py --desk chatgpt source --file source-request.json
+python scripts/desk_client.py --desk chatgpt source --claim-file claim.json --url https://example.org/x --out src.json
+python scripts/desk_client.py markets --sort newest --limit 50
+python scripts/desk_client.py --desk chatgpt handoff-export --round-label desks-round-1 --out handoff.md
 python scripts/desk_client.py --desk chatgpt complete --file research-result.json
 ```
 

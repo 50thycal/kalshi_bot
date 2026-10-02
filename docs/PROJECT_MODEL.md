@@ -428,6 +428,19 @@ after both prior order IDs remain absent, five minutes pass, the book is clean a
 still exactly $30. V3 has its own fixed ID, requires fresh live-order approval, and may POST once.
 Write HTTP failures remain durable and stage-specific; there is no v4 path.
 
+### Desk research v2: open discovery and open evidence (DEC-024)
+
+Desks browse the whole board through authenticated read-only endpoints (`kalshi_bot/desks/markets.py`):
+a five-minute whole-board index answers sorted, filtered, exactly paginated listings, and market,
+order book, trades, event and series reads are live. Browsing is never evidence. Evidence capture
+(`kalshi_bot/desks/web.py`) accepts any public HTTPS host behind a per-hop DNS check that refuses
+non-global addresses and pins the connection to the checked address; text is stored whole to one
+million characters with its sha256, so decision verification is unchanged. Captures per job (50)
+and the lease (60 minutes) are configuration. Rounds share the desk database: the service trades only
+the round named by `DESKS_ROUND_ID`, a new round opens only when every earlier order and position
+is closed, its books carry the prior cash (capped at $30) by default, and earlier rounds'
+publications reach each claim as `prior_round_record`.
+
 ### Desk notification modes (DEC-022)
 
 Webhook remains the default. The selected session-only option surfaces current pause and

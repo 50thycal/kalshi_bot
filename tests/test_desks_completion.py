@@ -32,7 +32,7 @@ def finish(sup, job, **overrides):
 
 def test_completed_result_can_be_acknowledged_after_lease_without_republishing(claimed, monkeypatch):
     sup, job = claimed
-    assert datetime.fromisoformat(job["lease_until"]) == NOW + timedelta(minutes=30)
+    assert datetime.fromisoformat(job["lease_until"]) == NOW + timedelta(minutes=60)
     original = finish(sup, job)
     snapshot = sup.store.snapshot(NOW)
 
@@ -68,7 +68,7 @@ def test_publishing_result_is_pending_until_recovery_completes(claimed, monkeypa
     assert finish(sup, job)["state"] == "publishing"
     assert len(sup.store.snapshot(NOW)["publications"]) == 1
     monkeypatch.setattr(sup, "_finish", original)
-    sup.tick(NOW + timedelta(minutes=31))
+    sup.tick(NOW + timedelta(minutes=61))
     assert finish(sup, job, now=NOW + timedelta(minutes=32))["state"] == "completed"
     assert len(sup.store.snapshot(NOW)["publications"]) == 1
 
@@ -76,7 +76,7 @@ def test_publishing_result_is_pending_until_recovery_completes(claimed, monkeypa
 def test_unaccepted_expired_claim_cannot_be_completed(claimed):
     sup, job = claimed
     with pytest.raises(DeskError, match="research_claim_expired"):
-        finish(sup, job, now=NOW + timedelta(minutes=31))
+        finish(sup, job, now=NOW + timedelta(minutes=61))
     with sup.store._tx() as session:
         assert session.scalar(select(ResearchJob)).result is None
 

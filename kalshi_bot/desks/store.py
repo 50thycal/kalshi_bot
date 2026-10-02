@@ -87,6 +87,9 @@ class DeskStore:
                 connection.execute("PRAGMA foreign_keys=ON")
 
         self._mutex = threading.RLock()
+        # The configured round (DESKS_ROUND_ID). Earlier rounds stay in the same database
+        # as the permanent record; only this round's books trade (DEC-024).
+        self.round_id: str | None = None
 
     @contextmanager
     def _tx(self):
@@ -114,12 +117,19 @@ class DeskStore:
             )
         )
 
+    def _current_round(self, s) -> str:
+        if self.round_id is not None:
+            return self.round_id
+        rounds = s.scalars(select(DeskRound.round_id)).all()
+        if len(rounds) != 1:  # never guess between rounds
+            raise DeskError("round_not_initialized")
+        return rounds[0]
+
     def _book(self, s, desk_id, round_id=None, lock=True):
         if desk_id not in DESKS:
             raise DeskError("unknown_desk")
-        query = select(DeskBook).where(DeskBook.desk_id == desk_id)
-        if round_id is not None:
-            query = query.where(DeskBook.round_id == round_id)
+        query = select(DeskBook).where(DeskBook.desk_id == desk_id,
+                                       DeskBook.round_id == (round_id or self._current_round(s)))
         if lock:
             query = query.with_for_update()
         rows = s.scalars(query).all()
@@ -166,31 +176,79 @@ class DeskStore:
                         )
                     )
 
-    def initialize(self, round_id: str, now: datetime):
+    def use_round(self, round_id: str):
+        """Select an existing round as this process's current round."""
+        with self._tx() as s:
+            if s.get(DeskRound, round_id) is None:
+                raise DeskError("round_not_initialized")
+        self.round_id = round_id
+        return round_id
+
+    def initialize(self, round_id: str, now: datetime, *, bankroll_mode: str = "carry"):
+        """Create (once) and select the configured round.
+
+        A later round is created in the same database only after every earlier round is
+        flat: no reserved/submitting/pending/unknown order and no filled, unsettled
+        position — so nothing of an earlier round is ever left unreconciled. Each new book
+        starts at the prior round's book cash (`carry`, never above $30: no replenishment)
+        or at $30 (`fresh`, requires the operator to have funded the subaccount).
+        """
         if not round_id or len(round_id) > 100:
             raise DeskError("invalid_round_id")
+        if bankroll_mode not in ("carry", "fresh"):
+            raise DeskError("invalid_bankroll_mode")
         self._schema()
         with self._tx() as s:
-            rounds = s.scalars(select(DeskRound)).all()
-            if rounds:
-                if len(rounds) == 1 and rounds[0].round_id == round_id:
-                    return self._round_dict(rounds[0])
-                raise DeskError("round_already_initialized")
-            row = DeskRound(round_id=round_id, created_at=_utc(now), start_at=None, rules=RULES)
+            existing = s.get(DeskRound, round_id)
+            if existing is not None:
+                self.round_id = round_id
+                return self._round_dict(existing)
+            prior = s.scalars(select(DeskRound).order_by(DeskRound.created_at.desc())).all()
+            initial = {desk: D(3000) for desk in DESKS}
+            rules = dict(RULES)
+            if prior:
+                open_rows = s.scalars(select(DeskExecution).where(
+                    DeskExecution.state.in_(ACTIVE)
+                    | ((DeskExecution.filled_quantity > 0) & DeskExecution.settled.is_(False)))).all()
+                if open_rows:
+                    raise DeskError("prior_round_not_closed")
+                previous = prior[0]
+                carried_pauses = {}
+                for desk in DESKS:
+                    book = s.scalar(select(DeskBook).where(DeskBook.round_id == previous.round_id,
+                                                           DeskBook.desk_id == desk))
+                    if book is None:
+                        continue
+                    if bankroll_mode == "carry":
+                        initial[desk] = max(D(0), min(D(3000), D(book.cash_cents)))
+                    if book.paused:  # a pause is cleared only by the operator, never by a new round
+                        carried_pauses[desk] = f"carried from {previous.round_id}: {book.pause_reason or 'paused'}"
+                rules.update({"bankroll_mode": bankroll_mode, "previous_round": previous.round_id,
+                              "initial_bankrolls": {d: _money(v) for d, v in initial.items()}})
+            row = DeskRound(round_id=round_id, created_at=_utc(now), start_at=None, rules=rules)
             s.add(row)
             s.flush()
+            carried = carried_pauses if prior else {}
             for desk in DESKS:
+                key = f"{round_id}:{desk}"
                 s.add(
                     DeskBook(
-                        key=f"{round_id}:{desk}",
+                        key=key,
                         round_id=round_id,
                         desk_id=desk,
                         ready=False,
-                        paused=False,
-                        initial_cents=3000,
-                        cash_cents=3000,
+                        paused=desk in carried,
+                        pause_reason=carried.get(desk),
+                        initial_cents=initial[desk],
+                        cash_cents=initial[desk],
                     )
                 )
+                if prior:
+                    s.flush()
+                    self._audit(s, key, "round_initialized",
+                                {"previous_round": prior[0].round_id, "bankroll_mode": bankroll_mode,
+                                 "initial_bankroll": _money(initial[desk])}, now)
+            self.round_id = round_id
             return self._round_dict(row)
 
     @staticmethod
@@ -604,12 +662,16 @@ class DeskStore:
 
     def snapshot(self, now: datetime):
         with self._tx() as s:
-            round_row = s.scalar(select(DeskRound))
+            round_row = s.get(DeskRound, self._current_round(s))
             if round_row is None:
                 raise DeskError("round_not_initialized")
             result = self._round_dict(round_row)
             result["desks"], result["decisions"], result["publications"] = [], [], []
-            for book in s.scalars(select(DeskBook).order_by(DeskBook.desk_id)):
+            result["prior_rounds"] = [r.round_id for r in s.scalars(
+                select(DeskRound).where(DeskRound.round_id != round_row.round_id)
+                .order_by(DeskRound.created_at))]
+            for book in s.scalars(select(DeskBook).where(DeskBook.round_id == round_row.round_id)
+                                  .order_by(DeskBook.desk_id)):
                 rows = self._orders(s, book.key)
                 decisions = [self._order_dict(s, row) for row in rows]
                 today = [row for row in rows if row.trading_day == _day(now)]
@@ -639,10 +701,13 @@ class DeskStore:
                     }
                 )
                 result["decisions"].extend(decisions)
+            # Publications span every round: desks keep their research memory, and
+            # immutable one-shot claims (e.g. the live smoke) stay visible to their guards.
             for row in s.scalars(select(DeskPublication).order_by(DeskPublication.recorded_at)):
                 result["publications"].append(
                     {
                         "record_id": row.publication_id,
+                        "round_id": row.book_key.rsplit(":", 1)[0],
                         "desk_id": row.book_key.rsplit(":", 1)[1],
                         "kind": row.kind,
                         "created_at": _utc(row.recorded_at).isoformat(),

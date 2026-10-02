@@ -1230,3 +1230,56 @@ v2 claims, the exact durable v2 submit-stage 403, absence of both prior order ID
 five-minute delay, the current external API host, a clean book and exactly $30. It uses a third
 fixed order ID and still needs fresh action-time confirmation before its sole POST. There is no
 v4 recovery: any visible prior order is reconciled, and any v3 ambiguity is a permanent hard stop.
+
+## DEC-024 — Desk research v2: open market discovery, open internet evidence, fresh round (2026-10-01)
+
+Calvin decided on 2026-10-01 that the two autonomous desks (DEC-018) may find markets and
+gather evidence the way their theses need, and that both desks start a fresh round under those
+rules. Decisions, as approved scope:
+
+1. **Open market discovery.** Desks browse the whole Kalshi board — by 24h volume, open interest,
+   newness, closing soon, category, series, event and free text, plus each market's rules, order
+   book and recent trades. The fixed 20-market rotating sample stays only as a convenience view.
+2. **Open internet evidence.** Any public HTTPS host is admissible and of equal standing to the
+   former allowlisted APIs once captured with URL, time and sha256 of the stored text. Retrieved
+   content remains untrusted data, never instructions.
+3. **More usage per desk.** Per-job limits that only rationed usage are lifted: the 8-capture cap
+   becomes a configurable 50 (`DESKS_MAX_SOURCES_PER_JOB`) and the research lease is 60 minutes
+   (`DESKS_RESEARCH_LEASE_MINUTES`). No paid research budget change is implied.
+4. **Fresh start.** Each desk logs a final round-1 Continue (its closing handoff), open positions
+   settle, and both desks move to a new round.
+5. **Same database, carried funding** (owner follow-up, same day). The new round lives in the
+   existing desk database — no second database to configure — and each desk's book carries its
+   round-1 cash rather than being topped up.
+
+Implementation choices made under that scope:
+
+- **Browsing is discovery, not evidence.** Browse reads never consume the capture allowance and
+  are never accepted as decision evidence; to rely on a market read the desk captures its
+  `capture_url` through `source`. One evidence path keeps verification unchanged.
+- **Web search** comes from the app sessions' own tools; any page a decision relies on must be
+  captured through the service fetcher. No paid search API was added (that would be an owner
+  cost decision).
+- **Service-protecting fetch boundary.** DNS is resolved per hop and every answer must be a
+  global unicast address (private, loopback, link-local, CGNAT, metadata, multicast, reserved and
+  IPv6/embedded-IPv4 forms refused); the connection is pinned to the checked address with TLS
+  verified against the hostname; HTTPS on 443 only; at most five redirects, each re-checked; no
+  credentials, cookies or environment proxies; 3 MB / 45 s caps; text kept whole to 1,000,000
+  characters. PDFs are refused rather than parsed in-process on the real-money service.
+- **Several rounds per database.** The service trades only the round named by `DESKS_ROUND_ID`.
+  A new round is created only when every earlier order is terminal and every filled position is
+  settled (`prior_round_not_closed` otherwise), so nothing of an earlier round is left
+  unreconciled. Books, decisions and readiness are per round; publications span rounds, so
+  desks keep their memory (`prior_round_record` in each claim) and one-shot claims such as the
+  live smoke stay visible to their guards.
+- **Carried bankroll, capped at $30.** `DESKS_NEW_ROUND_BANKROLL=carry` (default) starts each
+  new book at the prior book's cash, never above $30 (no size increase); `fresh` starts at $30.
+  Preflight before start requires the subaccount to hold the book's own bankroll instead of a
+  fixed $30 — the same invariant (exchange holds what the book claims). An operator pause
+  carries across the boundary.
+
+Unchanged: every DEC-018 financial control and execution safeguard (60 s quote freshness,
+rules-hash match, conservative probability bound, isolation check, unknown-order pause).
+Switching `DESKS_ROUND_ID`, starting the new round, funding, the live-enable flag, deploying the
+desk-service and the operator token stay owner hard stops
+(`docs/desks/ROUND_2_CUTOVER.md`).

@@ -12,6 +12,7 @@ from .config import DeskSettings
 from .contracts import utcnow
 from .exchange import KalshiDeskExchange
 from .execution import DeskExecutor
+from .markets import MarketBrowser
 from .notifications import AlertNotifier
 from .research import HTTPProvider, ProviderConfig
 from .server import make_server
@@ -27,7 +28,7 @@ def build_service(settings):
     elif url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     store = DeskStore(url)
-    store.initialize(settings.round_id, utcnow())
+    store.initialize(settings.round_id, utcnow(), bankroll_mode=settings.new_round_bankroll)
     providers = {}
     executors = {}
     ownership = None
@@ -67,9 +68,12 @@ def build_service(settings):
                             },
                             monthly_budget_usd=settings.monthly_research_budget_usd,
                             external_runners_verified=settings.external_runners_verified,
-                            research_mode=settings.research_mode)
+                            research_mode=settings.research_mode,
+                            max_sources_per_job=settings.max_sources_per_job,
+                            lease_minutes=settings.research_lease_minutes)
     notifier = AlertNotifier(store, settings.alert_webhook_url.get_secret_value())
-    service = DeskService(settings, store, supervisor, executors, notifier=notifier)
+    service = DeskService(settings, store, supervisor, executors, notifier=notifier,
+                          browser=MarketBrowser())
     supervisor.submit_decision = service.submit
     return service
 
