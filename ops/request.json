@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"rl-tier-ct-1"}
+{"type":"script","name":"live_book_truth","args":["--tag","Fmmsell10"],"id":"rl-tier-truth-1"}
