@@ -43,11 +43,30 @@ python scripts/archive_telemetry.py verify \
 The output is PostgreSQL `COPY` CSV compressed with gzip plus a manifest with
 the exact snapshot row count, column names/types, id bounds, SHA-256, and UTC
 interval. Files are created with mode 0600 and never overwritten. Keep the
-manifest and data together. The script has no S3 upload or deletion action.
-Upload to the private `kalshi-bot-research-archive` Railway bucket through a
-separately approved, least-privilege process; do not put bucket secrets in logs
-or repository files. Read the objects back from the bucket and rerun checksum,
-CSV row count, and header verification against the manifest.
+manifest and data together. The script has no database deletion action.
+After a separate approval for the specific production export, the `upload`
+subcommand can place the verified pair in the private
+`kalshi-bot-research-archive` Railway bucket and read both objects back to
+check their SHA-256 hashes. Install `requirements-archive.txt` only in the
+isolated archive job. Use Railway bucket variable references for endpoint,
+S3 bucket name (`BUCKET`, not the display name), key id, secret, and region,
+mapped to `ARCHIVE_S3_ENDPOINT`, `ARCHIVE_S3_BUCKET`,
+`ARCHIVE_S3_ACCESS_KEY_ID`, `ARCHIVE_S3_SECRET_ACCESS_KEY`, and
+`ARCHIVE_S3_REGION`. Set `ARCHIVE_S3_ADDRESSING_STYLE` only if the bucket's
+Credentials tab requires `path` rather than the default `virtual`. Never put
+these values in logs or repository files. This credentials grant and upload
+must be explicitly approved; neither is performed by this PR.
+
+```bash
+python scripts/archive_telemetry.py upload \
+  /secure/telemetry-archive/incentive_book_events_2026-09-17.csv.gz \
+  /secure/telemetry-archive/incentive_book_events_2026-09-17.manifest.json
+```
+
+The manifest key is uploaded last. Repeating an upload checks existing object
+bytes and refuses a conflicting object. Full CSV count/header verification is
+performed on the local file before upload; the bucket readback checks every
+remote byte against the local checksum.
 
 Before any removal, restore **the same archived day** to an isolated Postgres
 database with the matching migrated schema using `COPY FROM STDIN` and compare
