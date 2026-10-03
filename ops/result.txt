@@ -1,4 +1,7 @@
 # ops request [READ]
-# type=noop
-# code 81838dab54603bdcb96a414762fe79c0acc1aeb0 · started 2026-10-03T10:50:53Z
-(noop — nothing to do)
+# type=db  id=limm-ci-1252
+# code 81838dab54603bdcb96a414762fe79c0acc1aeb0 · started 2026-10-03T12:52:37Z
+k  market_ticker  side  p  status  koid  r  t
+-  -------------  ----  -  ------  ----  -  -
+
+(0 rows)
