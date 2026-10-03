@@ -1,4 +1,0 @@
-refused: host not on the desk allowlist (openrouter.ai, gasprices.aaa.com, www.eia.gov, api.eia.gov, www.chicagofed.org, fred.stlouisfed.org, api.stlouisfed.org, alfred.stlouisfed.org, www.bls.gov, api.bls.gov, www.census.gov, www.federalreserve.gov, www.bea.gov, api.weather.gov, forecast.weather.gov, www.weather.gov, api.open-meteo.com, ensemble-api.open-meteo.com, www.ercot.com, gamma-api.polymarket.com, clob.polymarket.com, charts.youtube.com, www.billboard.com, www.boxofficemojo.com, api.exchange.coinbase.com, api.coinbase.com, benchmarks.pyth.network)
-# ops request [READ]
-# type=script  id=desk-1003-portwatch
-# code 81838dab54603bdcb96a414762fe79c0acc1aeb0 · started 2026-10-03T13:37:19Z
