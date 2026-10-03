@@ -1,1 +1,1 @@
-{"type":"logs","id":"limm10-logs-1","filter":"incentive smoke cycle","lines":6}
+{"type":"db","id":"limm10-open-1","sql":"SELECT lo.market_ticker, lo.status, count(*) n, max(lo.created_at) last, (SELECT quantity FROM position_snapshots ps WHERE ps.market_ticker=lo.market_ticker ORDER BY ps.id DESC LIMIT 1) snap_qty FROM live_orders lo WHERE lo.strategy='Alimm1' AND lo.action='buy' AND lo.status NOT IN ('canceled','rejected','not_landed','expired') GROUP BY 1,2 ORDER BY 4 DESC LIMIT 30"}
