@@ -62,6 +62,7 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
+- `Hmmsell10` readout script: compute S0–S3 (size arms recomputed by `ticker_size`) and the contest-key report from `docs/MMSELL_SIZE_SPLIT_CANARY.md` §5, ops-allowlisted; needed before the first readout, ~2–3 weeks after arming (WS-007, PR #518, 2026-10-03).
 - Desk PDF evidence capture through an isolated, time-limited parser; refused today so untrusted PDFs are never parsed inside the real-money desk service (WS-022, 2026-10-01).
 - ECON-REACT script: enumerate settled econ prints by `series_ticker` (KXCPI, KXPAYROLLS, KXU3, KXGDP, KXJOBLESS/KXICSA) instead of paging all settled events — the 2026-09-29 re-run reached only 13 settled prints (Calvin, 2026-09-29).
 - Purchased-tail MMSELL hedge: explore buying a farther-tail YES against a NO threshold position on the same contest with matching settlement rules; evaluate interval loss and hedge cost (Calvin, 2026-09-12).
