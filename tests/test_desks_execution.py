@@ -5,6 +5,7 @@ from uuid import uuid4
 import httpx
 import pytest
 
+from kalshi_bot.desks import execution
 from kalshi_bot.desks.contracts import Decision, DeskError, OrderReport, Quote, utcnow
 from kalshi_bot.desks.exchange import ExchangeWriteHTTPError, KalshiDeskExchange
 from kalshi_bot.desks.execution import DeskExecutor, conservative_cost
@@ -144,13 +145,58 @@ def test_quote_rejections_never_reserve(desk_case, change, code):
     assert exchange.calls == 0
 
 
-def test_stale_and_low_edge_rejected(desk_case):
+def test_stale_and_low_edge_rejected(desk_case, monkeypatch):
     store, decision, quote, exchange, executor, now = desk_case
+    monkeypatch.setattr(execution, "utcnow", lambda: now + timedelta(seconds=61))
     with pytest.raises(DeskError, match="stale_or_future_quote"):
-        executor.submit(decision, now + timedelta(seconds=61))
+        executor.submit(decision, now)
+    monkeypatch.setattr(execution, "utcnow", lambda: now)
     weak = decision.model_copy(update={"probability_low": D("0.41")})
     with pytest.raises(DeskError, match="insufficient_conservative_edge"):
         executor.submit(weak, now)
+    assert not store.snapshot(now)["decisions"]
+
+
+def test_quote_validation_uses_time_after_fetch_and_rejects_future_quote(desk_case, monkeypatch):
+    store, decision, quote, exchange, executor, now = desk_case
+    later = now + timedelta(seconds=2)
+    monkeypatch.setattr(execution, "utcnow", lambda: later)
+    exchange.quote = lambda *args: quote.model_copy(update={"fetched_at": later})
+    assert executor.submit(decision, now - timedelta(seconds=10))["status"] == "terminal"
+    assert executor.submit(decision, now - timedelta(seconds=10))["status"] == "terminal"
+    assert exchange.calls == 1
+
+    future = decision.model_copy(update={"decision_id": "future-quote",
+                                         "quote_at": later + timedelta(microseconds=1)})
+    with pytest.raises(DeskError, match="stale_or_future_quote"):
+        executor.submit(future, now)
+    assert exchange.calls == 1
+
+
+def test_decision_expiry_uses_time_after_quote_fetch(desk_case, monkeypatch):
+    store, decision, quote, exchange, executor, now = desk_case
+    monkeypatch.setattr(execution, "utcnow", lambda: decision.expires_at)
+    with pytest.raises(DeskError, match="expired_or_future_decision"):
+        executor.submit(decision, now)
+    assert exchange.calls == 0
+    assert not store.snapshot(now)["decisions"]
+
+
+@pytest.mark.parametrize("field,offset", [
+    ("decision", -61), ("decision", 1), ("exchange", -61), ("exchange", 1),
+])
+def test_genuinely_stale_or_future_timestamps_still_refused(desk_case, monkeypatch,
+                                                            field, offset):
+    store, decision, quote, exchange, executor, now = desk_case
+    monkeypatch.setattr(execution, "utcnow", lambda: now)
+    if field == "decision":
+        decision = decision.model_copy(update={"quote_at": now + timedelta(seconds=offset)})
+    else:
+        exchange.quote = lambda *args: quote.model_copy(
+            update={"fetched_at": now + timedelta(seconds=offset)})
+    with pytest.raises(DeskError, match="stale_or_future_quote"):
+        executor.submit(decision, now)
+    assert exchange.calls == 0
     assert not store.snapshot(now)["decisions"]
 
 

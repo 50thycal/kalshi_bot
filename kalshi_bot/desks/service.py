@@ -83,7 +83,6 @@ class DeskService:
         return self.store.start_round(self.settings.round_id, now)
 
     def submit(self, decision: Decision, now=None):
-        now = now or utcnow()
         executor = self.executors.get(decision.desk_id)
         if executor is None:
             raise DeskError("exchange_unavailable")
@@ -94,12 +93,19 @@ class DeskService:
             raise DeskError("session_alerts_require_session_research")
         if self.settings.alert_mode == "webhook" and (self.notifier is None or not self.notifier.verified()):
             raise DeskError("operator_alert_delivery_not_verified")
-        checked = self._isolation.get(decision.desk_id)
-        if not checked or not 0 <= (now - checked["at"]).total_seconds() <= 300:
-            raise DeskError("fresh_isolation_check_required")
-        if self.last_tick is None or not 0 <= (now - self.last_tick).total_seconds() <= 180:
-            raise DeskError("execution_monitor_stale")
+        def require_fresh_execution():
+            current = utcnow()
+            checked = self._isolation.get(decision.desk_id)
+            if not checked or not 0 <= (current - checked["at"]).total_seconds() <= 300:
+                raise DeskError("fresh_isolation_check_required")
+            if self.last_tick is None or not 0 <= (current - self.last_tick).total_seconds() <= 180:
+                raise DeskError("execution_monitor_stale")
+            return current
+
+        require_fresh_execution()
         self.supervisor.verify_decision_sources(decision)
+        # Source verification may be slow; recheck just before the lease and executor.
+        now = require_fresh_execution()
         if self.settings.research_mode == "session":
             self.supervisor.verify_session_decision(decision, now)
         return executor.submit(decision, now=now)

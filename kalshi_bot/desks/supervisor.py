@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
-from .contracts import DeskError
+from .contracts import DeskError, utcnow
 from .research import (
     HTTPProvider,
     ProviderFailure,
@@ -383,7 +383,8 @@ class Supervisor:
             if self.submit_decision is None:
                 raise DeskError("decision_submission_unavailable")
             try:
-                self.submit_decision(item.decision, now)
+                # Publication and source verification may outlast the request clock.
+                self.submit_decision(item.decision, utcnow())
             except DeskError as exc:
                 # A price/limit refusal is a research outcome, not permission to
                 # chase. The executor independently retains uncertain orders.

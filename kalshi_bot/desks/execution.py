@@ -6,8 +6,7 @@ submission. Unknown submissions remain reserved until exchange reconciliation.
 
 from __future__ import annotations
 
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import ROUND_CEILING, Decimal
 from zoneinfo import ZoneInfo
 
@@ -100,9 +99,8 @@ class DeskExecutor:
             # A durable claim is never taken twice. Even an old reserved record
             # is reconciled, not submitted again after a restart.
             return existing
-        started = time.monotonic()
         quote = self.exchange.quote(decision.ticker, decision.side)
-        now += timedelta(seconds=time.monotonic() - started)
+        now = utcnow()
         self._validate(decision, quote, now)
         snapshot = self.store.snapshot(now)
         book = next(row for row in snapshot["desks"] if row["desk_id"] == self.desk_id)
@@ -123,7 +121,6 @@ class DeskExecutor:
         if decision.probability * quantity - reserved_cost <= 0:
             raise DeskError("nonpositive_computed_edge")
         if getattr(self.exchange, "shared_primary", False):
-            checked_at = time.monotonic()
             try:
                 self.exchange.check_isolation()
                 self.exchange.prepare_market(decision.ticker)
@@ -134,7 +131,7 @@ class DeskExecutor:
             except Exception:
                 self.store.pause(self.desk_id, "shared_account_check_failed")
                 raise
-            now += timedelta(seconds=time.monotonic() - checked_at)
+            now = utcnow()
             self._validate(decision, quote, now)
         row = self.store.reserve(decision, quantity, reserved_cost, now)
         if not self.store.claim_submission(decision.decision_id, now):
