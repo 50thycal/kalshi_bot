@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-review-1003b","sql":"WITH t AS (SELECT DISTINCT market_ticker FROM live_orders WHERE strategy='Alimm1'), p AS (SELECT DISTINCT ON (market_ticker) market_ticker, realized_pnl FROM positions JOIN t USING (market_ticker) ORDER BY market_ticker, captured_at DESC) SELECT f.market_ticker, f.side||' '||f.action sa, f.price, f.quantity, f.filled_at::text, round(p.realized_pnl::numeric,2) pnl FROM fills f JOIN t USING (market_ticker) LEFT JOIN p USING (market_ticker) WHERE f.filled_at > '2026-09-29 11:40' ORDER BY f.filled_at"}
