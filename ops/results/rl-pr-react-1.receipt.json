@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "b14126abe0c7581570715b9deaae561156e8a1eb",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-10-03T15:31:52Z",
+  "id": "rl-pr-react-1",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-pr-react-1.receipt.json",
+  "result_file": "ops/results/rl-pr-react-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37133526669",
+  "service": null,
+  "started_at": "2026-10-03T15:31:22Z",
+  "targets": [],
+  "type": "db"
+}
