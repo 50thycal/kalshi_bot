@@ -24,6 +24,10 @@ KalshiEnv = Literal["demo", "production"]
 VALID_MODES = ("scanner", "paper", "approval", "live", "weather", "mmsell", "evo")
 VALID_ENVS = ("demo", "production")
 
+#: Upper bound on any one count in a book's `sizes=` split. A bound on the SPEC, not a risk
+#: limit: the live dollar cap (LIVE_MAX_ORDER_DOLLARS) is still what limits a real order.
+MAX_SPLIT_CONTRACTS = 10
+
 DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
 PRODUCTION_BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
 
@@ -1963,6 +1967,14 @@ class Settings(BaseSettings):
                 # Per-book live contract cap, overriding the global max_order_size. Lets an
                 # experiment run 1-contract clips beside an incumbent sized differently.
                 "size": None,
+                # Per-TICKER contract count, written `sizes=1+3`: each ticker hashes (salted
+                # separately from `part`, see live/sizing.py::ticker_size) to ONE of the listed
+                # counts, so a single book runs a randomized size split with one contest cap,
+                # one twin and one paper control. None = the book's `size` (or the global
+                # max_order_size), which is every existing book. Not combinable with `size`.
+                # The per-order dollar cap (LIVE_MAX_ORDER_DOLLARS) still binds on top: this key
+                # can never raise a book's dollars past the global ceiling.
+                "sizes": None,
                 # How deep into the volume-ranked event list this book may look. None = the
                 # global `mmsell_top_events`, which is what every existing book uses.
                 #
@@ -2027,6 +2039,11 @@ class Settings(BaseSettings):
                             ok = False
                         else:
                             v[key] = (int(i_s), int(n_s))
+                    elif key == "sizes":
+                        # "1+3" -> (1, 3). Validated below; a malformed list fails the spec
+                        # rather than defaulting, because a book that reads as size-split and
+                        # is not would hide the treatment the experiment exists to measure.
+                        v[key] = tuple(int(t) for t in str(val).split("+") if t.strip())
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
                     elif key in ("skip", "only", "onlyx"):
@@ -2083,6 +2100,15 @@ class Settings(BaseSettings):
                 # Both splits on one book means it trades 1/(n*len(arms)) of the flow while its
                 # spec reads as 1/n. Refuse rather than silently run a quarter-sized book.
                 if v["abarm"] is not None:
+                    ok = False
+            # A size split needs at least two counts (one is just `size`), each a real clip
+            # (1..MAX_SPLIT_CONTRACTS), and cannot coexist with `size`, which would leave it
+            # ambiguous which one the live executor obeys.
+            if v["sizes"] is not None:
+                if len(v["sizes"]) < 2 or any(not (1 <= q <= MAX_SPLIT_CONTRACTS)
+                                              for q in v["sizes"]):
+                    ok = False
+                if v["size"] is not None:
                     ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)

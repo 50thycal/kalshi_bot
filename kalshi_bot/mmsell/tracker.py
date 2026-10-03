@@ -30,6 +30,7 @@ from ..live.sizing import (
     maker_offset,
     order_quantity,
     ticker_partition,
+    ticker_size,
 )
 from ..paper.engine import kalshi_fee
 from ..registry.observe import SeriesObserver
@@ -200,6 +201,22 @@ class MmSellTracker:
             ticker, book.get("abarm"),
             arms=s.mmsell_live_offset_ab_arm_list, salt=s.mmsell_live_offset_ab_salt,
         )
+
+    def _book_contracts(self, book: dict | None, ticker: str) -> tuple[int | None, int | None]:
+        """(size_arm, contract count) this book asks for on `ticker`.
+
+        A book declaring `sizes=1+3` gets its count from the ticker's hash (`ticker_size`), so
+        the split is randomized per market and recomputable from the ticker alone; every other
+        book keeps its `size` (None -> the executor's global max_order_size fallback) and has no
+        size arm. ONE definition, read by the live mirror, the retry path, the twin and the
+        parity tape — a twin that sized differently from live would not be a twin."""
+        book = book or {}
+        sizes = book.get("sizes")
+        if sizes:
+            idx, qty = ticker_size(ticker, sizes,
+                                   salt=self.settings.mmsell_live_partition_salt)
+            return idx, qty
+        return None, book.get("size")
 
     def _book_admits_ticker(self, book: dict, ticker: str) -> bool:
         """False when this book is one side of a split and the ticker belongs to the other side.
@@ -447,7 +464,7 @@ class MmSellTracker:
                 ab_salt=s.mmsell_live_offset_ab_salt,
             )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
-        size = (book or {}).get("size") or s.max_order_size
+        size = self._book_contracts(book, ticker)[1] or s.max_order_size
         qty = order_quantity(price, s.live_max_order_dollars, size) if price else None
         return price, qty
 
@@ -493,7 +510,7 @@ class MmSellTracker:
                 ticker=ticker, metrics=metrics, no_price=metrics.best_no_bid,
                 account_state=self._account_state,
                 arm_offset=self._book_arm_offset(book or {}, ticker),
-                max_contracts=(book or {}).get("size"),
+                max_contracts=self._book_contracts(book, ticker)[1],
             )
         except AuthError:
             raise
@@ -648,13 +665,26 @@ class MmSellTracker:
             contest = contest_key_of(market.get("ticker"))
         except Exception:  # noqa: BLE001
             contest = None
+        # The subject-split key and the size arm, so the readout can attribute each order to
+        # the two treatments a size-split canary carries without re-deriving either.
+        try:
+            contest_split = contest_key_of(market.get("ticker"), split_subjects=True)
+        except Exception:  # noqa: BLE001
+            contest_split = None
+        try:
+            size_arm, size_contracts = self._book_contracts(book, market.get("ticker") or "")
+        except Exception:  # noqa: BLE001
+            size_arm, size_contracts = None, None
         return {
             "series": series, "twin_tag": twin_tag, "book_tag": tag,
             "hours_to_close": htc, "hours_to_expiration": hte, "close_time": close_dt,
             "band_lo": book.get("lo"), "band_hi": book.get("hi"), "max_yes": book.get("maxyes"),
             "htc_min": book.get("htcmin"), "htc_max": book.get("htcmax"),
             "market_type": mtype, "market_mode": mode, "regime": regime, "review_tier": tier,
-            "contest_key": contest, "event_mutually_exclusive": event_exclusive,
+            "contest_key": contest, "contest_key_split": contest_split,
+            "contest_key_mode": book.get("contestkey"), "contest_cap": book.get("contestcap"),
+            "size_arm": size_arm, "size_contracts": size_contracts,
+            "event_mutually_exclusive": event_exclusive,
             "open_positions_for_tag": open_count,
             "open_position_cap": getattr(s, "mmsell_live_max_open_positions", None),
             "scan_rank": rank, "scanned_deep": bool(deep),
@@ -740,6 +770,16 @@ class MmSellTracker:
         if book.get("part"):
             params["part"] = list(book["part"])
             params["live_partition_salt"] = s.mmsell_live_partition_salt
+        # Same rule for a SIZE-SPLIT book: the counts and the salt decide which tickers trade
+        # 1 contract and which trade 3, so changing either mid-flight swaps the treatment under
+        # the twin. Conditional, so every book without `sizes=` keeps a byte-identical snapshot.
+        if book.get("sizes"):
+            params["sizes"] = list(book["sizes"])
+            params["live_size_salt"] = s.mmsell_live_partition_salt
+        # The contest KEY, only when a book names one (no running book does). The key decides
+        # which entries the contest cap refuses, so it shapes the twin's candidate set.
+        if book.get("contestkey"):
+            params["contestkey"] = book["contestkey"]
         return params
 
     def _record_scan_telemetry(self, session, summ: MmSellCycleSummary) -> None:
@@ -1382,7 +1422,7 @@ class MmSellTracker:
                                 ticker=ticker, metrics=metrics, no_price=price,
                                 account_state=self._account_state,
                                 arm_offset=self._book_arm_offset(book, ticker),
-                                max_contracts=book.get("size"),
+                                max_contracts=self._book_contracts(book, ticker)[1],
                                 # Execution telemetry: what THIS loop knew at decision time.
                                 # Every value here exists before the order is sent.
                                 decision_context=self._decision_context(

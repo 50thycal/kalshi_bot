@@ -1283,3 +1283,26 @@ rules-hash match, conservative probability bound, isolation check, unknown-order
 Switching `DESKS_ROUND_ID`, starting the new round, funding, the live-enable flag, deploying the
 desk-service and the operator token stay owner hard stops
 (`docs/desks/ROUND_2_CUTOVER.md`).
+
+## DEC-025 — MMSELL stays a profit line; position size is its lever (2026-10-03)
+
+Calvin decided on 2026-10-03 to keep investing in MMSELL as a profit line, overruling the
+2026-09-30 idea-model recommendation to stop investing research effort in it
+(`docs/IDEA_MODEL_20260930_MMSELL.md` §5 and RESULTS). His reasoning: the live canary is
+realizing profit (+$5.43 over 743 settled, `rl-tier-truth-1`), the north star is a portfolio
+target that several strategies contribute to, and the book's path to its share is larger
+position size. Decisions:
+
+1. **MMSELL is not closed as a P&L line.** The 09-30 "stop investing" recommendation is
+   superseded; research on the book continues where it can move dollars.
+2. **Size is the lever, taken in measured steps.** The next live step is the size-split canary
+   (`Hmmsell10`, `docs/MMSELL_SIZE_SPLIT_CANARY.md`): a randomized 1-vs-3 clip in one book, with
+   the contest key corrected, replacing `Fmmsell10`. Further steps (5-lots, a sized-up
+   slow-information cell) follow only from that canary's pre-registered readout.
+3. **Market tiers by evidence, not by design.** Which markets get more size is decided by
+   forward-validated cells, not a top-down S/A/B scheme; the first candidate is the
+   slow-information cell (`docs/MMSELL_REPLAY_PROBES_20261003.md`).
+
+Unchanged by this decision: every hard stop (merging the canary's code, `ARM_CANARY`, the
+`LIVE_STRATEGIES` / `LIVE_MAX_ORDER_DOLLARS` / `MAX_TOTAL_EXPOSURE` writes) is still confirmed by
+the operator at the step itself.
