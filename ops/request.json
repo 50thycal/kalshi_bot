@@ -1,1 +1,1 @@
-{"type":"db","id":"limm10-open-2","sql":"SELECT market_ticker, status, count(*) n, max(created_at) last FROM live_orders WHERE strategy='Alimm1' AND action='buy' AND status NOT IN ('canceled','rejected','not_landed','expired') GROUP BY 1,2 ORDER BY 4 DESC LIMIT 30"}
+{"type":"db","id":"limm10-rest-1","sql":"SELECT market_ticker, side, limit_price, quantity, status, created_at FROM live_orders WHERE strategy='Alimm1' AND created_at > '2026-10-03 21:00' ORDER BY created_at"}
