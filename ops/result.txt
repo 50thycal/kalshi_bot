@@ -1,11 +1,32 @@
 # ops request [READ]
-# type=db  id=limm10-rest-1
-# code c88b5a5959d1d0f7fe53e79c60dff68d7b9c9c9d · started 2026-10-03T23:33:31Z
-market_ticker              side  limit_price  quantity  status   created_at                      
--------------------------  ----  -----------  --------  -------  --------------------------------
-KXCELSIUSPOS-26NOV03-T107  yes   2            500       resting  2026-10-03 21:13:41.443490+00:00
-KXCELSIUSPOS-26NOV03-T107  no    1            500       resting  2026-10-03 21:13:41.522694+00:00
-KXC4POS-26NOV03-T124       yes   1            500       resting  2026-10-03 22:14:17.714386+00:00
-KXC4POS-26NOV03-T124       no    1            500       resting  2026-10-03 22:14:17.769149+00:00
+# type=db  id=limm10-open-2
+# code c88b5a5959d1d0f7fe53e79c60dff68d7b9c9c9d · started 2026-10-03T23:32:53Z
+market_ticker                      status   n  last                            
+---------------------------------  -------  -  --------------------------------
+KXC4POS-26NOV03-T124               resting  2  2026-10-03 22:14:17.769149+00:00
+KXCELSIUSPOS-26NOV03-T107          resting  2  2026-10-03 21:13:41.522694+00:00
+KXUSDJPY-26SEP2910-B157.875        filled   1  2026-09-29 10:52:11.239554+00:00
+KXEURUSD-26SEP2910-B1.133          filled   1  2026-09-29 10:49:43.921881+00:00
+KXGOOGVREQ-28SEP26-T13             filled   1  2026-09-28 18:05:30.208797+00:00
+KXANTHVREQ-28SEP26-T9P5            filled   1  2026-09-28 15:35:59.689200+00:00
+KXVHGCB-26SEP28-E8.3               filled   1  2026-09-28 14:29:05.732793+00:00
+KXTRUMPAPPROVE-26SEP28-E38.8       filled   1  2026-09-28 11:39:04.326073+00:00
+KXTOKENUSE-26SEP28-T146            filled   1  2026-09-27 20:35:43.218630+00:00
+KXAAAGASDGA-26SEP28-4.1700         filled   1  2026-09-27 18:18:40.166993+00:00
+KXVHGCB-26SEP27-E8.1               filled   1  2026-09-27 12:03:48.619755+00:00
+KXOPENVREQ-26SEP26-T17             filled   1  2026-09-26 21:24:35.139909+00:00
+KXRAIN-26SEP25-PHIL                filled   2  2026-09-26 01:55:44.609954+00:00
+KXAAAGASDCO-26SEP26-4.2350         filled   1  2026-09-25 23:18:36.706598+00:00
+KXAAAGASDCA-26SEP26-6.3150         filled   1  2026-09-25 19:15:55.093189+00:00
+KXTRUMPENDORSEMENTS-26SEP25-A25    filled   1  2026-09-25 12:10:29.516626+00:00
+KXTRUMPMENTIONB-26SEP24-BOEI       filled   1  2026-09-24 22:02:00.224225+00:00
+KXEARNINGSMENTIONCOST-26SEP24-REV  filled   1  2026-09-24 20:39:01.833396+00:00
+KXBIGGESTQUAKE-21SEP26-6.4         filled   1  2026-09-21 21:02:26.914120+00:00
+KXRT-RES-94                        filled   1  2026-09-18 18:21:03.428944+00:00
+KXRT-RES-93                        filled   1  2026-09-18 17:33:50.712585+00:00
+KXTRUMPAPPROVE-26SEP18-E39.4       filled   1  2026-09-18 14:48:49.863864+00:00
+KXUSLEI-26SEP18-T0.2               filled   1  2026-09-18 06:00:04.793171+00:00
+KXBIGGESTQUAKE-17SEP26-7.0         filled   1  2026-09-17 20:04:27.804563+00:00
+KXBIGGESTQUAKE-17SEP26-6.8         filled   1  2026-09-17 20:04:27.108789+00:00
 
-(4 rows)
+(25 rows)
