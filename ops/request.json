@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXMAXSHIPSHORMUZ-26SEP01-AL25"],"id":"desk-1003-hormuz2"}
+{"type":"script","name":"desk_fetch","args":["https://portwatch.imf.org/","--find","Hormuz","--window","300"],"id":"desk-1003-portwatch"}
