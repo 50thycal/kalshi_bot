@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0243
-# code 81838dab54603bdcb96a414762fe79c0acc1aeb0 · started 2026-10-03T02:42:47Z
-k  market_ticker           side  p  status   koid                                  r  t                            
--  ----------------------  ----  -  -------  ------------------------------------  -  -----------------------------
-O  KXROGUEPOS-26NOV03-T79  yes   1  resting  01a0ff57-e710-752e-836c-63dcacaf3b7c     2026-10-03 01:19:06.571974+00
-O  KXROGUEPOS-26NOV03-T79  no    1  resting  01a0ff57-e710-768d-b032-e2aa7386dda4     2026-10-03 01:19:06.627407+00
-
-(2 rows)
