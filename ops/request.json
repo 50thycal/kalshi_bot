@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select coalesce(series, split_part(market_ticker, '-', 1)) series, parent_outcome, count(distinct market_ticker) markets\nfrom live_paper_parity_events\nwhere live_tag = 'Fmmsell10' and recorded_at >= '2026-09-07T02:03:36Z' and recorded_at < '2026-10-01T00:00:00Z'\ngroup by 1, 2 order by 1, 2\n", "max_rows": 3000, "id": "rl-pr-gate-1"}
+{"type":"noop"}
