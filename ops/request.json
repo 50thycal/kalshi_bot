@@ -1,1 +1,1 @@
-{"type":"xos","command":"tag","args":["mmsell10"],"id":"hm-tag-1"}
+{"type": "db", "sql": "select pt.strategy, count(*) n, min(pt.created_at)::text first_at, max(pt.created_at)::text last_at,\n       count(*) filter (where pt.experiment_deployment_arm_id is not null) stamped\nfrom paper_trades pt where pt.created_at >= '2026-10-03T22:45:13Z' and pt.strategy in ('mmsell10','Fmmsell10','Fmmsell10_pt4','Gmmsell1','Rmmsell1')\ngroup by 1 order by 1\n", "id": "hm-chk-2"}
