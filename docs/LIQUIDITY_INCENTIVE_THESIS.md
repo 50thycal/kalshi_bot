@@ -2691,3 +2691,13 @@ risk: nothing rested. Fixes:
   (`409_not_found_on_exchange`). Scoped to this book's tags: other books' 409 rows include v1
   orders that never appear in the v2 feed. This also clears the two existing phantoms on the
   first reconcile after deploy.
+
+### 9.46 Leg price cap 5c → 10c (2026-10-03)
+
+Operator decision. After §9.45 the book placed intermittently and rested idle for most of
+2026-10-02/03: in ~4,600 refusals ~87% were `too_expensive` (a leg above 5c), so almost no reward
+market had both sides at 5c or less. `MAX_PRICE_CENTS` 5 → **10**. Unchanged: $10 per leg, 500
+contracts, 2 markets, $50 budget, edge rule, depth rule, close window. Dollars at risk per lone leg
+stay capped at $10; the cost is that a lone leg now loses up to 10c a contract (fewer contracts per
+$10). Book at the change: realized −$30.54, rewards +$2.21, no new-rule fills since §9.41. Judge at
+the November program payouts as before.
