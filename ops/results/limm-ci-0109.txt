@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0109
-# code ea935a2147445441d3ee987bdc08b141d0705e6e · started 2026-10-01T01:09:22Z
-k  market_ticker         side  action  p  q    status   t                              r
--  --------------------  ----  ------  -  ---  -------  -----------------------------  -
-O  KXCODEAI-26OCT31-GLM  yes   buy     2  250  resting  2026-09-30 22:54:18.444025+00   
-O  KXCODEAI-26OCT31-GLM  no    buy     4  250  resting  2026-09-30 22:54:18.494192+00   
-
-(2 rows)
