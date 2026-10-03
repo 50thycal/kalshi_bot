@@ -13,6 +13,9 @@ from uuid import uuid4
 
 import pytest
 
+from kalshi_bot.desks import execution
+from kalshi_bot.desks import service as desk_service
+from kalshi_bot.desks import supervisor as desk_supervisor
 from kalshi_bot.desks.config import DeskSettings
 from kalshi_bot.desks.contracts import Decision, DeskError, OrderReport, Quote, Settlement
 from kalshi_bot.desks.execution import DeskExecutor
@@ -131,6 +134,10 @@ def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, 
         claude_kalshi_private_key='offline-claude-private',
         alert_webhook_url='https://example.invalid/offline-alerts')
     exchanges = {desk: OfflineExchange(index) for index, desk in enumerate(('chatgpt', 'claude'), 1)}
+    # The offline timeline is deterministic; execution boundaries read this clock.
+    monkeypatch.setattr(execution, 'utcnow', lambda: exchanges['chatgpt'].now)
+    monkeypatch.setattr(desk_service, 'utcnow', lambda: exchanges['chatgpt'].now)
+    monkeypatch.setattr(desk_supervisor, 'utcnow', lambda: exchanges['chatgpt'].now)
     executors = {desk: DeskExecutor(store, exchange, desk, live_enabled=True,
                                     existing_workers_isolated=True)
                  for desk, exchange in exchanges.items()}

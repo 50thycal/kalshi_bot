@@ -1,8 +1,10 @@
 """A dropped completion acknowledgement cannot repeat accepted desk research."""
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
+from test_desks_integration import SOURCE, make_decision, verified_source
 
 from kalshi_bot.desks.contracts import DeskError
 from kalshi_bot.desks.research import parse_output
@@ -79,6 +81,21 @@ def test_unaccepted_expired_claim_cannot_be_completed(claimed):
         finish(sup, job, now=NOW + timedelta(minutes=61))
     with sup.store._tx() as session:
         assert session.scalar(select(ResearchJob)).result is None
+
+
+def test_publication_passes_current_time_to_decision_callback(claimed, monkeypatch):
+    sup, job = claimed
+    decision = make_decision(verified_source(SOURCE, NOW), NOW).model_copy(
+        update={"round_id": "runner-round"})
+    payload = {**OUTPUT, "decisions": [{"decision": decision.model_dump(mode="json"),
+                                        "source_ids": ["fixture"]}]}
+    seen = []
+    sup.submit_decision = lambda value, at: seen.append(at)
+    later = NOW + timedelta(seconds=3)
+    monkeypatch.setattr("kalshi_bot.desks.supervisor.utcnow", lambda: later)
+    sup._publish(job["job_id"], parse_output(json.dumps(payload)),
+                 "chatgpt", "configured-model", NOW)
+    assert seen == [later]
 
 
 @pytest.mark.parametrize("model", ["", None, "x" * 201])

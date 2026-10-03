@@ -258,7 +258,7 @@ def handler_for(service):
                 decision = Decision.model_validate(body)
                 if decision.desk_id != desk:
                     raise PermissionError
-                return service.submit(decision, now)
+                return service.submit(decision)
             if action == "publications":
                 kind = body.get("kind")
                 if kind not in {"candidate", "rejection", "lesson", "postmortem", "paper", "source", "handoff"}:

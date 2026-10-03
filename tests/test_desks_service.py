@@ -425,7 +425,8 @@ def test_scoreboard_grades_unfilled_forecasts_but_never_counts_paper_profit():
     ('isolation', 'fresh_isolation_check_required'),
     ('runtime', 'runtime_configuration_not_ready'),
 ])
-def test_submit_requires_fresh_monitor_isolation_and_working_alerts(service, fault, error):
+def test_submit_requires_fresh_monitor_isolation_and_working_alerts(service, fault, error,
+                                                                  monkeypatch):
     ready_both(service)
     service.start(NOW)
     assert service.supervisor.status(NOW)['health']['chatgpt']['status'] == 'healthy'
@@ -441,10 +442,32 @@ def test_submit_requires_fresh_monitor_isolation_and_working_alerts(service, fau
         service._isolation['chatgpt']['at'] = NOW - timedelta(seconds=301)
     elif fault == 'runtime':
         service.settings = settings(live_enabled=False)
+    monkeypatch.setattr('kalshi_bot.desks.service.utcnow', lambda: now)
     with pytest.raises(DeskError, match=error):
         service.submit(Decision.model_validate(decision_body()), now)
     assert called == []
     assert not service.store.snapshot(now)['decisions']
+
+
+def test_submit_checks_freshness_after_slow_source_verification(service, monkeypatch):
+    ready_both(service)
+    service.start(NOW)
+    decision = Decision.model_validate(decision_body())
+    later = NOW + timedelta(seconds=2)
+    service.last_tick = later
+    called = []
+    service.executors['chatgpt'].submit = lambda value, now: called.append(now)
+    service.supervisor.verify_decision_sources = lambda value: service._isolation.__setitem__(
+        'chatgpt', {'at': later, 'verified': True})
+    monkeypatch.setattr('kalshi_bot.desks.service.utcnow', lambda: later)
+    service.submit(decision, NOW)
+    assert called == [later]
+
+    service._isolation['chatgpt']['at'] = later - timedelta(seconds=301)
+    service.supervisor.verify_decision_sources = lambda value: None
+    with pytest.raises(DeskError, match='fresh_isolation_check_required'):
+        service.submit(decision, NOW)
+    assert called == [later]
 
 
 def test_direct_postmortem_requires_valid_own_settled_decision(api, service):

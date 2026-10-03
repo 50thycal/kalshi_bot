@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-20
-**Updated:** 2026-09-27
+**Updated:** 2026-10-03
 **Build OS:** v0.12
 
 ## Goal
@@ -403,3 +403,19 @@ no retry; failures labelled `DIAGNOSTIC : FAILED` and never a health verdict; no
 Continue/claim/source/complete/trade/pause/resume/preflight; no secret, balance, payload or raw
 body in output. Remaining operator steps (private): deploy + set the Railway variable, add the
 GitHub secret, commit the one-line passthrough onto `ops` (ops workflow file hard stop).
+
+## Quote validation clock repair — 2026-10-03
+
+The 2026-10-02 Claude session completion published a `stale_or_future_quote` refusal after a
+fresh quote capture; no order was sent. Completion publication and source verification used
+time after the HTTP request arrived, while service and executor validation still used the
+request-start timestamp. A fresh exchange quote could therefore appear to be in the future.
+
+This continuation reads the clock at each execution boundary: after source verification for
+isolation, monitor and session-lease checks; after exchange quote retrieval; and after the
+shared-account preflight. The 60-second quote window, future timestamp rejection, decision
+expiry, original session lease, isolation and monitor limits, financial limits, and durable
+submission claim remain unchanged. Tests cover processing delay, both quote timestamps,
+expiry, refreshed/stale isolation, and one-time submission. Owner action after PR acceptance:
+deploy only to desk-service, with no environment change; then check that the next ordinary
+Claude Continue does not produce this refusal. Do not retry the refused decision.
