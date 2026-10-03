@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-size-split-canary-register-202610032250"],"id":"hm-rcpt2-2"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"hm-show-1"}
