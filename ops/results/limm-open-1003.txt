@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-open-1003
-# code b14126abe0c7581570715b9deaae561156e8a1eb · started 2026-10-03T15:18:51Z
-k    market_ticker               q  t                            
----  --------------------------  -  -----------------------------
-POS  KXBIGGESTQUAKE-21SEP26-6.4  1  2026-09-22 12:39:34.153401+00
-
-(1 row)
