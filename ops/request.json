@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["mmsell-size-split-canary"],"id":"hm-pp-1"}
