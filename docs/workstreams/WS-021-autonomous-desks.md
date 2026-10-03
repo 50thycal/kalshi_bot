@@ -411,7 +411,7 @@ fresh quote capture; no order was sent. Completion publication and source verifi
 time after the HTTP request arrived, while service and executor validation still used the
 request-start timestamp. A fresh exchange quote could therefore appear to be in the future.
 
-This continuation reads the clock at each execution boundary: after source verification for
+This continuation is [PR #517](https://github.com/50thycal/kalshi_bot/pull/517). It reads the clock at each execution boundary: after source verification for
 isolation, monitor and session-lease checks; after exchange quote retrieval; and after the
 shared-account preflight. The 60-second quote window, future timestamp rejection, decision
 expiry, original session lease, isolation and monitor limits, financial limits, and durable
