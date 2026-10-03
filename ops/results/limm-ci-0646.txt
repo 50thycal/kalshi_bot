@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0646
-# code 81838dab54603bdcb96a414762fe79c0acc1aeb0 · started 2026-10-03T06:46:28Z
-k  market_ticker                   side  p  status   koid                                  r  t                            
--  ------------------------------  ----  -  -------  ------------------------------------  -  -----------------------------
-O  KXPOKEMON-26OCTPIKEX109-299.99  yes   2  resting  01a0ffba-ac38-7b46-88b6-dc1720b51a75     2026-10-03 03:06:59.715193+00
-O  KXPOKEMON-26OCTPIKEX109-299.99  no    2  resting  01a0ffba-ac38-7553-aa5e-01cff8303a7a     2026-10-03 03:06:59.762886+00
-
-(2 rows)
