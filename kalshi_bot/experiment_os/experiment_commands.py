@@ -256,6 +256,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         reviewed_universe,
         successor_mmsell10_capacity,
         successor_mmsell10_contest_cap,
+        successor_mmsell10_size_split,
     )
 
     return {
@@ -497,6 +498,30 @@ def _packages() -> dict[str, ExperimentPackage]:
             register=successor_mmsell10_contest_cap.register,
             arm=successor_mmsell10_contest_cap.arm,
             activation_vars=successor_mmsell10_contest_cap.ACTIVATION_VARS,
+        ),
+        "mmsell-size-split-canary": ExperimentPackage(
+            name="mmsell-size-split-canary",
+            experiment_key=successor_mmsell10_size_split.SUCCESSOR_KEY,
+            description=(
+                "The contest-cap book (Fmmsell10) succeeded by Hmmsell10: a randomized 1-vs-3 "
+                "contract clip fixed per ticker by hash (`sizes=1+3`), and the contest KEY "
+                "corrected (`contestkey=split`) so subject-split series (KXRAIN cities, "
+                "KXTRUMPSAY / KXFEDMENTION words) are not refused as one contest per date. "
+                "Operator direction 2026-10-03: position size is this book's lever to $100/month. "
+                "The promotion bar is the predecessor's own frozen object; the keep contract is "
+                "the predecessor's with exactly two thresholds restated for a 3-lot (loss "
+                "budget -$30, per-market loss bound $3.00). Registering ends only the "
+                "predecessor's PAPER deployment to hand mmsell10 over; Fmmsell10's live and twin "
+                "deployments stay open so it drains with every settlement recorded. Arming "
+                "places no order: MMSELL_VARIANTS + LIVE_STRATEGIES (which also stands "
+                "Fmmsell10 down) + LIVE_MAX_ORDER_DOLLARS 3.0 + MAX_TOTAL_EXPOSURE 125 are a "
+                "separate, operator-confirmed env act. Plan: docs/MMSELL_SIZE_SPLIT_CANARY.md."
+            ),
+            register=successor_mmsell10_size_split.register,
+            arm=successor_mmsell10_size_split.arm,
+            activation_vars=successor_mmsell10_size_split.ACTIVATION_VARS,
+            strategy_tags=(successor_mmsell10_size_split.LIVE_TAG,
+                           successor_mmsell10_size_split.TWIN_TAG),
         ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",

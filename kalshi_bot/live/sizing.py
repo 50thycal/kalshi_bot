@@ -159,6 +159,31 @@ def ticker_partition(ticker: str, *, n: int, salt: str) -> int:
     return int.from_bytes(digest[:8], "big") % n
 
 
+#: Appended to the partition salt for the size split, so a book's SIZE assignment is
+#: independent of any `part=` claim made with the same base salt. Without it, a book that
+#: declared both `part=0/2` and `sizes=1+3` would only ever see tickers hashing to arm 0 of
+#: the size split too, and "half at 3 contracts" would silently be "none at 3".
+SIZE_SALT_SUFFIX = ":sizes"
+
+
+def ticker_size(ticker: str, sizes, *, salt: str) -> tuple[int, int]:
+    """(arm_index, contracts) for one ticker in a book's randomized size split (`sizes=1+3`).
+
+    Same hashing properties as `ticker_partition`, for the same reasons: deterministic, so the
+    entry-retry path can never flip a ticker between 1 and 3 contracts mid-market;
+    recomputable from the ticker alone, so the readout attributes every order to its arm with
+    no new column; and reproducible on a fixed salt. Hashed on the TICKER, not the event, so
+    both arms are populated inside one event's ladder.
+
+    This decides the CONTRACT COUNT only. It never raises a dollar figure: the caller still
+    passes the result through `order_quantity`, where the per-order dollar cap binds."""
+    sizes = tuple(int(q) for q in sizes)
+    if len(sizes) < 2:
+        raise ValueError("ticker_size requires at least two sizes")
+    idx = ticker_partition(ticker, n=len(sizes), salt=f"{salt}{SIZE_SALT_SUFFIX}")
+    return idx, sizes[idx]
+
+
 def offset_arm(ticker: str, *, arms, salt: str) -> tuple[int, int]:
     """(arm_index, offset_cents) for one ticker in the randomized queue-position A/B
     (docs/MMSELL_OFFSET_AB.md).
