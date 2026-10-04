@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select market_ticker, quantity, status, created_at from live_orders where strategy='Hmmsell10' and market_ticker in ('KXNFLSPREAD-26OCT04INDWAS-WAS15','KXNFLSPREAD-26OCT04MIAMIN-MIN31')", "max_rows": 50, "id": "hm-status-q9"}
+{"type":"noop"}
