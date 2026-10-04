@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-ci-0104k", "sql": "SELECT o.market_ticker, o.side, o.limit_price, o.quantity, o.status, o.cancel_reason, o.created_at, (SELECT count(*) FROM fills f WHERE f.kalshi_order_id=o.kalshi_order_id) nfills, (SELECT quantity_fp FROM positions p WHERE p.market_ticker=o.market_ticker ORDER BY p.id DESC LIMIT 1) pos FROM live_orders o WHERE o.strategy='Alimm1' AND o.market_ticker='KXFEAR-26OCT09-GREE'"}
+{"type":"noop"}
