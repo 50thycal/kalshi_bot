@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select count(*) filter (where pnl is not null) settled, count(*) opened, now()::text from paper_trades where strategy='mmsell10' and created_at >= '2026-10-03T22:45:08Z'", "id": "hm-ready-1"}
