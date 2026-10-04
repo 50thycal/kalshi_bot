@@ -797,7 +797,8 @@ class LiveExecutor:
     # caps — a loss breaker that also blocked the stop-loss would be the wrong way round. They
     # are behind the live switches and this tag's allowlist entry, like everything else.
 
-    def cancel_incentive_orders(self, session, *, strategy: str, ticker: str) -> bool:
+    def cancel_incentive_orders(self, session, *, strategy: str, ticker: str,
+                                reason: str = "incentive_exit") -> bool:
         """Cancel every still-working order this strategy has on `ticker`. True only when none is
         left working — the caller must not send a marketable exit otherwise, because a resting
         leg that fills AFTER the exit flattens the book opens a fresh position."""
@@ -821,7 +822,7 @@ class LiveExecutor:
                     f"{row.kalshi_order_id}: {type(exc).__name__}: {str(exc)[:200]}")
                 continue
             repo.update_live_order_status(session, row, status="canceled",
-                                          cancel_reason="incentive_exit")
+                                          cancel_reason=reason)
         return ok
 
     def incentive_exit_attempts(self, session, *, strategy: str, ticker: str) -> int:
@@ -1648,6 +1649,11 @@ class LiveExecutor:
         now = datetime.now(timezone.utc)
         for row in repo.get_nonterminal_live_orders(session):
             if row.status != "resting":
+                continue
+            if limm_live.owns_tag(row.strategy):
+                # Operator decision (§9.47): the incentive book alone is exempt; it replaces its
+                # own pairs only when a better one is ready (`IncentiveLiveRunner`). Every other
+                # book keeps the timeout below.
                 continue
             age = (now - _aware(row.created_at)).total_seconds()
             if age <= self.settings.live_order_timeout_seconds:

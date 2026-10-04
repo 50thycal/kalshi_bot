@@ -733,3 +733,35 @@ def test_another_books_409_is_not_touched(settings):
     assert not _is_unconfirmed_incentive_409(row, datetime.now(timezone.utc))
     row.strategy = limm.LIVE_TAG
     assert _is_unconfirmed_incentive_409(row, datetime.now(timezone.utc))
+
+
+# --- §9.47: the 4h timeout no longer applies to THIS book, and only to this book -------------
+
+def _resting(s, strategy, koid, ticker, hours_old):
+    from datetime import timedelta
+
+    s.add(m.LiveOrder(market_ticker=ticker, strategy=strategy, side="yes", action="buy",
+                      limit_price=2, quantity=500, status="resting", kalshi_order_id=koid,
+                      client_order_id=f"c-{koid}",
+                      created_at=datetime.now(timezone.utc) - timedelta(hours=hours_old)))
+
+
+def test_the_timeout_skips_this_books_resting_orders_but_not_other_books(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient(orders=[
+        {"order_id": "K-LIMM", "client_order_id": "c-K-LIMM", "status": "resting"},
+        {"order_id": "K-OTHER", "client_order_id": "c-K-OTHER", "status": "resting"},
+    ])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-LIMM", "KXTEST-A", hours_old=9)
+        _resting(s, "Cmmsell10", "K-OTHER", "KXOTHER-A", hours_old=9)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+    with db.session_scope() as s:
+        got = {r.kalshi_order_id: (r.status, r.cancel_reason)
+               for r in s.scalars(select(m.LiveOrder))}
+    assert got["K-LIMM"] == ("resting", None)
+    assert got["K-OTHER"] == ("canceled", "timeout")
+    assert client.canceled == ["K-OTHER"]
