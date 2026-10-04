@@ -39,7 +39,14 @@ PULL_TRADES_5M = 3
 PULL_RANGE_5M = 3
 PULL_CLOSE_HOURS = 48.0
 REALISED_REWARD_USD = 2.21      # live book, 2026-09-17 -> 2026-10-04 (reward ledger)
-POLICIES = ("B0", "P1", "P2", "P1F", "P2F")
+POLICIES = ("B0", "P1", "P2", "P1F", "P2F", "P1A", "P1B", "P1C", "P1ABC")
+#: Run 2 (§ "Protections" in the thesis): loss controls layered on P1.
+#:   A  size to the pool: at most $3 at risk, and no more contracts than the side's field score
+#:   B  exit after a fill: scratch at entry once the side's bid is back at entry; stop at half
+#:   C  real long shots only: reference <= 5c, and stand aside while the market is active
+PROTECT_RISK_CENTS = 300
+PROTECT_MIN_QTY = 50
+LONGSHOT_MAX_PRICE = 5
 MODELS = ("optimistic", "conservative")
 
 
@@ -55,6 +62,11 @@ def _to_libpq_url(url: str) -> str:
 def maker_fee_cents(price: int, qty: float) -> float:
     p = price / 100.0
     return math.ceil(0.0175 * qty * p * (1.0 - p) * 100)
+
+
+def taker_fee_cents(price: int, qty: float) -> float:
+    p = price / 100.0
+    return math.ceil(0.07 * qty * p * (1.0 - p) * 100)
 
 
 def levels(raw) -> list[tuple[int, float]]:
@@ -126,7 +138,11 @@ def desired(policy: str, snap: dict, target: float) -> list[tuple[str, int]]:
     if ry is None or rn is None:
         return []
     if policy.startswith("P1"):
-        cands = [(p, s) for s, p in (("yes", ry), ("no", rn)) if 1 <= p <= MAX_PRICE]
+        variant = policy[2:]
+        cap = LONGSHOT_MAX_PRICE if "C" in variant else MAX_PRICE
+        if "C" in variant and ((snap["trades5"] or 0) > 0 or (snap["range5"] or 0) > 0):
+            return []
+        cands = [(p, s) for s, p in (("yes", ry), ("no", rn)) if 1 <= p <= cap]
         if not cands:
             return []
         p, s = min(cands)
@@ -149,6 +165,26 @@ def pulled(snap: dict, close_at) -> bool:
     return False
 
 
+def exit_after_fill(lg, snaps, snap_ts, out) -> float | None:
+    """Protection B. Walk the snapshots after the fill (no lookahead past each one): once the
+    side's best bid is back at the entry, the resting offer at entry is taken (scratch, maker
+    fee); once it is at or below half the entry, sell into it (taker fee). None when neither
+    happens inside the data -> the caller marks the leg as before."""
+    stop = lg.price - max(1, math.ceil(lg.price / 2))
+    for j in range(bisect_left(snap_ts, lg.filled_at), len(snaps)):
+        lv = snaps[j]["ylv"] if lg.side == "yes" else snaps[j]["nlv"]
+        if not lv:
+            continue
+        bid = lv[0][0]
+        if bid >= lg.price:
+            out["fees"] += maker_fee_cents(lg.price, lg.qty) / 100.0
+            return 0.0
+        if bid <= stop:
+            out["fees"] += taker_fee_cents(bid, lg.qty) / 100.0
+            return (bid - lg.price) * lg.qty / 100.0
+    return None
+
+
 def simulate(policy, model, snaps, trades, prog):
     """One policy x fill model over one market. Returns dict of totals."""
     target = float(prog["target"] or 0)
@@ -160,7 +196,7 @@ def simulate(policy, model, snaps, trades, prog):
     quoted_at = None
     stopped = False
     out = {"reward": 0.0, "pnl": 0.0, "fees": 0.0, "quoted_s": 0.0, "fills": 0, "pairs": 0,
-           "marked_late": 0}
+           "marked_late": 0, "loss": 0.0, "worst": 0.0}
     fills: list[Leg] = []
     for i, snap in enumerate(snaps):
         t = snap["at"]
@@ -181,6 +217,10 @@ def simulate(policy, model, snaps, trades, prog):
             cur = sorted((lg.side, lg.price) for lg in live)
             if want and sorted(want) != cur:
                 q = qty_for(want)
+                if "A" in policy[2:]:
+                    s0, p0 = want[0]
+                    field = snap["fy"] if s0 == "yes" else snap["fn"]
+                    q = min(q, PROTECT_RISK_CENTS // p0, max(PROTECT_MIN_QTY, int(field)))
                 legs = [lg for lg in legs if lg.filled_at is not None]
                 for s, p in want:
                     lv = snap["ylv"] if s == "yes" else snap["nlv"]
@@ -229,13 +269,21 @@ def simulate(policy, model, snaps, trades, prog):
         out["pairs"] += 1
     else:
         for lg in fills:
-            j = bisect_left(snap_ts, lg.filled_at + MARK_HORIZON)
-            if j >= len(snaps):
-                j = len(snaps) - 1
-                out["marked_late"] += 1
-            lv = snaps[j]["ylv"] if lg.side == "yes" else snaps[j]["nlv"]
-            mark = lv[0][0] if lv else 0
-            out["pnl"] += (mark - lg.price) * lg.qty / 100.0
+            pnl = None
+            if "B" in policy[2:]:
+                pnl = exit_after_fill(lg, snaps, snap_ts, out)
+            if pnl is None:
+                j = bisect_left(snap_ts, lg.filled_at + MARK_HORIZON)
+                if j >= len(snaps):
+                    j = len(snaps) - 1
+                    out["marked_late"] += 1
+                lv = snaps[j]["ylv"] if lg.side == "yes" else snaps[j]["nlv"]
+                mark = lv[0][0] if lv else 0
+                pnl = (mark - lg.price) * lg.qty / 100.0
+            out["pnl"] += pnl
+            if pnl < 0:
+                out["loss"] += pnl
+                out["worst"] = min(out["worst"], pnl)
     for lg in fills:
         out["fees"] += maker_fee_cents(lg.price, lg.qty) / 100.0
         out["fills"] += 1
@@ -315,7 +363,10 @@ def main(argv: list[str] | None = None) -> int:
                     if r["quoted_s"] <= 0:
                         continue
                     for k, v in r.items():
-                        tot[(p, m)][k] += v
+                        if k == "worst":
+                            tot[(p, m)][k] = min(tot[(p, m)][k], v)
+                        else:
+                            tot[(p, m)][k] += v
                     tot[(p, m)]["markets"] += 1
                     per_mkt[(p, m)][ticker] = r["reward"] + r["pnl"] - r["fees"]
 
@@ -329,7 +380,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"markets simulated: {used}   skipped (no terms / <2 snapshots): {skipped}\n")
     hdr = (f"{'policy':6} {'model':12} {'mkts':>5} {'mkt-days':>8} {'reward$':>9} {'fillP&L$':>9} "
-           f"{'fees$':>7} {'net$':>9} {'fills':>5} {'pairs':>5} {'rew/md':>7} {'net/md':>7} {'top-mkt%':>8}")
+           f"{'fees$':>7} {'net$':>9} {'fills':>5} {'pairs':>5} {'rew/md':>7} {'net/md':>7} {'top-mkt%':>8} "
+           f"{'loss$':>8} {'worst$':>7}")
     print(hdr)
     print("-" * len(hdr))
     res = {}
@@ -341,10 +393,12 @@ def main(argv: list[str] | None = None) -> int:
             pm = per_mkt[(p, m)]
             top = (max(pm.values()) / net * 100.0) if pm and net > 0 else float("nan")
             res[(p, m)] = {"md": md, "net": net, "rew_md": t["reward"] / md if md else 0.0,
-                           "net_md": net / md if md else 0.0, "top": top, "late": t["marked_late"]}
+                           "net_md": net / md if md else 0.0, "top": top, "late": t["marked_late"],
+                           "loss": t["loss"], "worst": t["worst"]}
             print(f"{p:6} {m:12} {int(t['markets']):5d} {md:8.2f} {t['reward']:9.2f} {t['pnl']:9.2f} "
                   f"{t['fees']:7.2f} {net:9.2f} {int(t['fills']):5d} {int(t['pairs']):5d} "
-                  f"{res[(p, m)]['rew_md']:7.3f} {res[(p, m)]['net_md']:7.3f} {top:8.1f}")
+                  f"{res[(p, m)]['rew_md']:7.3f} {res[(p, m)]['net_md']:7.3f} {top:8.1f} "
+                  f"{t['loss']:8.2f} {t['worst']:7.2f}")
     late = sum(int(tot[k]["marked_late"]) for k in tot)
     if late:
         print(f"\n({late} fills marked at the last snapshot: less than 24 h of book after the fill)")
@@ -381,6 +435,25 @@ def main(argv: list[str] | None = None) -> int:
     for base in ("P1", "P2"):
         better = res[(base + "F", "conservative")]["net_md"] > res[(base, "conservative")]["net_md"]
         print(f"F   {base}F {'beats' if better else 'does not beat'} {base} on conservative net/md")
+    # Run 2: protections on P1 (thesis "Protections"). Relative to P1, conservative model.
+    base = res[("P1", "conservative")]
+    print("\nPROTECTIONS vs P1 (conservative): pass = loss cut >= 40% AND net/md >= 70% of P1")
+    passing = []
+    for p in ("P1A", "P1B", "P1C", "P1ABC"):
+        r = res[(p, "conservative")]
+        cut = (1 - r["loss"] / base["loss"]) * 100.0 if base["loss"] < 0 else float("nan")
+        keep = (r["net_md"] / base["net_md"] * 100.0) if base["net_md"] > 0 else float("nan")
+        ok = cut == cut and keep == keep and cut >= 40.0 and keep >= 70.0
+        if ok:
+            passing.append(p)
+        print(f"  {p:6} loss ${r['loss']:8.2f} (cut {cut:5.0f}%)  worst fill ${r['worst']:6.2f}  "
+              f"net/md {r['net_md']:+.3f} ({keep:4.0f}% of P1) over {r['md']:.1f} md -> "
+              f"{'PASS' if ok else 'fail'}")
+    if passing:
+        pick = max(passing, key=lambda p: res[(p, "conservative")]["net_md"])
+        print(f"  PROTECTION CHOICE: {pick}")
+    else:
+        print("  PROTECTION CHOICE: none passes; P1 unprotected is the reference")
     winners = [p for p, v in verdicts.items() if v == "PROMOTE"]
     if winners:
         best = max(winners, key=lambda p: res[(p, "conservative")]["net_md"])

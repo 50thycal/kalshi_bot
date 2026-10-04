@@ -117,3 +117,22 @@ Reading inside the run (relative, same model): P1 earns about 8× P2 per market-
 availability; the F add-on lowers net. The absolute level is not usable until the reward model is
 calibrated against real payouts. The November payouts (programmes the live book quoted) are that
 calibration: re-run with the ledger's realised reward then, unchanged rules.
+
+## Protections — run 2 pre-registration (2026-10-04, before run 2)
+
+Operator decision after run 1: go with P1 (cheap side at the reference), and find what keeps a
+lone fill from costing the full $10. Three loss controls are layered on P1 and replayed with the
+same data window, fill models and marks:
+
+| code | protection |
+|---|---|
+| P1A | **Size to the pool:** at most $3 at risk (`qty ≤ 300 / price`) and no more contracts than the side's field score (min 50). |
+| P1B | **Exit after a fill:** an offer back at entry is taken once the side's best bid is back at entry (scratch, maker fee); a stop sells into the bid once it is at or below half the entry (taker fee). Unresolved legs are marked at +24 h as before. |
+| P1C | **Real long shots only:** reference ≤ 5¢, and stand aside while the market is active (`trades_last_5m > 0` or `price_range_5m > 0`). The scheduled-event filter is not testable on this data; activity stands in for it. |
+| P1ABC | all three. |
+
+**Decision rule (conservative fill model, relative to P1 in the same run):** a protection PASSES
+when it cuts P1's summed fill losses by at least 40% AND keeps at least 70% of P1's net per
+market-day. Among passes the highest net per market-day is chosen. If none passes, P1 runs
+unprotected. L0 still applies: absolute dollars stay flagged while the reward model reads far
+above realised rewards, so this run ranks protections; it does not certify their dollar value.
