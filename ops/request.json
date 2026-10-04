@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-bal-0104a","sql":"SELECT at, balance_cents, delta_cents, buy_cost_cents, settlement_cents, residual_cents, presumed_transfer FROM incentive_balance_observations WHERE at > '2026-10-04 12:00' ORDER BY at"}
