@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"hm-show-2"}
