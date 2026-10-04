@@ -1,0 +1,77 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "c88b5a5959d1d0f7fe53e79c60dff68d7b9c9c9d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T02:18:05Z",
+  "id": "hmmsell10-cutover-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 216 bytes, sha256:9f4d90acf991904c>",
+        "before": "<redacted 221 bytes, sha256:dd5be5fa2b81d346>",
+        "requested": "<redacted 216 bytes, sha256:9f4d90acf991904c>"
+      },
+      "LIVE_MAX_ORDER_DOLLARS": {
+        "after": "3.0",
+        "before": "1.0",
+        "requested": "3.0"
+      },
+      "LIVE_STRATEGIES": {
+        "after": "Hmmsell10,Alimm1",
+        "before": "Fmmsell10,Alimm1",
+        "requested": "Hmmsell10,Alimm1"
+      },
+      "MAX_TOTAL_EXPOSURE": {
+        "after": "125",
+        "before": "100",
+        "requested": "125"
+      },
+      "MMSELL_VARIANTS": {
+        "after": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Hmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3",
+        "before": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER",
+        "requested": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Hmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 5,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+      "LIVE_MAX_ORDER_DOLLARS",
+      "LIVE_STRATEGIES",
+      "MAX_TOTAL_EXPOSURE",
+      "MMSELL_VARIANTS"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/hmmsell10-cutover-1.receipt.json",
+  "result_file": "ops/results/hmmsell10-cutover-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37170615523",
+  "service": "main",
+  "started_at": "2026-10-04T02:17:57Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+    "LIVE_MAX_ORDER_DOLLARS",
+    "LIVE_STRATEGIES",
+    "MAX_TOTAL_EXPOSURE",
+    "MMSELL_VARIANTS"
+  ],
+  "type": "env"
+}
