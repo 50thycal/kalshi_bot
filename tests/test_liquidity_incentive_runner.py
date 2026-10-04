@@ -940,3 +940,96 @@ def test_a_non_default_shard_market_cools_down_and_the_next_one_is_placed(live_d
                               now=NOW + timedelta(minutes=3))
     assert second["cooling_down"] == 1 and second["placed"] == 1
     assert client.asked == ["KXTEST-OIL", "KXTEST-OK"]
+
+
+# --- §9.47: replace a stale resting pair only when a better one is ready ---------------------
+
+def _held_pair(s, ticker, *, hours_old, qty=250, yes=3, no=4):
+    _program(s, ticker)
+    for side, price, koid in (("yes", yes, f"K-{ticker}-y"), ("no", no, f"K-{ticker}-n")):
+        s.add(m.LiveOrder(market_ticker=ticker, event_ticker=ticker, strategy=limm.LIVE_TAG,
+                          side=side, action="buy", limit_price=price, quantity=qty,
+                          status="resting", kalshi_order_id=koid, client_order_id=koid,
+                          created_at=NOW - timedelta(hours=hours_old)))
+    s.flush()
+
+
+def _status_by_ticker(s):
+    return {r.market_ticker: r.status for r in s.scalars(sa_select(m.LiveOrder))}
+
+
+def _replace_books(new_depth):
+    return {
+        # Held books include our own 250 a side: KXHELD-1 is the deep (weak) one.
+        "KXHELD-1": _book([(3, 2000)], [(4, 2000)]),
+        "KXHELD-2": _book([(3, 1000)], [(4, 1000)]),
+        "KXTEST-N": _book([(3, new_depth)], [(4, new_depth)]),
+    }
+
+
+def test_a_fresh_full_book_fetches_nothing_and_keeps_its_pairs(live_db, settings):
+    client = FakeClient(_replace_books(500))
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=1)
+        _held_pair(s, "KXHELD-2", hours_old=1)
+        _program(s, "KXTEST-N")
+        out = _cycle(client, settings, s)
+    assert out["outcomes"] == {run.SKIP_NO_SLOTS: 1}
+    assert client.asked == [] and client.canceled == [] and client.placed == []
+
+
+def test_a_stale_pair_is_replaced_by_a_clearly_better_market(live_db, settings):
+    client = FakeClient(_replace_books(500))
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        _program(s, "KXTEST-N")
+        out = _cycle(client, settings, s)
+        statuses = _status_by_ticker(s)
+    assert out["outcomes"].get("replaced") == 1 and out["placed"] == 1
+    assert out["replace_check"]["held"] == "KXHELD-1"
+    assert out["replace_check"]["new_per_hour"] > out["replace_check"]["held_per_hour"] * 1.25
+    assert sorted(client.canceled) == ["K-KXHELD-1-n", "K-KXHELD-1-y"]
+    assert {o["ticker"] for o in client.placed} == {"KXTEST-N"}
+    assert statuses["KXHELD-2"] == "resting"
+
+
+def test_a_stale_pair_is_kept_when_nothing_is_better(live_db, settings):
+    client = FakeClient(_replace_books(1900))
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        _program(s, "KXTEST-N")
+        out = _cycle(client, settings, s)
+        statuses = _status_by_ticker(s)
+    assert "replaced" not in out["outcomes"] and out["placed"] == 0
+    assert client.canceled == [] and client.placed == []
+    assert statuses == {"KXHELD-1": "resting", "KXHELD-2": "resting"}
+
+
+def test_a_pair_with_a_fill_is_never_swapped(live_db, settings):
+    client = FakeClient(_replace_books(500))
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        for t in ("KXHELD-1", "KXHELD-2"):
+            s.add(m.Position(market_ticker=t, captured_at=NOW, side="yes", quantity=5,
+                             quantity_fp=5))
+        _program(s, "KXTEST-N")
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert "replaced" not in out["outcomes"]
+    assert client.canceled == [] and client.placed == []
+
+
+def test_a_resting_pair_whose_programme_ended_is_taken_down(live_db, settings):
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=1)
+        prog = s.scalars(sa_select(m.IncentiveProgram).where(
+            m.IncentiveProgram.market_ticker == "KXHELD-1")).one()
+        prog.end_date = NOW - timedelta(hours=1)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("program_ended") == 1
+    assert sorted(client.canceled) == ["K-KXHELD-1-n", "K-KXHELD-1-y"]

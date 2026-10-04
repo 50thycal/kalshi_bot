@@ -42,7 +42,7 @@ from . import live as limm
 from . import programs as progs
 from . import reward_ledger as rl
 from . import store
-from .scoring import discount_factor, side_score
+from .scoring import discount_factor, estimate, side_score
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,47 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
         "yes_touch_depth": yes_map[max(yes_map)] if yes_map else None,
         "no_touch_depth": no_map[max(no_map)] if no_map else None,
         "program_age_hours": age,
+        # What `est_reward_per_hour` needs: the full book and the programme's pool (§9.47).
+        "yes_levels": yes_map,
+        "no_levels": no_map,
+        "discount_factor_bps": program.discount_factor_bps,
+        "period_reward_usd": (float(program.period_reward_usd)
+                              if program.period_reward_usd is not None else None),
+        "period_seconds": (None if start is None or end is None
+                           else (end - start).total_seconds()),
     }
+
+
+def est_reward_per_hour(candidate: dict, *, yes_price: int, no_price: int, qty: float,
+                        own_yes: dict[int, float] | None = None,
+                        own_no: dict[int, float] | None = None) -> float:
+    """Estimated reward dollars per hour for resting `qty` on both sides at these prices — the
+    programme's pool times our share of the scored book (`scoring.estimate`). `own_*` are this
+    book's OWN resting orders already in the levels, removed first so a held pair is not
+    counted twice. 0.0 when the programme pays nothing we can estimate."""
+    if candidate.get("period_reward_usd") is None or not candidate.get("period_seconds"):
+        return 0.0
+
+    def _without(levels: dict | None, own: dict | None) -> dict:
+        out = dict(levels or {})
+        for price, q in (own or {}).items():
+            left = out.get(price, 0.0) - q
+            if left > 1e-9:
+                out[price] = left
+            else:
+                out.pop(price, None)
+        return out
+
+    est = estimate(
+        yes_levels=_without(candidate.get("yes_levels"), own_yes),
+        no_levels=_without(candidate.get("no_levels"), own_no),
+        target_size=candidate.get("target_size"),
+        discount_factor_bps=candidate.get("discount_factor_bps"),
+        our_yes_price=int(yes_price), our_yes_size=float(qty),
+        our_no_price=int(no_price), our_no_size=float(qty),
+        period_reward_usd_value=candidate.get("period_reward_usd"),
+        period_seconds=candidate.get("period_seconds"))
+    return float(est.reward_per_hour_usd or 0.0)
 
 
 class IncentiveLiveRunner:
@@ -176,11 +216,16 @@ class IncentiveLiveRunner:
         # Exits before entries: a cycle's first job is the capital already out, and an exit
         # frees the slot and the budget an entry below might use.
         summary["managed"] = self._manage_positions(session, executor, now)
+        retired = self._retire_unpaid_pairs(session, executor, now)
+        if retired:
+            summary["outcomes"]["program_ended"] = retired
 
         open_now = repo.count_live_book_open_tradeable(session, limm.LIVE_TAG, now)
         exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
         slots = limm.MAX_OPEN_ORDERS - int(open_now)
-        if slots <= 0:
+        # Full book: carry on only if a held pair is old enough to be swapped for a better one.
+        stale = self._stale_held_pairs(session, now) if slots <= 0 else {}
+        if slots <= 0 and not stale:
             summary["outcomes"][SKIP_NO_SLOTS] = 1
             return summary
 
@@ -234,6 +279,16 @@ class IncentiveLiveRunner:
                     seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
         self._save_cooldown(session, now)
 
+        if slots <= 0:
+            chosen = self._replace_stale_pair(session, executor, stale, ranked, now, summary)
+            if chosen is None:
+                summary["outcomes"][SKIP_NO_SLOTS] = \
+                    summary["outcomes"].get(SKIP_NO_SLOTS, 0) + 1
+                return summary
+            ranked = [chosen] + [r for r in ranked if r is not chosen]
+            slots = 1
+            exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
+
         for candidate, pair in ranked:
             if slots <= 0:
                 summary["outcomes"][SKIP_NO_SLOTS] = \
@@ -273,6 +328,114 @@ class IncentiveLiveRunner:
                 if self._open_twin(session, leg):
                     summary["twin_opened"] += 1
         return summary
+
+    # --- replace only when better (§9.47) ---------------------------------------
+
+    def _stale_held_pairs(self, session, now: datetime,
+                          min_age_seconds: float = limm.STALE_PAIR_SECONDS) -> dict[str, list]:
+        """Held tickers whose only working orders are this book's resting, unfilled BUY legs,
+        the oldest older than `min_age_seconds`. Anything filled, in flight or shared is left
+        to the position manager — only a pair that is purely resting can be swapped."""
+        out: dict[str, list] = {}
+        for ticker in sorted(repo.live_book_open_tickers(session, limm.LIVE_TAG)):
+            rows = repo.live_orders_on_ticker(session, ticker)
+            if any(r.strategy != limm.LIVE_TAG and r.status in repo.LIVE_NONTERMINAL_STATUSES
+                   for r in rows):
+                continue
+            working = [r for r in rows if r.strategy == limm.LIVE_TAG
+                       and r.status in repo.LIVE_NONTERMINAL_STATUSES]
+            if not working or any(r.status != "resting" or r.action != "buy"
+                                  or not r.kalshi_order_id for r in working):
+                continue
+            snap = repo.latest_position_snapshot(session, ticker)
+            if snap is not None:
+                net = float(snap.quantity_fp if snap.quantity_fp is not None
+                            else snap.quantity or 0)
+                if abs(net) > 0.01:
+                    continue            # something filled: a position, not a quote
+            oldest = min(_aware(r.created_at) for r in working)
+            if (now - oldest).total_seconds() > min_age_seconds:
+                out[ticker] = working
+        return out
+
+    def _retire_unpaid_pairs(self, session, executor, now: datetime) -> int:
+        """Cancel a purely resting pair whose programme is no longer running. With no timeout
+        (§9.47) nothing else would take it down, and a quote that earns nothing is only risk."""
+        resting = self._stale_held_pairs(session, now, min_age_seconds=0.0)
+        if not resting:
+            return 0
+        running = {p.market_ticker for p in progs.current_programs(
+            session, now=now, liquidity_only=True)
+            if p.end_date is not None and _aware(p.end_date) > now}
+        n = 0
+        for ticker in resting:
+            if ticker in running:
+                continue
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="program_ended"):
+                n += 1
+        return n
+
+    def _held_reward_per_hour(self, ticker: str, working: list, programs: dict,
+                              now: datetime) -> float | None:
+        """A held pair's estimated reward per hour on its CURRENT book. 0.0 when its programme
+        is gone or only one leg rests; None when the book cannot be read (then it is kept)."""
+        program = programs.get(ticker)
+        if program is None:
+            return 0.0
+        prices = {r.side: int(r.limit_price) for r in working}
+        if limm.SIDE_YES not in prices or limm.SIDE_NO not in prices:
+            return 0.0                  # a lone leg is not a qualifying two-sided quote
+        try:
+            ob = self.client.get_orderbook(ticker)
+        except Exception:  # noqa: BLE001 — unknown value: keep the pair
+            return None
+        c = candidate_from_book(program, ob, now=now)
+        qty = max(float(r.quantity) for r in working)
+        return est_reward_per_hour(c, yes_price=prices[limm.SIDE_YES],
+                                   no_price=prices[limm.SIDE_NO], qty=qty,
+                                   own_yes={prices[limm.SIDE_YES]: qty},
+                                   own_no={prices[limm.SIDE_NO]: qty})
+
+    def _replace_stale_pair(self, session, executor, stale: dict, ranked: list,
+                            now: datetime, summary: dict):
+        """Cancel the weakest stale held pair when a new candidate is estimated to earn at least
+        `REPLACE_MIN_GAIN_MULTIPLE` times its reward per hour, and return that candidate.
+        None leaves every held pair resting."""
+        def rate(cq) -> float:
+            c, q = cq
+            return est_reward_per_hour(c, yes_price=q.yes.price_cents,
+                                       no_price=q.no.price_cents, qty=q.quantity)
+
+        fresh = [cq for cq in ranked if cq[0]["market_ticker"] not in stale]
+        if not fresh:
+            return None
+        best = max(fresh, key=rate)
+        best_rate = rate(best)
+        if best_rate <= 0:
+            return None
+        programs = {p.market_ticker: p for p in progs.current_programs(
+            session, now=now, liquidity_only=True)}
+        held: list[tuple[float, str]] = []
+        for ticker, working in stale.items():
+            r = self._held_reward_per_hour(ticker, working, programs, now)
+            if r is not None:
+                held.append((r, ticker))
+        if not held:
+            return None
+        held_rate, ticker = min(held)
+        summary["replace_check"] = {"held": ticker, "held_per_hour": round(held_rate, 4),
+                                    "new": best[0]["market_ticker"],
+                                    "new_per_hour": round(best_rate, 4)}
+        if best_rate <= held_rate or best_rate < held_rate * limm.REPLACE_MIN_GAIN_MULTIPLE:
+            return None
+        if not executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="replaced"):
+            return None                 # part-cancelled: the next cycle re-checks
+        summary["outcomes"]["replaced"] = summary["outcomes"].get("replaced", 0) + 1
+        logger.info(f"incentive book: replaced {ticker} (~${held_rate:.4f}/h) with "
+                    f"{best[0]['market_ticker']} (~${best_rate:.4f}/h)")
+        return best
 
     # --- held positions -------------------------------------------------------
 

@@ -89,6 +89,16 @@ MIN_HOURS_TO_CLOSE = 168.0
 #: Flatten anything still held this close to the market's close.
 FLATTEN_HOURS_BEFORE_CLOSE = 1.0
 
+#: Replace-only-when-better (§9.47, operator decision 2026-10-04: "remove the timeout, but only
+#: for this experiment"). This book's resting pairs are exempt from the executor's 4h timeout —
+#: every other book keeps it. A pair that is still resting is still earning, and on 2026-10-04
+#: the timeout cancelled both pairs with nothing to replace them. Instead, once a resting pair is
+#: older than STALE_PAIR_SECONDS and every slot is full, it is cancelled only when a new
+#: candidate's estimated reward per hour beats the held pair's by REPLACE_MIN_GAIN_MULTIPLE (a
+#: held pair whose programme has ended is worth 0/h).
+STALE_PAIR_SECONDS = 4 * 3600.0
+REPLACE_MIN_GAIN_MULTIPLE = 1.25
+
 #: Exit distances, as fractions, with a floor so a cheap leg is not stopped out by one tick.
 #: Stop when the held side's bid is down STOP_LOSS_FRACTION of the entry price; take profit
 #: when it is up TAKE_PROFIT_FRACTION of the remaining upside (100 - entry). Pre-registered

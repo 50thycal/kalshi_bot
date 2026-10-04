@@ -2701,3 +2701,25 @@ contracts, 2 markets, $50 budget, edge rule, depth rule, close window. Dollars a
 stay capped at $10; the cost is that a lone leg now loses up to 10c a contract (fewer contracts per
 $10). Book at the change: realized −$30.54, rewards +$2.21, no new-rule fills since §9.41. Judge at
 the November program payouts as before.
+
+### 9.47 Timeout removed for this book only; replace only when better (2026-10-04)
+
+Operator decision: "remove the timeout, but only for this experiment." On 2026-10-04 the
+executor's process-wide 4h timeout cancelled both resting pairs (KXCELSIUSPOS, KXC4POS) with no
+candidate to replace them, so the book went from earning to idle. Changes:
+- `LiveExecutor.reconcile` skips the timeout for `owns_tag` rows (Alimm1 and its twin tag only).
+  Every other book keeps `live_order_timeout_seconds` unchanged.
+- `IncentiveLiveRunner`: with every slot full, a pair that is purely resting (no fill, no
+  position, no other book on the ticker) and older than `STALE_PAIR_SECONDS` (4h) is cancelled
+  (`cancel_reason='replaced'`) only when the best new candidate's estimated reward per hour
+  (`scoring.estimate`: pool per hour x our share, on the current book) is at least
+  `REPLACE_MIN_GAIN_MULTIPLE` (1.25x) the held pair's. A held pair whose programme has ended, or
+  that rests one leg only, is worth 0/h. One swap per cycle; a part-failed cancel places nothing.
+- A purely resting pair whose programme is no longer running is cancelled
+  (`cancel_reason='program_ended'`) whatever its age: it earns nothing and is only risk, and with
+  no timeout nothing else would take it down.
+- Unchanged: entry ranking, caps, sizes, exits.
+
+Risk accepted by the operator: a resting quote is no longer re-priced on a clock, so it can sit
+behind a moved book. A pair deep behind the touch scores little, so it is the first one the
+reward comparison replaces; the per-leg $10 bound on a lone fill is unchanged.
