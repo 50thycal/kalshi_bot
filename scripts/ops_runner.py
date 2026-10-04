@@ -219,6 +219,7 @@ ALLOWED_SCRIPTS = (
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",
+    "limm_placement_probe",
     "mmsell_depth_fill_model",
     "mmsell_deconfound_study",
     "mmsell_taxonomy_audit",
