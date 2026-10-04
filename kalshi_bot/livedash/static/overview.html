@@ -108,6 +108,9 @@
   .pill.wait{color:var(--muted);background:var(--panel2)}
 
   .note{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
+  .inc{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+  .incrow{background:var(--panel2);border-radius:8px;padding:8px 10px;margin-top:8px}
+  .incrow .mk{max-width:none}
   .empty{color:var(--muted);padding:18px 4px;text-align:center;font-size:13px}
   .err{color:var(--neg);font-size:13px;padding:10px 0}
   .skel{height:90px;border-radius:10px;background:var(--panel);animation:pulse 1.2s ease-in-out infinite}
@@ -195,7 +198,7 @@ function renderHeadline(){
         <span><b>${b.settled_this_month}</b> settled this month (${b.wins_this_month} won)</span>
         <span><b>${b.open_positions}</b> open (${usd(b.open_cost_usd)} at risk)</span>
         <span><b>${b.resting_orders}</b> orders resting</span>
-      </div></div>`;
+      </div>${b.incentive ? renderIncentive(b.incentive) : ""}</div>`;
   }).join("");
   $("#headline").innerHTML = `
     <div class="panel pad" style="margin-bottom:12px">
@@ -231,6 +234,46 @@ function renderHeadline(){
         ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
     </div>
     <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;
+}
+
+/* ---------- liquidity-incentive section (only the incentive book carries it) ---------- */
+function shortDate(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {month:"short", day:"numeric"});
+}
+function renderIncentive(x){
+  const rows = x.resting.map(r => `<div class="incrow">
+      <div class="mk">${esc(r.title)}<small>${esc(r.market)}</small></div>
+      <div class="stats" style="margin-top:4px">
+        <span><b>${esc((r.side||"").toUpperCase())} @ ${r.price_cents}¢ × ${Math.round(r.quantity)}</b></span>
+        <span>${usd(r.committed_usd)} committed</span>
+        <span>resting ${dur(r.age_minutes)}</span>
+      </div>
+      <div class="stats">
+        <span title="Estimate from Kalshi's published scoring on the newest book">est. <b>${has(r.est_reward_per_day_usd) ? usd(r.est_reward_per_day_usd) : "—"}</b>/day</span>
+        <span title="If it rests to the programme's end at today's share">≈ ${usd(r.est_reward_to_end_usd)} by end</span>
+        <span>pool ${has(r.pool_usd) ? usd(r.pool_usd) : "—"} · ends ${shortDate(r.program_ends_at)}</span>
+      </div>
+    </div>`).join("");
+  return `<div class="inc">
+    <div class="k" style="margin:10px 0 6px">Liquidity rewards</div>
+    <div class="pnl3">
+      <div><div class="k">Realized (all time)</div><div class="v ${sgn(x.realized_all_time_usd)}">${usd(x.realized_all_time_usd)}</div>
+        <div class="dim" style="font-size:11px">${x.settled_markets_all_time} settled of ${x.markets_traded_all_time} markets</div></div>
+      <div><div class="k">Rewards received</div><div class="v ${sgn(x.reward_credits_usd)}">${usd(x.reward_credits_usd)}</div>
+        <div class="dim" style="font-size:11px">${x.last_reward_at ? "last " + shortDate(x.last_reward_at) : "none yet"}</div></div>
+      <div><div class="k">Net (all time)</div><div class="v ${sgn(x.net_all_time_usd)}">${usd(x.net_all_time_usd)}</div>
+        <div class="dim" style="font-size:11px">realized + rewards</div></div>
+    </div>
+    <div class="stats" style="margin-top:8px">
+      <span><b>${x.slots_used}</b>/${x.slots_max} markets in use</span>
+      <span><b>${usd(x.committed_usd)}</b> committed in resting bids</span>
+      <span>est. reward <b>${has(x.est_reward_per_day_usd) ? usd(x.est_reward_per_day_usd) : "—"}</b>/day</span>
+    </div>
+    ${x.resting.length ? rows : `<div class="dim" style="margin-top:8px">No bids resting.</div>`}
+    <div class="note" style="margin-top:8px">Rewards received are cash the reward ledger could not explain by any fill or settlement (deposits and flagged readings excluded): the best read of what Kalshi paid. Kalshi pays after a programme ends. Estimates use Kalshi's published scoring on the newest book and have run well above what was actually paid; treat them as a ceiling.</div>
+  </div>`;
 }
 
 /* ---------- 2. order board ---------- */
