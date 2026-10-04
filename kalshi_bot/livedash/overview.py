@@ -45,6 +45,7 @@ from sqlalchemy import func, select
 from .. import models as m
 from ..live.sizing import ticker_size
 from ..mmsell.market_types import classify as classify_series
+from . import incentive_book
 from . import marks as marks_mod
 from . import pairs as pairs_mod
 from .legs import LIVE_WORKING
@@ -267,6 +268,19 @@ def _health(session, book: str, pair: pairs_mod.Pair | None, last_order_at, now)
     }
 
 
+def _incentive_block(session, book: str, now: datetime) -> dict | None:
+    """The liquidity-incentive book's extra section (`incentive_book`); None for every other
+    book. It can never take the landing page down: a failure is logged and the card renders
+    without it."""
+    if not incentive_book.is_incentive_book(book):
+        return None
+    try:
+        return incentive_book.build_incentive_block(session, book, now, _latest_snapshots)
+    except Exception:  # noqa: BLE001 — an optional section must not break the page
+        logger.exception("livedash: incentive block failed for %s", book)
+        return None
+
+
 def _ago(minutes: int) -> str:
     if minutes < 120:
         return f"{minutes} min"
@@ -366,6 +380,7 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             "resting_orders": resting,
             "last_order_at": _iso(last_order.get(book)),
             "health": _health(session, book, pair, last_order.get(book), now),
+            "incentive": _incentive_block(session, book, now),
         })
     days_in = (now - start).total_seconds() / 86400
     next_month = (start + timedelta(days=32)).replace(day=1)
