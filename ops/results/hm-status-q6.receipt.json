@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a6c920f658770435e67e5c1e4764255bf6b80e6f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T14:29:07Z",
+  "id": "hm-status-q6",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/hm-status-q6.receipt.json",
+  "result_file": "ops/results/hm-status-q6.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37209414833",
+  "service": null,
+  "started_at": "2026-10-04T14:29:07Z",
+  "targets": [],
+  "type": "db"
+}
