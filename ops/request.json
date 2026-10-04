@@ -1,1 +1,1 @@
-{"type":"logs","id":"limm-insuf-1","filter":"insufficient","lines":30}
+{"type": "db", "id": "limm-insuf-2", "sql": "SELECT created_at, level, component, left(message,160) msg FROM system_events WHERE created_at BETWEEN '2026-10-04 19:00' AND '2026-10-04 19:50' AND component NOT ILIKE '%evo%' ORDER BY created_at LIMIT 60"}
