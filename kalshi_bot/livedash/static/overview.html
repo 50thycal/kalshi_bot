@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Live Overview</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230f1117'/%3E%3Cpath d='M2 12 6 6l3 3 5-7' stroke='%236d8cff' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#0f1117; --panel:#181b24; --panel2:#1f2330; --panel3:#252a3a; --line:#2a2f3d;
+    --text:#e6e8ee; --muted:#9aa3b2; --dim:#6c7583;
+    --live:#6d8cff; --paper:#e8b64c;
+    --pos:#3ecf8e; --neg:#f2555a; --warn:#e8b64c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);padding-bottom:48px;
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 16px 16px}
+  h1{font-size:18px;margin:0}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    margin:24px 0 10px;font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  .pos{color:var(--pos)} .neg{color:var(--neg)} .muted{color:var(--muted)} .dim{color:var(--dim)}
+  header{border-bottom:1px solid var(--line);padding:12px 0 10px}
+  .hrow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+  nav a{color:var(--muted);text-decoration:none;font-size:13px;padding:4px 8px;border-radius:6px}
+  nav a:hover{color:var(--text);background:var(--panel2)}
+  nav a.on{color:var(--text);background:var(--panel2)}
+  .tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    padding:2px 7px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);
+    color:var(--live)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .pad{padding:14px 16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+
+  /* headline */
+  .goal{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;align-items:end}
+  .goal .big{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .track{height:12px;background:var(--panel2);border-radius:6px;overflow:hidden;position:relative}
+  .track i{position:absolute;top:0;bottom:0;left:0;border-radius:6px;background:var(--pos)}
+  .track i.neg{background:var(--neg)}
+  .track b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted)}
+  .book{display:flex;flex-direction:column;gap:6px}
+  .book .top{display:flex;align-items:center;gap:8px}
+  .book .amt{margin-left:auto;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .light{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 9px;
+    border-radius:11px;background:var(--panel2);color:var(--muted)}
+  .light .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .light.on{background:#12281f;color:var(--pos)}
+  .light.quiet{background:#2a2213;color:var(--warn)}
+  .light.off{background:var(--panel2);color:var(--muted)}
+  .light.warn{background:#2a2213;color:var(--warn)}
+  .light.bad{background:#2a1618;color:var(--neg)}
+  .lights{display:flex;flex-wrap:wrap;gap:6px}
+  .stats{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+  .stats b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* board */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .chip{font-size:12px;padding:4px 10px;border-radius:14px;background:var(--panel2);
+    color:var(--muted);border:1px solid var(--line);cursor:pointer}
+  .chip[aria-pressed="true"]{color:var(--text);border-color:#3d445a}
+  .chip b{font-variant-numeric:tabular-nums}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 9px;text-align:left;white-space:nowrap}
+  thead th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.04em;border-bottom:1px solid var(--line)}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr{border-bottom:1px solid var(--line)} tbody tr:last-child{border-bottom:none}
+  .st{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600}
+  .st.resting{color:var(--live);background:#151c33}
+  .st.partial{color:var(--paper);background:#2a2113}
+  .st.filled{color:var(--pos);background:#12281f}
+  .st.expired{color:var(--dim);background:var(--panel2)}
+  .mk{display:flex;flex-direction:column;white-space:normal;max-width:280px}
+  .mk small{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:var(--dim)}
+  .wait{display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--panel2);
+    position:relative;vertical-align:middle;margin-left:6px;overflow:hidden}
+  .wait i{position:absolute;left:0;top:0;bottom:0;background:var(--live)}
+  .wait i.over{background:var(--warn)}
+
+  /* scorecard */
+  .arms{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .arm h3{margin:0 0 8px;font-size:14px}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-size:13px;margin:0}
+  .kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+  .prog{display:grid;grid-template-columns:minmax(150px,260px) 1fr 90px;gap:10px;
+    align-items:center;font-size:12px;margin-top:8px}
+  .prog .track{height:10px}
+  .prog .track i{background:var(--live)}
+  .prog .track i.done{background:var(--pos)}
+  .prog .v{text-align:right;font-variant-numeric:tabular-nums}
+  .check{display:flex;gap:8px;align-items:center;font-size:12px;margin-top:6px}
+  .pill{font-size:11px;font-weight:600;padding:1px 8px;border-radius:10px}
+  .pill.pass{color:var(--pos);background:#12281f}
+  .pill.fail{color:var(--neg);background:#2a1618}
+  .pill.wait{color:var(--muted);background:var(--panel2)}
+
+  .note{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
+  .empty{color:var(--muted);padding:18px 4px;text-align:center;font-size:13px}
+  .err{color:var(--neg);font-size:13px;padding:10px 0}
+  .skel{height:90px;border-radius:10px;background:var(--panel);animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.75}}
+  @media(prefers-reduced-motion:reduce){ .skel{animation:none} }
+  @media(max-width:700px){
+    .goal{grid-template-columns:1fr}
+    .prog{grid-template-columns:1fr 70px}
+    .prog .lbl{grid-column:1 / -1}
+    .hide-sm{display:none}
+    th,td{padding:7px 6px}
+    .mk{max-width:170px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hrow">
+      <h1>Live overview</h1>
+      <nav>
+        <a href="/" class="on">Overview</a>
+        <a href="/compare">Live vs paper</a>
+        <a href="/chart">Charts</a>
+        <a href="/execution">Execution</a>
+      </nav>
+      <span style="margin-left:auto" class="dim" id="asof"></span>
+    </div>
+  </header>
+
+  <h2>Real money this month</h2>
+  <div id="headline"><div class="skel"></div></div>
+
+  <h2>Orders</h2>
+  <div id="board"><div class="skel"></div></div>
+
+  <div id="scorecards"></div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const has = v => v !== null && v !== undefined;
+const usd = v => has(v) ? (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2) : "—";
+const sgn = v => has(v) ? (v > 0 ? "pos" : v < 0 ? "neg" : "") : "dim";
+const pct = v => has(v) ? (Math.round(v) || 0) + "%" : "—";
+function dur(min){
+  if(!has(min)) return "—";
+  if(min < 60) return min + "m";
+  if(min < 48*60) return Math.floor(min/60) + "h " + String(min%60).padStart(2,"0") + "m";
+  return Math.floor(min/1440) + "d";
+}
+const S = {d:null, filter:"all"};
+
+/* ---------- 1. headline ---------- */
+function renderHeadline(){
+  const h = S.d.headline;
+  const p = Math.max(0, Math.min(100, h.progress_pct || 0));
+  const dayMark = (h.day_of_month - 1) / h.days_in_month * 100;
+  const books = h.books.map(b => {
+    const hl = b.health;
+    const lights = [`<span class="light ${hl.state}"><span class="dot"></span>${esc(hl.text)}</span>`]
+      .concat(hl.lights.map(l =>
+        `<span class="light ${l.level}" title="${l.count} candidates in the last hour">
+          <span class="dot"></span>${esc(l.text)}</span>`));
+    if(hl.tape && !hl.lights.length && hl.candidates_last_hour)
+      lights.push(`<span class="light on" title="No loss stop or cap refused an order in the last hour">
+        <span class="dot"></span>no stops, no caps</span>`);
+    if(!hl.tape)
+      lights.push(`<span class="light off" title="This book has no open twin, so there is no gate tape to read">
+        <span class="dot"></span>stops/caps not tracked</span>`);
+    const link = b.twin_tag ? `<a class="dim" style="font-size:12px" href="/compare?run=${encodeURIComponent(b.twin_tag)}">details →</a>` : "";
+    return `<div class="panel pad book">
+      <div class="top"><span class="tag">${esc(b.live_tag)}</span>${link}
+        <span class="amt ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</span></div>
+      <div class="lights">${lights.join("")}</div>
+      <div class="stats">
+        <span><b>${b.settled_this_month}</b> settled this month (${b.wins_this_month} won)</span>
+        <span><b>${b.open_positions}</b> open (${usd(b.open_cost_usd)} at risk)</span>
+        <span><b>${b.resting_orders}</b> orders resting</span>
+      </div></div>`;
+  }).join("");
+  $("#headline").innerHTML = `
+    <div class="panel pad" style="margin-bottom:12px">
+      <div class="goal">
+        <div><div class="big ${sgn(h.month_realized_usd)}">${usd(h.month_realized_usd)}</div>
+          <div class="dim" style="font-size:12px">of $${h.goal_usd.toFixed(0)} goal · ${esc(h.month)}</div></div>
+        <div>
+          <div class="stats" style="margin-bottom:6px">
+            <span><b>${pct(h.progress_pct)}</b> of goal</span>
+            <span>day <b>${h.day_of_month}</b> of ${h.days_in_month}</span>
+            <span>straight-line pace <b>${h.pace_usd === null ? "—" : usd(h.pace_usd)}</b>/month</span>
+          </div>
+          <div class="track" title="Bar: realized vs goal. Tick: how far through the month we are.">
+            <i class="${(h.month_realized_usd||0) < 0 ? "neg" : ""}" style="width:${p}%"></i>
+            <b style="left:${dayMark}%"></b></div>
+        </div>
+      </div>
+      <div class="note">Realized only — settled markets, after the fees Kalshi charged. Open positions are not counted until they settle.
+        ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
+    </div>
+    <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;
+}
+
+/* ---------- 2. order board ---------- */
+const LABEL = {resting:"Resting — waiting to fill", partial:"Partly filled — still working",
+               filled:"Filled", expired:"Expired unfilled"};
+function renderBoard(){
+  const b = S.d.board;
+  const chips = [["all","All", b.rows.length]].concat(
+    ["resting","partial","filled","expired"].map(s => [s, LABEL[s].split(" —")[0], b.counts[s]]))
+    .map(([k,l,n]) => `<button class="chip" data-f="${k}" aria-pressed="${S.filter===k}">${l} <b>${n}</b></button>`).join("");
+  const typ = b.typical_fill;
+  const rows = b.rows.filter(r => S.filter === "all" || r.status === S.filter).map(r => {
+    const t = typ[r.live_tag];
+    let age = dur(r.age_minutes);
+    if((r.status === "resting" || r.status === "partial") && t){
+      const frac = Math.min(1, r.age_minutes / Math.max(1, t.median_minutes * 2));
+      age += `<span class="wait" title="vs typical fill ${t.median_minutes} min"><i class="${r.age_minutes > t.median_minutes ? "over" : ""}" style="width:${frac*100}%"></i></span>`;
+    }
+    const why = r.status === "expired" ? (r.cancel_reason || r.raw_status || "") : "";
+    return `<tr>
+      <td><span class="st ${r.status}" title="${esc(LABEL[r.status])}">${esc(r.status)}</span></td>
+      <td class="hide-sm"><span class="tag" style="font-size:11px">${esc(r.live_tag)}</span></td>
+      <td><div class="mk">${esc(r.label)}<small>${esc(r.market)}</small></div></td>
+      <td class="r">${r.filled ?? 0}/${r.requested ?? "—"}</td>
+      <td class="r hide-sm">${has(r.limit_cents) ? r.limit_cents + "¢" : "—"}</td>
+      <td class="r hide-sm">${has(r.avg_fill_cents) ? r.avg_fill_cents + "¢" : "—"}</td>
+      <td>${age}</td>
+      <td class="r hide-sm">${has(r.wait_minutes) ? dur(r.wait_minutes) : "—"}</td>
+      <td class="dim hide-sm">${esc(why)}</td></tr>`;
+  }).join("");
+  const typLine = Object.entries(typ).map(([k,v]) =>
+    `${esc(k)}: typical wait to fill <b>${dur(v.median_minutes)}</b> (median of ${v.n})`).join(" · ");
+  $("#board").innerHTML = `<div class="chips">${chips}</div>
+    <div class="panel"><div class="scroll"><table>
+      <thead><tr><th>Status</th><th class="hide-sm">Book</th><th>Market</th><th class="r">Filled</th>
+        <th class="r hide-sm">Limit</th><th class="r hide-sm">Avg fill</th><th>Age</th>
+        <th class="r hide-sm">Waited</th><th class="hide-sm">Why it ended</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="9" class="empty">Nothing in this view.</td></tr>'}</tbody>
+    </table></div></div>
+    <div class="note">Working orders plus everything placed in the last ${b.window_hours} h.
+      A resting order is live on the book and can still fill; it is cancelled after the timeout, not failed.
+      ${typLine ? "<br>" + typLine + " (last 7 days)." : ""}
+      ${b.truncated ? `<br>${b.truncated} older rows not shown.` : ""}</div>`;
+  document.querySelectorAll(".chip").forEach(c =>
+    c.onclick = () => { S.filter = c.dataset.f; renderBoard(); });
+}
+
+/* ---------- 3. scorecard ---------- */
+function progRow(label, value, floor, hint){
+  const f = Math.min(1, (value || 0) / floor);
+  return `<div class="prog"><span class="lbl">${esc(label)}${hint ? ` <span class="dim">${esc(hint)}</span>` : ""}</span>
+    <div class="track"><i class="${f >= 1 ? "done" : ""}" style="width:${f*100}%"></i></div>
+    <span class="v">${value ?? 0} / ${floor}</span></div>`;
+}
+function renderScorecards(){
+  $("#scorecards").innerHTML = S.d.scorecards.map(c => {
+    const arms = c.arms.map(a => `<div class="panel pad arm">
+      <h3>${a.contracts}-contract orders</h3>
+      <dl class="kv">
+        <dt>Orders placed</dt><dd>${a.orders}</dd>
+        <dt>Fill rate</dt><dd>${pct(a.fill_rate_pct)}</dd>
+        <dt>Filled completely</dt><dd>${pct(a.full_fill_pct)}</dd>
+        <dt>Contracts filled</dt><dd>${a.contracts_filled}</dd>
+        <dt>Markets settled</dt><dd>${a.settled_markets} (${a.wins} won)</dd>
+        <dt>Per contract, after fees</dt><dd class="${sgn(a.net_cents_per_contract)}">${has(a.net_cents_per_contract) ? a.net_cents_per_contract.toFixed(2) + "¢" : "—"}</dd>
+        <dt>Realized</dt><dd class="${sgn(a.realized_usd)}">${usd(a.realized_usd)}</dd>
+      </dl></div>`).join("");
+    const checks = c.checks.map(k => {
+      const st = !has(k.value_pct) ? "wait" : k.value_pct >= k.pass_pct ? "pass" : "fail";
+      return `<div class="check"><span class="pill ${st}">${st === "wait" ? "no data" : st === "pass" ? "on track" : "below bar"}</span>
+        ${esc(k.id)} · ${esc(k.label)}: <b>${pct(k.value_pct)}</b> <span class="dim">(bar ${k.pass_pct}%, n=${k.n})</span></div>`;
+    }).join("");
+    const prog = c.progress.map(p => progRow(`${p.id} · ${p.label}`, p.value, p.floor)).join("");
+    return `<h2>Experiment scorecard — <span class="tag">${esc(c.live_tag)}</span> size split
+        <span class="dim" style="text-transform:none;letter-spacing:0">day ${Math.floor(c.days_running) + 1}</span></h2>
+      <div class="arms">${arms}</div>
+      <div class="panel pad" style="margin-top:12px">
+        <div class="dim" style="font-size:12px;margin-bottom:4px">Readout checks (pre-registered)</div>${checks}
+        <div class="dim" style="font-size:12px;margin:14px 0 0">Progress to the sample each read needs</div>${prog}
+        <div class="note">Arms come from each market's fixed random assignment, not from the order, so a mis-sized order shows up in S0 instead of moving between arms.
+          Nothing here is a verdict: the readout is recorded in Experiment OS once each sample is reached.</div>
+      </div>`;
+  }).join("");
+}
+
+async function load(){
+  try{
+    const r = await fetch("/api/overview", {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    S.d = await r.json();
+    renderHeadline(); renderBoard(); renderScorecards();
+    const age = S.d.cache_age_seconds;
+    $("#asof").textContent = "data " + (age < 90 ? "fresh" : Math.round(age/60) + " min old")
+      + (S.d.cache_error ? " · " + S.d.cache_error : "");
+  }catch(e){
+    if(!S.d) $("#headline").innerHTML = `<div class="err">Could not load the overview — ${esc(e.message)}. Retrying.</div>`;
+  }
+}
+load();
+setInterval(() => { if(!document.hidden) load(); }, 60000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) load(); });
+</script>
+</body>
+</html>
