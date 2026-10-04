@@ -127,8 +127,8 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
     }
 
 
-def est_reward_per_hour(candidate: dict, *, yes_price: int, no_price: int, qty: float,
-                        own_yes: dict[int, float] | None = None,
+def est_reward_per_hour(candidate: dict, *, yes_price: int | None, no_price: int | None,
+                        qty: float, own_yes: dict[int, float] | None = None,
                         own_no: dict[int, float] | None = None) -> float:
     """Estimated reward dollars per hour for resting `qty` on both sides at these prices — the
     programme's pool times our share of the scored book (`scoring.estimate`). `own_*` are this
@@ -152,8 +152,10 @@ def est_reward_per_hour(candidate: dict, *, yes_price: int, no_price: int, qty: 
         no_levels=_without(candidate.get("no_levels"), own_no),
         target_size=candidate.get("target_size"),
         discount_factor_bps=candidate.get("discount_factor_bps"),
-        our_yes_price=int(yes_price), our_yes_size=float(qty),
-        our_no_price=int(no_price), our_no_size=float(qty),
+        our_yes_price=None if yes_price is None else int(yes_price),
+        our_yes_size=0.0 if yes_price is None else float(qty),
+        our_no_price=None if no_price is None else int(no_price),
+        our_no_size=0.0 if no_price is None else float(qty),
         period_reward_usd_value=candidate.get("period_reward_usd"),
         period_seconds=candidate.get("period_seconds"))
     return float(est.reward_per_hour_usd or 0.0)
@@ -379,23 +381,21 @@ class IncentiveLiveRunner:
     def _held_reward_per_hour(self, ticker: str, working: list, programs: dict,
                               now: datetime) -> float | None:
         """A held pair's estimated reward per hour on its CURRENT book. 0.0 when its programme
-        is gone or only one leg rests; None when the book cannot be read (then it is kept)."""
+        is gone; None when the book cannot be read (then it is kept)."""
         program = programs.get(ticker)
         if program is None:
             return 0.0
         prices = {r.side: int(r.limit_price) for r in working}
-        if limm.SIDE_YES not in prices or limm.SIDE_NO not in prices:
-            return 0.0                  # a lone leg is not a qualifying two-sided quote
         try:
             ob = self.client.get_orderbook(ticker)
         except Exception:  # noqa: BLE001 — unknown value: keep the pair
             return None
         c = candidate_from_book(program, ob, now=now)
         qty = max(float(r.quantity) for r in working)
-        return est_reward_per_hour(c, yes_price=prices[limm.SIDE_YES],
-                                   no_price=prices[limm.SIDE_NO], qty=qty,
-                                   own_yes={prices[limm.SIDE_YES]: qty},
-                                   own_no={prices[limm.SIDE_NO]: qty})
+        y, n = prices.get(limm.SIDE_YES), prices.get(limm.SIDE_NO)
+        return est_reward_per_hour(c, yes_price=y, no_price=n, qty=qty,
+                                   own_yes=None if y is None else {y: qty},
+                                   own_no=None if n is None else {n: qty})
 
     def _replace_stale_pair(self, session, executor, stale: dict, ranked: list,
                             now: datetime, summary: dict):
@@ -404,8 +404,9 @@ class IncentiveLiveRunner:
         None leaves every held pair resting."""
         def rate(cq) -> float:
             c, q = cq
-            return est_reward_per_hour(c, yes_price=q.yes.price_cents,
-                                       no_price=q.no.price_cents, qty=q.quantity)
+            prices = {leg.side: leg.price_cents for leg in q.legs}
+            return est_reward_per_hour(c, yes_price=prices.get(limm.SIDE_YES),
+                                       no_price=prices.get(limm.SIDE_NO), qty=q.quantity)
 
         fresh = [cq for cq in ranked if cq[0]["market_ticker"] not in stale]
         if not fresh:

@@ -2723,3 +2723,27 @@ candidate to replace them, so the book went from earning to idle. Changes:
 Risk accepted by the operator: a resting quote is no longer re-priced on a clock, so it can sit
 behind a moved book. A pair deep behind the touch scores little, so it is the first one the
 reward comparison replaces; the per-leg $10 bound on a lone fill is unchanged.
+
+### 9.48 One bid on the cheap side at the reference price; out after a fill (2026-10-04)
+
+Operator decision, from the LIMM-PLACEMENT probe ([thesis](LIMM_PLACEMENT_THESIS.md), runs
+`limmplace-20261004-1` and `-2`). Run 1 ranked "cheap side at the reference" (P1) far above the
+two-sided pair; run 2 found "exit after a fill" (B) cut P1's fill losses 62% at no cost to net. The
+operator chose P1 + B, and declined the $3 size cap (A) because it halves reward. Changes:
+- `QUOTE_MODE = "cheap_side"`: one post-only bid, on the side whose reference price (R3) is
+  ≤ `MAX_PRICE_CENTS` (the cheaper if both), AT that reference price, so it scores full credit.
+  Quantity `min(500, $10 / price)`. Every shared gate is unchanged (`_entry_refusal`). The pair
+  code stays, selectable with `QUOTE_MODE = "pair"`.
+- Exit after a fill: `decide_exit` scratches a held leg once its side's bid is back at entry
+  (`EXIT_SCRATCH`, marketable sell), and stops it at half the entry, rounded up
+  (`STOP_LOSS_FRACTION` 0.40 → 0.50, stop floor 3 → 1; the old floor never stopped a 1–3¢ leg).
+  The opposite-side exit leg now rests at the scratch level (`EXIT_LEG_EDGE_CENTS` 1 → 0).
+- The executor's cap re-check accepts a single leg; replace-only-when-better (§9.47) scores a
+  single leg on its own side.
+
+Exposure falls: two markets × one leg ≤ $20, against ≤ $40 for two pairs. The probe charged the
+scratch a maker fee; live it is a taker sell (about $1.66 on 500 at 5¢).
+
+**Parked for later (operator: "remember these other options"):** A, size to the pool (≤ $3 at risk;
+cut losses 64% but kept 49% of net); C, long shots only (≤ 5¢ and stand aside while active; raised
+net but cut losses only 18%); A+B+C together (worst fill −$3, 80% of net). Revisit after B has run.

@@ -176,7 +176,8 @@ def test_a_market_outside_the_close_window_is_never_fetched(live_db, settings, c
 # ------------------------------------------------------------------ pair entries + caps
 
 
-def test_places_a_pair_on_one_market(live_db, settings):
+def test_places_a_pair_on_one_market(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "QUOTE_MODE", "pair")
     client = FakeClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
@@ -200,7 +201,8 @@ def test_newest_program_first_and_stops_at_the_market_cap(live_db, settings):
     assert placed_markets == ["KXTEST-B", "KXTEST-C"]
 
 
-def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings):
+def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "QUOTE_MODE", "pair")
     client = FakeClient({"KXTEST-A": _book([(4, 500)], [(5, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
@@ -250,7 +252,8 @@ def test_book_fetches_are_bounded_per_cycle(live_db, settings):
 # ------------------------------------------------------------------ the twin
 
 
-def test_both_legs_are_mirrored_to_the_twin(live_db, settings):
+def test_both_legs_are_mirrored_to_the_twin(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "QUOTE_MODE", "pair")
     from kalshi_bot.twin.harness import TwinHarness
 
     settings.live_paper_twin_enabled = True
@@ -379,7 +382,8 @@ def test_pre_close_flattens_even_a_flat_mark(live_db, settings):
 
 
 def test_a_held_leg_with_nothing_resting_gets_a_profitable_exit_leg(live_db, settings):
-    client = FakeClient({HELD: _book([(41, 500)], [(50, 500)])})
+    # YES bid 39: under the 40c entry (no scratch), above the 20c stop.
+    client = FakeClient({HELD: _book([(39, 500)], [(50, 500)])})
     with db.session_scope() as s:
         _held(s, other_leg=False)
         out = _cycle(client, settings, s)
@@ -1033,3 +1037,30 @@ def test_a_resting_pair_whose_programme_ended_is_taken_down(live_db, settings):
         out = _cycle(client, settings, s)
     assert out["outcomes"].get("program_ended") == 1
     assert sorted(client.canceled) == ["K-KXHELD-1-n", "K-KXHELD-1-y"]
+
+
+# --- §9.48: one bid on the cheap side at its reference price; out after a fill ----------------
+
+def test_places_one_bid_on_the_cheap_side_at_its_reference(live_db, settings):
+    # Target 200 -> reference = first level where cumulative size reaches 40. YES: 23c holds 100
+    # -> reference 23 (too dear). NO: 4c holds 30, 3c brings 330 -> reference 3.
+    client = FakeClient({"KXTEST-A": _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-A")
+        out = _cycle(client, settings, s)
+        rows = list(s.scalars(sa_select(m.LiveOrder)))
+    assert out["placed"] == 1 and len(client.placed) == 1
+    o = client.placed[0]
+    # A NO bid at 3c is a YES "ask" at 97c on the wire.
+    assert (o["ticker"], o["side"], o["price"], o["post_only"]) == ("KXTEST-A", "ask", "0.9700", True)
+    assert o["count"] == f"{min(limm.MAX_CONTRACTS_PER_ORDER, 1000 // 3)}.00"
+    assert [(r.side, r.limit_price) for r in rows] == [("no", 3)]
+
+
+def test_a_held_leg_back_at_entry_is_scratched(live_db, settings):
+    client = FakeClient({HELD: _book([(40, 500)], [(50, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        out = _cycle(client, settings, s)
+    (code,) = _managed(out)
+    assert code.startswith(limm.EXIT_SCRATCH + ":"), code

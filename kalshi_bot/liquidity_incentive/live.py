@@ -42,6 +42,7 @@ that cannot resolve within days.
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass
 
 # --- the strategy's own caps. The XOS risk envelope names these; a test asserts they match. ---
@@ -99,13 +100,26 @@ FLATTEN_HOURS_BEFORE_CLOSE = 1.0
 STALE_PAIR_SECONDS = 4 * 3600.0
 REPLACE_MIN_GAIN_MULTIPLE = 1.25
 
-#: Exit distances, as fractions, with a floor so a cheap leg is not stopped out by one tick.
-#: Stop when the held side's bid is down STOP_LOSS_FRACTION of the entry price; take profit
-#: when it is up TAKE_PROFIT_FRACTION of the remaining upside (100 - entry). Pre-registered
-#: starting values, chosen before any exit has fired — not tuned to a result.
-STOP_LOSS_FRACTION = 0.40
+#: How an entry is quoted (§9.48, operator decision 2026-10-04, probe LIMM-PLACEMENT P1):
+#:   "cheap_side" — ONE bid, on the side whose reference price is <= MAX_PRICE_CENTS (the
+#:                  cheaper if both), AT that reference price, so it scores full credit;
+#:   "pair"       — the §9.37–§9.47 two-sided pair, one tick behind each touch.
+#: Read at call time, so a test can switch it.
+QUOTE_MODE = "cheap_side"
+
+#: Exit distances. Stop when the held side's bid is down STOP_LOSS_FRACTION of the entry price
+#: (rounded up, at least STOP_MIN_DISTANCE_CENTS); take profit when it is up
+#: TAKE_PROFIT_FRACTION of the remaining upside (100 - entry), at least EXIT_MIN_DISTANCE_CENTS.
+#: 0.40 / floor 3 -> 0.50 / floor 1 (§9.48, protection "B", operator decision 2026-10-04): the
+#: old 3c floor never stopped a 1–3c leg at all. With SCRATCH below this is "exit after a fill":
+#: out flat once the bid is back at entry, out at half the entry if it falls.
+STOP_LOSS_FRACTION = 0.50
+STOP_MIN_DISTANCE_CENTS = 1
 TAKE_PROFIT_FRACTION = 0.40
 EXIT_MIN_DISTANCE_CENTS = 3
+#: The opposite-side exit bid nets a held leg flat at entry + this many cents (§9.48: 1 -> 0,
+#: a scratch; the point is getting out, not the extra cent).
+EXIT_LEG_EDGE_CENTS = 0
 #: A marketable exit crosses this many cents past the touch so it fills rather than expires.
 EXIT_SLIPPAGE_CENTS = 2
 #: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
@@ -199,6 +213,7 @@ REFUSE_EXPOSURE_CAP = "exposure_cap"
 EXIT_STOP_LOSS = "stop_loss"
 EXIT_TAKE_PROFIT = "take_profit"
 EXIT_PRE_CLOSE = "pre_close"
+EXIT_SCRATCH = "scratch"
 
 
 @dataclass(frozen=True)
@@ -235,6 +250,25 @@ class PairQuote:
     @property
     def legs(self) -> tuple[LiveQuote, LiveQuote]:
         return (self.yes, self.no)
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class SideQuote:
+    """ONE bid on one side of one market (§9.48, QUOTE_MODE "cheap_side")."""
+
+    market_ticker: str
+    leg: LiveQuote
+    quantity: int
+    collateral_usd: float
+    max_loss_usd: float
+    hours_to_close: float | None
+
+    @property
+    def legs(self) -> tuple[LiveQuote]:
+        return (self.leg,)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -290,6 +324,117 @@ def build_pair_quote(
     """The whole entry decision, as one pure function. Returns the pair to place, or why not.
 
     There is deliberately no path that returns a quote by relaxing a cap."""
+    refused = _entry_refusal(
+        market_ticker=market_ticker, best_yes_bid=best_yes_bid, best_no_bid=best_no_bid,
+        yes_resting_total=yes_resting_total, no_resting_total=no_resting_total,
+        target_size=target_size, hours_to_close=hours_to_close,
+        program_hours_remaining=program_hours_remaining, excluded_series=excluded_series,
+        event_ticker=event_ticker, blocked_event_tickers=blocked_event_tickers,
+        open_orders_now=open_orders_now)
+    if refused is not None:
+        return refused
+    y, n = int(best_yes_bid), int(best_no_bid)
+    y = behind_touch_price(y, yes_touch_depth, target_size)
+    n = behind_touch_price(n, no_touch_depth, target_size)
+    edge = 100 - y - n
+    if edge < MIN_PAIR_EDGE_CENTS:
+        return Refusal(REFUSE_NO_EDGE, f"yes {y} + no {n} leaves {edge}c, need {MIN_PAIR_EDGE_CENTS}c")
+    if max(y, n) > max_price_cents:
+        return Refusal(REFUSE_TOO_EXPENSIVE,
+                       f"dear leg at {max(y, n)}c, above the {max_price_cents}c per-leg cap")
+    qty = pair_quantity(y, n)
+    if qty < 1:
+        return Refusal(REFUSE_TOO_EXPENSIVE,
+                       f"{max(y, n)}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-leg budget")
+    refs = reference_price_by_side or {}
+    yes_leg = _leg(market_ticker, SIDE_YES, y, qty, refs.get(SIDE_YES))
+    no_leg = _leg(market_ticker, SIDE_NO, n, qty, refs.get(SIDE_NO))
+    collateral = round(yes_leg.collateral_usd + no_leg.collateral_usd, 4)
+    if strategy_exposure_now_usd + collateral > MAX_STRATEGY_EXPOSURE_USD:
+        return Refusal(
+            REFUSE_EXPOSURE_CAP,
+            f"${strategy_exposure_now_usd:.2f} committed + ${collateral:.2f} exceeds "
+            f"${MAX_STRATEGY_EXPOSURE_USD:.2f}")
+    return PairQuote(
+        market_ticker=market_ticker, yes=yes_leg, no=no_leg, quantity=qty, edge_cents=edge,
+        collateral_usd=collateral,
+        max_loss_usd=max(yes_leg.collateral_usd, no_leg.collateral_usd),
+        hours_to_close=hours_to_close,
+    )
+
+
+def build_side_quote(
+    *,
+    market_ticker: str,
+    best_yes_bid: int | None,
+    best_no_bid: int | None,
+    yes_resting_total: float,
+    no_resting_total: float,
+    target_size: float | None,
+    hours_to_close: float | None,
+    reference_price_by_side: dict[str, int | None] | None = None,
+    program_hours_remaining: float | None = None,
+    excluded_series: frozenset[str] = frozenset(),
+    event_ticker: str | None = None,
+    blocked_event_tickers: frozenset[str] = frozenset(),
+    open_orders_now: int = 0,
+    strategy_exposure_now_usd: float = 0.0,
+    max_price_cents: int = MAX_PRICE_CENTS,
+) -> SideQuote | Refusal:
+    """§9.48: one bid on the cheap side, AT that side's reference price (full scoring credit).
+
+    Same gates as the pair (window, two-sided book meeting Target Size, depth rule, programme
+    time, concentration). The side is the one whose reference price is <= `max_price_cents`,
+    the cheaper if both; quantity is the most the $ budget buys at that price, capped."""
+    refused = _entry_refusal(
+        market_ticker=market_ticker, best_yes_bid=best_yes_bid, best_no_bid=best_no_bid,
+        yes_resting_total=yes_resting_total, no_resting_total=no_resting_total,
+        target_size=target_size, hours_to_close=hours_to_close,
+        program_hours_remaining=program_hours_remaining, excluded_series=excluded_series,
+        event_ticker=event_ticker, blocked_event_tickers=blocked_event_tickers,
+        open_orders_now=open_orders_now)
+    if refused is not None:
+        return refused
+    refs = reference_price_by_side or {}
+    cands = []
+    for side in (SIDE_YES, SIDE_NO):
+        ref = refs.get(side)
+        if ref is not None and 1 <= int(ref) <= int(max_price_cents):
+            cands.append((int(ref), side))
+    if not cands:
+        known = {s: refs.get(s) for s in (SIDE_YES, SIDE_NO)}
+        return Refusal(REFUSE_TOO_EXPENSIVE,
+                       f"no side's reference price is within {max_price_cents}c ({known})")
+    price, side = min(cands)
+    qty = min(MAX_CONTRACTS_PER_ORDER, int(MAX_ORDER_DOLLARS * 100 // price))
+    if qty < 1:
+        return Refusal(REFUSE_TOO_EXPENSIVE,
+                       f"{price}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-leg budget")
+    collateral = round(price * qty / 100.0, 4)
+    if strategy_exposure_now_usd + collateral > MAX_STRATEGY_EXPOSURE_USD:
+        return Refusal(
+            REFUSE_EXPOSURE_CAP,
+            f"${strategy_exposure_now_usd:.2f} committed + ${collateral:.2f} exceeds "
+            f"${MAX_STRATEGY_EXPOSURE_USD:.2f}")
+    leg = LiveQuote(
+        market_ticker=market_ticker, side=side, price_cents=price, quantity=qty,
+        collateral_usd=collateral, max_loss_usd=collateral, reference_price_cents=price,
+        at_or_above_reference=True,
+        reason=f"rested the cheap {side} side at its {price}c reference price",
+    )
+    return SideQuote(market_ticker=market_ticker, leg=leg, quantity=qty,
+                     collateral_usd=collateral, max_loss_usd=collateral,
+                     hours_to_close=hours_to_close)
+
+
+def _entry_refusal(
+    *, market_ticker: str, best_yes_bid: int | None, best_no_bid: int | None,
+    yes_resting_total: float, no_resting_total: float, target_size: float | None,
+    hours_to_close: float | None, program_hours_remaining: float | None,
+    excluded_series: frozenset[str], event_ticker: str | None,
+    blocked_event_tickers: frozenset[str], open_orders_now: int,
+) -> Refusal | None:
+    """The gates every entry shares, pair or single side, in order. None when all pass."""
     series = market_ticker.split("-", 1)[0] if market_ticker else ""
     if series and series in excluded_series:
         return Refusal(REFUSE_EXCLUDED_SERIES,
@@ -337,33 +482,7 @@ def build_pair_quote(
                        f"{program_hours_remaining:.1f}h left, need {MIN_PROGRAM_HOURS_REMAINING}")
     if y < 1 or n < 1:
         return Refusal(REFUSE_NO_BOOK, f"touch yes {y} / no {n} is not a placeable pair")
-    y = behind_touch_price(y, yes_touch_depth, target_size)
-    n = behind_touch_price(n, no_touch_depth, target_size)
-    edge = 100 - y - n
-    if edge < MIN_PAIR_EDGE_CENTS:
-        return Refusal(REFUSE_NO_EDGE, f"yes {y} + no {n} leaves {edge}c, need {MIN_PAIR_EDGE_CENTS}c")
-    if max(y, n) > max_price_cents:
-        return Refusal(REFUSE_TOO_EXPENSIVE,
-                       f"dear leg at {max(y, n)}c, above the {max_price_cents}c per-leg cap")
-    qty = pair_quantity(y, n)
-    if qty < 1:
-        return Refusal(REFUSE_TOO_EXPENSIVE,
-                       f"{max(y, n)}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-leg budget")
-    refs = reference_price_by_side or {}
-    yes_leg = _leg(market_ticker, SIDE_YES, y, qty, refs.get(SIDE_YES))
-    no_leg = _leg(market_ticker, SIDE_NO, n, qty, refs.get(SIDE_NO))
-    collateral = round(yes_leg.collateral_usd + no_leg.collateral_usd, 4)
-    if strategy_exposure_now_usd + collateral > MAX_STRATEGY_EXPOSURE_USD:
-        return Refusal(
-            REFUSE_EXPOSURE_CAP,
-            f"${strategy_exposure_now_usd:.2f} committed + ${collateral:.2f} exceeds "
-            f"${MAX_STRATEGY_EXPOSURE_USD:.2f}")
-    return PairQuote(
-        market_ticker=market_ticker, yes=yes_leg, no=no_leg, quantity=qty, edge_cents=edge,
-        collateral_usd=collateral,
-        max_loss_usd=max(yes_leg.collateral_usd, no_leg.collateral_usd),
-        hours_to_close=hours_to_close,
-    )
+    return None
 
 
 def behind_touch_price(touch: int, touch_depth: float | None, target_size: float | None) -> int:
@@ -381,7 +500,7 @@ def behind_touch_price(touch: int, touch_depth: float | None, target_size: float
 
 
 def stop_distance_cents(entry_cents: int) -> int:
-    return max(EXIT_MIN_DISTANCE_CENTS, round(int(entry_cents) * STOP_LOSS_FRACTION))
+    return max(STOP_MIN_DISTANCE_CENTS, math.ceil(int(entry_cents) * STOP_LOSS_FRACTION))
 
 
 def take_profit_distance_cents(entry_cents: int) -> int:
@@ -405,6 +524,8 @@ def decide_exit(*, entry_cents: int, mark_bid_cents: int | None,
         return EXIT_STOP_LOSS
     if mark >= entry + take_profit_distance_cents(entry):
         return EXIT_TAKE_PROFIT
+    if mark >= entry:
+        return EXIT_SCRATCH   # §9.48: the bid is back at what we paid — get out flat
     return None
 
 
@@ -413,8 +534,8 @@ def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | 
 
     Buying the opposite side nets the held one flat, so a bid at p realises
     (100 - entry - p) per contract. Join the opposite touch, but never pay more than leaves
-    MIN_PAIR_EDGE_CENTS. None when no profitable price exists."""
-    cap = 100 - int(entry_cents) - MIN_PAIR_EDGE_CENTS
+    EXIT_LEG_EDGE_CENTS (0 since §9.48: a scratch). None when no such price exists."""
+    cap = 100 - int(entry_cents) - EXIT_LEG_EDGE_CENTS
     price = cap if best_opposite_bid is None else min(int(best_opposite_bid), cap)
     return price if price >= 1 else None
 
@@ -436,8 +557,22 @@ def _depth_ratio(candidate: dict) -> float:
 
 def quote_candidate(c: dict, *, excluded_series: frozenset[str] = frozenset(),
                     blocked_event_tickers: frozenset[str] = frozenset(),
-                    max_price_cents: int = MAX_PRICE_CENTS) -> PairQuote | Refusal:
-    """`build_pair_quote` over one runner candidate dict."""
+                    max_price_cents: int = MAX_PRICE_CENTS) -> PairQuote | SideQuote | Refusal:
+    """The entry decision over one runner candidate dict, in the current QUOTE_MODE."""
+    if QUOTE_MODE == "cheap_side":
+        return build_side_quote(
+            market_ticker=c.get("market_ticker", ""),
+            best_yes_bid=c.get("best_yes_bid"), best_no_bid=c.get("best_no_bid"),
+            yes_resting_total=float(c.get("yes_resting_total") or 0.0),
+            no_resting_total=float(c.get("no_resting_total") or 0.0),
+            target_size=c.get("target_size"),
+            hours_to_close=c.get("hours_to_close"),
+            reference_price_by_side=c.get("reference_price_by_side"),
+            program_hours_remaining=c.get("program_hours_remaining"),
+            excluded_series=excluded_series, max_price_cents=max_price_cents,
+            event_ticker=c.get("event_ticker"),
+            blocked_event_tickers=blocked_event_tickers,
+        )
     return build_pair_quote(
         market_ticker=c.get("market_ticker", ""),
         best_yes_bid=c.get("best_yes_bid"), best_no_bid=c.get("best_no_bid"),
@@ -472,12 +607,17 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
     is no longer a key: near resolution is where lone fills lose.
     Price is no longer a ranking key: a pair always holds both sides, so "the cheap side" is not
     a choice this book makes, and the dollar downside of a single-leg fill is capped per leg."""
-    out: list[tuple[dict, PairQuote]] = []
+    out: list[tuple[dict, PairQuote | SideQuote]] = []
     for c in candidates:
         q = quote_candidate(c, excluded_series=excluded_series,
                             blocked_event_tickers=blocked_event_tickers,
                             max_price_cents=max_price_cents)
-        if isinstance(q, PairQuote):
+        if isinstance(q, (PairQuote, SideQuote)):
             out.append((c, q))
-    out.sort(key=lambda cq: (_age_bucket(cq[0]), _depth_ratio(cq[0]), -cq[1].edge_cents))
+
+    def last_key(q) -> int:
+        # Pair: widest edge first. Single side: cheapest first (smallest loss per contract).
+        return -q.edge_cents if isinstance(q, PairQuote) else q.leg.price_cents
+
+    out.sort(key=lambda cq: (_age_bucket(cq[0]), _depth_ratio(cq[0]), last_key(cq[1])))
     return out
