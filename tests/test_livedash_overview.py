@@ -294,3 +294,56 @@ def test_the_overview_has_no_write_path():
     for verb in ("session.add", "session.delete", "session.commit", "session.flush",
                  "insert(", "update(m.", "delete(m."):
         assert verb not in src
+
+
+# --- realized + unrealized + trades ------------------------------------------------------
+
+
+def _tick(s, ticker, *, no_bid, yes_bid=None, at=None):
+    yes_bid = 100 - no_bid - 2 if yes_bid is None else yes_bid
+    s.add(m.MmSellPositionTick(market_ticker=ticker, captured_at=at or NOW - timedelta(minutes=3),
+                               no_bid=no_bid, no_ask=100 - yes_bid, yes_bid=yes_bid,
+                               yes_ask=100 - no_bid, mid=50))
+    s.flush()
+
+
+def test_open_positions_are_marked_to_the_bid_and_unpriced_ones_are_counted_not_zeroed(session):
+    _order(session, "KXU-1", qty=3, filled=3, price=93)
+    _hold(session, "KXU-1", 3, 2.79)                       # cost 93c x 3
+    _tick(session, "KXU-1", no_bid=95)                     # worth 2.85 now
+    _order(session, "KXU-2", filled=1, price=92)
+    _hold(session, "KXU-2", 1, 0.92)                       # never taped: no price
+    _order(session, "KXU-3", filled=1, at=NOW - timedelta(days=3))
+    _settle(session, "KXU-3", 0.07, at=NOW - timedelta(hours=2))
+
+    h = ov.build_overview(session, now=NOW)["headline"]
+    b = _book({"headline": h}, "Hbook")
+    assert b["unrealized_usd"] == pytest.approx(0.06)
+    assert b["open_unpriced"] == 1 and h["open_unpriced"] == 1
+    assert b["total_pnl_usd"] == pytest.approx(0.13)
+    assert (h["month_realized_usd"], h["unrealized_usd"], h["total_pnl_usd"]) == (
+        pytest.approx(0.07), pytest.approx(0.06), pytest.approx(0.13))
+    # the goal still counts realized money only
+    assert h["progress_pct"] == pytest.approx(0.1)
+
+
+def test_a_yes_position_is_marked_at_the_yes_bid(session):
+    _order(session, "KXY-1", book="Abook", qty=5, filled=5, price=40)
+    session.add(m.Position(market_ticker="KXY-1", captured_at=NOW - timedelta(minutes=5),
+                           side="yes", quantity=5, quantity_fp=5, market_exposure=2.0))
+    _tick(session, "KXY-1", no_bid=55, yes_bid=43)
+    b = _book(ov.build_overview(session, now=NOW), "Abook")
+    assert b["unrealized_usd"] == pytest.approx(0.15)       # 5 x 43c - $2.00
+
+
+def test_trades_count_markets_filled_this_month_and_all_time(session):
+    _order(session, "KXT-1", filled=1, at=NOW - timedelta(days=1))
+    _order(session, "KXT-1", filled=1, at=NOW - timedelta(hours=20), oid="retry")  # same market
+    _order(session, "KXT-2", filled=1, at=datetime(2026, 9, 28, tzinfo=timezone.utc),
+           fill_at=datetime(2026, 9, 28, 1, tzinfo=timezone.utc))
+    _order(session, "KXT-3", filled=1, at=datetime(2026, 6, 1, tzinfo=timezone.utc))  # old
+    _order(session, "KXT-4", status="canceled")                                        # no fill
+    p = ov.build_overview(session, now=NOW)
+    b = _book(p, "Hbook")
+    assert (b["trades_this_month"], b["trades_all_time"]) == (1, 3)
+    assert (p["headline"]["trades_this_month"], p["headline"]["trades_all_time"]) == (1, 3)

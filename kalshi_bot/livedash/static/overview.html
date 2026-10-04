@@ -55,6 +55,15 @@
   .lights{display:flex;flex-wrap:wrap;gap:6px}
   .stats{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
   .stats b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+    margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .tile .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tile .s{font-size:11px;color:var(--dim)}
+  .pnl3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:12px;
+    background:var(--panel2);border-radius:8px;padding:6px 10px}
+  .pnl3 .k{color:var(--muted);font-size:11px}
+  .pnl3 .v{font-weight:600;font-variant-numeric:tabular-nums}
 
   /* board */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
@@ -175,7 +184,12 @@ function renderHeadline(){
     const link = b.twin_tag ? `<a class="dim" style="font-size:12px" href="/compare?run=${encodeURIComponent(b.twin_tag)}">details →</a>` : "";
     return `<div class="panel pad book">
       <div class="top"><span class="tag">${esc(b.live_tag)}</span>${link}
-        <span class="amt ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</span></div>
+        <span class="amt ${sgn(b.total_pnl_usd)}" title="Realized this month + unrealized on open positions">${usd(b.total_pnl_usd)}</span></div>
+      <div class="pnl3">
+        <div><div class="k">Realized (month)</div><div class="v ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</div></div>
+        <div><div class="k">Unrealized (open)</div><div class="v ${sgn(b.unrealized_usd)}">${usd(b.unrealized_usd)}${b.open_unpriced ? `<span class="dim" title="open positions with no current price"> +${b.open_unpriced}?</span>` : ""}</div></div>
+        <div><div class="k">Trades</div><div class="v">${b.trades_this_month} <span class="dim" style="font-weight:400">month · ${b.trades_all_time} all</span></div></div>
+      </div>
       <div class="lights">${lights.join("")}</div>
       <div class="stats">
         <span><b>${b.settled_this_month}</b> settled this month (${b.wins_this_month} won)</span>
@@ -199,7 +213,21 @@ function renderHeadline(){
             <b style="left:${dayMark}%"></b></div>
         </div>
       </div>
-      <div class="note">Realized only — settled markets, after the fees Kalshi charged. Open positions are not counted until they settle.
+      <div class="tiles">
+        <div class="tile"><div class="k">Realized this month</div>
+          <div class="v ${sgn(h.month_realized_usd)}">${usd(h.month_realized_usd)}</div>
+          <div class="s">settled, after fees</div></div>
+        <div class="tile"><div class="k">Unrealized now</div>
+          <div class="v ${sgn(h.unrealized_usd)}">${usd(h.unrealized_usd)}</div>
+          <div class="s">open positions at the current bid${h.open_unpriced ? ` · ${h.open_unpriced} with no price yet` : ""}</div></div>
+        <div class="tile"><div class="k">Total</div>
+          <div class="v ${sgn(h.total_pnl_usd)}">${usd(h.total_pnl_usd)}</div>
+          <div class="s">realized + unrealized</div></div>
+        <div class="tile"><div class="k">Trades</div>
+          <div class="v">${h.trades_this_month}</div>
+          <div class="s">this month · ${h.trades_all_time} all time</div></div>
+      </div>
+      <div class="note">The goal bar counts realized money only — settled markets, after the fees Kalshi charged. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on.
         ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
     </div>
     <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;
