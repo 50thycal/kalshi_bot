@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"hm-show-2"}
+{"type": "db", "sql": "select 'paper' k, count(*) from paper_trades where strategy like 'Jmmsell10%' union all select 'live', count(*) from live_orders where strategy like 'Jmmsell10%' union all select 'arms', count(*) from experiment_deployment_arms where strategy_tag like 'Jmmsell10%'", "max_rows": 10, "id": "j-fresh-1"}
