@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "79b71302832f8fa989782326b1d6d30382099b84",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T02:54:55Z",
+  "id": "limm-share-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-share-1.receipt.json",
+  "result_file": "ops/results/limm-share-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37172488479",
+  "service": null,
+  "started_at": "2026-10-04T02:54:55Z",
+  "targets": [],
+  "type": "db"
+}
