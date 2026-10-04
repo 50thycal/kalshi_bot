@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=hm-status-q9
-# code a6c920f658770435e67e5c1e4764255bf6b80e6f · started 2026-10-04T14:30:46Z
-market_ticker  quantity  status  created_at
--------------  --------  ------  ----------
-
-(0 rows)
