@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"scoreboard","args":["mmsell-price-ceiling-size-split","--evaluate"],"id":"hm-gate-1"}
