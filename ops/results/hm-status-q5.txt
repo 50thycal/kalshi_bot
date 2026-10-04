@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=hm-status-q5
-# code a6c920f658770435e67e5c1e4764255bf6b80e6f · started 2026-10-04T14:28:49Z
-st       n  realized  wins  exposure
--------  -  --------  ----  --------
-open     7  0.0000    0     9.3500  
-settled  6  0.7900    6     0.0000  
-
-(2 rows)
