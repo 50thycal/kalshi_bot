@@ -1329,3 +1329,25 @@ What that step rests on, stated now so it is not chosen after the data:
    package and an operator hard stop as always; a thin read is stated as thin, not rounded up.
 
 Supersedes nothing; extends DEC-025's point 3.
+
+## DEC-027 — Turn on the XOS-000038 cap-scope fix, on a fresh epoch (2026-10-04)
+
+Calvin approved on 2026-10-04 turning on `MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY` (PR #531)
+for the size-split canary, "full approval", and asked that it be logged in Experiment OS as the
+experiment change it is.
+
+1. **Why it is an epoch, not a flag flip.** The flag changes which candidates the live book
+   admits — a paper-only position in a live-paused series no longer fills a contest slot — so
+   the live candidate population changes (I2 → NEW_EPOCH, `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`).
+   The precedent is `mmsell-contestcap-epoch2` (2026-09-07): reusing a tag across a defect fix
+   recorded no boundary between pre- and post-fix evidence.
+2. **How.** Package `mmsell-sizesplit-epoch3` closes epoch 2 and opens its I2 successor on fresh
+   tags `Jmmsell10` / `Jmmsell10_pt4`, carrying the `mmsell10` paper parent. One env write then
+   swaps `Hmmsell10` → `Jmmsell10` in `MMSELL_VARIANTS` and `LIVE_STRATEGIES` (keeping `Alimm1`),
+   pins the unchanged envelope and turns the flag on — so the epoch and the rule start together.
+3. **What it does not change.** The contract (`sizes=1+3`, `contestkey=split`, `contestcap=1`),
+   the risk envelope and the keep gate are the successor package's own objects. The size-split
+   readout (`docs/MMSELL_SIZE_SPLIT_CANARY.md` §5) restarts its counts on the new epoch;
+   `Hmmsell10`'s evidence is historical only. `Hmmsell10`'s open positions settle as usual.
+
+Extends DEC-026; the one-week review reads `Jmmsell10`.
