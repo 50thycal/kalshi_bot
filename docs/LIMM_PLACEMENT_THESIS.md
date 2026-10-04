@@ -136,3 +136,22 @@ when it cuts P1's summed fill losses by at least 40% AND keeps at least 70% of P
 market-day. Among passes the highest net per market-day is chosen. If none passes, P1 runs
 unprotected. L0 still applies: absolute dollars stay flagged while the reward model reads far
 above realised rewards, so this run ranks protections; it does not certify their dollar value.
+
+## Result — run 2 (2026-10-04, ops `limmplace-20261004-2`)
+
+Same 3-day window, 400 markets, conservative fill model:
+
+| policy | net/md | fill losses | worst fill | loss cut vs P1 | net kept | verdict |
+|---|---|---|---|---|---|---|
+| P1 | $4.61 | −$239.65 | −$10.00 | — | — | reference |
+| P1A size to pool | $2.25 | −$85.28 | −$3.00 | 64% | 49% | fail (net) |
+| **P1B exit after fill** | **$4.77** | −$89.94 | −$8.30 | **62%** | **103%** | **PASS — chosen** |
+| P1C long shots only | $8.68 | −$195.64 | −$10.00 | 18% | 188% | fail (loss) |
+| P1ABC all three | $3.71 | −$29.45 | −$3.00 | 88% | 80% | PASS |
+
+- By the pre-registered rule the protection is **P1B**: it cuts fill losses 62% at no cost to net.
+- P1ABC also passes and has the smallest worst case (−$3 a fill, 88% of losses gone) for 20% less net.
+- P1C's activity filter raised net (fewer quoted hours, better ones) without cutting losses: its
+  fills are as large as P1's because the price cap, not the filter, sets the size.
+- L0 still holds (B0 simulated $10.15/md vs ~$0.19 realised): the ranking is the result, not the
+  dollar level. 321 fills had under 24 h of book after them and were marked at the last snapshot.

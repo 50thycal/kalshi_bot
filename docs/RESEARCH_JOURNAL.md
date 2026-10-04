@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## LIMM-PLACEMENT 2026-10-04 — run 2: exit-after-fill is the protection that pays for itself
+
+Calvin chose P1 (cheap side at the reference) and asked what keeps a lone fill from costing $10.
+Three pre-registered protections were replayed on the same window (`limmplace-20261004-2`). Exiting
+after a fill (offer back at entry, stop at half) cut summed fill losses 62% and kept 103% of P1's
+net: it **passes** and is the rule's choice. All three together cut losses 88% with a worst fill of
+−$3, keeping 80% of net, and also pass. Sizing to a $3 risk cap alone halves reward; quoting only
+quiet long shots raised net but left the losses where they were. The reward model is still
+flagged by L0, so this ranks protections; the dollar level is not certified.
+
 ## LIMM-PLACEMENT 2026-10-04 — run 1: HOLD; the reward model reads 50× what the book earned
 
 [Probe](LIMM_PLACEMENT_THESIS.md) run `limmplace-20261004-1` (3 days, 400 markets). Under the
