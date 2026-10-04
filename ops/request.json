@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"sizesplit-epoch3-arm-2\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell-sizesplit-epoch3\",\"approved_by\":\"Calvin\"},\"schema_version\":1}"}, "id": "sizesplit-epoch3-arm-2-set"}
+{"type":"xos","command":"experiment-command-show","args":["sizesplit-epoch3-arm-2"],"id":"ep3-rcpt-2"}
