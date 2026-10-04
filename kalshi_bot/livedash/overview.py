@@ -45,6 +45,7 @@ from sqlalchemy import func, select
 from .. import models as m
 from ..live.sizing import ticker_size
 from ..mmsell.market_types import classify as classify_series
+from . import marks as marks_mod
 from . import pairs as pairs_mod
 from .legs import LIVE_WORKING
 from .market_meta import classify as market_tag
@@ -67,6 +68,8 @@ BOARD_WINDOW_HOURS = 24
 BOARD_MAX_ROWS = 80
 #: Typical time-to-fill is the median over this many days of a book's own filled orders.
 FILL_TIME_DAYS = 7
+#: An open position is priced off its newest tick inside this window; older is no price.
+MARK_LOOKBACK_DAYS = 3
 
 # Gate codes the live mirror returns (kalshi_bot/live/executor.py::mirror_mmsell_entry),
 # recorded per candidate in `live_paper_parity_events.live_outcome`.
@@ -169,6 +172,45 @@ def _settled(snap: m.Position | None) -> bool:
     return snap is not None and (snap.quantity or 0) == 0 and snap.realized_pnl is not None
 
 
+def _open_marks(session, snaps, now) -> marks_mod.MarkIndex:
+    """The newest orderbook tick for every ticker still held — one row per ticker, the same
+    tape and the same "latest" read the comparison page values open positions with."""
+    held = [t for t, snap in snaps.items() if snap is not None and not _settled(snap)
+            and abs(float(snap.quantity_fp or snap.quantity or 0))]
+    return marks_mod.MarkIndex.load_latest(
+        session, held, now - timedelta(days=MARK_LOOKBACK_DAYS), None, side="no")
+
+
+def _unrealized(snap: m.Position, mark) -> float | None:
+    """Mark-to-bid P&L of one held position, whole account (callers apply the book's share).
+
+    A long position is valued at the price it could be SOLD at now — the NO bid for a NO
+    position, the YES bid for a YES one — against its cost basis. None when the tape has no
+    price for the ticker or the snapshot has no cost basis: unmeasured, never zero."""
+    qty = abs(float(snap.quantity_fp or snap.quantity or 0))
+    if mark is None or not qty or snap.market_exposure is None:
+        return None
+    bid = mark.yes_bid if (snap.side or "").lower() == "yes" else mark.no_bid
+    if bid is None:
+        return None
+    return qty * bid / 100.0 - abs(float(snap.market_exposure))
+
+
+def _trade_counts(session, books) -> dict[str, int]:
+    """All-time trades per book: markets the book actually got filled on (one position = one
+    trade, however many fills it took). Unbounded by the lookback, so it is a count, not a
+    read of every row."""
+    if not books:
+        return {}
+    rows = session.execute(
+        select(m.LiveOrder.strategy, func.count(func.distinct(m.LiveOrder.market_ticker)))
+        .join(m.Fill, m.Fill.kalshi_order_id == m.LiveOrder.kalshi_order_id)
+        .where(m.LiveOrder.strategy.in_(books), m.LiveOrder.action == "buy")
+        .group_by(m.LiveOrder.strategy)
+    )
+    return {str(k): int(v) for k, v in rows}
+
+
 # ---------------------------------------------------------------------------
 # 1. Headline
 # ---------------------------------------------------------------------------
@@ -251,6 +293,16 @@ def _share(held, book: str, ticker: str) -> float:
 
 def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) -> dict:
     start = month_start(now)
+    marks = _open_marks(session, snaps, now)
+    all_time = _trade_counts(session, books)
+    # A trade belongs to the month its first fill landed in.
+    first_fill: dict[tuple[str, str], datetime] = {}
+    for o in orders:
+        for f in fills.get(o.kalshi_order_id or "", []):
+            at = _aware(f.filled_at) or _aware(o.created_at)
+            key = (o.strategy, o.market_ticker)
+            if key not in first_fill or at < first_fill[key]:
+                first_fill[key] = at
     qty = held
     ticker_total: dict[str, float] = {}
     books_on: dict[str, int] = {}
@@ -264,10 +316,11 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
     for o in orders:
         last_order[o.strategy] = o.created_at
     rows = []
-    month_total = 0.0
+    month_total = unreal_total = 0.0
+    unpriced_total = 0
     for book in books:
         month_pnl, settled_month, wins = 0.0, 0, 0
-        open_n, open_cost = 0, 0.0
+        open_n, open_cost, unreal, unpriced = 0, 0.0, 0.0, 0
         for (b, ticker), q in qty.items():
             if b != book or not q:
                 continue
@@ -282,12 +335,20 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             elif snap is not None and abs(float(snap.quantity_fp or snap.quantity or 0)):
                 open_n += 1
                 open_cost += abs(float(snap.market_exposure or 0)) * share
+                u = _unrealized(snap, marks.mark_for(ticker))
+                if u is None:
+                    unpriced += 1
+                else:
+                    unreal += u * share
         resting = sum(
             1 for o in orders
             if o.strategy == book and (o.status or "").lower() in LIVE_WORKING
             and not fills.get(o.kalshi_order_id or "")
         )
         month_total += month_pnl
+        unreal_total += unreal
+        unpriced_total += unpriced
+        trades_month = sum(1 for (b, _), at in first_fill.items() if b == book and at >= start)
         pair = open_pairs.get(book)
         rows.append({
             "live_tag": book,
@@ -297,6 +358,11 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             "wins_this_month": wins,
             "open_positions": open_n,
             "open_cost_usd": _r(open_cost),
+            "unrealized_usd": _r(unreal),
+            "open_unpriced": unpriced,
+            "total_pnl_usd": _r(month_pnl + unreal),
+            "trades_this_month": trades_month,
+            "trades_all_time": all_time.get(book, 0),
             "resting_orders": resting,
             "last_order_at": _iso(last_order.get(book)),
             "health": _health(session, book, pair, last_order.get(book), now),
@@ -308,6 +374,13 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
         "month": start.strftime("%Y-%m"),
         "goal_usd": MONTHLY_GOAL_USD,
         "month_realized_usd": _r(month_total),
+        # Open positions marked to the bid now. Not counted toward the goal: it is what the
+        # book would book if it could sell everything at once, not money it has made.
+        "unrealized_usd": _r(unreal_total),
+        "open_unpriced": unpriced_total,
+        "total_pnl_usd": _r(month_total + unreal_total),
+        "trades_this_month": sum(r["trades_this_month"] for r in rows),
+        "trades_all_time": sum(r["trades_all_time"] for r in rows),
         "progress_pct": _r(month_total / MONTHLY_GOAL_USD * 100, 1),
         # A straight-line pace, labelled as such on the page; early in a month it is noise.
         "pace_usd": _r(month_total / days_in * days_total) if days_in >= 1 else None,
