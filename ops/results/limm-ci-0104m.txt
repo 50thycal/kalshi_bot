@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0104m
-# code 49fc5c6de53a1bdbeba768a08cecb7c1e66af331 · started 2026-10-04T23:22:21Z
-market_ticker                side  limit_price  quantity  status   reason  created_at                        nf
----------------------------  ----  -----------  --------  -------  ------  --------------------------------  --
-KXFEAR-26OCT09-XGREE         yes   1            500       resting          2026-10-04 19:32:26.822282+00:00  0 
-KXNEXTMANAGERMLB-PHI26-DMAT  yes   1            500       resting          2026-10-04 19:36:11.241031+00:00  0 
-
-(2 rows)
