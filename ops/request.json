@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select strategy, market_ticker, created_at, status, assumed_price, quantity from paper_trades where strategy in ('Hmmsell10','Hmmsell10_pt4') and legacy=false and (market_ticker like '%26OCT04MIAMIN%' or market_ticker like '%26OCT04INDWAS%') order by created_at", "max_rows": 100, "id": "hm-status-q7"}
+{"type":"noop"}
