@@ -136,3 +136,11 @@ matched REST, 99.6 % of queue ticks readable, zero 429s).
 
 Let ticks accrue; read `execution_telemetry` weekly for coverage. Phase 2 analysis opens once
 the sample is large enough to fit curves, in a Research Lab session.
+
+## Bounded Research Lab extension — 2026-10-04
+
+Existing retained telemetry supplied three [read-only diagnostics](../MMSELL_CHATGPT_PROBES_20261004.md)
+for Calvin. Probe scripts run offline against existing SQL exports; no instrumentation or
+runner change was made. The report distinguishes tape activity from completeness and flags
+fast-fill censoring. A recommendation to audit coverage is recorded, not an authorization
+for a new collector, parameter, deployment or scheduled process.

@@ -1,5 +1,30 @@
 # Weather-markets research journal
 
+## MMSELL 2026-10-04 — three read-only probes; no supported live treatment
+
+Calvin authorized measurement of cheaper NO quotes, reserved quality slots and broad NO-book
+withdrawal. The [contract](MMSELL_CHATGPT_PROBES_20261004.md) was committed before new exports.
+F/H stayed separate; no worker, collector, risk, gate or lifecycle change was made.
+
+INVERSE-OFFSET: the −1¢ touch scenario nets +$3.119 against +$4.454 normalized actual,
+delta −$1.335; strict-through +$1.157. Only 54 touch hits, and the current-price tape proxy
+recovers 74.1% of 328 known fills: **HOLD(model)**, not executable fill P&L. SLOT-PRIORITY:
+6,435 F candidates over 19 dates have zero recorded open-cap refusals, against 254/317
+candidate slow-cell markets with a contest-cap observation: **UNSUPPORTED(capacity)** for
+open-slot reservation. H has only one date: **HOLD(accrual)**.
+
+WITHDRAWAL: 303/435 orders have paired windows. At two-second latency the raw-checked trigger
+discards 57 winners, no losers, modeled delta −$3.666; **HOLD(instrument)** with contrary
+economics. Nine of 17 losing fills lack paired coverage; seven losers filled within 40 seconds,
+so the trailing 40–60-second baseline cannot cover them. Absence of prints/errors is not proof
+of complete trade coverage. These observations should prioritize an exact paper/live fill
+audit, not tune a new veto to historical losses. Let the already-running HMmSell one-versus-three
+experiment accrue without stacking new variables. [Source hashes/full results](research/MMSELL_CHATGPT_PROBE_RESULTS_20261004.json).
+
+Validation: 23 focused tests and full-repository Ruff passed. SQL ran through the existing
+read-only ops channel; scripts ran offline. Research PR remains unmerged: deployment was not
+authorized. Three completed operator diagnostics, zero positive policy screens, zero new books.
+
 ## LIMM-PLACEMENT 2026-10-04 — run 2: exit-after-fill is the protection that pays for itself
 
 Calvin chose P1 (cheap side at the reference) and asked what keeps a lone fill from costing $10.
