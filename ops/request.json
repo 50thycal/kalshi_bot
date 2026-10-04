@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-0104g","sql":"SELECT market_ticker, side, limit_price, quantity, status, cancel_reason, created_at FROM live_orders WHERE strategy='Alimm1' AND (created_at > '2026-10-04 11:00' OR status IN ('resting','submitted','pending','unknown')) ORDER BY created_at"}
+{"type":"noop"}
