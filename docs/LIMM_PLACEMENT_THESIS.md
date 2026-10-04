@@ -1,6 +1,7 @@
 # LIMM-PLACEMENT — where the liquidity-incentive book should rest its bids
 
-**Status:** pending probe (pre-registered 2026-10-04, before any run). Probe:
+**Status:** run 1 (ops `limmplace-20261004-1`, 3 days, 400 markets): **HOLD on every policy**, L0 flagged the
+reward model OPTIMISTIC. See Result below. Probe:
 `scripts/limm_placement_probe.py`. Book: `Alimm1` (WS-020, thesis
 [§9.41–§9.47](LIQUIDITY_INCENTIVE_THESIS.md)). Operator request (Calvin, 2026-10-04): "create a
 probe and test all three of these ideas"; operator leaning: Idea 1 + Idea 3.
@@ -88,3 +89,31 @@ correlation: the same book, same markets; only where the bid rests changes.
 
 Passive-on-informative without an adverse-selection model is a killed family. This probe carries
 that model explicitly (two fill models, a 24 h mark) and decides on the conservative one.
+
+## Result — run 1 (2026-10-04, ops `limmplace-20261004-1`)
+
+3 days, 400 markets, conservative fill model (optimistic in brackets):
+
+| policy | market-days | reward/md | net/md | fills | verdict |
+|---|---|---|---|---|---|
+| B0 | 5.8 | $9.65 | $9.62 [$1.47] | 1 [6] | — |
+| P1 | 212.7 | $5.08 | **$4.48** [$2.94] | 34 [53] | HOLD |
+| P2 | 466.3 | $0.64 | $0.57 [$0.30] | 69 [164] | HOLD |
+| P1F | 194.3 | $0.39 | $0.41 [$0.47] | 4 [20] | HOLD |
+| P2F | 441.5 | $0.23 | $0.21 [$0.17] | 10 [103] | HOLD |
+
+- **L0 failed:** the live book realised about $0.19 per market-day (69 pairs × 4 h against the $2.21
+  ledger), and B0 simulated $9.65, 50× higher. Per the pre-registration every reward figure is
+  flagged OPTIMISTIC and nothing promotes. Kalshi pays after a programme ends, so most of the live
+  book's programmes have not paid yet; the realised side is a floor, not a settled number.
+- **L1 failed** for P1 and P2 against B0: B0 is available only on the rare empty books where both
+  sides are ≤ 10¢ (5.8 market-days in 3 days), and there the model credits it with most of the pool.
+- **L2:** every policy is net positive under both fill models, so none is KILLED. Held only by L0.
+- **F add-on:** neither F variant beats its base. Pulling and re-pricing cost more reward than the
+  fills they avoided.
+- 186 fills had less than 24 h of book after them and were marked at the last snapshot.
+
+Reading inside the run (relative, same model): P1 earns about 8× P2 per market-day and has 37× B0's
+availability; the F add-on lowers net. The absolute level is not usable until the reward model is
+calibrated against real payouts. The November payouts (programmes the live book quoted) are that
+calibration: re-run with the ledger's realised reward then, unchanged rules.
