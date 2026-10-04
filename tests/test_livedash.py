@@ -229,6 +229,23 @@ def test_a_submitted_order_is_never_counted_as_a_fill():
     assert live.summary()["realized_pnl_usd"] == 0.0
 
 
+def test_a_RESTING_order_is_labelled_resting_not_unfilled():
+    """An order still working on the exchange is waiting, not failed. Counting it as
+    'never filled' made a freshly armed book look broken in its first minutes; it is
+    labelled RESTING, carries no P&L, and is not a missed fill."""
+    session = _session()
+    _epoch(session)
+    _live_entry(session, "WAIT", status="resting", fill=False)
+    live, _p, _m = _load(session)
+    pos = live.by_ticker()["WAIT"]
+    assert pos.status == "resting"
+    assert pos.quantity is None and pos.realized_pnl_usd is None
+    s = live.summary()
+    assert s["positions_resting"] == 1
+    assert s["positions_unfilled"] == 0
+    assert s["capital_deployed_usd"] == 0.0
+
+
 def test_paper_leg_uses_the_simulator_formula_and_marks_off_the_shared_tick():
     session = _session()
     _epoch(session)
@@ -310,8 +327,9 @@ def test_comparison_labels_each_metric_against_its_own_tolerance():
     entry = rows["Entry price (matched markets)"]
     assert entry["difference"] == pytest.approx(1.0)   # live paid 1c more
     assert entry["verdict"] == compare.MATERIAL
-    assert rows["Live orders that never filled"]["live"] == 1
-    assert rows["Live orders that never filled"]["verdict"] == compare.MATERIAL
+    assert rows["Live orders expired unfilled"]["live"] == 1
+    assert rows["Live orders resting (waiting to fill)"]["live"] == 0
+    assert rows["Live orders expired unfilled"]["verdict"] == compare.MATERIAL
     assert rows["Realized P&L"]["difference"] == pytest.approx(0.18)
     assert c["worst_verdict"] == compare.MATERIAL
 

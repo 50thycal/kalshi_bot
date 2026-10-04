@@ -55,7 +55,18 @@ PAPER_OPEN = "open"
 PAPER_TERMINAL = ("settled", "closed_void", "closed_tp", "closed_sl", "closed_timeout")
 
 # live_orders.status values that mean the order can still fill.
-LIVE_WORKING = ("submitted", "resting", "partial")
+LIVE_WORKING = ("pending", "submitted", "resting", "partial")
+
+#: LegPosition statuses for a live market with no fill yet. Neither is a position and
+#: neither carries P&L, but they are different facts and the dashboard labels them apart:
+#: RESTING — at least one order is still working on the exchange and can still fill
+#: (a maker order waits in the queue for up to the order timeout); UNFILLED — every
+#: order reached a terminal state without filling (timed out, cancelled, rejected).
+#: Only UNFILLED is a missed fill. Counting a resting order as one made a book look
+#: like it was failing in its first minutes.
+RESTING = "resting"
+UNFILLED = "unfilled"
+NOT_FILLED = (RESTING, UNFILLED)
 LIVE_DEAD = ("canceled", "rejected", "expired", "error", "not_landed")
 
 
@@ -91,8 +102,9 @@ class LegPosition:
     cost_basis_usd: float | None = None
     entry_at: datetime | None = None
     exit_at: datetime | None = None
-    # open | settled | closed | unfilled — 'unfilled' is a live order that never
-    # became a position, which is exactly the case paper cannot produce.
+    # open | settled | closed | resting | unfilled — 'resting' is a live order still
+    # waiting to fill; 'unfilled' is one that expired or was cancelled without
+    # filling, which is exactly the case paper cannot produce.
     status: str = "open"
     realized_pnl_usd: float | None = None
     resolved_value_cents: int | None = None
@@ -172,7 +184,11 @@ class Leg:
 
     @property
     def unfilled(self) -> list[LegPosition]:
-        return [p for p in self.positions if p.status == "unfilled"]
+        return [p for p in self.positions if p.status == UNFILLED]
+
+    @property
+    def resting(self) -> list[LegPosition]:
+        return [p for p in self.positions if p.status == RESTING]
 
     def by_ticker(self) -> dict[str, LegPosition]:
         return {p.ticker: p for p in self.positions}
@@ -192,7 +208,7 @@ class Leg:
         # trades at $2 each read as $40 deployed regardless of outcome. A
         # position with no cost basis (an unfilled live order) contributes 0,
         # since no capital was ever actually committed.
-        filled = [p for p in self.positions if p.status != "unfilled"]
+        filled = [p for p in self.positions if p.status not in NOT_FILLED]
         capital_deployed = sum(p.cost_basis_usd or 0 for p in filled)
         return {
             "environment": self.environment,
@@ -201,6 +217,7 @@ class Leg:
             "positions_open": len(opened),
             "positions_closed": len(closed),
             "positions_unfilled": len(self.unfilled),
+            "positions_resting": len(self.resting),
             "contracts_open": sum(abs(p.quantity or 0) for p in opened),
             "contracts_closed": contracts_closed,
             "wins": wins,
@@ -277,9 +294,11 @@ def live_leg(session, live_tag: str, since: datetime, marks) -> Leg:
         pos = LegPosition(ticker=ticker, environment=LIVE, side="no",
                           order_count=len(ticker_orders), fill_count=len(fills))
         if not fills:
-            # An order that never filled is NOT a position. This is precisely the
-            # case the paper twin cannot produce, so it is labelled, not dropped.
-            pos.status = "unfilled"
+            # An order with no fill is NOT a position. Labelled, not dropped: RESTING
+            # while any order can still fill, UNFILLED once every order is terminal —
+            # the latter is precisely the case the paper twin cannot produce.
+            working = any((o.status or "").lower() in LIVE_WORKING for o in ticker_orders)
+            pos.status = RESTING if working else UNFILLED
             pos.entry_at = _aware(ticker_orders[0].created_at)
             leg.positions.append(pos)
             continue
