@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0104j
-# code 49fc5c6de53a1bdbeba768a08cecb7c1e66af331 · started 2026-10-04T19:15:45Z
-market_ticker                side  limit_price  quantity  status   cancel_reason  created_at                      
----------------------------  ----  -----------  --------  -------  -------------  --------------------------------
-KXTRUMPMENTION-26OCT06-NUCL  no    9            111       resting                 2026-10-04 15:30:02.870732+00:00
-KXCELSIUSPOS-26NOV03-T99     yes   5            200       resting                 2026-10-04 17:40:53.234434+00:00
-
-(2 rows)
