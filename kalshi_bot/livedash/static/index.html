@@ -544,7 +544,8 @@ function positionCard(sel, side, s, positions, tags, universe){
        <dt>Per contract (realized)</dt><dd>${cell(cents(s.pnl_per_contract_cents,2), sign(s.pnl_per_contract_cents))}</dd>
        <dt>Positions closed</dt><dd>${esc(int(s.positions_closed))}</dd>
        <dt>Positions open</dt><dd>${esc(int(s.positions_open))}</dd>
-       ${side==="live" ? `<dt>Orders never filled</dt><dd class="${s.positions_unfilled?'warn':''}">${esc(int(s.positions_unfilled))}</dd>` : ""}
+       ${side==="live" ? `<dt title="still working on the exchange — a maker order waits in the queue for up to 4 hours; not a failure">Orders resting (waiting to fill)</dt><dd>${esc(int(s.positions_resting||0))}</dd>
+       <dt title="timed out or cancelled without filling">Orders expired unfilled</dt><dd class="${s.positions_unfilled?'warn':''}">${esc(int(s.positions_unfilled))}</dd>` : ""}
        <dt>Contracts closed</dt><dd>${esc(int(s.contracts_closed))}</dd>
        <dt>Win rate</dt><dd>${has(s.win_rate)?esc(s.win_rate.toFixed(1)+"%"):EM}</dd>
        <dt>Open cost basis</dt><dd>${has(s.cost_basis_open_usd)?esc(usd(s.cost_basis_open_usd)):EM}</dd>

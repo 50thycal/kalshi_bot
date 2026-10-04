@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from .. import models as m
+from .legs import NOT_FILLED, RESTING, UNFILLED
 
 MAX_POINTS = 300
 
@@ -67,8 +68,8 @@ def _leg_point(positions, marks, when: datetime) -> tuple[float, float, float, b
         if exit_at is not None and exit_at <= when:
             realized += pos.realized_pnl_usd or 0.0
             continue
-        if pos.status == "unfilled":
-            continue  # an order that never filled carries no P&L
+        if pos.status in NOT_FILLED:
+            continue  # an order with no fill (resting or expired) carries no P&L
         if pos.entry_price_cents is None or not pos.quantity:
             continue
         mark = marks.mark_as_of(pos.ticker, when)
@@ -137,10 +138,13 @@ def _markers(live, paper, since: datetime) -> list[dict]:
             "environment": "both"}]
     for leg, env in ((live, "live"), (paper, "paper")):
         for pos in leg.positions:
-            if pos.status == "unfilled":
+            if pos.status == RESTING:
+                continue  # still waiting to fill: not an event yet
+            if pos.status == UNFILLED:
                 if pos.entry_at:
                     out.append({"at": _aware(pos.entry_at).isoformat(), "kind": "unfilled_order",
-                                "label": f"{pos.ticker} order never filled", "environment": env,
+                                "label": f"{pos.ticker} order expired unfilled",
+                                "environment": env,
                                 "ticker": pos.ticker})
                 continue
             if pos.entry_at:
@@ -167,7 +171,7 @@ def pick_focus_ticker(live, paper) -> str | None:
     live_by = {p.ticker: p for p in live.positions}
     paper_by = {p.ticker: p for p in paper.positions}
     missed = [t for t, p in paper_by.items()
-              if t not in live_by or live_by[t].status == "unfilled"]
+              if t not in live_by or live_by[t].status == UNFILLED]
     if missed:
         return sorted(missed)[0]
     shared = sorted(set(live_by) & set(paper_by))

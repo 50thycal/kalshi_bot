@@ -31,6 +31,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from .legs import UNFILLED
+
 # Verdict vocabulary. Explicit, so a caller cannot invent an optimistic one.
 MATCH = "match"
 MINOR = "minor"
@@ -190,9 +192,16 @@ def compare_legs(live, paper, thresholds: Thresholds, *, now: datetime | None = 
 
     unfilled = live_s["positions_unfilled"]
     rows.append(_row(
-        "Live orders that never filled", unfilled, 0, diff=-unfilled, unit="count",
+        "Live orders expired unfilled", unfilled, 0, diff=-unfilled, unit="count",
         verdict=MATCH if unfilled == 0 else MATERIAL,
-        note="paper cannot produce this state — it assumes its resting order was lifted"))
+        note="timed out or cancelled without filling — paper cannot produce this state, "
+             "it assumes its resting order was lifted"))
+    resting = live_s.get("positions_resting", 0)
+    rows.append(_row(
+        "Live orders resting (waiting to fill)", resting, 0, diff=-resting, unit="count",
+        verdict=MATCH,
+        note="still working on the exchange; not a failure — a maker order waits in the "
+             "queue for up to the order timeout"))
 
     # Win rate: only meaningful once both sides have closed something.
     lv, pv = live_s["win_rate"], paper_s["win_rate"]
@@ -520,7 +529,7 @@ def discrepancies(live, paper, thresholds: Thresholds) -> list[dict]:
 
     for ticker in sorted(set(live_by) | set(paper_by)):
         lpos, ppos = live_by.get(ticker), paper_by.get(ticker)
-        if ppos is not None and (lpos is None or lpos.status == "unfilled"):
+        if ppos is not None and (lpos is None or lpos.status == UNFILLED):
             out.append({
                 "kind": "missed_fill",
                 "ticker": ticker,
