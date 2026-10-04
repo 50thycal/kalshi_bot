@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0104k
-# code 49fc5c6de53a1bdbeba768a08cecb7c1e66af331 · started 2026-10-04T19:16:12Z
-market_ticker        side  limit_price  quantity  status    cancel_reason  created_at                        nfills  pos
--------------------  ----  -----------  --------  --------  -------------  --------------------------------  ------  ---
-KXFEAR-26OCT09-GREE  yes   2            500       canceled  replaced       2026-10-04 13:39:16.101272+00:00  0          
-
-(1 row)
