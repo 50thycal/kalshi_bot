@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ci-0104d
-# code 79b71302832f8fa989782326b1d6d30382099b84 · started 2026-10-04T03:04:01Z
-market_ticker  side  limit_price  quantity  status  cancel_reason  created_at
--------------  ----  -----------  --------  ------  -------------  ----------
-
-(0 rows)
