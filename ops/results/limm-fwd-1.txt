@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-fwd-1
-# code 79b71302832f8fa989782326b1d6d30382099b84 · started 2026-10-04T02:56:21Z
-mkt  px  close_d  tgt  field  pool_day  sh500  day500  sh2000  day2000  day5000
----  --  -------  ---  -----  --------  -----  ------  ------  -------  -------
-
-(0 rows)
