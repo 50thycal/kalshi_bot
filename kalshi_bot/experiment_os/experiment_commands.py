@@ -187,6 +187,16 @@ class ExperimentPackage:
     #: resolver still refuses two active arms on one tag at run time). Must be
     #: the module's own tag constants, never retyped literals.
     strategy_tags: tuple[str, ...] = ()
+    #: Tags this package DELIBERATELY retires: an epoch re-cut that moves a live book onto
+    #: fresh tags ends the old pair's deployments, and live deployments cannot be carried
+    #: forward. Without a declaration the XOS-000033 guard (`_assert_no_tag_stranded`)
+    #: cannot tell that retirement from the accident it exists to catch. The declaration is
+    #: not trusted on its own: a declared tag may leave the active set only when the running
+    #: worker no longer CONSTRUCTS it — not in `LIVE_STRATEGIES` (by prefix), not an
+    #: `MMSELL_VARIANTS` book, not a configured twin — which is exactly the condition under
+    #: which nothing can be refused at the write path for lack of an arm. Must be the module's
+    #: own tag constants.
+    retires_tags: tuple[str, ...] = ()
     #: A one-shot lineage REPAIR: reviewed code that fixes deployment rows an
     #: engine defect left inconsistent. Deliberately its own slot rather than a
     #: mode of `register` — a repair authors no contract, moves no lifecycle
@@ -545,6 +555,8 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=recut_mmsell10_size_split.ACTIVATION_VARS,
             strategy_tags=(recut_mmsell10_size_split.LIVE_TAG,
                            recut_mmsell10_size_split.TWIN_TAG),
+            retires_tags=(recut_mmsell10_size_split.PRIOR_LIVE_TAG,
+                          recut_mmsell10_size_split.PRIOR_TWIN_TAG),
         ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",
@@ -1289,7 +1301,49 @@ _TAG_PRESERVING_ACTIONS: frozenset[str] = frozenset(
 )
 
 
-def _assert_no_tag_stranded(session, before: frozenset[str], env: _Envelope) -> None:
+def runtime_constructed_tags(settings) -> frozenset[str] | None:
+    """Every strategy tag the running worker would construct or allow, or None when the
+    settings cannot be read (the caller then treats every tag as constructed: fail closed).
+
+    Not an exhaustive list of tags in the world — LIVE_STRATEGIES is a PREFIX allowlist — so
+    callers ask `_constructs(tag, ...)` rather than testing membership."""
+    try:
+        books = {b["tag"] for b in settings.mmsell_variant_list}
+        twins = {t for _live, t in settings.live_paper_twin_pairs}
+        prefixes = set(settings.live_strategy_list)
+    except Exception:  # noqa: BLE001 — unreadable settings must never widen the guard
+        return None
+    return frozenset(books | twins | {f"prefix:{p}" for p in prefixes})
+
+
+def _constructs(tag: str, constructed: frozenset[str] | None) -> bool:
+    if constructed is None:
+        return True
+    if tag in constructed:
+        return True
+    return any(tag.startswith(c[len("prefix:"):]) for c in constructed
+               if c.startswith("prefix:"))
+
+
+def _declared_retirements(env: _Envelope, settings_loader=None) -> frozenset[str]:
+    """The tags this command may take out of the active set: the package's own
+    `retires_tags`, minus any the running worker still constructs."""
+    name = env.payload.get("package") if isinstance(env.payload, dict) else None
+    package = _packages().get(name) if isinstance(name, str) else None
+    if package is None or not package.retires_tags:
+        return frozenset()
+    try:
+        from ..config import get_settings
+
+        settings = (settings_loader or get_settings)()
+    except Exception:  # noqa: BLE001 — fail closed
+        return frozenset()
+    constructed = runtime_constructed_tags(settings)
+    return frozenset(t for t in package.retires_tags if not _constructs(t, constructed))
+
+
+def _assert_no_tag_stranded(session, before: frozenset[str], env: _Envelope,
+                            retiring: frozenset[str] = frozenset()) -> None:
     """The structural backstop for XOS-000033, checked by the transport itself.
 
     `service.select_handover_deployments` fixes the two packages that ended more
@@ -1311,7 +1365,10 @@ def _assert_no_tag_stranded(session, before: frozenset[str], env: _Envelope) -> 
     stranded by this action, and the Control Tower's own detectors own it.
     """
     after = service.active_strategy_tags(session)
-    stranded = sorted(before - after)
+    # A DECLARED retirement the runtime has already let go of is the one exception (see
+    # `ExperimentPackage.retires_tags`): nothing constructs those tags any more, so nothing
+    # can be refused at the write path for lack of an arm.
+    stranded = sorted(before - after - retiring)
     if stranded:
         raise ExperimentCommandRejected(
             f"{env.action} would leave {stranded} with lineage and no active "
@@ -1516,7 +1573,7 @@ def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> 
         before = service.active_strategy_tags(session) if preserving else frozenset()
         produced = ACTIONS[env.action].run(session, env, now)
         if preserving:
-            _assert_no_tag_stranded(session, before, env)
+            _assert_no_tag_stranded(session, before, env, _declared_retirements(env))
         row.result_json = _result_of(produced)
         row.status = CommandStatus.SUCCEEDED
         row.error = None
