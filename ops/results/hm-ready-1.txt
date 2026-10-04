@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=hm-ready-1
-# code c88b5a5959d1d0f7fe53e79c60dff68d7b9c9c9d · started 2026-10-04T01:16:46Z
-settled  opened  now                          
--------  ------  -----------------------------
-6        46      2026-10-04 01:16:47.021512+00
-
-(1 row)
