@@ -48,6 +48,13 @@ from .regimes import contest_key_of, regime_of
 from .universe import admits as universe_admits
 from .universe import exposure_paused, tier_of
 
+
+def _live_eligible(series: str, paused, min_tier: str) -> bool:
+    """Would the two live-only bars let real money trade this series? The same two checks,
+    in the same order, as `_live_paused_blocks` / `_live_tier_blocks` and the twin's copy."""
+    return not exposure_paused(series, paused) and universe_admits(series, min_tier)
+
+
 # Bands the inline-quote pre-filter experiment scores its decision table for
 # (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:
 # the experiment accumulates over days, and a book retuned mid-run would silently redefine its
@@ -253,7 +260,8 @@ class MmSellTracker:
                                mutually_exclusive: bool | None,
                                summ: MmSellCycleSummary, recorder,
                                contest_cap: int | None = None,
-                               contest_key: str | None = None) -> bool:
+                               contest_key: str | None = None,
+                               counts=None) -> bool:
         """True when a concentration cap should SKIP this entry: too many of `tag`'s own open
         positions already settle on this candidate's date (docs/MMSELL_SEASONAL_FORECAST.md
         "Reading 3"), or (on a CORRELATED regime's date) too many distinct EVENTS already do, or
@@ -274,12 +282,18 @@ class MmSellTracker:
         follow the global, which is every existing book. It exists because the global flag cannot
         express an experiment: `tracker.py` is shared, so the global switch caps every mmsell book
         at once and leaves no window in which a capped book and an uncapped control run side by
-        side (docs/MMSELL_CORRELATION_CAP.md)."""
+        side (docs/MMSELL_CORRELATION_CAP.md).
+
+        `counts` restricts every cap here to the open positions it accepts — the live-eligible
+        scope (`_live_cap_scope`). None counts the whole open book, which is every path unless
+        `mmsell_live_caps_count_live_eligible_only` is on."""
         if not s.mmsell_settlement_cap_enabled or close_dt is None:
             return False
+        # `counts` is passed only when set, so the shipped (flag-off) calls are unchanged.
+        scope = {} if counts is None else {"counts": counts}
         try:
             n_on_date, events_on_date = repo.open_positions_settlement_summary(
-                session, tag, close_dt.date(), ticker)
+                session, tag, close_dt.date(), ticker, **scope)
         except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
             logger.exception("mmsell settlement cap: read failed (entering anyway)")
             return False
@@ -346,7 +360,10 @@ class MmSellTracker:
             contest = contest_key_of(ticker, split_subjects=(contest_key == "split"))
             if contest:
                 try:
-                    open_contests = repo.open_positions_contest_summary(session, tag, ticker)
+                    open_contests = (
+                        repo.open_positions_contest_summary(session, tag, ticker)
+                        if counts is None else
+                        repo.open_positions_contest_summary_scoped(session, tag, ticker, counts))
                 except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
                     logger.exception("mmsell contest cap: read failed (entering anyway)")
                     return False
@@ -376,6 +393,29 @@ class MmSellTracker:
         except Exception:  # noqa: BLE001 — a telemetry decision must never break the scan
             logger.exception("mmsell live bar: allowlist probe failed (counting the refusal)")
             return False
+
+    def _live_cap_scope(self, s: Settings, series: str, tag: str, book: dict):
+        """The `counts` predicate for this candidate's concentration caps, or None (count all).
+
+        A book's caps count its whole PAPER book, and that book deliberately holds positions in
+        series live may not trade (the two live-only bars leave paper alone). For a candidate
+        live COULD trade, those paper-only positions are not exposure live holds — yet they used
+        to fill the contest slot and refuse the very entry the mirror would have placed. With
+        `mmsell_live_caps_count_live_eligible_only` on, such a candidate's caps count only open
+        positions in series that clear both live bars: the same universe the twin trades, so the
+        live book's caps and its twin's see the same book.
+
+        None — the shipped behaviour — whenever the flag is off, the book is a twin, live would
+        not act on this tag, or the candidate itself is paused or below the tier (paper evidence
+        on those keeps accruing under exactly the old caps)."""
+        if not s.mmsell_live_caps_count_live_eligible_only or book.get("twin_of"):
+            return None
+        if self.live_executor is None or not self._live_would_act(tag):
+            return None
+        paused, min_tier = s.mmsell_live_skip_series_list, s.mmsell_live_min_tier
+        if not _live_eligible(series, paused, min_tier):
+            return None
+        return lambda t: _live_eligible(t.split("-", 1)[0].upper(), paused, min_tier)
 
     def _live_paused_blocks(self, s: Settings, series: str, tag: str,
                             summ: MmSellCycleSummary, recorder, ticker: str) -> bool:
@@ -1290,7 +1330,9 @@ class MmSellTracker:
                                                    mutually_exclusive=event_exclusive,
                                                    summ=summ, recorder=recorder,
                                                    contest_cap=book.get("contestcap"),
-                                                   contest_key=book.get("contestkey")):
+                                                   contest_key=book.get("contestkey"),
+                                                   counts=self._live_cap_scope(
+                                                       s, series, tag, book)):
                         continue
 
                     if is_twin:

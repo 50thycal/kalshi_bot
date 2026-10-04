@@ -341,6 +341,27 @@ class Settings(BaseSettings):
     #:
     #: This can only ever REFUSE a twin entry, never add one.
     mmsell_twin_applies_live_bars: bool = False
+    #: For a book LIVE would act on, count only positions live could hold when its
+    #: concentration caps (settlement date, distinct events, rungs, contest) judge a
+    #: candidate live CAN trade.
+    #:
+    #: WHY THIS EXISTS. The live mirror copies the book's PAPER entries, and the two live-only
+    #: bars above deliberately leave paper alone — so the book holds paper-only positions in
+    #: paused / below-tier series. Its caps counted those too, so a paper-only KXNFLSPREAD on a
+    #: game used the game's one contest slot and the same game's KXNFLTOTAL — a market live
+    #: may trade — was refused before the mirror was ever asked. The twin (which applies the
+    #: live bars) took it; live never did. Seen on `Hmmsell10` on 2026-10-04: 2 of ~25 live
+    #: placements lost this way (XOS-000038).
+    #:
+    #: Narrow by construction: it changes nothing for a book live would not act on, nothing
+    #: for a candidate live cannot trade (a paused/below-tier candidate still counts the whole
+    #: paper book, so paper evidence accrues exactly as before), and nothing for the twin.
+    #: Live's own executor gates (open cap, exposure, daily loss) are untouched.
+    #:
+    #: WHY IT DEFAULTS OFF. Turning it on lets a live book place entries it currently refuses,
+    #: which is a real-money change and an operator decision — merging this changes nothing
+    #: that runs.
+    mmsell_live_caps_count_live_eligible_only: bool = False
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive

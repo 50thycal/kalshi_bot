@@ -950,7 +950,7 @@ def ensure_mmsell_settlement_meta(session, *, market_ticker: str, event_ticker: 
 
 
 def open_positions_settlement_summary(
-    session, strategy: str, close_date, ticker: str
+    session, strategy: str, close_date, ticker: str, *, counts=None
 ) -> tuple[int, Counter[str]]:
     """(count, event ticker -> open rungs) of `strategy`'s OTHER
     currently-open positions settling on `close_date` (a UTC calendar date) — the settlement-date
@@ -969,7 +969,11 @@ def open_positions_settlement_summary(
 
     Filters with an explicit UTC datetime RANGE rather than a DB-side date() function: SQLite
     (used by the test suite) and Postgres (production) parse timestamp strings differently
-    enough that a portable comparison is worth the extra two lines."""
+    enough that a portable comparison is worth the extra two lines.
+
+    `counts`, when given, is a predicate on an open position's ticker: only positions it
+    accepts are counted (the live-eligible scope, see
+    Settings.mmsell_live_caps_count_live_eligible_only). None counts every one, as before."""
     day_start = datetime(close_date.year, close_date.month, close_date.day, tzinfo=timezone.utc)
     day_end = day_start + timedelta(days=1)
     rows = session.execute(
@@ -984,6 +988,8 @@ def open_positions_settlement_summary(
             m.MmSellSettlementMeta.close_time < day_end,
         )
     ).all()
+    if counts is not None:
+        rows = [r for r in rows if counts(r[0])]
     return len(rows), Counter(r[1] for r in rows if r[1])
 
 
@@ -1022,6 +1028,28 @@ def open_positions_contest_summary(
         )
     ).all()
     return Counter(key for key in (contest_key_of(t) for t in tickers) if key)
+
+
+def open_positions_contest_summary_scoped(
+    session, strategy: str, ticker: str, counts
+) -> Counter[str]:
+    """`open_positions_contest_summary` restricted to the open positions `counts` accepts — the
+    live-eligible scope (Settings.mmsell_live_caps_count_live_eligible_only, XOS-000038).
+
+    A sibling rather than a parameter on the original, whose exact signature is pinned by
+    tests/test_successor_mmsell10_contest_cap.py as the guard against a date-scoped contest read
+    returning. Same read, same key, same exclusion of the candidate's own ticker; still NOT
+    settlement-date scoped."""
+    from .mmsell.regimes import contest_key_of
+
+    tickers = session.scalars(
+        select(m.PaperPosition.market_ticker).where(
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
+            m.PaperPosition.market_ticker != ticker,
+        )
+    ).all()
+    return Counter(key for key in (contest_key_of(t) for t in tickers if counts(t)) if key)
 
 
 def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:

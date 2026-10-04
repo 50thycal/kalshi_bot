@@ -173,6 +173,10 @@ ALLOWED_VARS = frozenset({
     "MMSELL_EVENT_RUNG_CAP_ENABLED", "MMSELL_EVENT_RUNG_CAP",
     "MMSELL_SETTLEMENT_CAP_ENABLED", "MMSELL_SETTLEMENT_CAP_PCT",
     "MMSELL_SETTLEMENT_EVENT_CAP",
+    # Scope those caps to positions live could hold, for a live book's live-tradable
+    # candidates (config.py `mmsell_live_caps_count_live_eligible_only`). Turning it ON lets a
+    # live book place entries it currently refuses — an operator decision, not a tune.
+    "MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY",
     # The pre-filter stays DISARMED for the price-ceiling books: the full order book is
     # authoritative for the maxyes decision (tests/test_mmsell_orderbook_authoritative.py).
     "MMSELL_PREFILTER_ENABLED",
