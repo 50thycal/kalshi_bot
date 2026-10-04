@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"cc-uni-1004a","sql":"SELECT strategy, count(*) AS orders, count(*) FILTER (WHERE status IN ('executed','filled')) AS filled, count(DISTINCT split_part(market_ticker,'-',1)) AS series, min(created_at)::date AS first, max(created_at) AS last FROM live_orders WHERE created_at >= now() - interval '30 days' GROUP BY strategy ORDER BY orders DESC"}
