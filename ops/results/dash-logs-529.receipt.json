@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "8e3086dc78b9c7f7866f8d92acaa03ce65f41740",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T13:36:50Z",
+  "id": "dash-logs-529",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dash-logs-529.receipt.json",
+  "result_file": "ops/results/dash-logs-529.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37206234083",
+  "service": "livedash",
+  "started_at": "2026-10-04T13:36:49Z",
+  "targets": [],
+  "type": "logs"
+}
