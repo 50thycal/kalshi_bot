@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "e3aca90622542b79a539f76524567a32702d08ff",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T17:26:45Z",
+  "id": "ep3-rcpt-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ep3-rcpt-1.receipt.json",
+  "result_file": "ops/results/ep3-rcpt-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37220516165",
+  "service": null,
+  "started_at": "2026-10-04T17:26:43Z",
+  "targets": [],
+  "type": "xos"
+}
