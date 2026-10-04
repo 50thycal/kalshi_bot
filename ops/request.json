@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-ci-0104i", "sql": "SELECT o.market_ticker, o.side, o.limit_price, o.status, o.cancel_reason, o.created_at, (SELECT close_time FROM incentive_programs p WHERE p.market_ticker=o.market_ticker ORDER BY last_seen_at DESC LIMIT 1) close_time, (SELECT market_title FROM incentive_programs p WHERE p.market_ticker=o.market_ticker ORDER BY last_seen_at DESC LIMIT 1) title FROM live_orders o WHERE o.strategy='Alimm1' AND o.created_at > '2026-10-04 11:00' ORDER BY o.created_at"}
+{"type":"noop"}
