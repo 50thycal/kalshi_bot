@@ -701,13 +701,19 @@ class LiveExecutor:
 
     @staticmethod
     def _incentive_pair_within_caps(pair) -> bool:
+        """The decision layer's caps, re-asserted: a two-sided pair (§9.37) or, since §9.48, a
+        single cheap-side bid. Anything else is refused."""
         legs = pair.legs
-        if {leg.side for leg in legs} != {limm_live.SIDE_YES, limm_live.SIDE_NO}:
-            return False
-        if len({int(leg.quantity) for leg in legs}) != 1:
-            return False
-        if sum(int(leg.price_cents) for leg in legs) > 100 - limm_live.MIN_PAIR_EDGE_CENTS:
-            return False
+        if len(legs) == 1:
+            if legs[0].side not in (limm_live.SIDE_YES, limm_live.SIDE_NO):
+                return False
+        else:
+            if {leg.side for leg in legs} != {limm_live.SIDE_YES, limm_live.SIDE_NO}:
+                return False
+            if len({int(leg.quantity) for leg in legs}) != 1:
+                return False
+            if sum(int(leg.price_cents) for leg in legs) > 100 - limm_live.MIN_PAIR_EDGE_CENTS:
+                return False
         for leg in legs:
             price, qty = int(leg.price_cents), int(leg.quantity)
             if not (1 <= price <= limm_live.MAX_PRICE_CENTS):
