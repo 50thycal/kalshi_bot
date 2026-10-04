@@ -950,7 +950,7 @@ def ensure_mmsell_settlement_meta(session, *, market_ticker: str, event_ticker: 
 
 
 def open_positions_settlement_summary(
-    session, strategy: str, close_date, ticker: str
+    session, strategy: str, close_date, ticker: str, *, counts=None
 ) -> tuple[int, Counter[str]]:
     """(count, event ticker -> open rungs) of `strategy`'s OTHER
     currently-open positions settling on `close_date` (a UTC calendar date) — the settlement-date
@@ -969,7 +969,11 @@ def open_positions_settlement_summary(
 
     Filters with an explicit UTC datetime RANGE rather than a DB-side date() function: SQLite
     (used by the test suite) and Postgres (production) parse timestamp strings differently
-    enough that a portable comparison is worth the extra two lines."""
+    enough that a portable comparison is worth the extra two lines.
+
+    `counts`, when given, is a predicate on an open position's ticker: only positions it
+    accepts are counted (the live-eligible scope, see
+    Settings.mmsell_live_caps_count_live_eligible_only). None counts every one, as before."""
     day_start = datetime(close_date.year, close_date.month, close_date.day, tzinfo=timezone.utc)
     day_end = day_start + timedelta(days=1)
     rows = session.execute(
@@ -984,11 +988,13 @@ def open_positions_settlement_summary(
             m.MmSellSettlementMeta.close_time < day_end,
         )
     ).all()
+    if counts is not None:
+        rows = [r for r in rows if counts(r[0])]
     return len(rows), Counter(r[1] for r in rows if r[1])
 
 
 def open_positions_contest_summary(
-    session, strategy: str, ticker: str
+    session, strategy: str, ticker: str, *, counts=None
 ) -> Counter[str]:
     """CONTEST -> open rungs across `strategy`'s WHOLE open book. `ticker` is excluded for the
     same reason the settlement summary excludes it: a position already open on the candidate's
@@ -1011,7 +1017,9 @@ def open_positions_contest_summary(
 
     Keys on `contest_key_of` rather than the event ticker because an event ticker is series x
     contest: KXMLBTOTAL and KXMLBSPREAD on one baseball game are two events and one result
-    (XOS-000020)."""
+    (XOS-000020).
+
+    `counts` filters the positions counted, exactly as in `open_positions_settlement_summary`."""
     from .mmsell.regimes import contest_key_of
 
     tickers = session.scalars(
@@ -1021,6 +1029,8 @@ def open_positions_contest_summary(
             m.PaperPosition.market_ticker != ticker,
         )
     ).all()
+    if counts is not None:
+        tickers = [t for t in tickers if counts(t)]
     return Counter(key for key in (contest_key_of(t) for t in tickers) if key)
 
 
