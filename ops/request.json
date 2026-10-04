@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select coalesce(lo.status,'?') status, coalesce(lo.cancel_reason,'') reason, count(*) n,\n       min(lo.created_at)::text first_at, max(lo.created_at)::text last_at,\n       round(avg(extract(epoch from now() - lo.created_at)/60)::numeric,0) avg_age_min,\n       count(*) filter (where exists (select 1 from fills f where f.kalshi_order_id = lo.kalshi_order_id)) any_fill,\n       now()::text as now_at\nfrom live_orders lo where lo.strategy = 'Hmmsell10' group by 1,2 order by 3 desc\n", "id": "hm-unfilled-1"}
