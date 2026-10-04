@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ci-0104m","sql":"SELECT o.market_ticker, o.side, o.limit_price, o.quantity, o.status, left(coalesce(o.cancel_reason,''),30) reason, o.created_at, (SELECT count(*) FROM fills f WHERE f.kalshi_order_id=o.kalshi_order_id) nf FROM live_orders o WHERE o.strategy='Alimm1' AND (o.created_at > '2026-10-04 21:00' OR o.status IN ('resting','submitted','pending','unknown')) ORDER BY o.created_at"}
