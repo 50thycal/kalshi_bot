@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "49fc5c6de53a1bdbeba768a08cecb7c1e66af331",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-04T17:55:20Z",
+  "id": "hm-show-3",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/hm-show-3.receipt.json",
+  "result_file": "ops/results/hm-show-3.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37222329236",
+  "service": null,
+  "started_at": "2026-10-04T17:55:14Z",
+  "targets": [],
+  "type": "xos"
+}
