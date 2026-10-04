@@ -1,0 +1,90 @@
+# LIMM-PLACEMENT — where the liquidity-incentive book should rest its bids
+
+**Status:** pending probe (pre-registered 2026-10-04, before any run). Probe:
+`scripts/limm_placement_probe.py`. Book: `Alimm1` (WS-020, thesis
+[§9.41–§9.47](LIQUIDITY_INCENTIVE_THESIS.md)). Operator request (Calvin, 2026-10-04): "create a
+probe and test all three of these ideas"; operator leaning: Idea 1 + Idea 3.
+
+## One-liner
+
+The book has earned $2.21 in rewards because its 1–2¢ bids usually sit far below Kalshi's
+reference price, where each cent below costs 10% of the score. Resting AT the reference price, on
+the cheap side only (P1) or on both sides sized to a $10 lone-fill loss (P2), with or without
+re-pricing every cycle and pulling on activity spikes (the "F" add-on), should earn far more
+reward per market-day without a matching rise in lone-fill losses.
+
+## Mechanism
+
+- **Who pays:** Kalshi's liquidity-incentive pool, split by score share. Scoring rules R1–R6 in
+  `kalshi_bot/liquidity_incentive/scoring.py`: an order at or above the side's reference price
+  (where cumulative resting size from the best bid reaches Target/5) scores 1.0 per contract;
+  k cents below scores `discount^k` (0.9 on these programmes).
+- **Who is on the other side of a fill:** a taker selling into our bid. The cost is adverse
+  selection: a fill tends to arrive just before the price moves against us. Resting nearer the
+  touch raises reward share and fill rate together, so the question is the NET.
+- **Why it might persist:** most weeks-out incentive markets carry thin, wide books; the
+  reference price there is cheap on at least one side.
+
+## Policies simulated (all at most one market position at a time per market)
+
+| code | rule | requote |
+|---|---|---|
+| B0 | today: both sides one tick behind the best bid, both legs ≤ 10¢ | every 4 h |
+| P1 | cheap side only: the side whose reference price ≤ 10¢ (cheaper if both), at the reference | every 4 h |
+| P2 | both sides at their reference prices, yes + no ≤ 99¢ | every 4 h |
+| P1F | P1, re-priced to the reference every snapshot, pulled while a spike/close rule is on | every snapshot |
+| P2F | P2, likewise | every snapshot |
+
+Sizing: `qty = min(500, floor($10 / dearer leg price))`, the live book's caps. Common gates:
+both sides meet Target Size in the snapshot (else nobody is paid), programme still running,
+market open. Pull rule (F only): `trades_last_5m ≥ 3` OR `price_range_5m ≥ 3¢` OR the market closes
+within 48 h.
+
+## Measurement (no lookahead)
+
+Data: `incentive_market_snapshots` (book levels, field score, activity, every ~6 min per market)
+and `incentive_trade_events` (public tape), live-collected by the shadow collector; programme
+terms from `incentive_programs`. Every decision at snapshot `t` uses only the snapshot at `t`.
+Reward accrues over `[t, t_next)` (capped at 15 min) at
+`pool_per_second × our_side_share / 2` per resting side, where
+`share = q·mult / (field_score + q·mult)`. Fills replay the tape under two models, reported side by
+side: **optimistic** (a print on our side at or through our price fills us) and **conservative**
+(a print at our price fills only after the depth ahead of us at placement has traded; a print
+through our price fills us). After a fill the policy places nothing new on that market; an unfilled leg of the same pair keeps
+resting unchanged, as the live book leaves it. Both legs filled lock `100 − yes − no`; a lone leg is
+marked to its side's best bid at fill + 24 h (or the last snapshot, labelled). Fees: maker
+`ceil(0.0175 · q · P · (1−P) · 100)` cents per filled leg.
+
+Unit of comparison: **net $ per market-day quoted** (reward + fill P&L − fees, divided by the
+market-days with at least one resting leg), plus market-days available. The live book holds two
+markets, so ≈ 2 × net/market-day is its daily figure.
+
+## Pre-registered predictions and decision rule
+
+- **L0 (model sanity):** B0's simulated reward per market-day is reported beside the live book's
+  realised rewards ($2.21 over 2026-09-17 → 10-04). If B0 sim exceeds 5× the realised rate per
+  market-day, every reward figure is flagged OPTIMISTIC and no policy can PROMOTE on this run.
+- **L1 (reward):** P1 and P2 earn at least 3× B0's reward per market-day.
+- **L2 (net, the decision):** a policy PROMOTEs when its **conservative** net per market-day is
+  ≥ $0.50 AND its optimistic net is > 0 AND it has ≥ 20 market-days quoted AND no single market
+  supplies more than 50% of its net.
+- **KILL** a policy when its conservative net per market-day ≤ 0.
+- Otherwise **HOLD**.
+- **Choice:** among PROMOTEs, the highest conservative net per market-day wins; P1F wins a tie
+  within 20% (lowest loss per contract).
+- **F add-on:** the F variant is kept only if its conservative net per market-day beats its base
+  policy's.
+
+Nothing here is re-scoped after the run. A KILL on every policy is a clean ruling-out of
+"placement is the bottleneck" and is logged as a win.
+
+## Cost / capacity / correlation
+
+Capacity is two markets × at most $10 lone-fill loss each, unchanged. Honest ceiling: two slots at
+$0.50–$5 per market-day ≈ $30–$300/month in reward, before the measured fill losses. No new
+correlation: the same book, same markets; only where the bid rests changes.
+
+## Graveyard check
+
+Passive-on-informative without an adverse-selection model is a killed family. This probe carries
+that model explicitly (two fill models, a 24 h mark) and decides on the conservative one.

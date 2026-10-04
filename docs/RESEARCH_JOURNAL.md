@@ -1,5 +1,17 @@
 # Weather-markets research journal
 
+## LIMM-PLACEMENT 2026-10-04 — pre-registered: where should the incentive book rest its bids?
+
+The liquidity-incentive book has earned $2.21 in rewards since 09-17. Its 1–2¢ bids usually sit
+far below Kalshi's reference price, where each cent below costs 10% of the score (C4 at 23¢ best
+bid scored ~10%). Calvin asked for three alternatives tested before any money moves:
+cheap side only at the reference (P1), both sides at the reference sized to a $10 lone fill (P2),
+and re-price each cycle + pull on spikes (F, an add-on). [Thesis](LIMM_PLACEMENT_THESIS.md) and
+`scripts/limm_placement_probe.py` replay all five policies (with today's B0) over the shadow
+collector's books and tape; the decision is conservative net per market-day ≥ $0.50, with an L0
+check that the reward model is not wildly above what the live book actually earned. Operator
+leaning before the run: P1 + F.
+
 ## MMSELL TYPE-RANK 2026-10-01 — retrospective leg did not kill; HOLD for forward fills
 
 [TYPE-RANK](MMSELL_TYPE_RANK_THESIS.md) ran first time (ops `typerank-20261001-1`). Ranking the
