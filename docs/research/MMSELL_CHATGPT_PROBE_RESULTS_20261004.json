@@ -1,0 +1,717 @@
+{
+  "as_of": "2026-10-04T15:30:00Z",
+  "data_source_code_sha": "a6c920f658770435e67e5c1e4764255bf6b80e6f",
+  "inverse_offset": {
+    "contract": "docs/MMSELL_CHATGPT_PROBES_20261004.md",
+    "groups": {
+      "Fmmsell10": {
+        "actual_filled_orders": 328,
+        "actual_losing_filled_orders": 17,
+        "actual_net_usd": 4.454000000000001,
+        "control_print_recall": 0.7408536585365854,
+        "missing_settlements": 38,
+        "normal_context_orders": 473,
+        "orders": 636,
+        "orders_with_valid_book_tick": 344,
+        "orders_with_yes_taker_print": 312,
+        "retry_orders": 34,
+        "scenarios": {
+          "control_touch": {
+            "delta_cents_per_order": -0.010804597701149103,
+            "delta_usd": -0.04699999999999477,
+            "interval": {
+              "dates": 19,
+              "p05": -0.7391873589164782,
+              "p95": 0.7780000000000004
+            },
+            "net_usd": 4.407000000000006,
+            "positive_scenario_screen": false,
+            "proxy_hits": 265,
+            "proxy_losses": 13
+          },
+          "lower_strict_through": {
+            "delta_cents_per_order": -0.7579310344827586,
+            "delta_usd": -3.2970000000000006,
+            "interval": {
+              "dates": 19,
+              "p05": -2.6879420289855074,
+              "p95": 1.293082706766917
+            },
+            "net_usd": 1.1570000000000005,
+            "positive_scenario_screen": false,
+            "proxy_hits": 15,
+            "proxy_losses": 0
+          },
+          "lower_touch": {
+            "delta_cents_per_order": -0.30685057471264365,
+            "delta_usd": -1.3347999999999984,
+            "interval": {
+              "dates": 19,
+              "p05": -2.3033492822966504,
+              "p95": 1.7520574162679425
+            },
+            "net_usd": 3.1192000000000024,
+            "positive_scenario_screen": false,
+            "proxy_hits": 54,
+            "proxy_losses": 1
+          },
+          "lower_touch_fee_0.10c": {
+            "delta_cents_per_order": -0.31678160919540227,
+            "delta_usd": -1.378000000000004,
+            "interval": {
+              "dates": 19,
+              "p05": -2.3123444976076555,
+              "p95": 1.7427872860635698
+            },
+            "net_usd": 3.075999999999997,
+            "positive_scenario_screen": false,
+            "proxy_hits": 54,
+            "proxy_losses": 1
+          }
+        },
+        "settled_terminal_fee_known_orders": 435,
+        "tape_activity_order_share": 0.7172413793103448,
+        "tape_coverage_identified": false,
+        "unique_markets": 401,
+        "verdict": "HOLD(model): alternative queue and later fills unidentified"
+      },
+      "Fmmsell10/before-09-24": {
+        "actual_filled_orders": 156,
+        "actual_losing_filled_orders": 10,
+        "actual_net_usd": 0.11940000000000012,
+        "control_print_recall": 0.75,
+        "missing_settlements": 1,
+        "normal_context_orders": 210,
+        "orders": 284,
+        "orders_with_valid_book_tick": 165,
+        "orders_with_yes_taker_print": 155,
+        "retry_orders": 17,
+        "scenarios": {
+          "control_touch": {
+            "delta_cents_per_order": 0.7101435406698569,
+            "delta_usd": 1.4841999999999955,
+            "interval": {
+              "dates": 13,
+              "p05": -0.45925925925925887,
+              "p95": 1.9235874439461889
+            },
+            "net_usd": 1.6035999999999957,
+            "positive_scenario_screen": false,
+            "proxy_hits": 132,
+            "proxy_losses": 7
+          },
+          "lower_strict_through": {
+            "delta_cents_per_order": 0.2721531100478468,
+            "delta_usd": 0.5688000000000001,
+            "interval": {
+              "dates": 13,
+              "p05": -2.611904761904762,
+              "p95": 3.278513011152416
+            },
+            "net_usd": 0.6882000000000003,
+            "positive_scenario_screen": false,
+            "proxy_hits": 9,
+            "proxy_losses": 0
+          },
+          "lower_touch": {
+            "delta_cents_per_order": 0.8877511961722487,
+            "delta_usd": 1.8553999999999997,
+            "interval": {
+              "dates": 13,
+              "p05": -2.0117525773195877,
+              "p95": 3.8166527196652718
+            },
+            "net_usd": 1.9747999999999997,
+            "positive_scenario_screen": false,
+            "proxy_hits": 26,
+            "proxy_losses": 0
+          },
+          "lower_touch_fee_0.10c": {
+            "delta_cents_per_order": 0.877799043062201,
+            "delta_usd": 1.834600000000001,
+            "interval": {
+              "dates": 13,
+              "p05": -2.0228205128205126,
+              "p95": 3.808413284132841
+            },
+            "net_usd": 1.9540000000000008,
+            "positive_scenario_screen": false,
+            "proxy_hits": 26,
+            "proxy_losses": 0
+          }
+        },
+        "settled_terminal_fee_known_orders": 209,
+        "tape_activity_order_share": 0.7416267942583732,
+        "tape_coverage_identified": false,
+        "unique_markets": 192,
+        "verdict": "HOLD(model): alternative queue and later fills unidentified"
+      },
+      "Fmmsell10/from-09-24": {
+        "actual_filled_orders": 172,
+        "actual_losing_filled_orders": 7,
+        "actual_net_usd": 4.3346,
+        "control_print_recall": 0.7325581395348837,
+        "missing_settlements": 37,
+        "normal_context_orders": 263,
+        "orders": 352,
+        "orders_with_valid_book_tick": 179,
+        "orders_with_yes_taker_print": 157,
+        "retry_orders": 17,
+        "scenarios": {
+          "control_touch": {
+            "delta_cents_per_order": -0.677522123893805,
+            "delta_usd": -1.5311999999999995,
+            "interval": {
+              "dates": 11,
+              "p05": -1.3248908296943231,
+              "p95": 0.16395256916996087
+            },
+            "net_usd": 2.8034000000000003,
+            "positive_scenario_screen": false,
+            "proxy_hits": 133,
+            "proxy_losses": 6
+          },
+          "lower_strict_through": {
+            "delta_cents_per_order": -1.7105309734513274,
+            "delta_usd": -3.8657999999999997,
+            "interval": {
+              "dates": 11,
+              "p05": -4.097619047619048,
+              "p95": 0.9079285714285712
+            },
+            "net_usd": 0.4688000000000001,
+            "positive_scenario_screen": false,
+            "proxy_hits": 6,
+            "proxy_losses": 0
+          },
+          "lower_touch": {
+            "delta_cents_per_order": -1.4115929203539823,
+            "delta_usd": -3.1902,
+            "interval": {
+              "dates": 11,
+              "p05": -3.8947540983606554,
+              "p95": 1.3415714285714284
+            },
+            "net_usd": 1.1443999999999999,
+            "positive_scenario_screen": false,
+            "proxy_hits": 28,
+            "proxy_losses": 1
+          },
+          "lower_touch_fee_0.10c": {
+            "delta_cents_per_order": -1.421504424778761,
+            "delta_usd": -3.212599999999999,
+            "interval": {
+              "dates": 11,
+              "p05": -3.90327868852459,
+              "p95": 1.3284745762711863
+            },
+            "net_usd": 1.122000000000001,
+            "positive_scenario_screen": false,
+            "proxy_hits": 28,
+            "proxy_losses": 1
+          }
+        },
+        "settled_terminal_fee_known_orders": 226,
+        "tape_activity_order_share": 0.6946902654867256,
+        "tape_coverage_identified": false,
+        "unique_markets": 209,
+        "verdict": "HOLD(model): alternative queue and later fills unidentified"
+      },
+      "Hmmsell10": {
+        "actual_filled_orders": 6,
+        "actual_losing_filled_orders": 0,
+        "actual_net_usd": 0.39,
+        "control_print_recall": 0.5,
+        "missing_settlements": 26,
+        "normal_context_orders": 32,
+        "orders": 34,
+        "orders_with_valid_book_tick": 3,
+        "orders_with_yes_taker_print": 3,
+        "retry_orders": 0,
+        "scenarios": {
+          "control_touch": {
+            "delta_cents_per_order": -3.3433333333333333,
+            "delta_usd": -0.2006,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "net_usd": 0.1894,
+            "positive_scenario_screen": false,
+            "proxy_hits": 3,
+            "proxy_losses": 0
+          },
+          "lower_strict_through": {
+            "delta_cents_per_order": -6.5,
+            "delta_usd": -0.39,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "net_usd": 0.0,
+            "positive_scenario_screen": false,
+            "proxy_hits": 0,
+            "proxy_losses": 0
+          },
+          "lower_touch": {
+            "delta_cents_per_order": -4.006666666666667,
+            "delta_usd": -0.2404,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "net_usd": 0.1496,
+            "positive_scenario_screen": false,
+            "proxy_hits": 2,
+            "proxy_losses": 0
+          },
+          "lower_touch_fee_0.10c": {
+            "delta_cents_per_order": -4.033333333333333,
+            "delta_usd": -0.242,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "net_usd": 0.14800000000000002,
+            "positive_scenario_screen": false,
+            "proxy_hits": 2,
+            "proxy_losses": 0
+          }
+        },
+        "settled_terminal_fee_known_orders": 6,
+        "tape_activity_order_share": 0.5,
+        "tape_coverage_identified": false,
+        "unique_markets": 6,
+        "verdict": "HOLD(model): alternative queue and later fills unidentified"
+      }
+    },
+    "offset_cents": -1,
+    "probe": "INVERSE-OFFSET",
+    "scope": "retrospective scenarios; no executable fill guarantee",
+    "window": {
+      "since": "2026-09-16T00:00:00Z",
+      "until": "2026-10-04T15:30:00Z"
+    }
+  },
+  "limitations": [
+    "Historical diagnostics, not prospective treatment effects.",
+    "Trade activity is not a certificate of complete tape coverage.",
+    "Alternative queue position and post-original-fill continuation are unidentified.",
+    "No replacement fills or profits from freed slots are credited.",
+    "Normalization uses at most one contract at average observed order fill price and allocated fee.",
+    "F/H epochs are separate; existing pending platform revisions preclude pooling or promotion."
+  ],
+  "posthoc_coverage_audit": {
+    "F_losing_fill_delay_median_seconds": 77.6873939037323,
+    "F_losing_fills": 17,
+    "F_losing_fills_under_40_seconds": 7,
+    "F_losing_fills_with_paired_ticks": 8,
+    "F_winning_fill_delay_median_seconds": 174.64395999908447,
+    "F_winning_fills": 311,
+    "F_winning_fills_under_40_seconds": 98,
+    "F_winning_fills_with_paired_ticks": 191,
+    "hypothesis_test": false
+  },
+  "pre_registration_commit": "79969e0ee148b1a8cfbe069e56c0d5e9b103ece7",
+  "slot_priority": {
+    "contract": "docs/MMSELL_CHATGPT_PROBES_20261004.md",
+    "groups": {
+      "Fmmsell10": {
+        "all_open_cap_candidates": 0,
+        "creation_dates": 19,
+        "distinct_candidates": 6435,
+        "distinct_market_outcome_counts": {
+          "gate:daily_loss": 3,
+          "gate:dedup": 178,
+          "not_attempted": 5873,
+          "placed": 571,
+          "rejected": 14
+        },
+        "missed_paper_scenario_count": 0,
+        "missed_paper_scenario_usd": 0.0,
+        "missed_priority_share": 0.0,
+        "parity_rows": 38606,
+        "priority_candidates": 317,
+        "priority_contest_cap": 254,
+        "priority_open_cap_later_placed": 0,
+        "priority_open_cap_never_placed": 0,
+        "priority_paper_cap": 0,
+        "priority_paused": 0,
+        "priority_placed": 47,
+        "priority_tier": 75,
+        "verdict": "UNSUPPORTED(capacity): insufficient missed priority-cell open-cap supply"
+      },
+      "Hmmsell10": {
+        "all_open_cap_candidates": 0,
+        "creation_dates": 1,
+        "distinct_candidates": 330,
+        "distinct_market_outcome_counts": {
+          "gate:dedup": 15,
+          "not_attempted": 306,
+          "placed": 25
+        },
+        "missed_paper_scenario_count": 0,
+        "missed_paper_scenario_usd": 0.0,
+        "missed_priority_share": 0.0,
+        "parity_rows": 2997,
+        "priority_candidates": 22,
+        "priority_contest_cap": 6,
+        "priority_open_cap_later_placed": 0,
+        "priority_open_cap_never_placed": 0,
+        "priority_paper_cap": 0,
+        "priority_paused": 0,
+        "priority_placed": 10,
+        "priority_tier": 5,
+        "verdict": "HOLD(accrual): fewer than 7 days or 200 distinct candidates"
+      }
+    },
+    "probe": "SLOT-PRIORITY",
+    "scope": "capacity census, not hypothetical live P&L",
+    "window": {
+      "since": "2026-09-16T00:00:00Z",
+      "until": "2026-10-04T15:30:00Z"
+    }
+  },
+  "source_transport_snapshot": "a0b6bb2ddc4f58e481fab603403c1e7ea654b714",
+  "sources": {
+    "orders": {
+      "columns": [
+        "tag",
+        "ticker",
+        "created",
+        "limit",
+        "quantity",
+        "status",
+        "filled",
+        "fill_price",
+        "fee",
+        "first_fill",
+        "settle",
+        "settled_at",
+        "context",
+        "hot",
+        "offset",
+        "start",
+        "end",
+        "ticks",
+        "valid_ticks",
+        "first_tick",
+        "last_tick",
+        "trades",
+        "control_at",
+        "touch_at",
+        "through_at",
+        "open_count",
+        "open_cap",
+        "cancel_at",
+        "close_at"
+      ],
+      "decoded_json_sha256": "3998f2ad47fd995f12c6a3d46a6983881008989cd0f21b1ebdc52164d7cd38a4",
+      "export_sha256": "cd161ab74c7da98302e41b9bf7fa06f9615122fb7c72daefe8a414364796ed0a",
+      "read_only": true,
+      "request_id": "cg-mm3-orders-20261004-2",
+      "rows": 670,
+      "sql_sha256": "1237eb6d86447822293fec3521b34ee58a745450fda4689287c11aa2a4cf0d56",
+      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-orders-20261004-2.txt"
+    },
+    "slots": {
+      "columns": [
+        "tag",
+        "ticker",
+        "first_at",
+        "first_cap_at",
+        "placed",
+        "open_cap",
+        "paper_cap",
+        "contest_cap",
+        "tier",
+        "paused",
+        "cap_price",
+        "outcomes",
+        "repeated_rows",
+        "settle"
+      ],
+      "decoded_json_sha256": "fcd756ae8bcbf5502c36b2a4bb16244430a3f23c71dc361d1d59004698808327",
+      "export_sha256": "3e0a5bce560317d672ce5feb726147785a840329d14cd8f4c698654dcce10da4",
+      "read_only": true,
+      "request_id": "cg-mm3-slots-20261004-1",
+      "rows": 6765,
+      "sql_sha256": "dfbd3d418287ca3ec327f07cfe0086f79d4e05fe9a4f0559ef61824aea49463d",
+      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-slots-20261004-1.txt"
+    },
+    "withdrawal": {
+      "columns": [
+        "tag",
+        "ticker",
+        "created",
+        "paired_ticks",
+        "coarse_windows",
+        "clean_windows",
+        "first_coarse",
+        "signal_at",
+        "removed",
+        "levels",
+        "yes_volume",
+        "baseline_depth",
+        "depth",
+        "baseline_ask",
+        "ask"
+      ],
+      "decoded_json_sha256": "a7d2acdc22d62e9a42f796feb6ea97aff80da2fd3e4f1049875a2edad63c981f",
+      "export_sha256": "c9fedc72b458b6d6adf7109ff9275764a0ef5197f8cab0bbd328f1a1655cdb67",
+      "read_only": true,
+      "request_id": "cg-mm3-withdraw-20261004-1",
+      "rows": 670,
+      "sql_sha256": "7826b21f4507a60e4d8a13293e884e2e3abe14b4e6cf2d024ea0aecd2f1e3133",
+      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-withdraw-20261004-1.txt"
+    }
+  },
+  "validation": "23 focused tests passed; full repository ruff passed",
+  "withdrawal": {
+    "contract": "docs/MMSELL_CHATGPT_PROBES_20261004.md",
+    "groups": {
+      "Fmmsell10": {
+        "actual_net_usd": 4.454000000000001,
+        "all_losing_fills": 17,
+        "clean_raw_windows": 1912,
+        "coarse_windows": 2007,
+        "covered_filled_orders": 199,
+        "covered_losing_fills": 8,
+        "paired_window_coverage": 0.696551724137931,
+        "paired_window_orders": 303,
+        "raw_trade_coverage_independently_verified": false,
+        "settled_terminal_orders": 435,
+        "signal_variants": {
+          "coarse_price_depth_only": {
+            "actual_fill_retention": 0.6884422110552764,
+            "avoidable_fills": 62,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.461612903225807,
+            "avoided_winners": 62,
+            "covered_actual_net_usd": 5.0274,
+            "delta_usd": -4.0062,
+            "interval": {
+              "dates": 19,
+              "p05": -1.6264321608040202,
+              "p95": -1.0208832807570978
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 1.0212,
+            "triggered_filled_orders": 62,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 108,
+            "untriggered_filled_orders": 137,
+            "untriggered_losing_fills": 8,
+            "verdict": "DESCRIPTIVE ONLY: does not identify withdrawal without prints"
+          },
+          "verified_withdrawal": {
+            "actual_fill_retention": 0.7135678391959799,
+            "avoidable_fills": 57,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.431929824561403,
+            "avoided_winners": 57,
+            "covered_actual_net_usd": 5.0274,
+            "delta_usd": -3.6662,
+            "interval": {
+              "dates": 19,
+              "p05": -1.4909422492401214,
+              "p95": -0.9316770186335404
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 1.3612,
+            "triggered_filled_orders": 57,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 102,
+            "untriggered_filled_orders": 142,
+            "untriggered_losing_fills": 8,
+            "verdict": "HOLD(instrument): paired-window order coverage below 80%"
+          }
+        }
+      },
+      "Fmmsell10/before-09-24": {
+        "actual_net_usd": 0.11940000000000012,
+        "all_losing_fills": 10,
+        "clean_raw_windows": 1360,
+        "coarse_windows": 1423,
+        "covered_filled_orders": 98,
+        "covered_losing_fills": 5,
+        "paired_window_coverage": 0.7129186602870813,
+        "paired_window_orders": 149,
+        "raw_trade_coverage_independently_verified": false,
+        "settled_terminal_orders": 209,
+        "signal_variants": {
+          "coarse_price_depth_only": {
+            "actual_fill_retention": 0.653061224489796,
+            "avoidable_fills": 34,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.341764705882353,
+            "avoided_winners": 34,
+            "covered_actual_net_usd": 1.3416,
+            "delta_usd": -2.1562,
+            "interval": {
+              "dates": 13,
+              "p05": -1.87696,
+              "p95": -0.8715596330275229
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": -0.8146000000000001,
+            "triggered_filled_orders": 34,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 59,
+            "untriggered_filled_orders": 64,
+            "untriggered_losing_fills": 5,
+            "verdict": "DESCRIPTIVE ONLY: does not identify withdrawal without prints"
+          },
+          "verified_withdrawal": {
+            "actual_fill_retention": 0.6734693877551021,
+            "avoidable_fills": 32,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.300625,
+            "avoided_winners": 32,
+            "covered_actual_net_usd": 1.3416,
+            "delta_usd": -2.0162,
+            "interval": {
+              "dates": 13,
+              "p05": -1.7664566929133858,
+              "p95": -0.8235294117647058
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": -0.6746000000000001,
+            "triggered_filled_orders": 32,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 57,
+            "untriggered_filled_orders": 66,
+            "untriggered_losing_fills": 5,
+            "verdict": "HOLD(instrument): paired-window order coverage below 80%"
+          }
+        }
+      },
+      "Fmmsell10/from-09-24": {
+        "actual_net_usd": 4.3346,
+        "all_losing_fills": 7,
+        "clean_raw_windows": 552,
+        "coarse_windows": 584,
+        "covered_filled_orders": 101,
+        "covered_losing_fills": 3,
+        "paired_window_coverage": 0.6814159292035398,
+        "paired_window_orders": 154,
+        "raw_trade_coverage_independently_verified": false,
+        "settled_terminal_orders": 226,
+        "signal_variants": {
+          "coarse_price_depth_only": {
+            "actual_fill_retention": 0.7227722772277227,
+            "avoidable_fills": 28,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.607142857142857,
+            "avoided_winners": 28,
+            "covered_actual_net_usd": 3.6858000000000004,
+            "delta_usd": -1.85,
+            "interval": {
+              "dates": 11,
+              "p05": -1.537037037037037,
+              "p95": -0.8773006134969326
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 1.8358000000000003,
+            "triggered_filled_orders": 28,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 49,
+            "untriggered_filled_orders": 73,
+            "untriggered_losing_fills": 3,
+            "verdict": "DESCRIPTIVE ONLY: does not identify withdrawal without prints"
+          },
+          "verified_withdrawal": {
+            "actual_fill_retention": 0.7524752475247525,
+            "avoidable_fills": 25,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.6,
+            "avoided_winners": 25,
+            "covered_actual_net_usd": 3.6858000000000004,
+            "delta_usd": -1.65,
+            "interval": {
+              "dates": 11,
+              "p05": -1.3642857142857143,
+              "p95": -0.7942857142857143
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 2.0358000000000005,
+            "triggered_filled_orders": 25,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 45,
+            "untriggered_filled_orders": 76,
+            "untriggered_losing_fills": 3,
+            "verdict": "HOLD(instrument): paired-window order coverage below 80%"
+          }
+        }
+      },
+      "Hmmsell10": {
+        "actual_net_usd": 0.39,
+        "all_losing_fills": 0,
+        "clean_raw_windows": 3,
+        "coarse_windows": 3,
+        "covered_filled_orders": 2,
+        "covered_losing_fills": 0,
+        "paired_window_coverage": 0.3333333333333333,
+        "paired_window_orders": 2,
+        "raw_trade_coverage_independently_verified": false,
+        "settled_terminal_orders": 6,
+        "signal_variants": {
+          "coarse_price_depth_only": {
+            "actual_fill_retention": 0.5,
+            "avoidable_fills": 1,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.0,
+            "avoided_winners": 1,
+            "covered_actual_net_usd": 0.12,
+            "delta_usd": -0.06,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 0.06,
+            "triggered_filled_orders": 1,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 1,
+            "untriggered_filled_orders": 1,
+            "untriggered_losing_fills": 0,
+            "verdict": "DESCRIPTIVE ONLY: does not identify withdrawal without prints"
+          },
+          "verified_withdrawal": {
+            "actual_fill_retention": 0.5,
+            "avoidable_fills": 1,
+            "avoided_losers": 0,
+            "avoided_mean_cents": 6.0,
+            "avoided_winners": 1,
+            "covered_actual_net_usd": 0.12,
+            "delta_usd": -0.06,
+            "interval": {
+              "dates": 1,
+              "p05": null,
+              "p95": null
+            },
+            "observed_economic_screen": "UNSUPPORTED: cancellation discards nonnegative fills",
+            "policy_net_usd": 0.06,
+            "triggered_filled_orders": 1,
+            "triggered_losing_fills": 0,
+            "triggered_orders": 1,
+            "untriggered_filled_orders": 1,
+            "untriggered_losing_fills": 0,
+            "verdict": "HOLD(instrument): paired-window order coverage below 80%"
+          }
+        }
+      }
+    },
+    "probe": "WITHDRAWAL",
+    "scope": "cancel-only replay, no credit for replacement fills",
+    "window": {
+      "since": "2026-09-16T00:00:00Z",
+      "until": "2026-10-04T15:30:00Z"
+    }
+  }
+}

@@ -13,6 +13,12 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ## Base rate (as of 2026-07-26, XLOCK + WIDEQUOTE both probed)
 
+Operator-originated addition 2026-10-04: three MMSELL read-only diagnostics completed,
+**0 positive policy screens / 0 trading books**. INVERSE-OFFSET HOLD(model), SLOT-PRIORITY
+UNSUPPORTED(capacity) for F / HOLD(accrual) for H, WITHDRAWAL HOLD(instrument) with contrary
+economics on readable traces. These are not idea-model promotions; the dated base-rate and
+per-family promotion denominators below are unchanged. [Contract/results](MMSELL_CHATGPT_PROBES_20261004.md).
+
 Operator-originated addition 2026-09-13: SPOT-PERP-CARRY, 1 completed funding census (HOLD),
 0 measured profitability passes; separate from the dated idea-model promotion tally.
 
@@ -101,6 +107,19 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 ---
 
 ## Ledger
+
+### Operator diagnostic addendum — 2026-10-04
+
+| Diagnostic | Measurement | Judgment / rerun trigger |
+|---|---|---|
+| INVERSE-OFFSET | F: one-cent-lower touch scenario +$3.119 vs normalized actual +$4.454; 54 proxy hits, 74.1% control fill recall | HOLD(model); audit tape and alternative-queue/continuation identification before interpreting policy P&L |
+| SLOT-PRIORITY | F: 6,435 candidates / 19 dates, 0 recorded open-cap refusals; H: 330 / 1 date | UNSUPPORTED(capacity) F; HOLD(accrual) H. Need >=7 dates, >=20 never-placed priority open-cap refusals and >=5% refusal share before occupancy replay |
+| WITHDRAWAL | F: 303/435 paired-window coverage; 57 avoidable winners / 0 losers; modeled delta −$3.666 | HOLD(instrument), observed economics unsupported; require >=80% paired coverage plus independent trade completeness and >=40 avoidable fills / >=10 dates |
+
+Full assumptions and source hashes: [MMSELL read-only probes](MMSELL_CHATGPT_PROBES_20261004.md)
+and [JSON results](research/MMSELL_CHATGPT_PROBE_RESULTS_20261004.json). No promotion or live change.
+
+### Idea-model promotion ledger
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|

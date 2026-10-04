@@ -553,3 +553,10 @@ i.e. around 2026-09-04. Status at 01:40Z: 11 trades created, 0 settled yet
 Arming remains a separate operator approval, and the runtime allowlist
 (`LIVE_STRATEGIES`, plus a `Dmmsell10` entry in `MMSELL_VARIANTS`) a separate one
 after that. `Cmmsell10` continues draining beside it on its own tags and epoch.
+
+## Bounded Research Lab extension — 2026-10-04
+
+Calvin requested three read-only MMSELL probes. [Frozen contract and results](../MMSELL_CHATGPT_PROBES_20261004.md)
+record the completed measurements; none supports a new live treatment. This extension
+creates no experiment or ongoing workstream, and changes no deployment, parameter, executor,
+collector, risk gate or lifecycle state. HMmSell and predecessor epochs are analyzed separately.
