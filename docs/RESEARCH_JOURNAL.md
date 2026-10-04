@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## LIMM-PLACEMENT 2026-10-04 — run 1: HOLD; the reward model reads 50× what the book earned
+
+[Probe](LIMM_PLACEMENT_THESIS.md) run `limmplace-20261004-1` (3 days, 400 markets). Under the
+conservative fill model every policy nets positive: cheap side at the reference (P1) +$4.48 per
+market-day over 213 market-days, both sides at the reference (P2) +$0.57, and the re-price-and-pull
+variants +$0.41 and +$0.21. The F add-on beats neither base. Nothing promotes: the pre-registered
+L0 check found today's policy simulated at $9.65 per market-day against about $0.19 the live book
+actually realised, so every reward figure is flagged optimistic. Part of that gap is timing, since
+Kalshi pays when a programme ends and most of ours have not. The November payouts calibrate the
+model; re-run then with the same rules. Inside this run, P1 is clearly the strongest placement.
+
 ## LIMM-PLACEMENT 2026-10-04 — pre-registered: where should the incentive book rest its bids?
 
 The liquidity-incentive book has earned $2.21 in rewards since 09-17. Its 1–2¢ bids usually sit
