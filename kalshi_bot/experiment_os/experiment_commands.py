@@ -249,6 +249,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         perp_v1,
         queue_aware_cancel,
         recut_mmsell10_contest_cap,
+        recut_mmsell10_size_split,
         repair_dark_live_canaries,
         repair_live_material_baseline,
         repair_tmmsell_epoch,
@@ -522,6 +523,28 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=successor_mmsell10_size_split.ACTIVATION_VARS,
             strategy_tags=(successor_mmsell10_size_split.LIVE_TAG,
                            successor_mmsell10_size_split.TWIN_TAG),
+        ),
+        "mmsell-sizesplit-epoch3": ExperimentPackage(
+            name="mmsell-sizesplit-epoch3",
+            experiment_key=recut_mmsell10_size_split.EXPERIMENT_KEY,
+            description=(
+                "Re-cuts the size-split canary's live epoch onto FRESH tags (Jmmsell10 / "
+                "Jmmsell10_pt4) at the instant the XOS-000038 fix "
+                "(MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY) goes on: the live book's candidate "
+                "population changes (I2), so pre- and post-fix evidence must not pool — the "
+                "same remedy mmsell-contestcap-epoch2 applied to the 2026-09-06 fix. NOT a "
+                "promotion and NOT a widening: book params, envelope and keep gate are the "
+                "successor package's own objects. Closes epoch 2, opens its I2 successor, "
+                "registers live + twin at one instant on tags with no history, carries the "
+                "mmsell10 paper parent forward. Places no order — MMSELL_VARIANTS (Hmmsell10 -> "
+                "Jmmsell10), the flag and LIVE_STRATEGIES (Hmmsell10 -> Jmmsell10, Alimm1 kept) "
+                "are one separate env act."
+            ),
+            register=recut_mmsell10_size_split.register,
+            arm=recut_mmsell10_size_split.recut,
+            activation_vars=recut_mmsell10_size_split.ACTIVATION_VARS,
+            strategy_tags=(recut_mmsell10_size_split.LIVE_TAG,
+                           recut_mmsell10_size_split.TWIN_TAG),
         ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",

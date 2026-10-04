@@ -141,6 +141,15 @@ roughly **$15–20/month** if the per-contract edge holds. The canary's job is t
 step is safe and linear; the next steps (5-lots, a sized-up slow-information cell) are where the
 book's share of $100/month comes from.
 
+## 5b. Epoch 3 — `Jmmsell10` (2026-10-04, `DEC-027`)
+
+`Hmmsell10` lost live-tradable entries to paper-only positions in live-paused series filling a
+contest slot (XOS-000038). The fix (PR #531, `MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY`) changes
+the live candidate population, so it goes on with a new epoch on fresh tags — package
+`mmsell-sizesplit-epoch3` (`kalshi_bot/experiment_os/recut_mmsell10_size_split.py`). Same contract,
+envelope and keep gate. The §5 readout counts from the epoch-3 boundary; `Hmmsell10`'s evidence is
+historical only and does not pool.
+
 ## 6. Rollback
 
 - **Stop new entries:** remove `Hmmsell10` from `LIVE_STRATEGIES` (or `KILL_SWITCH=true` for the
