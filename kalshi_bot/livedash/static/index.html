@@ -157,6 +157,15 @@
   .loadbar{position:fixed;top:0;left:0;height:2px;width:100%;transform-origin:0 50%;
     background:var(--live);z-index:60;transition:transform .25s ease,opacity .25s ease}
   .loadbar[hidden]{display:block;opacity:0}
+  /* One page, two modes (/compare and /chart), chosen from the pathname at boot: each
+     mode hides the other's sections AND never fetches their data. */
+  body[data-mode="compare"] .m-chart{display:none}
+  body[data-mode="chart"] .m-compare{display:none}
+  nav a{color:var(--muted);text-decoration:none;font-size:13px;padding:4px 8px;border-radius:6px}
+  nav a:hover{color:var(--text);background:var(--panel2)}
+  nav a.on{color:var(--text);background:var(--panel2)}
+  details.sec>summary{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:22px 0 10px;padding:0}
 
   @media(max-width:700px){
     .bar{grid-template-columns:110px 1fr 78px}
@@ -167,6 +176,12 @@
     header{position:static}
     header h1{display:none}
     #clock{display:none}
+    nav a{padding:4px 5px}
+    /* nav on its own line, the pair picker and reload on the next */
+    header .hrow{flex-wrap:wrap}
+    header nav{flex-basis:100%}
+    .toolbar label{max-width:100%;min-width:0}
+    .toolbar select{max-width:100%;min-width:0}
   }
 </style>
 </head>
@@ -179,7 +194,12 @@
        the whole length of the page. -->
   <header>
     <div class="hrow">
-      <h1>Live vs Paper</h1>
+      <h1 id="pagetitle">Live vs Paper</h1>
+      <nav>
+        <a href="/">Overview</a>
+        <a href="/compare" id="nav-compare">Live vs paper</a>
+        <a href="/chart" id="nav-chart">Charts</a>
+      </nav>
       <select id="runsel" aria-label="Paired run"></select>
       <label class="dim" style="font-size:11px" title="Retired pairs are kept for history but hidden by default">
         <input type="checkbox" id="showretired"> retired</label>
@@ -193,13 +213,14 @@
     <span id="tags"></span>
     <span id="states"></span>
   </div>
-  <div class="hrow dim" id="meta" style="font-size:12px;margin-top:6px"></div>
+  <div class="hrow dim m-compare" id="meta" style="font-size:12px;margin-top:6px"></div>
 
   <div id="fatal" hidden class="banner bad"></div>
   <div id="pairnote"></div>
-  <div id="verdict"></div>
+  <div id="verdict" class="m-compare"></div>
 
   <!-- 1. positions + discrepancy summary -->
+  <div class="m-compare">
   <h2>Current position</h2>
   <div class="grid2">
     <div class="panel pad" id="livecard"></div>
@@ -208,8 +229,10 @@
   <!-- full width: the verdict column is the point of this table and must never be
        pushed off the edge of a narrow card -->
   <div class="panel pad" id="cmpcard" style="margin-top:12px"></div>
+  </div>
 
   <!-- 2. P&L overlay -->
+  <div class="m-chart">
   <h2>P&amp;L over time <span class="dim" style="text-transform:none;letter-spacing:0">— live vs paper, marked off the same tick</span></h2>
   <div class="panel pad">
     <div class="toolbar">
@@ -250,8 +273,10 @@
     <div id="pricechart"></div>
     <div class="note" id="pricenote"></div>
   </div>
+  </div>
 
   <!-- 4. divergence -->
+  <div class="m-compare">
   <h2>Divergence analysis</h2>
   <div class="grid2">
     <div class="panel pad" id="divpanel"></div>
@@ -291,8 +316,9 @@
       <button id="ordmore">Load more</button></div>
   </div>
 
-  <!-- 6. timeline -->
-  <h2>Event timeline</h2>
+  <!-- 6. timeline: collapsed, fetched the first time it is opened -->
+  <details class="sec" id="evsec">
+  <summary>Event timeline</summary>
   <div class="tabs" role="tablist" id="evtabs"></div>
   <div class="toolbar">
     <label>Environment <select id="evenv">
@@ -303,9 +329,11 @@
     <div style="padding:10px 14px;border-top:1px solid var(--line)" id="evmorewrap" hidden>
       <button id="evmore">Load more</button></div>
   </div>
+  </details>
 
-  <!-- 7. history -->
-  <h2>Paired runs</h2>
+  <!-- 7. history: collapsed, and the most expensive request on the page, so lazy too -->
+  <details class="sec" id="histsec">
+  <summary>All paired runs</summary>
   <div class="panel"><div class="scroll"><table>
     <caption class="sr">All paired live/paper runs</caption>
     <thead><tr><th>Pair</th><th>Live tag</th><th>Started</th><th>Ended</th><th class="r">Markets</th>
@@ -313,11 +341,13 @@
     <tbody id="histbody"><tr><td colspan="9"><div class="skel"><i></i><i></i><i></i></div></td></tr>
     </tbody></table></div></div>
   <div id="unpaired"></div>
+  </details>
 
   <details class="panel pad" style="margin-top:16px" id="provenance">
     <summary>How every number on this page was calculated</summary>
     <div id="diag" style="margin-top:8px"></div>
   </details>
+  </div>
 </div>
 <div class="tip" id="tip" role="status"></div>
 
@@ -328,6 +358,13 @@ const esc = v => String(v ?? "").replace(/[&<>"']/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const EM = '<span class="dim">—</span>';
 const has = v => v !== null && v !== undefined;
+// /chart shows the two charts and fetches only the series; /compare (and the legacy path)
+// shows everything else and never fetches the series -- the slowest request this page makes.
+const MODE = location.pathname.replace(/\/+$/, "") === "/chart" ? "chart" : "compare";
+document.body.dataset.mode = MODE;
+document.getElementById(MODE === "chart" ? "nav-chart" : "nav-compare").classList.add("on");
+document.getElementById("pagetitle").textContent = MODE === "chart" ? "Charts" : "Live vs Paper";
+const EVLOAD = {opened:false}, HISTLOAD = {opened:false};
 
 /* Missing data is never rendered as zero. */
 const usd = v => has(v) ? (v < 0 ? "−$" : "$") +
@@ -1028,19 +1065,31 @@ async function selectRun(tag){
   S.run = S.series = S.orders = null; S.incumbent = null; S.evItems = [];
   rememberRun(tag);
   renderRunOptions();
-  ["#livecard","#papercard","#cmpcard","#divpanel","#gatepanel"].forEach(x => skeleton(x));
-  skeleton("#pnlchart",1,true); skeleton("#pricechart",1,true);
-  skeleton("#ordbody",2); skeleton("#feed",2);
   progress(true);
+  if(MODE === "chart"){
+    renderChartHeader();
+    skeleton("#pnlchart",1,true); skeleton("#pricechart",1,true);
+    await section(gen, "#pnlchart", loadSeries);
+    return;
+  }
+  ["#livecard","#papercard","#cmpcard","#divpanel","#gatepanel"].forEach(x => skeleton(x));
+  skeleton("#ordbody",2); skeleton("#feed",2);
 
   await section(gen, "#livecard", loadRun);
   if(stale(gen)) return;
   await Promise.all([
-    section(gen, "#pnlchart", loadSeries),
     section(gen, "#ordbody", g => loadOrders(false, g)),
-    section(gen, "#feed", g => loadEvents(true, g)),
+    EVLOAD.opened ? section(gen, "#feed", g => loadEvents(true, g)) : null,
   ]);
   if(S.history) renderHistory();   // re-mark the selected row
+}
+
+// The chart page skips the run payload entirely; the tags come from the picker's own list.
+function renderChartHeader(){
+  const r = S.byTag[S.tag] || {};
+  $("#tags").innerHTML = `<span class="tag live">${esc(r.live_tag || "")}</span>
+    <span class="dim">vs</span> <span class="tag paper">${esc(S.tag)}</span>
+    <a class="dim" style="font-size:12px;margin-left:8px" href="/compare?run=${encodeURIComponent(S.tag)}">numbers →</a>`;
 }
 
 /* Refresh in place. The old timer re-ran the whole selection every 60 seconds, which
@@ -1051,9 +1100,8 @@ async function selectRun(tag){
 async function refreshInPlace(){
   if(INFLIGHT || document.hidden || !S.tag) return;
   const gen = GEN;
+  if(MODE === "chart"){ await section(gen, "#pnlchart", loadSeries); return; }
   await section(gen, "#livecard", loadRun);
-  if(stale(gen)) return;
-  await section(gen, "#pnlchart", loadSeries);
 }
 const ended = t => !!(S.byTag[t] && S.byTag[t].ended_at);
 
@@ -1096,6 +1144,10 @@ function renderRunOptions(){
 // ?run=<retired tag> still works, for exactly the visit that asked for it.
 function rememberRun(tag){
   history.replaceState(null, "", ended(tag) ? location.pathname : "?run="+encodeURIComponent(tag));
+  // Switching between the numbers and the charts keeps the pair you were looking at.
+  const q = "?run=" + encodeURIComponent(tag) + (ended(tag) ? "&retired=1" : "");
+  $("#nav-compare").href = "/compare" + q;
+  $("#nav-chart").href = "/chart" + q;
 }
 
 async function boot(){
@@ -1134,7 +1186,6 @@ async function boot(){
     // Phase 2 + 3 -- this pair, top of the page first. Phase 4, the all-runs table, is the
     // expensive one and nothing above it waits on it.
     await selectRun(S.tag);
-    loadHistory();
   }catch(e){ fatal(e.message); }
 }
 
@@ -1153,6 +1204,10 @@ $("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0;
 $("#ordmore").onclick = () => { S.ordOffset += 100; reload("#ordbody", g => loadOrders(true, g)); };
 $("#evenv").onchange = e => { S.evEnv = e.target.value; reload("#feed", g => loadEvents(true, g)); };
 $("#evmore").onclick = () => reload("#feed", g => loadEvents(false, g));
+$("#evsec").ontoggle = e => { if(e.target.open && !EVLOAD.opened){ EVLOAD.opened = true;
+  reload("#feed", g => loadEvents(true, g)); } };
+$("#histsec").ontoggle = e => { if(e.target.open && !HISTLOAD.opened){ HISTLOAD.opened = true;
+  loadHistory(); } };
 $("#provenance").ontoggle = e => { if(e.target.open && S.incumbent === null) loadIncumbent(); };
 $("#divgroup").onchange = e => { S.divGroup = e.target.checked; renderDivergence(); };
 $("#divbody").addEventListener("click", e => {

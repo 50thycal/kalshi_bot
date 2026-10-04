@@ -1,8 +1,11 @@
 """Stdlib HTTP server for the read-only live-vs-paper comparison dashboard.
 
 Routes:
-  GET /                              the single-page dashboard
+  GET /                              overview: month vs goal, order board, experiment scorecard
+  GET /compare                       live vs paper detail for one pair (no charts)
+  GET /chart                         the P&L and price charts for one pair, on their own
   GET /healthz                       "ok"
+  GET /api/overview                  the overview payload, from a background-refreshed cache
   GET /api/runs[?view=selector]      paired runs + unpaired live strategies
                                      (view=selector: the picker's pairs only, no P&L)
   GET /api/runs/<twin_tag>           header, positions, comparison, divergence
@@ -51,11 +54,13 @@ from ..db import session_scope
 from ..liquidity_incentive import report as incentive_report
 from . import data
 from . import execution as execution_mod
+from . import overview as overview_mod
 from .events import CATEGORIES, DEFAULT_CATEGORY, ENVIRONMENTS
 
 logger = logging.getLogger("kalshi_bot.livedash")
 
 _INDEX = (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
+_OVERVIEW = (Path(__file__).parent / "static" / "overview.html").read_text(encoding="utf-8")
 _EXECUTION = (Path(__file__).parent / "static" / "execution.html").read_text(encoding="utf-8")
 _INCENTIVES = (Path(__file__).parent / "static" / "incentives.html").read_text(encoding="utf-8")
 _POLICY_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
@@ -74,6 +79,16 @@ SLOW_REQUEST_MS = 2000
 # broken". They are the normal outcome of a reload, a navigation, a closed tab or
 # an upstream proxy giving up, and none of them is this service's fault.
 DISCONNECTED = (BrokenPipeError, ConnectionResetError)
+
+
+def _build_overview() -> dict:
+    with session_scope() as session:
+        return overview_mod.build_overview(session)
+
+
+# The landing page reads this, never the database directly: `serve` starts its refresher, and
+# the first request after start builds inline if the refresher has not finished yet.
+OVERVIEW = overview_mod.OverviewCache(_build_overview)
 
 
 def _one(params: dict, key: str) -> str | None:
@@ -151,6 +166,11 @@ class LiveDashHandler(BaseHTTPRequestHandler):
 
     def _dispatch(self, path: str, params: dict) -> None:
         if path == "/":
+            self._send(200, _OVERVIEW.encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path in ("/compare", "/chart"):
+            # One page, two modes: index.html reads its own pathname and shows only the
+            # sections that mode needs (and fetches only their data).
             self._send(200, _INDEX.encode("utf-8"), "text/html; charset=utf-8")
             return
         if path == "/healthz":
@@ -207,6 +227,9 @@ class LiveDashHandler(BaseHTTPRequestHandler):
                    elapsed_ms, self._bytes_sent)
 
     def _route(self, path: str, params: dict) -> bool:
+        if path == "/api/overview":
+            self._json(OVERVIEW.get())
+            return True
         # Liquidity-incentive shadow research view (docs/LIQUIDITY_INCENTIVE_THESIS.md): read-only
         # over the incentive_* tables. Ranking only; nothing here can submit an order.
         if path == "/api/incentives/active":
@@ -300,6 +323,7 @@ class LiveDashHandler(BaseHTTPRequestHandler):
 
 def serve(host: str, port: int) -> None:
     httpd = ThreadingHTTPServer((host, port), LiveDashHandler)
+    OVERVIEW.start()
     logger.info("livedash listening on http://%s:%d", host, port)
     try:
         httpd.serve_forever()

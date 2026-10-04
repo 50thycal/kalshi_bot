@@ -58,6 +58,8 @@ def live_server(monkeypatch):
             return False
 
     monkeypatch.setattr(srv, "session_scope", lambda: _Scope())
+    # A fresh overview cache per test: the module-level one would serve another test's build.
+    monkeypatch.setattr(srv, "OVERVIEW", srv.overview_mod.OverviewCache(srv._build_overview))
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), srv.LiveDashHandler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -85,8 +87,15 @@ def test_page_and_health(live_server):
     base, _ = live_server
     with urllib.request.urlopen(base + "/", timeout=10) as r:
         body = r.read().decode()
-    assert r.status == 200 and "<title>Live vs Paper</title>" in body
-    # the run is chosen at runtime from the API, never baked into the page
+    assert r.status == 200 and "<title>Live Overview</title>" in body
+    assert "/api/overview" in body
+    # the detail page is served at both of its modes
+    for path in ("/compare", "/chart", "/compare/"):
+        with urllib.request.urlopen(base + path, timeout=10) as r:
+            page = r.read().decode()
+        assert r.status == 200 and "<title>Live vs Paper</title>" in page
+        # the run is chosen at runtime from the API, never baked into the page
+        assert "mm10_pt" not in page and "mmsell10" not in page
     assert "mm10_pt" not in body and "mmsell10" not in body
     with urllib.request.urlopen(base + "/healthz", timeout=10) as r:
         assert r.read() == b"ok"
@@ -110,6 +119,32 @@ def test_all_routes_answer(live_server):
     assert code == 200 and events["twin_tag"] == "mm10_pt"
 
 
+def test_overview_route_answers_from_the_cache(live_server):
+    base, _ = live_server
+    code, ov = _get(base, "/api/overview")
+    assert code == 200
+    assert ov["headline"]["goal_usd"] == 100.0
+    assert [b["live_tag"] for b in ov["headline"]["books"]] == ["mmsell10"]
+    assert ov["board"]["counts"]["filled"] >= 0 and "cache_age_seconds" in ov
+    assert ov["scorecards"] == []          # the fixture pair declares no size split
+
+
+def test_compare_mode_never_fetches_the_series_and_chart_mode_fetches_only_it():
+    """The two speed properties of the split: /compare does not pay for the charts and
+    /chart does not pay for the run payload; the timeline and the all-runs table are lazy."""
+    import pathlib as _pathlib
+
+    page = (_pathlib.Path(srv.__file__).parent / "static" / "index.html").read_text()
+    select_run = page.split("async function selectRun(tag){", 1)[1].split("\n}\n", 1)[0]
+    chart, compare = select_run.split('if(MODE === "chart"){', 1)[1].split("return;", 1)
+    assert "loadSeries" in chart and "loadRun" not in chart
+    assert "loadSeries" not in compare and "loadRun" in compare
+    assert "EVLOAD.opened ?" in compare
+    boot = page.split("async function boot(){", 1)[1].split("\n}\n", 1)[0]
+    assert "loadHistory()" not in boot
+    assert '$("#histsec").ontoggle' in page
+
+
 def test_the_page_loads_in_phases_and_never_pins_itself_to_a_retired_run():
     """Source-level guards, in the spirit of the no-write-path test: these are the two
     properties a later edit could silently undo, and both were operator-visible faults.
@@ -121,7 +156,8 @@ def test_the_page_loads_in_phases_and_never_pins_itself_to_a_retired_run():
 
     page = (_pathlib.Path(srv.__file__).parent / "static" / "index.html").read_text()
 
-    # boot asks for the cheap selector view; the summary list is fetched separately
+    # boot asks for the cheap selector view; the summary list is fetched separately (and
+    # only when its section is opened)
     assert "/api/runs?view=selector" in page
     assert "async function loadHistory()" in page
 
