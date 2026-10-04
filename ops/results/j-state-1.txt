@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=j-state-1
-# code e3aca90622542b79a539f76524567a32702d08ff · started 2026-10-04T17:29:44Z
-strategy   status    count  max                             
----------  --------  -----  --------------------------------
-Hmmsell10  canceled  1      2026-10-04 17:15:54.353332+00:00
-Hmmsell10  paper     1      2026-10-04 17:15:53.593043+00:00
-
-(2 rows)
