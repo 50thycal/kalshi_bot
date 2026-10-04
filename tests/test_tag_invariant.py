@@ -236,3 +236,116 @@ def test_pytest_sees_the_refusal_as_a_refusal_not_a_failure():
     produce, so it must be in `_REFUSALS` (→ REJECTED), not fall through to
     FAILED, which means 'the executor no longer knows what it did'."""
     assert xc.ExperimentCommandRejected in xc._REFUSALS
+
+
+# ---------------------------------------------------------------------------
+# A DECLARED retirement the runtime has let go of (epoch re-cuts onto fresh tags)
+# ---------------------------------------------------------------------------
+
+
+class _Runtime:
+    """The three things the guard reads off the running worker's Settings."""
+
+    def __init__(self, *, books=(), twins=(), live=()):
+        self.mmsell_variant_list = [{"tag": t} for t in books]
+        self.live_paper_twin_pairs = [(f"live-of-{t}", t) for t in twins]
+        self.live_strategy_list = list(live)
+
+
+def _retiring_package(monkeypatch, retires):
+    def register(session, *, actor, promotion_sample_floor=None):
+        dep = _dep(session, "a-paper-1")
+        svc.end_deployment(session, dep, ended_at=svc._now())
+        return {"ended": [dep.deployment_key]}
+
+    pkg = xc.ExperimentPackage(
+        name="fake-retirer", experiment_key="book-a", description="test-only package",
+        register=register, retires_tags=retires,
+    )
+    monkeypatch.setattr(xc, "_packages", lambda: {pkg.name: pkg})
+    return pkg
+
+
+def _with_runtime(monkeypatch, runtime):
+    import kalshi_bot.config as config
+
+    monkeypatch.setattr(config, "get_settings", lambda: runtime)
+
+
+def test_a_declared_retirement_the_runtime_no_longer_constructs_is_allowed(
+    xos_session, xos_platform, monkeypatch
+):
+    """The Hmmsell10 -> Jmmsell10 re-cut: the old tag is out of LIVE_STRATEGIES and
+    MMSELL_VARIANTS, so nothing can be refused for lack of its arm."""
+    s = xos_session
+    _book(s, key="book-a", tag=TAG, dep_key="a-paper-1")
+    s.commit()
+    pkg = _retiring_package(monkeypatch, (TAG,))
+    _with_runtime(monkeypatch, _Runtime(books=("other",), live=("Jmm",)))
+
+    out = xc.execute_envelope(s, _envelope(pkg.name, "inv-ret-1"))
+    s.commit()
+
+    assert out["status"] == "SUCCEEDED", out
+    assert TAG not in svc.active_strategy_tags(s)
+
+
+def test_a_declared_retirement_the_runtime_still_constructs_is_rejected(
+    xos_session, xos_platform, monkeypatch
+):
+    """The declaration is not trusted on its own: each way the worker can still build the
+    tag — a variants book, a twin, a LIVE_STRATEGIES prefix — keeps the guard closed."""
+    for i, runtime in enumerate((_Runtime(books=(TAG,)), _Runtime(twins=(TAG,)),
+                                 _Runtime(live=(TAG[:5],)))):
+        s = xos_session
+        if i == 0:
+            _book(s, key="book-a", tag=TAG, dep_key="a-paper-1")
+            s.commit()
+        pkg = _retiring_package(monkeypatch, (TAG,))
+        _with_runtime(monkeypatch, runtime)
+
+        out = xc.execute_envelope(s, _envelope(pkg.name, f"inv-ret-c{i}"))
+        s.commit()
+
+        assert out["status"] == "REJECTED", (i, out)
+        assert TAG in out["error"]
+        s.expire_all()
+        assert TAG in svc.active_strategy_tags(s)
+
+
+def test_unreadable_settings_fail_closed(xos_session, xos_platform, monkeypatch):
+    s = xos_session
+    _book(s, key="book-a", tag=TAG, dep_key="a-paper-1")
+    s.commit()
+    pkg = _retiring_package(monkeypatch, (TAG,))
+    import kalshi_bot.config as config
+
+    def boom():
+        raise RuntimeError("no settings")
+
+    monkeypatch.setattr(config, "get_settings", boom)
+    out = xc.execute_envelope(s, _envelope(pkg.name, "inv-ret-2"))
+    assert out["status"] == "REJECTED"
+
+
+def test_an_undeclared_tag_is_still_guarded_beside_a_declared_one(
+    xos_session, xos_platform, monkeypatch
+):
+    """Declaring one retirement does not open the guard for anything else."""
+    s = xos_session
+    _book(s, key="book-a", tag=TAG, dep_key="a-paper-1")
+    s.commit()
+    pkg = _retiring_package(monkeypatch, ("somethingelse",))
+    _with_runtime(monkeypatch, _Runtime())
+
+    out = xc.execute_envelope(s, _envelope(pkg.name, "inv-ret-3"))
+    assert out["status"] == "REJECTED"
+    assert TAG in out["error"]
+
+
+def test_the_sizesplit_epoch3_package_declares_exactly_the_tags_it_retires():
+    from kalshi_bot.experiment_os import recut_mmsell10_size_split as r
+
+    pkg = xc._packages()["mmsell-sizesplit-epoch3"]
+    assert pkg.retires_tags == (r.PRIOR_LIVE_TAG, r.PRIOR_TWIN_TAG) == ("Hmmsell10",
+                                                                         "Hmmsell10_pt4")

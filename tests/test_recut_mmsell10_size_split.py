@@ -540,3 +540,51 @@ def test_the_allowlist_swap_refuses_when_the_retiring_book_is_absent():
     with pytest.raises(svc.ExperimentOsError) as exc:
         recut.strategies_for_recut("Alimm1")
     assert "refusing to guess" in str(exc.value)
+
+
+# --- end to end through the transport production uses ----------------------
+
+
+class _Runtime:
+    def __init__(self, live):
+        self.mmsell_variant_list = [{"tag": "mmsell10"}, {"tag": recut.LIVE_TAG}]
+        self.live_paper_twin_pairs = [(t, f"{t}_pt4") for t in live]
+        self.live_strategy_list = list(live)
+
+
+def _arm_envelope(command_id):
+    return {"command_id": command_id, "action": "ARM_CANARY", "actor": "claude-code",
+            "actor_role": "LIVE_OPS", "schema_version": 1,
+            "payload": {"package": "mmsell-sizesplit-epoch3", "approved_by": "Calvin"}}
+
+
+def test_arm_canary_succeeds_once_the_runtime_has_let_the_old_tags_go(
+    xos_session, canary, monkeypatch
+):
+    """The 2026-10-04 17:24Z rejection (TAG_STRANDED) reproduced and cleared: with the
+    activation env applied, Hmmsell10/_pt4 are constructed by nothing, so the declared
+    retirement passes the XOS-000033 guard and the new pair is registered."""
+    import kalshi_bot.config as config
+    from kalshi_bot.experiment_os import experiment_commands as ec
+
+    xos_session.commit()
+    monkeypatch.setattr(config, "get_settings", lambda: _Runtime(("Jmmsell10", "Alimm1")))
+    out = ec.execute_envelope(xos_session, _arm_envelope("ep3-arm-test-1"))
+    assert out["status"] == "SUCCEEDED", out
+    tags = svc.active_strategy_tags(xos_session)
+    assert {recut.LIVE_TAG, recut.TWIN_TAG, recut.PAPER_TAG} <= tags
+    assert not {cc.LIVE_TAG, cc.TWIN_TAG} & tags
+
+
+def test_arm_canary_is_still_refused_while_the_runtime_builds_the_old_tag(
+    xos_session, canary, monkeypatch
+):
+    """Sent BEFORE the activation env (Hmmsell10 still allowlisted) it must refuse."""
+    import kalshi_bot.config as config
+    from kalshi_bot.experiment_os import experiment_commands as ec
+
+    xos_session.commit()
+    monkeypatch.setattr(config, "get_settings", lambda: _Runtime(("Hmmsell10", "Alimm1")))
+    out = ec.execute_envelope(xos_session, _arm_envelope("ep3-arm-test-2"))
+    assert out["status"] == "REJECTED"
+    assert "Hmmsell10" in out["error"]
