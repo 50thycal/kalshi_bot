@@ -289,9 +289,11 @@ class MmSellTracker:
         `mmsell_live_caps_count_live_eligible_only` is on."""
         if not s.mmsell_settlement_cap_enabled or close_dt is None:
             return False
+        # `counts` is passed only when set, so the shipped (flag-off) calls are unchanged.
+        scope = {} if counts is None else {"counts": counts}
         try:
             n_on_date, events_on_date = repo.open_positions_settlement_summary(
-                session, tag, close_dt.date(), ticker, counts=counts)
+                session, tag, close_dt.date(), ticker, **scope)
         except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
             logger.exception("mmsell settlement cap: read failed (entering anyway)")
             return False
@@ -358,8 +360,10 @@ class MmSellTracker:
             contest = contest_key_of(ticker, split_subjects=(contest_key == "split"))
             if contest:
                 try:
-                    open_contests = repo.open_positions_contest_summary(
-                        session, tag, ticker, counts=counts)
+                    open_contests = (
+                        repo.open_positions_contest_summary(session, tag, ticker)
+                        if counts is None else
+                        repo.open_positions_contest_summary_scoped(session, tag, ticker, counts))
                 except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
                     logger.exception("mmsell contest cap: read failed (entering anyway)")
                     return False

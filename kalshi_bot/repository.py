@@ -994,7 +994,7 @@ def open_positions_settlement_summary(
 
 
 def open_positions_contest_summary(
-    session, strategy: str, ticker: str, *, counts=None
+    session, strategy: str, ticker: str
 ) -> Counter[str]:
     """CONTEST -> open rungs across `strategy`'s WHOLE open book. `ticker` is excluded for the
     same reason the settlement summary excludes it: a position already open on the candidate's
@@ -1017,9 +1017,7 @@ def open_positions_contest_summary(
 
     Keys on `contest_key_of` rather than the event ticker because an event ticker is series x
     contest: KXMLBTOTAL and KXMLBSPREAD on one baseball game are two events and one result
-    (XOS-000020).
-
-    `counts` filters the positions counted, exactly as in `open_positions_settlement_summary`."""
+    (XOS-000020)."""
     from .mmsell.regimes import contest_key_of
 
     tickers = session.scalars(
@@ -1029,9 +1027,29 @@ def open_positions_contest_summary(
             m.PaperPosition.market_ticker != ticker,
         )
     ).all()
-    if counts is not None:
-        tickers = [t for t in tickers if counts(t)]
     return Counter(key for key in (contest_key_of(t) for t in tickers) if key)
+
+
+def open_positions_contest_summary_scoped(
+    session, strategy: str, ticker: str, counts
+) -> Counter[str]:
+    """`open_positions_contest_summary` restricted to the open positions `counts` accepts — the
+    live-eligible scope (Settings.mmsell_live_caps_count_live_eligible_only, XOS-000038).
+
+    A sibling rather than a parameter on the original, whose exact signature is pinned by
+    tests/test_successor_mmsell10_contest_cap.py as the guard against a date-scoped contest read
+    returning. Same read, same key, same exclusion of the candidate's own ticker; still NOT
+    settlement-date scoped."""
+    from .mmsell.regimes import contest_key_of
+
+    tickers = session.scalars(
+        select(m.PaperPosition.market_ticker).where(
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
+            m.PaperPosition.market_ticker != ticker,
+        )
+    ).all()
+    return Counter(key for key in (contest_key_of(t) for t in tickers if counts(t)) if key)
 
 
 def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:

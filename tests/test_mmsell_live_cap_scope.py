@@ -162,3 +162,22 @@ def test_two_tradable_legs_on_one_game_still_get_one(settings):
 
 def test_the_flag_ships_off(settings):
     assert settings.mmsell_live_caps_count_live_eligible_only is False
+
+
+def test_the_scoped_contest_read_matches_the_shipped_one_when_it_accepts_everything(settings):
+    """The sibling read must be the same read: same key, same own-ticker exclusion."""
+    settings.bot_mode = "mmsell"
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        for t in (SPREAD, TOTAL, "KXMLBTOTAL-26OCT04NYYBOS-8"):
+            repository.open_paper_position_for_trade(
+                session, ticker=t, strategy=BOOK, side="no", quantity=1, avg_price=93)
+        session.flush()
+        shipped = repository.open_positions_contest_summary(session, BOOK, TOTAL)
+        scoped = repository.open_positions_contest_summary_scoped(
+            session, BOOK, TOTAL, lambda t: True)
+        assert scoped == shipped
+        live_only = repository.open_positions_contest_summary_scoped(
+            session, BOOK, TOTAL, lambda t: not t.startswith("KXNFLSPREAD"))
+        assert sum(live_only.values()) == sum(shipped.values()) - 1
