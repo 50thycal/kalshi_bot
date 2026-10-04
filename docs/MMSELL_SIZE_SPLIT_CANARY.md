@@ -121,6 +121,8 @@ contracts. Bootstrap: settlement-date blocks, 5,000 resamples, seed 20261003.
 | S2 marginal economics | the extra contracts are not adversely selected | per-contract realized (3-lot arm) − (1-lot arm) ≥ −1.0¢ and bootstrap 5th pct > −3.0¢, at ≥ 150 settled markets per arm | difference ≤ −3.0¢ at the floor |
 | S3 risk | the envelope holds at size | no keep-gate stop, no envelope breach | any stop |
 
+**Next step, decided 2026-10-04 (`DEC-026`):** after about a week of this split, size by win rate against entry price — larger positions in cells that win more often than their price implies (first candidate: the slow-information cell), small elsewhere. The one-week review reports S0, S1, S3 and the slow cell's forward count as they stand; S2 will be underpowered at a week and is reported as such.
+
 S2 is a **non-inferiority guard**, not a precision estimate: at ~25¢ per-contract dispersion,
 150 markets per arm resolve a difference of roughly ±3¢ — enough to catch the extra contracts
 being badly picked off, not to rank small effects. **Decision:** S0–S3 PASS → a

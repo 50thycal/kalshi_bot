@@ -1306,3 +1306,26 @@ position size. Decisions:
 Unchanged by this decision: every hard stop (merging the canary's code, `ARM_CANARY`, the
 `LIVE_STRATEGIES` / `LIVE_MAX_ORDER_DOLLARS` / `MAX_TOTAL_EXPOSURE` writes) is still confirmed by
 the operator at the step itself.
+
+## DEC-026 — After about a week of the random split, size by win rate against entry price (2026-10-04)
+
+Calvin decided on 2026-10-04, with `Hmmsell10` armed (02:18:55Z), that the random 1-vs-3 split
+runs for about a week to collect data on how larger orders behave, and that the **next MMSELL
+step is sizing by edge**: larger positions where our live win rate beats the entry price, smaller
+everywhere else. His framing: enter at roughly the same price, but where we win far more often
+than that price implies (e.g. ~93¢ entry winning ~99%), size up; where we win about what the price
+implies, stay small. The thresholds come from the research, not from this example.
+
+What that step rests on, stated now so it is not chosen after the data:
+
+1. **The edge measure is realized win rate minus the entry price**, per market cell, on live
+   fills. A high win rate alone is not edge.
+2. **The first candidate cell is the slow-information cell** (weather, mentions, scheduled
+   discrete markets; `docs/MMSELL_REPLAY_PROBES_20261003.md`), positive in three live windows
+   and accruing its forward read on `Hmmsell10`.
+3. **At about one week the review reports what exists, plainly:** the size split's instrument,
+   fill-completeness and risk checks (S0, S1, S3), the slow cell's forward fills against its
+   100-fill floor, and whether either read is still thin. The size step is a new successor
+   package and an operator hard stop as always; a thin read is stated as thin, not rounded up.
+
+Supersedes nothing; extends DEC-025's point 3.
