@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-funnel-1
-# code 79b71302832f8fa989782326b1d6d30382099b84 · started 2026-10-04T02:56:49Z
-snaps  progs  joined  qual  in_window  win_qual  win_qual_cheap  win_qual_one_cheap
------  -----  ------  ----  ---------  --------  --------------  ------------------
-415    4370   289     289   8          8         0               6                 
-
-(1 row)
