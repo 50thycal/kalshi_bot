@@ -376,7 +376,7 @@
       "until": "2026-10-04T15:30:00Z"
     }
   },
-  "source_transport_snapshot": "a0b6bb2ddc4f58e481fab603403c1e7ea654b714",
+  "source_transport_snapshot": "f0c62dd546bb435c2e425ba03ed1e7fd383bab0f",
   "sources": {
     "orders": {
       "columns": [
@@ -416,7 +416,7 @@
       "request_id": "cg-mm3-orders-20261004-2",
       "rows": 670,
       "sql_sha256": "1237eb6d86447822293fec3521b34ee58a745450fda4689287c11aa2a4cf0d56",
-      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-orders-20261004-2.txt"
+      "url": "https://github.com/50thycal/kalshi_bot/blob/f0c62dd546bb435c2e425ba03ed1e7fd383bab0f/ops/results/cg-mm3-orders-20261004-2.txt"
     },
     "slots": {
       "columns": [
@@ -441,7 +441,7 @@
       "request_id": "cg-mm3-slots-20261004-1",
       "rows": 6765,
       "sql_sha256": "dfbd3d418287ca3ec327f07cfe0086f79d4e05fe9a4f0559ef61824aea49463d",
-      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-slots-20261004-1.txt"
+      "url": "https://github.com/50thycal/kalshi_bot/blob/f0c62dd546bb435c2e425ba03ed1e7fd383bab0f/ops/results/cg-mm3-slots-20261004-1.txt"
     },
     "withdrawal": {
       "columns": [
@@ -461,13 +461,13 @@
         "baseline_ask",
         "ask"
       ],
-      "decoded_json_sha256": "a7d2acdc22d62e9a42f796feb6ea97aff80da2fd3e4f1049875a2edad63c981f",
-      "export_sha256": "c9fedc72b458b6d6adf7109ff9275764a0ef5197f8cab0bbd328f1a1655cdb67",
+      "decoded_json_sha256": "aec534211dfa9d65a1d65e206bc95151e12ebb36b3eb105ce1442a9ac1e4d971",
+      "export_sha256": "50077bdd4ad77ae75f4315522f466fe6546e026dacbdeca98ad2f29951c5bdf2",
       "read_only": true,
-      "request_id": "cg-mm3-withdraw-20261004-1",
+      "request_id": "cg-mm3-withdraw-20261004-3",
       "rows": 670,
-      "sql_sha256": "7826b21f4507a60e4d8a13293e884e2e3abe14b4e6cf2d024ea0aecd2f1e3133",
-      "url": "https://github.com/50thycal/kalshi_bot/blob/a0b6bb2ddc4f58e481fab603403c1e7ea654b714/ops/results/cg-mm3-withdraw-20261004-1.txt"
+      "sql_sha256": "b9dad729df4b3f8c13eeca0c675215c33c6423a09e956b54894878860d477be3",
+      "url": "https://github.com/50thycal/kalshi_bot/blob/f0c62dd546bb435c2e425ba03ed1e7fd383bab0f/ops/results/cg-mm3-withdraw-20261004-3.txt"
     }
   },
   "validation": "23 focused tests passed; full repository ruff passed",

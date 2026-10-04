@@ -22,9 +22,13 @@ __FACTS__
       AND b.features_json->>'book_valid' = 'true'
       AND (q.features_json->>'book_age_s')::float <= 30
       AND (b.features_json->>'book_age_s')::float <= 30
+      AND q.features_json->>'best_yes_ask' IS NOT NULL
+      AND b.features_json->>'best_yes_ask' IS NOT NULL
+      AND q.features_json->>'no_top3' IS NOT NULL
+      AND b.features_json->>'no_top3' IS NOT NULL
 ), coarse AS MATERIALIZED (
     SELECT * FROM tick_pairs WHERE ask >= baseline_ask + 1
-      AND baseline_depth >= 40 AND depth <= baseline_depth * 0.5
+      AND depth <= baseline_depth * 0.5
       AND baseline_depth - depth >= 20
 ), checked AS MATERIALIZED (
     SELECT p.*, d.removed, d.levels, d.snapshots, d.connections,

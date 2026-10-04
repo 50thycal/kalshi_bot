@@ -139,14 +139,17 @@ production channel. SQL completed against code `a6c920f658770435e67e5c1e4764255b
 |---|---|---:|
 | Orders, fills, settlement mapping and tape | `cg-mm3-orders-20261004-2` | 670 orders: F 636, H 34 |
 | Candidate/gate census | `cg-mm3-slots-20261004-1` | 6,765 tag/market candidates: F 6,435, H 330 |
-| Paired book ticks and withdrawal traces | `cg-mm3-withdraw-20261004-1` | 670 order traces |
+| Paired book ticks and withdrawal traces | `cg-mm3-withdraw-20261004-3` | 670 order traces |
 
-Immutable source snapshot: `a0b6bb2ddc4f58e481fab603403c1e7ea654b714` on the transport
+Immutable source snapshot: `f0c62dd546bb435c2e425ba03ed1e7fd383bab0f` on the transport
 history. [Machine-readable results](research/MMSELL_CHATGPT_PROBE_RESULTS_20261004.json)
 include source URLs, input/decoded-data/query hashes, column schemas and all sensitivity groups.
 The first order export was superseded to bound fill timestamps to the cutoff, include exchange
 cancellation events, and fall back to WS quantities when REST retained a zero quantity.
 These are measurement corrections; prices, trigger thresholds and decision floors were unchanged.
+The final withdrawal rerun removed an accidental extra 40-contract baseline minimum and
+required nonmissing price/depth fields at both paired endpoints. Results were unchanged;
+the final query now matches the original frozen depth-drop criteria exactly.
 
 The initial census included 654 F orders. The analysis requires an exchange order identifier
 and buy-NO action, leaving 636. Of these, 473 have readable normal-entry context; 435 have

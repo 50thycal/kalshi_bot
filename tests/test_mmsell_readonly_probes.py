@@ -138,3 +138,4 @@ def test_sql_readonly_price_convention_and_asof_cutoff():
     assert "ts_ms <= extract(epoch FROM f.observed_end)" in sql
     assert "WHERE kalshi_order_id=o.kalshi_order_id AND status IN ('canceled','cancelled')" in sql
     assert "received_at <= p.at" in p.export_sql("withdrawal")
+    assert "baseline_depth >= 40" not in p.export_sql("withdrawal")
