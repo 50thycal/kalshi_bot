@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-fb-rev1
-# code a06b4425681afe9775a011978ac65b7d01e2965f · started 2026-10-05T15:55:38Z
-id  component        version                       status   fingerprint                                                       activated_at                      pr_ref 
---  ---------------  ----------------------------  -------  ----------------------------------------------------------------  --------------------------------  -------
-3   MARKET_TAXONOMY  coverage_2026_08_13           retired                                                                    2026-08-13 18:09:40+00:00                
-11  MARKET_TAXONOMY  settlement_repair_2026_08_24  active   d1c08d7fdf70c446bef502909a6c4933480d622595b5d518bdf8bf82ad07169f  2026-08-24 14:21:17.571842+00:00  PR #257
-
-(2 rows)
