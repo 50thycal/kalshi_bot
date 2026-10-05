@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=xos  id=cc-fb-iss2
-# code a06b4425681afe9775a011978ac65b7d01e2965f · started 2026-10-05T15:56:50Z
-issue       sev     pri  classification  owner                   status  scope                                  title                                                       
-----------  ------  ---  --------------  ----------------------  ------  -------------------------------------  ------------------------------------------------------------
-XOS-000008  MEDIUM  P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN    revision:settlement_repair_2026_08_24  Settlement-taxonomy coverage decays over a long-running expe
-XOS-000012  MEDIUM  P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN    system-wide                            Standing a live book down by naming a different one in LIVE_
-XOS-000032  MEDIUM  P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN    system-wide                            Series with no manifest row inherit the nearest prefix row's
-XOS-000030  LOW     P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN    system-wide                            Two mmsell series are recorded under the wrong market taxono
