@@ -1,6 +1,1 @@
-{
-  "type": "db",
-  "sql": "SELECT rolcanlogin AS can_login,\nhas_schema_privilege('bot_readonly','public','USAGE') AS schema_usage,\nhas_table_privilege('bot_readonly','public.paper_trades','SELECT') AS paper_select,\nhas_table_privilege('bot_readonly','public.fills','SELECT') AS fills_select,\nhas_table_privilege('bot_readonly','public.live_orders','SELECT') AS orders_select,\nhas_table_privilege('bot_readonly','public.live_paper_twins','SELECT') AS twins_select\nFROM pg_roles WHERE rolname='bot_readonly'",
-  "max_rows": 5,
-  "id": "catalog-read-access-20261005-2142"
-}
+{"type":"noop"}
