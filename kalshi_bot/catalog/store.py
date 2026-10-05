@@ -322,15 +322,52 @@ class Store:
             )
         return result
 
-    def evidence_page(self, source, records, cursor):
+    def evidence_page(self, source, records, cursor, coverage=None):
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             for record in records:
                 series = record["market_ticker"].split("-", 1)[0]
                 db.execute(
                     "INSERT OR REPLACE INTO evidence VALUES (?,?,?,?)",
                     (source, record["id"], series, pack(record)),
                 )
+            if coverage is not None:
+                fingerprint = hashlib.sha256()
+                local_records = 0
+                for row in db.execute(
+                    "SELECT source_id FROM evidence WHERE source=? AND source_id<=? "
+                    "ORDER BY source_id",
+                    (source, coverage["through_source_id"]),
+                ):
+                    if local_records:
+                        fingerprint.update(b",")
+                    fingerprint.update(str(row[0]).encode())
+                    local_records += 1
+                matched = (
+                    local_records == coverage["source_records"]
+                    and fingerprint.hexdigest() == coverage["source_ids_fingerprint"]
+                )
+                coverage = {
+                    **coverage,
+                    "local_records": local_records,
+                    "local_ids_fingerprint": fingerprint.hexdigest(),
+                    "ids_match": matched,
+                    "payload_parity_verified": False,
+                }
+                cursor = {
+                    **cursor,
+                    "initial_coverage_verified": bool(
+                        cursor.get("initial_coverage_verified") or matched
+                    ),
+                    "initial_complete": bool(cursor.get("initial_coverage_verified") or matched),
+                    "reconciliation_complete": matched,
+                    "last_coverage_check_at": coverage["checked_at"],
+                }
+                if matched:
+                    cursor["last_complete_at"] = coverage["checked_at"]
+                self.put_state(db, "source_coverage:" + source, coverage)
             self.put_state(db, "cursor:" + source, cursor)
+        return coverage
 
     def evidence(self):
         with self.connect() as db:
@@ -413,6 +450,7 @@ class Store:
         table = DOCUMENT_TABLES[index]
         saved = changed = 0
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             rows = db.execute(
                 f"SELECT rowid,document FROM {table} WHERE rowid>? ORDER BY rowid LIMIT ?",
                 (progress["after"], batch_size),
@@ -488,6 +526,19 @@ class Store:
             "evidence": evidence,
             "assessment_contexts": assessments,
             "jobs": states,
+            "backfill": {
+                source: {
+                    "local_records": evidence.get(source, 0),
+                    "initial_complete": states.get("cursor:" + source, {}).get(
+                        "initial_coverage_verified", False
+                    ),
+                    "reconciliation_complete": states.get("cursor:" + source, {}).get(
+                        "reconciliation_complete", False
+                    ),
+                    "coverage": states.get("source_coverage:" + source),
+                }
+                for source in ("paper", "live")
+            },
             "consumer_cutover": False,
             "confidence_calibrated": False,
         }

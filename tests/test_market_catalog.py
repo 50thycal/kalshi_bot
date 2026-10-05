@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 import threading
@@ -8,9 +9,17 @@ import httpx
 import pytest
 
 from kalshi_bot.catalog.evaluators import EVALUATORS, mmsell, refresh, register
-from kalshi_bot.catalog.ingest import Discovery, seed, source_page
+from kalshi_bot.catalog.ingest import SOURCE_COVERAGE_QUERIES, Discovery, seed, source_page
 from kalshi_bot.catalog.service import make_server, run_job
-from kalshi_bot.catalog.store import DOCUMENT_TABLES, SEMANTIC_FIELDS, Store, digest, encode, unpack
+from kalshi_bot.catalog.store import (
+    DOCUMENT_TABLES,
+    SEMANTIC_FIELDS,
+    Store,
+    digest,
+    encode,
+    pack,
+    unpack,
+)
 
 
 @pytest.fixture
@@ -295,6 +304,88 @@ def test_write_grants_without_elevated_role_still_refused(store):
     assert conn.execute.call_count == 2  # No trading data read after refusal.
 
 
+def coverage(ids, through=3):
+    return {
+        "source_records": len(ids),
+        "source_ids_fingerprint": hashlib.sha256(
+            ",".join(str(i) for i in sorted(ids)).encode()
+        ).hexdigest(),
+        "through_source_id": through,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "definition": "sorted-source-ids-sha256-v1",
+    }
+
+
+def test_backfill_requires_matching_ids_not_just_counts(store):
+    store.evidence_page("paper", [trade(1), trade(3)], {"after": 3, "initial_complete": False})
+    result = store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 2]))
+    assert result["source_records"] == result["local_records"] == 2
+    assert not result["ids_match"]
+    assert not store.state("cursor:paper")["initial_complete"]
+    assert not store.state("cursor:paper")["reconciliation_complete"]
+    assert store.state("cursor:paper").get("last_complete_at") is None
+    assert store.status()["backfill"]["paper"]["coverage"]["ids_match"] is False
+    # A fully matching coverage checkpoint is durable, but is not a confidence score.
+    result = store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 3]))
+    reopened = Store(store.path)
+    assert result["ids_match"] and not result["payload_parity_verified"]
+    assert reopened.status()["backfill"]["paper"]["initial_complete"]
+    assert reopened.state("cursor:paper")["last_complete_at"] == result["checked_at"]
+    refresh(reopened, datetime(2026, 10, 5, tzinfo=timezone.utc))
+    assert all(r["confidence_score"] is None and not r["qualified"] for r in reopened.assessments())
+
+
+def test_coverage_checkpoint_and_cursor_rollback_together(store):
+    cursor = {"after": 1, "initial_complete": False}
+    store.evidence_page("paper", [trade()], cursor)
+    with store.connect() as db:
+        db.execute("""CREATE TRIGGER refuse_cursor BEFORE INSERT ON state
+                      WHEN NEW.key='cursor:paper'
+                      BEGIN SELECT RAISE(ABORT, 'test interruption'); END""")
+    with pytest.raises(sqlite3.IntegrityError):
+        store.evidence_page("paper", [], cursor, coverage([1], through=1))
+    assert store.state("source_coverage:paper") is None
+    assert store.state("cursor:paper") == cursor
+
+
+def test_eof_audits_read_only_source_and_throttles_repeat_checks(store):
+    store.evidence_page("paper", [trade()], {"after": 1, "initial_complete": False})
+    conn = MagicMock()
+    conn.__enter__.return_value = conn
+    conn.execute.return_value.fetchall.return_value = []
+    source = coverage([1], through=1)
+    conn.execute.return_value.fetchone.side_effect = [
+        {"rolsuper": False},
+        {"writable": False},
+        {k: source[k] for k in ("source_records", "source_ids_fingerprint")},
+    ]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        assert source_page(store, "postgresql://private/source", "paper") == 0
+    assert conn.execute.call_args.args == (SOURCE_COVERAGE_QUERIES["paper"], (1,))
+    assert conn.read_only and store.state("cursor:paper")["initial_complete"]
+    conn.reset_mock()
+    conn.execute.return_value.fetchall.return_value = []
+    conn.execute.return_value.fetchone.side_effect = [{"rolsuper": False}, {"writable": False}]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        source_page(store, "postgresql://private/source", "paper")
+    assert conn.execute.call_count == 3  # Privileges + page; no repeated whole-source hash.
+
+
+def test_empty_source_is_complete_only_after_audit(store):
+    assert not store.status()["backfill"]["live"]["initial_complete"]
+    result = store.evidence_page("live", [], {"after": 0}, coverage([], through=0))
+    assert result["ids_match"]
+    assert store.status()["backfill"]["live"]["initial_complete"]
+
+
+def test_legacy_eof_flag_does_not_imply_verified_coverage(store):
+    store.set_state("cursor:paper", {"after": 3, "initial_complete": True})
+    store.evidence_page("paper", [trade(1), trade(3)], store.state("cursor:paper"))
+    assert not store.status()["backfill"]["paper"]["initial_complete"]
+    store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 2]))
+    assert not store.state("cursor:paper")["initial_complete"]
+
+
 def test_compression_preserves_legacy_documents_hashes_and_restart(store):
     raw = {"rules_primary": "Repeated official rules with Unicode: café. " * 100}
     doc = store.upsert("market", "KXTEST-E-M", raw, "KXTEST")
@@ -355,6 +446,34 @@ def test_compression_failure_rolls_back_page_and_cursor(store):
         db.execute("DROP TRIGGER refuse_reencoding")
     assert store.compress_page() == 1
     assert store.get("market", doc["ticker"])["raw"] == doc["raw"]
+
+
+def test_compression_serializes_with_concurrent_evidence_updates(store):
+    record = trade(notes="history " * 1000)
+    store.evidence_page("paper", [record], {"after": 1})
+    with store.connect() as db:
+        db.execute("UPDATE evidence SET document=?", (encode(record),))
+    store.set_state(
+        "storage:compression", {"table_index": DOCUMENT_TABLES.index("evidence"), "after": 0}
+    )
+    blocked = []
+
+    def concurrent_update(value):
+        other = sqlite3.connect(store.path, timeout=0)
+        try:
+            with pytest.raises(sqlite3.OperationalError, match="locked"):
+                other.execute("UPDATE evidence SET document=?", (encode({**record, "pnl": 999}),))
+            blocked.append(True)
+        finally:
+            other.close()
+        return pack(value)
+
+    with patch("kalshi_bot.catalog.store.pack", side_effect=concurrent_update):
+        assert store.compress_page() == 1
+    assert blocked and store.evidence()[0][1] == record
+    # Once maintenance commits, the writer can retry and its new value survives.
+    store.evidence_page("paper", [{**record, "pnl": 999}], {"after": 1})
+    assert store.evidence()[0][1]["pnl"] == 999
 
 
 def test_precompression_backup_is_consistent_and_never_overwritten(store):

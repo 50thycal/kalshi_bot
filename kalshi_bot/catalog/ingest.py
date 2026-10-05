@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -15,15 +16,29 @@ from .store import now, pack, unpack
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
 PAGE_SIZE = 1000
-SOURCE_QUERIES = {
-    "paper": """SELECT p.*, EXISTS(SELECT 1 FROM live_paper_twins t
-                  WHERE t.twin_tag=p.strategy) AS is_twin FROM paper_trades p
-                WHERE p.id > %s AND p.strategy ILIKE '%%mmsell%%' ORDER BY p.id LIMIT %s""",
-    "live": """SELECT f.*, o.strategy,o.event_ticker,o.experiment_deployment_arm_id
-                FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id
+SOURCE_RELATIONS = {
+    "paper": "FROM paper_trades p WHERE p.strategy ILIKE '%%mmsell%%'",
+    "live": """FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id
                 AND o.id=(SELECT min(x.id) FROM live_orders x
                          WHERE x.kalshi_order_id=f.kalshi_order_id)
-                WHERE f.id > %s AND o.strategy ILIKE '%%mmsell%%' ORDER BY f.id LIMIT %s""",
+                WHERE o.strategy ILIKE '%%mmsell%%'""",
+}
+SOURCE_PROJECTIONS = {
+    "paper": """p.*, EXISTS(SELECT 1 FROM live_paper_twins t
+                              WHERE t.twin_tag=p.strategy) AS is_twin""",
+    "live": "f.*, o.strategy,o.event_ticker,o.experiment_deployment_arm_id",
+}
+SOURCE_IDS = {"paper": "p.id", "live": "f.id"}
+SOURCE_QUERIES = {
+    source: f"SELECT {SOURCE_PROJECTIONS[source]} {relation} "
+    f"AND {SOURCE_IDS[source]} > %s ORDER BY {SOURCE_IDS[source]} LIMIT %s"
+    for source, relation in SOURCE_RELATIONS.items()
+}
+SOURCE_COVERAGE_QUERIES = {
+    source: "SELECT count(*) AS source_records,encode(sha256(convert_to("
+    f"coalesce(string_agg({SOURCE_IDS[source]}::text,',' ORDER BY {SOURCE_IDS[source]}),''),"
+    f"'UTF8')),'hex') AS source_ids_fingerprint {relation} AND {SOURCE_IDS[source]} <= %s"
+    for source, relation in SOURCE_RELATIONS.items()
 }
 
 
@@ -52,6 +67,7 @@ def seed(store):
 
 def source_page(store, url, source, batch_size=PAGE_SIZE):
     cursor = store.state("cursor:" + source, {"after": 0, "initial_complete": False})
+    coverage = None
     # SET TRANSACTION READ ONLY is issued by psycopg before the first SELECT.
     with psycopg.connect(
         url.replace("postgresql+psycopg://", "postgresql://"),
@@ -89,20 +105,47 @@ def source_page(store, url, source, batch_size=PAGE_SIZE):
             )
             raise PermissionError("Source role must have only SELECT privileges")
         records = conn.execute(SOURCE_QUERIES[source], (cursor["after"], batch_size)).fetchall()
-    next_cursor = {**cursor, "last_success_at": now()}
+        last_check = cursor.get("last_coverage_check_at")
+        check_due = (
+            not last_check
+            or (datetime.now(timezone.utc) - datetime.fromisoformat(last_check)).total_seconds()
+            >= 300
+        )
+        if not records and check_due:
+            coverage = {
+                **conn.execute(SOURCE_COVERAGE_QUERIES[source], (cursor["after"],)).fetchone(),
+                "through_source_id": cursor["after"],
+                "checked_at": now(),
+                "definition": "sorted-source-ids-sha256-v1",
+            }
+    next_cursor = {
+        **cursor,
+        "last_success_at": now(),
+        "initial_complete": bool(cursor.get("initial_coverage_verified")),
+    }
     if records:
         next_cursor["after"] = records[-1]["id"]
-    else:
-        next_cursor["initial_complete"] = True
-        next_cursor["last_complete_at"] = now()
-    store.evidence_page(source, records, next_cursor)
+        next_cursor["reconciliation_complete"] = False
+    result = store.evidence_page(source, records, next_cursor, coverage)
+    if result:
+        logging.getLogger("market_catalog").info(
+            "source_coverage=%s", json.dumps({"source": source, **result})
+        )
     return len(records)
 
 
 def reset_source_reconciliation(store):
     for source in SOURCE_QUERIES:
         cursor = store.state("cursor:" + source, {"initial_complete": False})
-        store.set_state("cursor:" + source, {**cursor, "after": 0})
+        store.set_state(
+            "cursor:" + source,
+            {
+                **cursor,
+                "after": 0,
+                "reconciliation_complete": False,
+                "last_coverage_check_at": None,
+            },
+        )
 
 
 class Discovery:
