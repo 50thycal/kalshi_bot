@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-px-0110","sql":"select distinct on (market_ticker) market_ticker, at, left(yes_levels_json::text,160) yes_lv, left(no_levels_json::text,160) no_lv from incentive_market_snapshots where market_ticker in ('KXFEAR-26OCT09-XGREE','KXTRUMPMENTION-26OCT06-CRYP') order by market_ticker, at desc"}
