@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "acbe7430996bec6101e91e0bddb4485bf7a179cf",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-10-05T00:27:59Z",
+  "id": "limm-insuf-4",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-insuf-4.receipt.json",
+  "result_file": "ops/results/limm-insuf-4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37247581097",
+  "service": null,
+  "started_at": "2026-10-05T00:27:58Z",
+  "targets": [],
+  "type": "db"
+}
