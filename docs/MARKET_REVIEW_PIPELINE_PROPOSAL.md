@@ -1,8 +1,8 @@
 # Market review pipeline — proposal and owner decisions
 
-Status: Design checkpoint; open choices below are recommendations, not accepted decisions.
+Status: D1–D9 A approved by Calvin in ChatGPT on 2026-10-05; service implementation requested.
 Date: 2026-10-05
-Scope: Preserve the proposed shared catalog and MMSELL-first evidence design. No implementation, arming, admission, or runtime change is authorized by this document.
+Scope: Standalone Railway catalog and MMSELL-first evidence service, with existing-data import. Trading activation and experiment consumer cutover remain separate.
 
 ## Confirmed direction
 
@@ -27,9 +27,9 @@ Family rollups are summaries. They do not silently pool incompatible versions, e
 
 If D2-A is selected, evidence maturity is the first comparison dimension; paper-only evidence cannot outrank established live evidence on a blended number. Live maturity still requires sufficient actual executions, distinct outcomes, temporal coverage, and data integrity. Several months with two fills is not automatically mature. Paper and live twins on the same underlying outcomes are paired evidence, not independent sample counts.
 
-## Open owner decisions
+## Approved owner decisions
 
-All entries remain pending. Recommendation: A for D1-D9; exact durations, sample floors, interval widths, and score mappings remain unset until measured calibration.
+Calvin selected A for D1–D9 on 2026-10-05. Exact durations, sample floors, interval widths and score mappings remain unset until measured calibration.
 
 | ID | Decision | A — recommended | B |
 |---|---|---|---|
@@ -89,4 +89,4 @@ Changes to metric semantics, taxonomy, shared risk or admission must follow the 
 
 ## Next step
 
-Owner selects the open options. Then produce a bounded Build Card and implementation spec, calibrated MMSELL confidence requirements, and the applicable Platform Impact plan. This proposal does not open an additional Active workstream or start implementation.
+Build the isolated service under WS-023 and MARKET_CATALOG_BUILD.md. Backfill is additive; adopt its outputs into experiment consumers only through the canonical Platform Impact process.
