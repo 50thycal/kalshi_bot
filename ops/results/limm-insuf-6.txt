@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-insuf-6
-# code acbe7430996bec6101e91e0bddb4485bf7a179cf · started 2026-10-05T00:30:08Z
-strategy  hr                         insuf  ok  insuf_usd
---------  -------------------------  -----  --  ---------
-Alimm1    2026-10-04 19:00:00+00:00  21     2   209.88   
-
-(1 row)
