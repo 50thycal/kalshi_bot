@@ -14,9 +14,11 @@ The API returns separate review completion, evidence maturity, confidence and ed
 
 Current raw quote/depth/volume fields are stored; full quote history is not archived. Semantic/lifecycle revisions, reviews and assessments are retained. There is no new execution telemetry subscription or order endpoint. REST reconciliation supplies automatic discovery and outcome/change refresh; authenticated WebSocket acceleration is a later optimization.
 
+Large JSON documents use lossless, versioned zlib compression; small documents stay JSON TEXT. Readers accept both formats. Content hashes, assessment IDs and API documents are unchanged. Before the first compressed write on upgrade, startup saves a consistent SQLite backup at `<CATALOG_DB_PATH>.before-compression-v1` and checks its integrity. Historical documents are re-encoded in atomic 1,000-row pages, with a persisted cursor and a three-second maintenance budget per cycle. No records are deleted. Freed SQLite pages are reused; the database file does not automatically shrink. The retained backup also occupies volume space.
+
 ## Railway deployment
 Project `kalshi-bot`, production. New service `market-catalog`; existing services are untouched.
-One replica in `us-east4-eqdc4a`, 1 CPU / 1 GB memory maximum. Dedicated 1 GB volume `market-catalog-data` at `/data`, SQLite WAL. The source Postgres is not the catalog's write database. Do not scale replicas against this SQLite volume. Backup/migrate storage before a future multi-replica deployment.
+One replica in `us-east4-eqdc4a`, 1 CPU / 1 GB memory maximum. Calvin expanded the dedicated volume `market-catalog-data` to 20 GB on 2026-10-05 after the initial 1 GB filled; mounted at `/data`, SQLite WAL. The source Postgres is not the catalog's write database. Do not scale replicas against this SQLite volume. Backup/migrate storage before a future multi-replica deployment.
 Dockerfile `deploy/catalog/Dockerfile`, start `python -m kalshi_bot.catalog.service`, health `/health`, port 8080. Configure through Railway service settings/tools; new services cannot opt into deprecated `railway.json` configuration. Watch only catalog files, registry manifest, taxonomy source and the catalog Dockerfile. Pin a tested commit until owner merge acceptance and subsequent deployment policy are recorded.
 
 Variables:
@@ -58,10 +60,14 @@ Review body: `kind`, `ticker`, `rules_hash`, `actor`, `rationale`, optional `tem
 
 ## Verification and recovery
 `python -m pytest tests/test_market_catalog.py`; `python -m ruff check kalshi_bot/catalog tests/test_market_catalog.py`.
-The importer checks source role elevation and write grants and refuses privileged connections. A root-credential reference was rejected by automatic approval review; provision the existing SELECT-only connection directly through Railway variables.
+The importer checks source role elevation and write grants and refuses privileged connections. `jobs.source_permissions` in status and the `source_permissions` log identify elevated role flags and public-table write privileges without revealing the URL or role name. A root-credential reference was rejected by automatic approval review; provision the existing SELECT-only connection directly through Railway variables.
 
 Source/discovery exceptions log only exception type; retries resume committed cursors. Inspect authenticated status and Railway logs. Restart preserves data on the volume. Reconcile daily rather than deleting/replacing legacy records. Before any volume operation or storage migration, stop this service and export a consistent SQLite backup; retain originals and historical snapshots.
+
+`jobs["storage:metrics"]` and five-minute `catalog_storage` logs report per-table payload bytes/counts, compressed rows, database/WAL sizes, reusable pages and free volume bytes. The compression cursor reports logical document bytes saved; this is not equivalent to a reduction in the Railway disk metric. Roll back to a build that understands both encodings. Restoring the original build requires stopping the service, preserving current data, and restoring the pre-compression backup; records collected after that backup must be reconciled again. Never replace the active volume with an older backup while running.
 
 
 ## Deployment verification — 2026-10-05
 The first deployment succeeded, health returned 200 and unauthenticated data returned 401. Registry seed verified all 140 rows. Public discovery returned 14,649 series and has continued paging events/markets. Through existing SELECT-only ops exports, the service accepted 200 recent paper records (including 6 separately preserved twins) and 200 actual live fills; this is explicitly partial coverage, not full historical migration. Ops transport returned to noop. Continuous historical backfill is blocked on configuring the SELECT-only source URL; the owner database URL was rejected by automatic approval review. Calibration and first consumer cutover remain subsequent WS-023 stages.
+
+Operational follow-up: PR #541 merged. Railway deployment `2518cd96-d621-44fd-b84a-0c4f2f27721e` recovered from confirmed disk-full startup failures after the volume expansion. Discovery passed 109,000 markets; the volume metric was approximately 1.6 GB. The supplied source URL reaches the permission check but is refused; paper/live evidence remains at the partial 200/200 seed. The follow-up adds lossless compression, a pre-upgrade backup and sanitized diagnostics; continuous import still requires genuinely SELECT-only credentials.

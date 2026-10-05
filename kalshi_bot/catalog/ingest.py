@@ -1,6 +1,7 @@
 """Bounded read-only source import and resumable public REST reconciliation."""
 
 import json
+import logging
 from pathlib import Path
 
 import httpx
@@ -9,7 +10,7 @@ from psycopg.rows import dict_row
 
 from kalshi_bot.mmsell.market_types import classify
 
-from .store import now
+from .store import now, pack, unpack
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
@@ -37,14 +38,14 @@ def seed(store):
             record = db.execute(
                 "SELECT document FROM objects WHERE kind=? AND ticker=?", ("series", ticker)
             ).fetchone()
-            doc = json.loads(record[0])
+            doc = unpack(record[0])
             doc["legacy_registry"] = row
             doc["legacy_classification"] = dict(
                 zip(("contract_type", "settlement_mode"), classify(ticker), strict=True)
             )
             db.execute(
                 "UPDATE objects SET document=? WHERE kind=? AND ticker=?",
-                (json.dumps(doc), "series", ticker),
+                (pack(doc), "series", ticker),
             )
     store.set_state("registry_seed", {"last_success_at": now(), "series": len(manifest["series"])})
 
@@ -69,7 +70,23 @@ def source_page(store, url, source, batch_size=PAGE_SIZE):
             "current_user,quote_ident(table_schema)||'.'||quote_ident(table_name),"
             "'INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER')) AS writable"
         ).fetchone()
-        if not role or any(role.values()) or writable["writable"]:
+        permissions = {
+            "checked_at": now(),
+            "role_found": bool(role),
+            "elevated_flags": [key for key, enabled in (role or {}).items() if enabled],
+            "public_table_write_privileges": bool(writable["writable"]),
+        }
+        permissions["accepted"] = (
+            permissions["role_found"]
+            and not permissions["elevated_flags"]
+            and not permissions["public_table_write_privileges"]
+        )
+        store.set_state("source_permissions", permissions)
+        if not permissions["accepted"]:
+            # Fixed catalog flags only: no role name, URL or exception message.
+            logging.getLogger("market_catalog").error(
+                "source_permissions=%s", json.dumps(permissions)
+            )
             raise PermissionError("Source role must have only SELECT privileges")
         records = conn.execute(SOURCE_QUERIES[source], (cursor["after"], batch_size)).fetchall()
     next_cursor = {**cursor, "last_success_at": now()}

@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import threading
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
@@ -9,7 +10,7 @@ import pytest
 from kalshi_bot.catalog.evaluators import EVALUATORS, mmsell, refresh, register
 from kalshi_bot.catalog.ingest import Discovery, seed, source_page
 from kalshi_bot.catalog.service import make_server, run_job
-from kalshi_bot.catalog.store import SEMANTIC_FIELDS, Store
+from kalshi_bot.catalog.store import DOCUMENT_TABLES, SEMANTIC_FIELDS, Store, digest, encode, unpack
 
 
 @pytest.fixture
@@ -276,6 +277,122 @@ def test_admin_source_role_is_refused_before_import(store):
             source_page(store, "postgresql://private/source", "paper")
     assert store.evidence() == []
     assert store.state("cursor:paper") is None
+    permissions = store.state("source_permissions")
+    assert permissions["elevated_flags"] == ["rolsuper"]
+    assert permissions["public_table_write_privileges"]
+    assert not permissions["accepted"]
+    assert "private" not in json.dumps(permissions)
+
+
+def test_write_grants_without_elevated_role_still_refused(store):
+    conn = MagicMock()
+    conn.__enter__.return_value = conn
+    conn.execute.return_value.fetchone.side_effect = [{"rolsuper": False}, {"writable": True}]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        with pytest.raises(PermissionError):
+            source_page(store, "postgresql://private/source", "paper")
+    assert not store.state("source_permissions")["accepted"]
+    assert conn.execute.call_count == 2  # No trading data read after refusal.
+
+
+def test_compression_preserves_legacy_documents_hashes_and_restart(store):
+    raw = {"rules_primary": "Repeated official rules with Unicode: café. " * 100}
+    doc = store.upsert("market", "KXTEST-E-M", raw, "KXTEST")
+    payload = review_payload(doc)
+    payload["rationale"] *= 150
+    review = store.review(payload)
+    store.evidence_page("paper", [trade(notes="historical context " * 200)], {"after": 1})
+    refresh(store, datetime(2026, 10, 5, tzinfo=timezone.utc))
+    # Construct an actual original-format database to exercise the upgrade path.
+    with store.connect() as db:
+        for table in DOCUMENT_TABLES:
+            for row in db.execute(f"SELECT rowid,document FROM {table}").fetchall():
+                db.execute(
+                    f"UPDATE {table} SET document=? WHERE rowid=?",
+                    (encode(unpack(row[1])), row[0]),
+                )
+    before_docs = {}
+    with store.connect() as db:
+        for table in DOCUMENT_TABLES:
+            before_docs[table] = [
+                (row[0], unpack(row[1]))
+                for row in db.execute(f"SELECT rowid,document FROM {table} ORDER BY rowid")
+            ]
+    before_bytes = sum(t["document_bytes"] for t in store.storage()["tables"].values())
+    assert store.compress_page(batch_size=1) == 1
+    reopened = Store(store.path)
+    while not reopened.state("storage:compression")["complete"]:
+        reopened.compress_page(batch_size=1)
+    with reopened.connect() as db:
+        for table in DOCUMENT_TABLES:
+            after = [
+                (row[0], unpack(row[1]))
+                for row in db.execute(f"SELECT rowid,document FROM {table} ORDER BY rowid")
+            ]
+            assert after == before_docs[table]
+    after_bytes = sum(t["document_bytes"] for t in reopened.storage()["tables"].values())
+    assert after_bytes < before_bytes / 2
+    assert reopened.get("market", doc["ticker"])["raw"] == raw
+    assert reopened.list_objects("market")[0]["rules_hash"] == doc["rules_hash"]
+    assert reopened.history("reviews", "market", doc["ticker"])[0] == review
+    assert digest({k: v for k, v in review.items() if k != "id"}) == review["id"]
+    assert reopened.evidence()[0][1]["notes"] == "historical context " * 200
+    assert reopened.assessments() == store.assessments()
+    assert reopened.compress_page() == 0
+
+
+def test_compression_failure_rolls_back_page_and_cursor(store):
+    doc = store.upsert("market", "KXTEST-E-M", {"rules_primary": "rules " * 1000}, "KXTEST")
+    with store.connect() as db:
+        db.execute("UPDATE objects SET document=?", (encode(doc),))
+        db.execute("""CREATE TRIGGER refuse_reencoding BEFORE UPDATE ON objects
+                      BEGIN SELECT RAISE(ABORT, 'test interruption'); END""")
+    with pytest.raises(sqlite3.IntegrityError):
+        store.compress_page()
+    assert store.state("storage:compression") is None
+    with store.connect() as db:
+        assert db.execute("SELECT typeof(document) FROM objects").fetchone()[0] == "text"
+        db.execute("DROP TRIGGER refuse_reencoding")
+    assert store.compress_page() == 1
+    assert store.get("market", doc["ticker"])["raw"] == doc["raw"]
+
+
+def test_precompression_backup_is_consistent_and_never_overwritten(store):
+    doc = store.upsert("market", "KXTEST-E-M", {"rules_primary": "rules " * 1000}, "KXTEST")
+    with store.connect() as db:
+        db.execute("UPDATE objects SET document=?", (encode(doc),))
+    backup = store.backup_before_compression()
+    store.compress_page()
+    store.upsert("market", doc["ticker"], {"rules_primary": "changed"}, "KXTEST")
+    assert store.backup_before_compression() == backup
+    with sqlite3.connect(backup) as db:
+        assert db.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        # The original version can still read this saved JSON TEXT record.
+        original = json.loads(db.execute("SELECT document FROM objects").fetchone()[0])
+        assert original == doc
+
+
+def test_compressed_assessment_lookup_over_http(store):
+    result = {
+        "as_of": "2026-10-05T00:00:00Z",
+        "qualification_reasons": ["missing data " * 200],
+    }
+    identity = store.assessment("context", result)
+    server = make_server(store, "a" * 32, ("127.0.0.1", 0))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with httpx.Client(
+            base_url=f"http://127.0.0.1:{server.server_port}",
+            headers={"Authorization": "Bearer " + "a" * 32},
+            trust_env=False,
+        ) as client:
+            response = client.get("/v1/assessments/" + identity)
+            assert response.status_code == 200 and response.json() == result
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
 
 
 def test_consumer_adapter_is_qualified_by_default():
