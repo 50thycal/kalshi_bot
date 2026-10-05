@@ -1,1 +1,1 @@
-{"type":"script","id":"cc-b6-pnl","name":"mmsell_series_pnl","args":["--all-time","--split-subjects","--min-n","1","--top","400"]}
+{"type":"noop"}
