@@ -9,7 +9,13 @@ import httpx
 import pytest
 
 from kalshi_bot.catalog.evaluators import EVALUATORS, mmsell, refresh, register
-from kalshi_bot.catalog.ingest import SOURCE_COVERAGE_QUERIES, Discovery, seed, source_page
+from kalshi_bot.catalog.ingest import (
+    SOURCE_COVERAGE_QUERIES,
+    Discovery,
+    DiscoveryDeferred,
+    seed,
+    source_page,
+)
 from kalshi_bot.catalog.service import make_server, run_job
 from kalshi_bot.catalog.store import (
     DOCUMENT_TABLES,
@@ -548,3 +554,66 @@ def test_incremental_scan_preserves_upper_boundary_across_restart(store):
         Discovery(Store(store.path), client).updates()
     assert seen[0]["max_updated_ts"] == seen[1]["max_updated_ts"]
     assert store.state("discovery:updates")["since"] == before["scan_started_at"] - 60
+
+
+def test_rate_backoff_preserves_cursor_and_success_across_restart(store):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, json={"events": [], "cursor": "page2"})
+        if len(calls) == 2:
+            return httpx.Response(429, headers={"Retry-After": "180"}, text="private text")
+        return httpx.Response(200, json={"events": [], "cursor": ""})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        discovery = Discovery(store, client)
+        run_job(store, "discovery:events", lambda: discovery.page("events"))
+        success = store.state("job:discovery:events")["last_success_at"]
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1000):
+            assert run_job(store, "discovery:events", lambda: discovery.page("events")) is None
+        assert store.state("discovery:events")["cursor"] == "page2"
+        assert store.state("discovery:backoff")["not_before_unix"] == 1180
+        restarted = Discovery(Store(store.path), client)
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1100):
+            assert run_job(store, "discovery:events", lambda: restarted.page("events")) is None
+            with pytest.raises(DiscoveryDeferred):
+                restarted.updates()  # Shared provider throttle across endpoints.
+        assert len(calls) == 2
+        assert store.state("job:discovery:events")["last_success_at"] == success
+        assert store.state("job:discovery:events")["http_status"] == 429
+        assert "private text" not in json.dumps(store.status())
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1181):
+            assert run_job(store, "discovery:events", lambda: restarted.page("events")) == 0
+        assert calls[-1].url.params["cursor"] == "page2"
+        assert store.state("discovery:events")["complete"]
+        assert store.state("job:discovery:events")["error"] is None
+        assert store.state("discovery:backoff")["failures"] == 0
+
+
+@pytest.mark.parametrize("hint", ["Thu, 01 Jan 1970 00:21:40 GMT", "NaN", "invalid", None])
+def test_provider_backoff_accepts_http_date_and_ignores_nonfinite_delay(store, hint):
+    def handler(request):
+        return httpx.Response(503, headers={"Retry-After": hint} if hint is not None else {})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1000):
+            with pytest.raises(httpx.HTTPStatusError):
+                Discovery(store, client).page("events")
+    expected = 1300 if hint and hint.startswith("Thu") else 1060
+    assert store.state("discovery:backoff")["not_before_unix"] == expected
+
+
+def test_retry_after_starts_when_response_arrives(store):
+    clock = MagicMock(return_value=1000)
+
+    def handler(request):
+        clock.return_value = 1030
+        return httpx.Response(429, headers={"Retry-After": "120"})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        with patch("kalshi_bot.catalog.ingest.time.time", clock):
+            with pytest.raises(httpx.HTTPStatusError):
+                Discovery(store, client).page("events")
+    assert store.state("discovery:backoff")["not_before_unix"] == 1150

@@ -2,7 +2,10 @@
 
 import json
 import logging
+import math
+import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import httpx
@@ -40,6 +43,12 @@ SOURCE_COVERAGE_QUERIES = {
     f"'UTF8')),'hex') AS source_ids_fingerprint {relation} AND {SOURCE_IDS[source]} <= %s"
     for source, relation in SOURCE_RELATIONS.items()
 }
+
+
+class DiscoveryDeferred(Exception):
+    def __init__(self, retry_at):
+        self.retry_at = retry_at
+        super().__init__("Public discovery provider backoff")
 
 
 def seed(store):
@@ -153,6 +162,42 @@ class Discovery:
         self.store = store
         self.client = client or httpx.Client(base_url=BASE_URL, timeout=30)
 
+    def get_json(self, path, params):
+        stamp = time.time()
+        backoff = self.store.state("discovery:backoff", {})
+        if backoff.get("not_before_unix", 0) > stamp:
+            raise DiscoveryDeferred(backoff["not_before_unix"])
+        response = self.client.get(path, params=params)
+        if response.status_code == 429 or response.status_code >= 500:
+            stamp = time.time()  # Retry-After is measured from response receipt.
+            failures = min(16, backoff.get("failures", 0) + 1)
+            delay = min(900, 60 * 2 ** min(failures - 1, 4))
+            hint = response.headers.get("Retry-After")
+            try:
+                retry_delay = float(hint)
+            except (TypeError, ValueError):
+                try:
+                    date = parsedate_to_datetime(hint)
+                    if date.tzinfo is None:
+                        date = date.replace(tzinfo=timezone.utc)
+                    retry_delay = date.timestamp() - stamp
+                except (TypeError, ValueError, OverflowError):
+                    retry_delay = 0
+            if math.isfinite(retry_delay) and retry_delay > 0:
+                delay = max(delay, retry_delay)
+            self.store.set_state(
+                "discovery:backoff",
+                {
+                    "failures": failures,
+                    "not_before_unix": stamp + delay,
+                    "http_status": response.status_code,
+                    "recorded_at": now(),
+                },
+            )
+        response.raise_for_status()
+        self.store.set_state("discovery:backoff", {"failures": 0, "not_before_unix": 0})
+        return response.json()
+
     def page(self, job):
         state = self.store.state("discovery:" + job, {"cursor": None, "complete": False})
         if state["complete"]:
@@ -163,9 +208,7 @@ class Discovery:
             path, key, params = "/events", "events", {"limit": 200, "with_nested_markets": "true"}
         if state["cursor"]:
             params["cursor"] = state["cursor"]
-        response = self.client.get(path, params=params)
-        response.raise_for_status()
-        data = response.json()
+        data = self.get_json(path, params)
         for row in data[key]:
             ticker = row["ticker"] if job == "series" else row["event_ticker"]
             series = ticker if job == "series" else row["series_ticker"]
@@ -204,9 +247,7 @@ class Discovery:
         }
         if state["cursor"]:
             params["cursor"] = state["cursor"]
-        response = self.client.get("/markets", params=params)
-        response.raise_for_status()
-        data = response.json()
+        data = self.get_json("/markets", params)
         for market in data["markets"]:
             series = market.get("series_ticker") or market["ticker"].split("-", 1)[0]
             self.store.upsert("market", market["ticker"], market, series)

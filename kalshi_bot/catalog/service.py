@@ -10,8 +10,10 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
+import httpx
+
 from .evaluators import refresh
-from .ingest import Discovery, reset_source_reconciliation, seed, source_page
+from .ingest import Discovery, DiscoveryDeferred, reset_source_reconciliation, seed, source_page
 from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
@@ -20,13 +22,43 @@ LOG = logging.getLogger("market_catalog")
 def run_job(store, key, action):
     try:
         count = action()
-        store.set_state("job:" + key, {"last_success_at": now(), "records": count, "error": None})
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "last_success_at": now(),
+                "records": count,
+                "error": None,
+                "http_status": None,
+                "retry_at_unix": None,
+            },
+        )
         LOG.info("job=%s records=%s status=ok", key, count)
         return count
+    except DiscoveryDeferred as error:
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "error": "DiscoveryDeferred",
+                "retry_at_unix": error.retry_at,
+            },
+        )
+        LOG.info("job=%s status=deferred retry_at_unix=%s", key, error.retry_at)
+        return None
     except Exception as error:
         # Exception messages can contain connection strings; emit the type only.
-        store.set_state("job:" + key, {"last_error_at": now(), "error": type(error).__name__})
-        LOG.error("job=%s status=error type=%s", key, type(error).__name__)
+        code = error.response.status_code if isinstance(error, httpx.HTTPStatusError) else None
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "last_error_at": now(),
+                "error": type(error).__name__,
+                "http_status": code,
+            },
+        )
+        LOG.error("job=%s status=error type=%s http_status=%s", key, type(error).__name__, code)
         return None
 
 

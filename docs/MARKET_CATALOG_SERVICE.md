@@ -16,6 +16,8 @@ The API returns separate review completion, evidence maturity, confidence and ed
 
 Current raw quote/depth/volume fields are stored; full quote history is not archived. Semantic/lifecycle revisions, reviews and assessments are retained. There is no new execution telemetry subscription or order endpoint. REST reconciliation supplies automatic discovery and outcome/change refresh; authenticated WebSocket acceleration is a later optimization.
 
+Public discovery shares a persisted provider backoff across endpoints after HTTP 429 or 5xx. It honors numeric/HTTP-date `Retry-After` and otherwise backs off exponentially from 60 to 900 seconds. Deferral preserves cursors and last-success timestamps, and does not block source import, evaluation, storage maintenance or the API. Status records the retry boundary and numeric HTTP status without exception bodies or credentials. A successful request clears the backoff; restart/daily repair does not bypass it.
+
 Large JSON documents use lossless, versioned zlib compression; small documents stay JSON TEXT. Readers accept both formats. Content hashes, assessment IDs and API documents are unchanged. Before the first compressed write on upgrade, startup saves a consistent SQLite backup at `<CATALOG_DB_PATH>.before-compression-v1` and checks its integrity. Historical documents are re-encoded in atomic 1,000-row pages, with a persisted cursor and a three-second maintenance budget per cycle. No records are deleted. Freed SQLite pages are reused; the database file does not automatically shrink. The retained backup also occupies volume space.
 
 ## Railway deployment
