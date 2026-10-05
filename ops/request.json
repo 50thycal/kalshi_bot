@@ -1,1 +1,1 @@
-{"type":"db","id":"catalog-live-export-20261005-1","max_rows":200,"sql":"SELECT f.id,f.market_ticker,f.filled_at,f.side,f.action,f.price,f.quantity,f.fee,o.strategy,o.event_ticker,o.experiment_deployment_arm_id FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id AND o.id=(SELECT min(x.id) FROM live_orders x WHERE x.kalshi_order_id=f.kalshi_order_id) WHERE o.strategy ILIKE '%mmsell%' ORDER BY f.id DESC LIMIT 200","actor":"Codex","purpose":"Seed actual fills through SELECT-only export","workstream":"WS-023"}
+{"type":"noop"}
