@@ -582,3 +582,70 @@ the first batch where the pattern is not uniform. It still holds wherever the sa
 The running `Rmmsell` tapes are unchanged (24 armed, 32 signed; `reviewed_tape_spec.py --check`
 reports it). Volume added is small: the five signed series took 18 `mmsell10` trades in 30 days
 between them. Nothing here gates anything.
+
+---
+
+## Batch 8 signed — 2026-10-05, by `50cal`
+
+Four of ten. Audit: `CONFIRMS=9 CONTRADICTS=0 INSUFFICIENT=1`. **36 of 138 rows now reviewed.**
+Worklist: the next ten unruled backlog rows (same ranking as batches 6–7). Measured as before
+(ops `cc-b8-rules`, `cc-b8-conc`, `cc-b6-pnl`).
+
+| series | contracts / outcome | P&L | edge | contests | own% | decision |
+|---|---:|---:|---:|---:|---:|---|
+| `KXUFCFIGHT` | **1.02 avg**, 2 max | +$4.88 | +3.9 | 83 | 69% | ✅ signed |
+| `KXCPLMATCH` | 1.41 avg, 2 max | +$4.35 | +4.9 | 32 | 46% | ✅ signed |
+| `KXDIMAYORGAME` | 1.77 avg, 3 max | +$4.16 | +3.8 | 29 | 43% | ✅ signed |
+| `KXDOTA2GAME` | 1.21 avg, 2 max | +$3.89 | +8.1 | 33 | 46% | ✅ signed |
+| `KXLALIGAGAME` | 2.28 avg, 3 max | +$5.56 | +2.6 | 60 | 61% | not ruled |
+| `KXUFCVICROUND` | 5.00 avg, 8 max | +$4.73 | +3.6 | 9 | 19% | held |
+| `KXWTIW` | **12.38 avg, 19 max** | +$5.30 | **+0.5** | 8 | 17% | held |
+| `KXSAUDIPLGAME` | 1.70 avg, 3 max | −$5.58 | −6.7 | 20 | 34% | rejected |
+| `KXEFLCHAMPIONSHIPGAME` | 1.41 avg, 3 max | −$4.76 | −3.2 | 34 | 47% | rejected |
+| `KXNFLPASSYDS` | 3.29 avg, 7 max | −$4.75 | −1.7 | 34 | 47% | rejected |
+
+**`KXUFCFIGHT` is the cleanest concentration row in any batch.** It averages 1.02 contracts per
+fight, and 98% of its fights hold a single market. This makes it the first series whose losses
+are almost entirely single-contract ($14.66 vs $0.41). Whatever its losses are, a contest cap
+would not have touched them.
+
+**`KXDOTA2GAME` is signed against the esports record so far.** `KXCS2GAME` (batch 3) and
+`KXLOLGAME` (batch 6) were both negative and rejected. The operator signed Dota 2 on its own
++8.1 over 33 games. It also prices differently from the rest of the signed set: average entry
+22.4¢ against a 19.6% break-even. Most of its trades sit outside the 5–10¢ band the `Rmmsell`
+tapes use, so a widened tape would carry little of it.
+
+### Not ruled: `KXLALIGAGAME`
+
++$5.56 over 60 games, but only +2.6pp, with 2.28 contracts per game. That is the small-edge
+moderate-ladder shape the operator has consistently left unsigned (`KXMLBKS`, `KXMLBTEAMTOTAL`).
+Its sibling `KXLALIGATOTAL` was signed in batch 6.
+
+### Held
+
+- `KXUFCVICROUND`: 9 events at 19% own-weight, with 5 contracts per event.
+- **`KXWTIW`: the INSUFFICIENT is overruled on the rules, not the numbers.** *"If the daily
+  settlement price for WTI crude oil (November 2026 contract) on October 02, 2026 is below 80.00
+  USD/Bbl"* names a source and an instant, so `scheduled` is right. It is held because it is a
+  19-strike ladder on 8 prints at +0.5pp: 1,009 trades that say almost nothing. Its daily sibling
+  `KXWTI` was rejected in batch 1 at −9.2.
+
+### Rejected
+
+- `KXSAUDIPLGAME`: −6.7 on 20 games.
+- `KXEFLCHAMPIONSHIPGAME`: −3.2 on 34 games, despite low concentration.
+- **`KXNFLPASSYDS`: −1.7, and the most cross-shared series reviewed.** An NFL game carries on
+  average 12.8 other traded series beside it (max 30), so one game moves dozens of positions
+  across the family. Every dollar of its loss is in multi-contract games.
+
+### Concentration association
+
+`KXEFLCHAMPIONSHIPGAME` 29% of games multi → 51% of loss, `KXDOTA2GAME` 21% → 55%,
+`KXSAUDIPLGAME` 55% → 61%, `KXDIMAYORGAME` 70% → 84%. It over-represents again on every mixed
+row with real losses. `KXUFCFIGHT` is the opposite case, with nearly no multi-contract games at all.
+
+### Same limits
+
+The running `Rmmsell` tapes are unchanged (24 armed, 36 signed). Volume added is small: 5
+`KXDIMAYORGAME` trades in 30 days, and the other three signed series took none in that window.
+Nothing here gates anything.
