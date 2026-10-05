@@ -1,6 +1,6 @@
 {
   "type": "db",
-  "sql": "WITH paper AS (SELECT id FROM paper_trades WHERE strategy ILIKE '%mmsell%'),\nlive AS (SELECT f.id FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id\nAND o.id=(SELECT min(x.id) FROM live_orders x WHERE x.kalshi_order_id=f.kalshi_order_id)\nWHERE o.strategy ILIKE '%mmsell%')\nSELECT 'bot_readonly_elevated' AS metric,(rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)::text AS value FROM pg_roles WHERE rolname='bot_readonly'\nUNION ALL SELECT 'bot_readonly_memberships',count(*)::text FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.member WHERE r.rolname='bot_readonly'\nUNION ALL SELECT 'bot_readonly_direct_nonselect_grants',count(*)::text FROM information_schema.role_table_grants WHERE grantee='bot_readonly' AND privilege_type<>'SELECT'\nUNION ALL SELECT 'paper_ids_sha256',encode(sha256(convert_to(coalesce(string_agg(id::text,',' ORDER BY id),''),'UTF8')),'hex') FROM paper\nUNION ALL SELECT 'live_ids_sha256',encode(sha256(convert_to(coalesce(string_agg(id::text,',' ORDER BY id),''),'UTF8')),'hex') FROM live",
-  "max_rows": 10,
-  "id": "catalog-role-id-audit-20261005-2138"
+  "sql": "SELECT rolcanlogin AS can_login,\nhas_schema_privilege('bot_readonly','public','USAGE') AS schema_usage,\nhas_table_privilege('bot_readonly','public.paper_trades','SELECT') AS paper_select,\nhas_table_privilege('bot_readonly','public.fills','SELECT') AS fills_select,\nhas_table_privilege('bot_readonly','public.live_orders','SELECT') AS orders_select,\nhas_table_privilege('bot_readonly','public.live_paper_twins','SELECT') AS twins_select\nFROM pg_roles WHERE rolname='bot_readonly'",
+  "max_rows": 5,
+  "id": "catalog-read-access-20261005-2142"
 }
