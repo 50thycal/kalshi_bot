@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-rmm-1005d","sql":"SELECT strategy, count(*) AS legs, count(DISTINCT split_part(market_ticker,'-',2)) AS games, count(*) FILTER (WHERE pnl<0) AS losses, round(sum(pnl)::numeric,2) AS pnl FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') AND market_ticker LIKE 'KXNFL%26OCT04%' GROUP BY strategy"}
+{"type":"noop"}
