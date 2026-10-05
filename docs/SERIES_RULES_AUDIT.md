@@ -525,3 +525,60 @@ still association rather than proof.
   pools — `KXNCAAF*` and the NFL player props — are not in the manifest at all, so they never reach
   this backlog; admitting them is a classification step before any review can start.
 - **It gates nothing**, exactly as for batches 1–5: every row stays `graduated`, signed or not.
+
+---
+
+## Batch 7 signed — 2026-10-05, by `50cal`
+
+Five of ten. Audit: **`CONFIRMS=10 CONTRADICTS=0 INSUFFICIENT=0`**. **32 of 138 rows now
+reviewed.** Worklist: the next ten backlog rows (same 2026-10-05 ranking as batch 6) that no
+earlier batch ruled on. Measured as batch 6 (ops `cc-b7-rules`, `cc-b7-conc`, `cc-b6-pnl`).
+
+| series | contracts / outcome | P&L | edge | contests | own% | decision |
+|---|---:|---:|---:|---:|---:|---|
+| `KXMLSSPREAD` | 1.71 avg, 4 max | +$8.99 | +7.2 | 28 | 42% | ✅ signed |
+| `KXBRASILEIROGAME` | 1.81 avg, 3 max | +$7.68 | +5.9 | 37 | 49% | ✅ signed |
+| `KXECULPTOTAL` | 1.54 avg, 3 max | +$7.44 | +5.8 | 24 | 39% | ✅ signed |
+| `KXLIGAMXSPREAD` | 2.14 avg, 4 max | +$7.99 | +5.1 | 22 | 37% | ✅ signed |
+| `KXCONMEBOLSUDTOTAL` | 1.75 avg, 3 max | +$6.75 | +6.5 | 20 | 34% | ✅ signed |
+| `KXLPGATOUR` | 6.50 avg, 12 max | +$9.26 | +10.8 | 5 | 12% | held |
+| `KXGOLDD` | **9.08 avg, 21 max** | +$8.04 | +1.6 | 12 | 24% | held |
+| `KXITFWMATCH` | 1.18 avg, 2 max | +$9.09 | **+0.4** | 857 | 96% | rejected |
+| `KXATPCHALLENGERMATCH` | 1.20 avg, 2 max | +$6.31 | **+0.2** | 1,129 | 97% | rejected |
+| `KXLIGAMXGAME` | 2.43 avg, 3 max | −$6.36 | −2.2 | 61 | 62% | rejected |
+
+**All five signatures are soccer totals, spreads and match winners**, and all five are
+low-concentration (≤ 2.14 contracts per outcome). They are also thin: 20–37 contests at 34–49%
+own-weight, the same range as `KXUCLGAME` / `KXLIGAMXTOTAL` (batches 4–5). `KXCONMEBOLSUDTOTAL`
+is the thinnest signature in this batch.
+
+`KXLIGAMXSPREAD` is signed while its sibling `KXLIGAMXGAME` is rejected. They are the same games
+read through different contracts: the spread sells the tail of a margin, the game sells the tail of
+an outright result, and only the first has been profitable on its own record.
+
+### Rejected: two tennis tours with no edge
+
+`KXITFWMATCH` and `KXATPCHALLENGERMATCH` are the `KXMLBTOTAL` pattern again: the two
+best-measured rows in the batch (96–97% own-weight) both measure *nothing*. Together they are
+5,200+ trades for +0.2 to +0.4pp. Low concentration does not rescue them. They are also the
+batch's volume (~6.5 trades a day between them over the last 30 days). Rejecting them costs the
+tape activity, not profit.
+
+### Held
+
+`KXLPGATOUR` has 5 tournaments at 12% own-weight, and the "+10.8" is mostly prior. `KXGOLDD` is a
+21-strike ladder on 12 prints with an edge of +1.6: thin, deep and small, the `KXNATGASD` shape
+without the excuse of zero losses.
+
+### The concentration association, mixed this time
+
+The two large samples still over-represent: `KXATPCHALLENGERMATCH` 20% of contests multi → 51%
+of gross loss, `KXITFWMATCH` 18% → 46%. The small soccer series do not: `KXECULPTOTAL` 38% →
+1%, `KXMLSSPREAD` 50% → 44%. Their losses are too few (≤ $1.81 gross) to say anything. This is
+the first batch where the pattern is not uniform. It still holds wherever the sample is large.
+
+### Same limits as batch 6
+
+The running `Rmmsell` tapes are unchanged (24 armed, 32 signed; `reviewed_tape_spec.py --check`
+reports it). Volume added is small: the five signed series took 18 `mmsell10` trades in 30 days
+between them. Nothing here gates anything.
