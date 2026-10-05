@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-insuf-5", "sql": "WITH last AS (SELECT DISTINCT ON (market_ticker) market_ticker, captured_at, quantity_fp, market_exposure FROM positions ORDER BY market_ticker, id DESC) SELECT l.market_ticker, l.quantity_fp, l.market_exposure, l.captured_at, (SELECT string_agg(DISTINCT strategy, ',') FROM live_orders o WHERE o.market_ticker=l.market_ticker) books FROM last l WHERE abs(coalesce(l.quantity_fp,0)) > 0 ORDER BY l.market_exposure DESC NULLS LAST LIMIT 40"}
+{"type":"noop"}
