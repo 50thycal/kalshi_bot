@@ -442,3 +442,86 @@ ladder. All three remain unsigned.
 Every mixed-contest series over-represents losses in multi-contract outcomes: `KXWTASETWINNER`
 23% of contests → 62% of losses; `KXARGPREMDIVTOTAL` 48% → 100%; `KXMLSGAME` 72% → 92%.
 Consistent with batches 3 and 4, and still association rather than proof.
+
+---
+
+## Batch 6 signed — 2026-10-05, by `50cal`
+
+Three of ten. Audit: `CONFIRMS=9 CONTRADICTS=0 INSUFFICIENT=1`. **27 of 138 rows now reviewed.**
+
+**How the worklist was picked.** The backlog ranks by *current* live exposure, so a literal
+"ranks 51–60" no longer points at the rows it did on 2026-09-10. Batch 6 is the ten
+highest-ranked backlog rows (`series_registry_review --section backlog`, 2026-10-05) that no
+earlier batch ruled on; they sit at today's ranks 9–25, the gaps being batch 1–5 rows still
+unsigned. Measured all-time, mmsell paper, twins excluded, corrected (subject-split) contest key
+(ops `cc-b6-rules`, `cc-b6-conc`, `cc-b6-pnl`).
+
+| series | audit | contracts / outcome | P&L | edge | contests | own% | decision |
+|---|---|---:|---:|---:|---:|---:|---|
+| `KXATPSETWINNER` | CONFIRMS | 1.49 avg, 4 max | +$12.98 | +6.7 | 78 | 67% | ✅ signed |
+| `KXLALIGATOTAL` | CONFIRMS | 2.62 avg, 6 max | +$12.16 | +3.7 | 52 | 58% | ✅ signed |
+| `KXT20MATCH` | CONFIRMS | 1.23 avg, 2 max | +$11.71 | +4.4 | 102 | 73% | ✅ signed |
+| `KXMLBTEAMTOTAL` | CONFIRMS | 3.44 avg, 10 max | +$22.06 | **+1.1** | 197 | 84% | not ruled |
+| `KXBRENTD` | CONFIRMS | 4.08 avg, 7 max | +$14.93 | +5.8 | 12 | 24% | held |
+| `KXLALIGASCORE` | CONFIRMS | 6.53 avg, 16 max | +$12.92 | +3.8 | 17 | 31% | held |
+| `KXINX` | CONFIRMS | 5.62 avg, 17 max | +$10.44 | +4.9 | 8 | 17% | held |
+| `KXAAAGASW` | **INSUFFICIENT** | 5.83 avg, 14 max | +$10.30 | +3.7 | 12 | 24% | held |
+| `KXMLBHRR` | CONFIRMS | 5.20 avg, **32 max** | −$10.98 | −2.7 | 25 | 40% | rejected |
+| `KXLOLGAME` | CONFIRMS | 1.28 avg, 2 max | −$10.36 | −2.7 | 134 | 78% | rejected |
+
+The three signed rows are the same shape as rows already signed — `KXATPSETWINNER` is the ATP
+sibling of `KXWTASETWINNER`, `KXLALIGATOTAL` of `KXLIGAMXTOTAL` / `KXMLSTOTAL` — and all three
+are low-concentration. `KXT20MATCH` shares its game with at most one other traded series
+(cross-series 1.00, max 1). It is not the format batch 5 rejected: `KXTESTMATCH` is five-day Test cricket with draws on
+8 contests; a T20 match is one day and decisive.
+
+### Not ruled: `KXMLBTEAMTOTAL`
+
+The largest P&L in the batch, and the thinnest edge: **+1.1pp on 197 contests at 84% own-weight**
+is a well-measured small number, carrying 3.44 contracts per game and −$112.77 of gross loss in
+multi-contract games against $0.00 in single ones. Same shape as `KXMLBKS`, `KXWNBATOTAL` and
+`KXMLBHIT`; the operator left it unsigned with them. The MLB regular season has ended, so nothing
+new will accrue until spring.
+
+### Held, too thin to judge
+
+`KXBRENTD` (12 contests), `KXLALIGASCORE` (17), `KXINX` (8) and `KXAAAGASW` (12) — all positive,
+all under a third own-weight, all ladders of 4–17 contracts per outcome. Same treatment as
+`KXBRENTW` (batch 4) and `KXCOPPERD` / `KXLIGAMXSCORE` (batch 5).
+
+- **`KXAAAGASW` — the INSUFFICIENT is overruled on the rules, not the numbers.** *"If average
+  regular gas prices for United States are strictly greater than $4.4920 on Sep 28, 2026 according
+  to AAA"* — a named source at a named date, so `scheduled` is right; the regex found no keyword,
+  the same situation as `KXFEDMENTION`. It is held on its 12 contests, and because its daily
+  sibling `KXAAAGASD` (rejected, batch 2) is negative on the same underlying.
+- **`KXINX` is a bucket ladder, not a strike ladder.** Its markets are mutually exclusive ranges
+  (*"between 7950 and 7974.9999"*) with two open tails, so at most one leg of a print can resolve
+  Yes. For a book selling the cheap tail that is much less concentrated than 5.62/outcome reads —
+  but on 8 contests it is not evidence either way.
+
+### Rejected
+
+- `KXMLBHRR` — −$10.98, edge −2.7, and **32 contracts on one game**: the deepest single outcome
+  in any batch, past `KXNATGASD`'s 30. 97% of its gross loss is in multi-contract games.
+- `KXLOLGAME` — −$10.36, edge −2.7 on 134 contests at 78% own-weight. A well-measured small
+  negative despite low concentration, the `KXATPMATCH` pattern; with `KXCS2GAME` (batch 3) that
+  is both esports series reviewed, both negative.
+
+### The concentration association, fourth batch running
+
+`KXT20MATCH` 23% of contests multi → 51% of gross loss; `KXATPSETWINNER` 35% → 43%;
+`KXLOLGAME` 28% → 36%. Every mixed series over-represents again, more weakly than batch 3, and
+still association rather than proof.
+
+### What this batch does NOT do
+
+- **It does not widen the running tapes.** `Rmmsell1` / `Rmmsell2` trade the 24-series universe
+  they were armed with on 2026-09-11; `scripts/reviewed_tape_spec.py --check` now reports the
+  27-vs-24 gap, which is the designed prompt, not a defect. Widening is an operator act — new
+  `MMSELL_VARIANTS` value plus a recorded epoch on **both** arms (`docs/MMSELL_REVIEWED_TAPE.md`,
+  "Widening the universe").
+- **It adds little volume.** Over the last 30 days `mmsell10` took 14 `KXLALIGATOTAL`, 10
+  `KXT20MATCH` and 5 `KXATPSETWINNER` trades, about one a day between them. The large untapped
+  pools — `KXNCAAF*` and the NFL player props — are not in the manifest at all, so they never reach
+  this backlog; admitting them is a classification step before any review can start.
+- **It gates nothing**, exactly as for batches 1–5: every row stays `graduated`, signed or not.
