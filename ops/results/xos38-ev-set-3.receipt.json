@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "a06b4425681afe9775a011978ac65b7d01e2965f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-05T18:04:01Z",
+  "id": "xos38-ev-set-3",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 625 bytes, sha256:5e17d59a3b9f68e4>",
+        "before": "<redacted 677 bytes, sha256:e4a31d1603c855fd>",
+        "requested": "<redacted 625 bytes, sha256:5e17d59a3b9f68e4>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/xos38-ev-set-3.receipt.json",
+  "result_file": "ops/results/xos38-ev-set-3.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37353106905",
+  "service": "main",
+  "started_at": "2026-10-05T18:03:56Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
