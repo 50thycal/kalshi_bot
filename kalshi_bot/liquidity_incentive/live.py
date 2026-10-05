@@ -199,6 +199,10 @@ REFUSE_BOOK_TOO_DEEP = "book_too_deep"
 #: The executor's outcome for a market on a non-default matching-engine shard (§9.45). Such an
 #: order is answered 409 and never rests, so the runner cools the market down instead of retrying.
 GATE_NON_DEFAULT_SHARD = "gate:shard"
+#: Kalshi refused an entry for lack of free cash. The runner stops placing for
+#: BALANCE_BACKOFF_SECONDS rather than trying every remaining candidate into the same refusal.
+REJECT_INSUFFICIENT_BALANCE = "rejected:insufficient_balance"
+BALANCE_BACKOFF_SECONDS = 30 * 60
 REFUSE_POST_ONLY_CROSS = "post_only_would_cross"
 REFUSE_NO_EDGE = "no_pair_edge"
 REFUSE_NO_CLOSE_TIME = "no_close_time"

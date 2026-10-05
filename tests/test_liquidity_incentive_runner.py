@@ -1064,3 +1064,32 @@ def test_a_held_leg_back_at_entry_is_scratched(live_db, settings):
         out = _cycle(client, settings, s)
     (code,) = _managed(out)
     assert code.startswith(limm.EXIT_SCRATCH + ":"), code
+
+
+# --- an account with no free cash: one refusal, then back off -------------------------------
+
+class BrokeClient(FakeClient):
+    def create_events_order(self, order):
+        from kalshi_bot.kalshi.errors import KalshiAPIError
+
+        self.placed.append(order)
+        raise KalshiAPIError(400, '{"error":{"code":"insufficient_balance"}}',
+                             "/trade-api/v2/portfolio/events/orders")
+
+
+def test_insufficient_balance_stops_the_cycle_and_backs_off(live_db, settings):
+    books = {t: _book([(3, 500)], [(4, 500)]) for t in ("KXTEST-A", "KXTEST-B", "KXTEST-C")}
+    client = BrokeClient(books)
+    with db.session_scope() as s:
+        for t in books:
+            _program(s, t)
+        ex = _exec(settings, client)
+        runner = run.IncentiveLiveRunner(client, settings)
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+        assert len(client.placed) == 1                      # not one attempt per candidate
+        assert out["outcomes"].get(limm.REJECT_INSUFFICIENT_BALANCE) == 1
+        again = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=5))
+        assert again["outcomes"] == {"balance_backoff": 1} and len(client.placed) == 1
+        later = runner.cycle(s, ex, {"cash_balance": 500.0},
+                             now=NOW + timedelta(seconds=limm.BALANCE_BACKOFF_SECONDS + 60))
+        assert "balance_backoff" not in later["outcomes"] and len(client.placed) == 2

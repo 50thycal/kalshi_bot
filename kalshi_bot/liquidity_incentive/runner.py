@@ -177,6 +177,8 @@ class IncentiveLiveRunner:
         self._book_refused_until: dict[str, datetime] = {}
         self._cooldown_loaded = False
         self._cooldown_saved_at: datetime | None = None
+        #: No entries before this: Kalshi said the account has no free cash (see live.py).
+        self._balance_backoff_until: datetime | None = None
 
     # --- arming ---------------------------------------------------------------
 
@@ -221,6 +223,10 @@ class IncentiveLiveRunner:
         retired = self._retire_unpaid_pairs(session, executor, now)
         if retired:
             summary["outcomes"]["program_ended"] = retired
+
+        if self._balance_backoff_until is not None and now < self._balance_backoff_until:
+            summary["outcomes"]["balance_backoff"] = 1
+            return summary
 
         open_now = repo.count_live_book_open_tradeable(session, limm.LIVE_TAG, now)
         exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
@@ -311,6 +317,12 @@ class IncentiveLiveRunner:
                 ticker=pair.market_ticker, pair=pair, account_state=account_state,
             )
             summary["outcomes"][outcome] = summary["outcomes"].get(outcome, 0) + 1
+            if outcome == limm.REJECT_INSUFFICIENT_BALANCE:
+                # Every other candidate would be refused the same way: stop, and wait.
+                self._balance_backoff_until = now + timedelta(seconds=limm.BALANCE_BACKOFF_SECONDS)
+                logger.warning("incentive book: Kalshi reports insufficient balance; no entries "
+                               f"for {limm.BALANCE_BACKOFF_SECONDS // 60} min")
+                break
             if outcome == limm.GATE_NON_DEFAULT_SHARD:
                 # The shard is a property of the market, not of this minute's book: rest it so
                 # the fetch budget goes to markets this book can actually quote (§9.45).

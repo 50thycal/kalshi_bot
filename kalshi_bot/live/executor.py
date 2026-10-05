@@ -778,6 +778,10 @@ class LiveExecutor:
                 return "placed"
             repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
             self.summary.rejected += 1
+            if "insufficient_balance" in str(exc):
+                # Named, so the runner can stop trying instead of walking its whole candidate
+                # list into the same refusal (2026-10-04: 21 rejections in four minutes).
+                return limm_live.REJECT_INSUFFICIENT_BALANCE
             return "rejected"
         except Exception as exc:  # noqa: BLE001 — live must never break the shadow record
             repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
