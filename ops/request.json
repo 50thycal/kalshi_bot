@@ -1,1 +1,1 @@
-{"type":"script","id":"cc-b6-rules","name":"series_rules_audit","args":["--only","KXMLBTEAMTOTAL,KXBRENTD,KXATPSETWINNER,KXLALIGASCORE,KXLALIGATOTAL,KXT20MATCH,KXMLBHRR,KXINX,KXLOLGAME,KXAAAGASW","--evidence"]}
+{"type":"script","id":"cc-b6-conc","name":"series_concentration","args":["--only","KXMLBTEAMTOTAL,KXBRENTD,KXATPSETWINNER,KXLALIGASCORE,KXLALIGATOTAL,KXT20MATCH,KXMLBHRR,KXINX,KXLOLGAME,KXAAAGASW"]}
