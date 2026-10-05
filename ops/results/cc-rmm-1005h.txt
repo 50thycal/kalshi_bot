@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-1005h
-# code a06b4425681afe9775a011978ac65b7d01e2965f · started 2026-10-05T17:41:15Z
-contest                   legs                       r1  r2  entered   
-------------------------  -------------------------  --  --  ----------
-KXITFMATCH-26OCT05LENSER  SER:Rmmsell1 SER:Rmmsell2  1   1   2026-10-05
-
-(1 row)
