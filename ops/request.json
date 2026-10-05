@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-chk-0105a","sql":"select market_ticker, side, limit_price, quantity, status, created_at, updated_at from live_orders where strategy='Alimm1' and (created_at > now() - interval '6 hours' or status in ('resting','partial','pending','submitted')) order by created_at desc limit 40"}
