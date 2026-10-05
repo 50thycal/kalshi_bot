@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-type-tight"],"id":"cc-fb-show1"}
+{"type":"db","id":"limm-chk-1738","sql":"select market_ticker, side, limit_price, quantity, status, created_at from live_orders where strategy='Alimm1' and (created_at > '2026-10-05 05:00' or status in ('resting','partial','pending','submitted','unknown')) order by created_at desc limit 20"}
