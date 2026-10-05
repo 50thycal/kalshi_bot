@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-1005f
-# code 9eab4f3021f4df935414e3b122263263ac40f8e6 · started 2026-10-05T09:37:45Z
-contest  legs  r1  r2  entered
--------  ----  --  --  -------
-
-(0 rows)
