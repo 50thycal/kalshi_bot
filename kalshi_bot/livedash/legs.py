@@ -282,6 +282,7 @@ def live_leg(session, live_tag: str, since: datetime, marks) -> Leg:
 
     tickers = sorted({o.market_ticker for o in orders})
     snapshots = _latest_position_snapshots(session, tickers)
+    others = _other_books_contracts(session, live_tag, tickers)
 
     realized_total = 0.0
     unrealized_total = 0.0
@@ -315,24 +316,31 @@ def live_leg(session, live_tag: str, since: datetime, marks) -> Leg:
         fees_total += pos.entry_fees_usd
 
         snap = snapshots.get(ticker)
+        # `positions` is ACCOUNT-wide per ticker: when another live book also bought this
+        # market, the snapshot's P&L and size are both books' together. This leg owns its
+        # share by contracts (the same split the overview page applies).
+        share = qty / (qty + others[ticker]) if others.get(ticker) and qty else 1.0
+        if share < 1.0:
+            leg.notes.append(f"{ticker}: shared with another live book; credited "
+                             f"{share:.0%} of the account position by contracts")
         if snap is None:
             pos.status = "open"
             leg.notes.append(f"{ticker}: filled but no position snapshot yet")
             unrealized_measurable = False
         elif (snap.quantity or 0) == 0 and snap.realized_pnl is not None:
             pos.status = "settled"
-            pos.realized_pnl_usd = _f(snap.realized_pnl)
+            pos.realized_pnl_usd = _f(snap.realized_pnl) * share
             pos.exit_at = _aware(snap.captured_at)
             realized_total += pos.realized_pnl_usd or 0.0
         else:
             pos.status = "open"
-            live_qty = abs(_f0(snap.quantity_fp) or _f0(snap.quantity))
+            live_qty = abs(_f0(snap.quantity_fp) or _f0(snap.quantity)) * share
             if live_qty:
                 pos.quantity = live_qty
             if snap.avg_price is not None:
                 pos.entry_price_cents = _f(snap.avg_price)
             if snap.market_exposure is not None:
-                pos.cost_basis_usd = abs(_f0(snap.market_exposure))
+                pos.cost_basis_usd = abs(_f0(snap.market_exposure)) * share
             mark = marks.mark_for(ticker)
             if mark is None or pos.entry_price_cents is None:
                 unrealized_measurable = False
@@ -353,6 +361,27 @@ def live_leg(session, live_tag: str, since: datetime, marks) -> Leg:
     last_snap = max((s.captured_at for s in snapshots.values() if s.captured_at), default=None)
     leg.last_data_at = _aware(last_snap)
     return leg
+
+
+def _other_books_contracts(session, live_tag: str, tickers: list[str]) -> dict[str, float]:
+    """Contracts OTHER live books filled on these tickers (all time), keyed by ticker.
+
+    The weight of the pro-rata split in `live_leg`. All time rather than epoch-scoped,
+    because the account position a snapshot describes is all time too: a draining
+    predecessor's contracts bought yesterday settle in the same snapshot as today's."""
+    if not tickers:
+        return {}
+    rows = session.execute(
+        select(m.LiveOrder.market_ticker, func.sum(m.Fill.quantity))
+        .join(m.Fill, m.Fill.kalshi_order_id == m.LiveOrder.kalshi_order_id)
+        .where(
+            m.LiveOrder.market_ticker.in_(tickers),
+            m.LiveOrder.strategy != live_tag,
+            m.LiveOrder.action == "buy",
+        )
+        .group_by(m.LiveOrder.market_ticker)
+    )
+    return {t: float(q or 0) for t, q in rows if q}
 
 
 def _latest_position_snapshots(session, tickers: list[str]) -> dict[str, m.Position]:

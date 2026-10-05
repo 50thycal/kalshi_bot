@@ -954,3 +954,55 @@ def test_newest_position_snapshot_wins_without_reading_every_snapshot():
     assert live.realized_pnl_usd == pytest.approx(0.14)   # the settlement, not a mid-run row
     assert [p.status for p in live.positions] == ["settled"]
     assert any("max(" in s.lower() and "positions" in s.lower() for s in statements)
+
+
+# ---------------------------------------------------------------------------
+# A ticker two live books both filled (positions are account-wide)
+# ---------------------------------------------------------------------------
+
+
+def test_a_shared_ticker_is_split_by_contracts_not_claimed_whole():
+    """2026-10-04: Hmmsell10 bought 3 contracts of a BTC market in the morning, its successor
+    Jmmsell10 bought 3 more that evening, and the exchange settled the ACCOUNT position at
+    -$5.58. The Jmmsell10 page showed all of it. Each book owns its contracts' share."""
+    session = _session()
+    _epoch(session)
+    t = "KXBTCD-26OCT0417-T85749.99"
+    _live_entry(session, t, strategy="Hmmsell10", qty=3, order_id="old",
+                at=T0 - timedelta(hours=10))
+    _live_entry(session, t, strategy="mmsell10", qty=3, order_id="new")
+    _live_settle(session, t, pnl=-5.58)
+
+    live, _paper, _marks = _load(session)
+    pos = live.by_ticker()[t]
+    assert pos.status == "settled"
+    assert pos.quantity == 3
+    assert pos.realized_pnl_usd == pytest.approx(-2.79)
+    assert live.realized_pnl_usd == pytest.approx(-2.79)
+    assert any("shared with another live book" in n for n in live.notes)
+
+
+def test_a_shared_open_position_reports_only_this_books_size_and_cost():
+    session = _session()
+    _epoch(session)
+    t = "KXTRUMPSAY-26OCT05-CEAS"
+    _live_entry(session, t, strategy="Hmmsell10", qty=1, order_id="old",
+                at=T0 - timedelta(hours=6))
+    _live_entry(session, t, strategy="mmsell10", qty=1, order_id="new")
+    _live_open(session, t, qty=2, price=94)
+
+    live, _paper, _marks = _load(session)
+    pos = live.by_ticker()[t]
+    assert pos.status == "open"
+    assert pos.quantity == pytest.approx(1)
+    assert pos.cost_basis_usd == pytest.approx(0.94)
+
+
+def test_an_unshared_ticker_is_unchanged():
+    session = _session()
+    _epoch(session)
+    _live_entry(session, "KXSOLO-1", qty=2)
+    _live_settle(session, "KXSOLO-1", pnl=0.14)
+    live, _paper, _marks = _load(session)
+    assert live.by_ticker()["KXSOLO-1"].realized_pnl_usd == pytest.approx(0.14)
+    assert not any("shared" in n for n in live.notes)
