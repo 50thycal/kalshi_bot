@@ -1,1 +1,1 @@
-{"type":"xos","command":"list","id":"cc-fb-list1"}
+{"type":"db","id":"cc-fb-rev1","sql":"SELECT r.id, c.key AS component, r.version, r.status, r.fingerprint, r.activated_at, r.pr_ref FROM platform_revisions r JOIN platform_components c ON c.id=r.component_id WHERE c.key='MARKET_TAXONOMY' ORDER BY r.id"}
