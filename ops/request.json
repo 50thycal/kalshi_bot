@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-fb-rev1","sql":"SELECT r.id, c.key AS component, r.version, r.status, r.fingerprint, r.activated_at, r.pr_ref FROM platform_revisions r JOIN platform_components c ON c.id=r.component_id WHERE c.key='MARKET_TAXONOMY' ORDER BY r.id"}
+{"type":"db","id":"cc-fb-iss1","sql":"SELECT key, status, kind, owner_role, left(title,110) AS title, created_at::date FROM experiment_os_issues WHERE title ILIKE '%taxonom%' OR title ILIKE '%KXUE%' OR title ILIKE '%SERIES_TYPES%' OR title ILIKE '%classif%' ORDER BY created_at"}
