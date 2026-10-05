@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-insuf-4", "sql": "SELECT book_key, event_ticker, state, quantity, limit_price_cents, reserved_cents, filled_quantity, submitted_at, updated_at FROM desk_executions WHERE updated_at > '2026-10-04 00:00' OR state <> 'terminal' ORDER BY submitted_at DESC NULLS LAST LIMIT 30"}
