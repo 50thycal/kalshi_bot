@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-1005d
-# code d9770185b57cd1ee7713aa1fefede388c5f5a8ee · started 2026-10-05T01:35:13Z
-strategy  legs  games  losses  pnl 
---------  ----  -----  ------  ----
-Rmmsell1  36    14     2       0.26
-Rmmsell2  14    14     0       0.85
-
-(2 rows)
