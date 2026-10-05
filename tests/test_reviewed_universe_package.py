@@ -263,10 +263,17 @@ def test_the_recorded_books_are_exactly_what_the_spec_tool_emits(registered, xos
 
     emitted = {line.split(":", 1)[0]: line.split(":", 1)[1] for line in spec_mod.specs()}
     assert registered["paper"].config_json["books"] == emitted
-    # ...and the doc an operator actually pastes from says the same thing.
+    # ...and the doc an operator actually pastes from carries the same books. Its allowlist is
+    # the ARMED universe, so it may lag later sign-offs (`--check` reports the gap) but never
+    # name a series the manifest has not signed.
     documented = {line.split(":", 1)[0]: line.split(":", 1)[1]
                   for line in spec_mod.documented_spec().split(";")}
-    assert documented == emitted
+    assert documented.keys() == emitted.keys()
+    for tag, body in documented.items():
+        doc_params, doc_allow = body.split(",onlyx=", 1)
+        tool_params, tool_allow = emitted[tag].split(",onlyx=", 1)
+        assert doc_params == tool_params, tag
+        assert set(doc_allow.split("+")) <= set(tool_allow.split("+")), tag
 
 
 def test_registering_twice_is_refused_not_a_silent_no_op(registered, xos_session):

@@ -93,8 +93,8 @@
   {
    "series": "KXATPSETWINNER",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -380,8 +380,8 @@
   {
    "series": "KXLALIGATOTAL",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -695,8 +695,8 @@
   {
    "series": "KXT20MATCH",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {

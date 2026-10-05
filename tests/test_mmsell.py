@@ -514,7 +514,11 @@ def test_the_documented_reviewed_tape_specs_parse_into_the_books_they_claim(sett
     books = {b["tag"]: b for b in settings.mmsell_variant_list}
     assert list(books) == ["Rmmsell1", "Rmmsell2"], "a documented spec does not parse"
 
-    universe = sorted(registry.reviewed_series())
+    # The doc pins the ARMED universe, which a later sign-off must not widen; it may only lag
+    # the manifest (`reviewed_tape_spec.py --check` reports that gap), never name an unsigned row.
+    universe = books["Rmmsell1"]["onlyx"]
+    assert universe == sorted(universe)
+    assert set(universe) <= set(registry.reviewed_series())
     for tag, b in books.items():
         assert len(tag) <= 24                          # paper_trades.strategy is String(24)
         # Same band and ceiling as mmsell10, so each tape reads against it directly.
