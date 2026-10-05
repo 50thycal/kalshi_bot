@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "9ccb3f9090a495b775e861b58fb05bc975e50e92",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-05T21:18:29Z",
+  "id": "",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/20261005T211829Z-run5828.receipt.json",
+  "result_file": "ops/results/20261005T211829Z-run5828.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37375013473",
+  "service": null,
+  "started_at": "2026-10-05T21:18:29Z",
+  "targets": [],
+  "type": "noop"
+}
