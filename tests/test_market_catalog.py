@@ -1,4 +1,6 @@
+import hashlib
 import json
+import sqlite3
 import threading
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
@@ -7,9 +9,23 @@ import httpx
 import pytest
 
 from kalshi_bot.catalog.evaluators import EVALUATORS, mmsell, refresh, register
-from kalshi_bot.catalog.ingest import Discovery, seed, source_page
+from kalshi_bot.catalog.ingest import (
+    SOURCE_COVERAGE_QUERIES,
+    Discovery,
+    DiscoveryDeferred,
+    seed,
+    source_page,
+)
 from kalshi_bot.catalog.service import make_server, run_job
-from kalshi_bot.catalog.store import SEMANTIC_FIELDS, Store
+from kalshi_bot.catalog.store import (
+    DOCUMENT_TABLES,
+    SEMANTIC_FIELDS,
+    Store,
+    digest,
+    encode,
+    pack,
+    unpack,
+)
 
 
 @pytest.fixture
@@ -276,6 +292,232 @@ def test_admin_source_role_is_refused_before_import(store):
             source_page(store, "postgresql://private/source", "paper")
     assert store.evidence() == []
     assert store.state("cursor:paper") is None
+    permissions = store.state("source_permissions")
+    assert permissions["elevated_flags"] == ["rolsuper"]
+    assert permissions["public_table_write_privileges"]
+    assert not permissions["accepted"]
+    assert "private" not in json.dumps(permissions)
+
+
+def test_write_grants_without_elevated_role_still_refused(store):
+    conn = MagicMock()
+    conn.__enter__.return_value = conn
+    conn.execute.return_value.fetchone.side_effect = [{"rolsuper": False}, {"writable": True}]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        with pytest.raises(PermissionError):
+            source_page(store, "postgresql://private/source", "paper")
+    assert not store.state("source_permissions")["accepted"]
+    assert conn.execute.call_count == 2  # No trading data read after refusal.
+
+
+def coverage(ids, through=3):
+    return {
+        "source_records": len(ids),
+        "source_ids_fingerprint": hashlib.sha256(
+            ",".join(str(i) for i in sorted(ids)).encode()
+        ).hexdigest(),
+        "through_source_id": through,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "definition": "sorted-source-ids-sha256-v1",
+    }
+
+
+def test_backfill_requires_matching_ids_not_just_counts(store):
+    store.evidence_page("paper", [trade(1), trade(3)], {"after": 3, "initial_complete": False})
+    result = store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 2]))
+    assert result["source_records"] == result["local_records"] == 2
+    assert not result["ids_match"]
+    assert not store.state("cursor:paper")["initial_complete"]
+    assert not store.state("cursor:paper")["reconciliation_complete"]
+    assert store.state("cursor:paper").get("last_complete_at") is None
+    assert store.status()["backfill"]["paper"]["coverage"]["ids_match"] is False
+    # A fully matching coverage checkpoint is durable, but is not a confidence score.
+    result = store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 3]))
+    reopened = Store(store.path)
+    assert result["ids_match"] and not result["payload_parity_verified"]
+    assert reopened.status()["backfill"]["paper"]["initial_complete"]
+    assert reopened.state("cursor:paper")["last_complete_at"] == result["checked_at"]
+    refresh(reopened, datetime(2026, 10, 5, tzinfo=timezone.utc))
+    assert all(r["confidence_score"] is None and not r["qualified"] for r in reopened.assessments())
+
+
+def test_coverage_checkpoint_and_cursor_rollback_together(store):
+    cursor = {"after": 1, "initial_complete": False}
+    store.evidence_page("paper", [trade()], cursor)
+    with store.connect() as db:
+        db.execute("""CREATE TRIGGER refuse_cursor BEFORE INSERT ON state
+                      WHEN NEW.key='cursor:paper'
+                      BEGIN SELECT RAISE(ABORT, 'test interruption'); END""")
+    with pytest.raises(sqlite3.IntegrityError):
+        store.evidence_page("paper", [], cursor, coverage([1], through=1))
+    assert store.state("source_coverage:paper") is None
+    assert store.state("cursor:paper") == cursor
+
+
+def test_eof_audits_read_only_source_and_throttles_repeat_checks(store):
+    store.evidence_page("paper", [trade()], {"after": 1, "initial_complete": False})
+    conn = MagicMock()
+    conn.__enter__.return_value = conn
+    conn.execute.return_value.fetchall.return_value = []
+    source = coverage([1], through=1)
+    conn.execute.return_value.fetchone.side_effect = [
+        {"rolsuper": False},
+        {"writable": False},
+        {k: source[k] for k in ("source_records", "source_ids_fingerprint")},
+    ]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        assert source_page(store, "postgresql://private/source", "paper") == 0
+    assert conn.execute.call_args.args == (SOURCE_COVERAGE_QUERIES["paper"], (1,))
+    assert conn.read_only and store.state("cursor:paper")["initial_complete"]
+    conn.reset_mock()
+    conn.execute.return_value.fetchall.return_value = []
+    conn.execute.return_value.fetchone.side_effect = [{"rolsuper": False}, {"writable": False}]
+    with patch("kalshi_bot.catalog.ingest.psycopg.connect", return_value=conn):
+        source_page(store, "postgresql://private/source", "paper")
+    assert conn.execute.call_count == 3  # Privileges + page; no repeated whole-source hash.
+
+
+def test_empty_source_is_complete_only_after_audit(store):
+    assert not store.status()["backfill"]["live"]["initial_complete"]
+    result = store.evidence_page("live", [], {"after": 0}, coverage([], through=0))
+    assert result["ids_match"]
+    assert store.status()["backfill"]["live"]["initial_complete"]
+
+
+def test_legacy_eof_flag_does_not_imply_verified_coverage(store):
+    store.set_state("cursor:paper", {"after": 3, "initial_complete": True})
+    store.evidence_page("paper", [trade(1), trade(3)], store.state("cursor:paper"))
+    assert not store.status()["backfill"]["paper"]["initial_complete"]
+    store.evidence_page("paper", [], store.state("cursor:paper"), coverage([1, 2]))
+    assert not store.state("cursor:paper")["initial_complete"]
+
+
+def test_compression_preserves_legacy_documents_hashes_and_restart(store):
+    raw = {"rules_primary": "Repeated official rules with Unicode: café. " * 100}
+    doc = store.upsert("market", "KXTEST-E-M", raw, "KXTEST")
+    payload = review_payload(doc)
+    payload["rationale"] *= 150
+    review = store.review(payload)
+    store.evidence_page("paper", [trade(notes="historical context " * 200)], {"after": 1})
+    refresh(store, datetime(2026, 10, 5, tzinfo=timezone.utc))
+    # Construct an actual original-format database to exercise the upgrade path.
+    with store.connect() as db:
+        for table in DOCUMENT_TABLES:
+            for row in db.execute(f"SELECT rowid,document FROM {table}").fetchall():
+                db.execute(
+                    f"UPDATE {table} SET document=? WHERE rowid=?",
+                    (encode(unpack(row[1])), row[0]),
+                )
+    before_docs = {}
+    with store.connect() as db:
+        for table in DOCUMENT_TABLES:
+            before_docs[table] = [
+                (row[0], unpack(row[1]))
+                for row in db.execute(f"SELECT rowid,document FROM {table} ORDER BY rowid")
+            ]
+    before_bytes = sum(t["document_bytes"] for t in store.storage()["tables"].values())
+    assert store.compress_page(batch_size=1) == 1
+    reopened = Store(store.path)
+    while not reopened.state("storage:compression")["complete"]:
+        reopened.compress_page(batch_size=1)
+    with reopened.connect() as db:
+        for table in DOCUMENT_TABLES:
+            after = [
+                (row[0], unpack(row[1]))
+                for row in db.execute(f"SELECT rowid,document FROM {table} ORDER BY rowid")
+            ]
+            assert after == before_docs[table]
+    after_bytes = sum(t["document_bytes"] for t in reopened.storage()["tables"].values())
+    assert after_bytes < before_bytes / 2
+    assert reopened.get("market", doc["ticker"])["raw"] == raw
+    assert reopened.list_objects("market")[0]["rules_hash"] == doc["rules_hash"]
+    assert reopened.history("reviews", "market", doc["ticker"])[0] == review
+    assert digest({k: v for k, v in review.items() if k != "id"}) == review["id"]
+    assert reopened.evidence()[0][1]["notes"] == "historical context " * 200
+    assert reopened.assessments() == store.assessments()
+    assert reopened.compress_page() == 0
+
+
+def test_compression_failure_rolls_back_page_and_cursor(store):
+    doc = store.upsert("market", "KXTEST-E-M", {"rules_primary": "rules " * 1000}, "KXTEST")
+    with store.connect() as db:
+        db.execute("UPDATE objects SET document=?", (encode(doc),))
+        db.execute("""CREATE TRIGGER refuse_reencoding BEFORE UPDATE ON objects
+                      BEGIN SELECT RAISE(ABORT, 'test interruption'); END""")
+    with pytest.raises(sqlite3.IntegrityError):
+        store.compress_page()
+    assert store.state("storage:compression") is None
+    with store.connect() as db:
+        assert db.execute("SELECT typeof(document) FROM objects").fetchone()[0] == "text"
+        db.execute("DROP TRIGGER refuse_reencoding")
+    assert store.compress_page() == 1
+    assert store.get("market", doc["ticker"])["raw"] == doc["raw"]
+
+
+def test_compression_serializes_with_concurrent_evidence_updates(store):
+    record = trade(notes="history " * 1000)
+    store.evidence_page("paper", [record], {"after": 1})
+    with store.connect() as db:
+        db.execute("UPDATE evidence SET document=?", (encode(record),))
+    store.set_state(
+        "storage:compression", {"table_index": DOCUMENT_TABLES.index("evidence"), "after": 0}
+    )
+    blocked = []
+
+    def concurrent_update(value):
+        other = sqlite3.connect(store.path, timeout=0)
+        try:
+            with pytest.raises(sqlite3.OperationalError, match="locked"):
+                other.execute("UPDATE evidence SET document=?", (encode({**record, "pnl": 999}),))
+            blocked.append(True)
+        finally:
+            other.close()
+        return pack(value)
+
+    with patch("kalshi_bot.catalog.store.pack", side_effect=concurrent_update):
+        assert store.compress_page() == 1
+    assert blocked and store.evidence()[0][1] == record
+    # Once maintenance commits, the writer can retry and its new value survives.
+    store.evidence_page("paper", [{**record, "pnl": 999}], {"after": 1})
+    assert store.evidence()[0][1]["pnl"] == 999
+
+
+def test_precompression_backup_is_consistent_and_never_overwritten(store):
+    doc = store.upsert("market", "KXTEST-E-M", {"rules_primary": "rules " * 1000}, "KXTEST")
+    with store.connect() as db:
+        db.execute("UPDATE objects SET document=?", (encode(doc),))
+    backup = store.backup_before_compression()
+    store.compress_page()
+    store.upsert("market", doc["ticker"], {"rules_primary": "changed"}, "KXTEST")
+    assert store.backup_before_compression() == backup
+    with sqlite3.connect(backup) as db:
+        assert db.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        # The original version can still read this saved JSON TEXT record.
+        original = json.loads(db.execute("SELECT document FROM objects").fetchone()[0])
+        assert original == doc
+
+
+def test_compressed_assessment_lookup_over_http(store):
+    result = {
+        "as_of": "2026-10-05T00:00:00Z",
+        "qualification_reasons": ["missing data " * 200],
+    }
+    identity = store.assessment("context", result)
+    server = make_server(store, "a" * 32, ("127.0.0.1", 0))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with httpx.Client(
+            base_url=f"http://127.0.0.1:{server.server_port}",
+            headers={"Authorization": "Bearer " + "a" * 32},
+            trust_env=False,
+        ) as client:
+            response = client.get("/v1/assessments/" + identity)
+            assert response.status_code == 200 and response.json() == result
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
 
 
 def test_consumer_adapter_is_qualified_by_default():
@@ -312,3 +554,66 @@ def test_incremental_scan_preserves_upper_boundary_across_restart(store):
         Discovery(Store(store.path), client).updates()
     assert seen[0]["max_updated_ts"] == seen[1]["max_updated_ts"]
     assert store.state("discovery:updates")["since"] == before["scan_started_at"] - 60
+
+
+def test_rate_backoff_preserves_cursor_and_success_across_restart(store):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, json={"events": [], "cursor": "page2"})
+        if len(calls) == 2:
+            return httpx.Response(429, headers={"Retry-After": "180"}, text="private text")
+        return httpx.Response(200, json={"events": [], "cursor": ""})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        discovery = Discovery(store, client)
+        run_job(store, "discovery:events", lambda: discovery.page("events"))
+        success = store.state("job:discovery:events")["last_success_at"]
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1000):
+            assert run_job(store, "discovery:events", lambda: discovery.page("events")) is None
+        assert store.state("discovery:events")["cursor"] == "page2"
+        assert store.state("discovery:backoff")["not_before_unix"] == 1180
+        restarted = Discovery(Store(store.path), client)
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1100):
+            assert run_job(store, "discovery:events", lambda: restarted.page("events")) is None
+            with pytest.raises(DiscoveryDeferred):
+                restarted.updates()  # Shared provider throttle across endpoints.
+        assert len(calls) == 2
+        assert store.state("job:discovery:events")["last_success_at"] == success
+        assert store.state("job:discovery:events")["http_status"] == 429
+        assert "private text" not in json.dumps(store.status())
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1181):
+            assert run_job(store, "discovery:events", lambda: restarted.page("events")) == 0
+        assert calls[-1].url.params["cursor"] == "page2"
+        assert store.state("discovery:events")["complete"]
+        assert store.state("job:discovery:events")["error"] is None
+        assert store.state("discovery:backoff")["failures"] == 0
+
+
+@pytest.mark.parametrize("hint", ["Thu, 01 Jan 1970 00:21:40 GMT", "NaN", "invalid", None])
+def test_provider_backoff_accepts_http_date_and_ignores_nonfinite_delay(store, hint):
+    def handler(request):
+        return httpx.Response(503, headers={"Retry-After": hint} if hint is not None else {})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        with patch("kalshi_bot.catalog.ingest.time.time", return_value=1000):
+            with pytest.raises(httpx.HTTPStatusError):
+                Discovery(store, client).page("events")
+    expected = 1300 if hint and hint.startswith("Thu") else 1060
+    assert store.state("discovery:backoff")["not_before_unix"] == expected
+
+
+def test_retry_after_starts_when_response_arrives(store):
+    clock = MagicMock(return_value=1000)
+
+    def handler(request):
+        clock.return_value = 1030
+        return httpx.Response(429, headers={"Retry-After": "120"})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        with patch("kalshi_bot.catalog.ingest.time.time", clock):
+            with pytest.raises(httpx.HTTPStatusError):
+                Discovery(store, client).page("events")
+    assert store.state("discovery:backoff")["not_before_unix"] == 1150

@@ -10,9 +10,11 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
+import httpx
+
 from .evaluators import refresh
-from .ingest import Discovery, reset_source_reconciliation, seed, source_page
-from .store import Store, now
+from .ingest import Discovery, DiscoveryDeferred, reset_source_reconciliation, seed, source_page
+from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
 
@@ -20,19 +22,50 @@ LOG = logging.getLogger("market_catalog")
 def run_job(store, key, action):
     try:
         count = action()
-        store.set_state("job:" + key, {"last_success_at": now(), "records": count, "error": None})
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "last_success_at": now(),
+                "records": count,
+                "error": None,
+                "http_status": None,
+                "retry_at_unix": None,
+            },
+        )
         LOG.info("job=%s records=%s status=ok", key, count)
         return count
+    except DiscoveryDeferred as error:
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "error": "DiscoveryDeferred",
+                "retry_at_unix": error.retry_at,
+            },
+        )
+        LOG.info("job=%s status=deferred retry_at_unix=%s", key, error.retry_at)
+        return None
     except Exception as error:
         # Exception messages can contain connection strings; emit the type only.
-        store.set_state("job:" + key, {"last_error_at": now(), "error": type(error).__name__})
-        LOG.error("job=%s status=error type=%s", key, type(error).__name__)
+        code = error.response.status_code if isinstance(error, httpx.HTTPStatusError) else None
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}),
+                "last_error_at": now(),
+                "error": type(error).__name__,
+                "http_status": code,
+            },
+        )
+        LOG.error("job=%s status=error type=%s http_status=%s", key, type(error).__name__, code)
         return None
 
 
 def collect(store, stopped, source_url, interval):
     discovery = Discovery(store)
     last_evaluation = 0
+    last_storage_check = 0
     last_reconciliation = store.state("last_reconciliation", 0)
     while not stopped.is_set():
         stamp = time.time()
@@ -59,6 +92,23 @@ def collect(store, stopped, source_url, interval):
             if result is not None and store.state("evaluation_requested") == requested:
                 store.set_state("evaluation_requested", None)
             last_evaluation = stamp
+        if stamp - last_storage_check >= 300:
+
+            def report_storage():
+                storage = store.storage()
+                store.set_state("storage:metrics", storage)
+                LOG.info("catalog_storage=%s", json.dumps(storage))
+                return 0
+
+            run_job(store, "storage:metrics", report_storage)
+            last_storage_check = stamp
+        # Limit maintenance time and commit each page so interruption is safe.
+        maintenance_deadline = time.monotonic() + 3
+        while not stopped.is_set() and time.monotonic() < maintenance_deadline:
+            if store.state("storage:compression", {}).get("complete"):
+                break
+            if run_job(store, "storage:compression", store.compress_page) is None:
+                break
         LOG.info(
             "catalog_counts=%s",
             json.dumps(
@@ -163,7 +213,7 @@ def make_server(store, token, address=("::", 8080)):
                         row = db.execute(
                             "SELECT document FROM assessments WHERE id=?", (path.split("/")[-1],)
                         ).fetchone()
-                    result = json.loads(row[0]) if row else None
+                    result = unpack(row[0]) if row else None
                 elif path in ("/v1/series", "/v1/events", "/v1/markets", "/v1/review-queue"):
                     kind = {
                         "/v1/series": "series",
@@ -270,6 +320,9 @@ def main():
     token = os.environ.get("CATALOG_API_TOKEN", "")
     interval = max(10, int(os.environ.get("CATALOG_INTERVAL_SECONDS", "30")))
     server = make_server(store, token, ("::", int(os.environ.get("PORT", "8080"))))
+    LOG.info("catalog_backup status=starting")
+    backup = store.backup_before_compression()
+    LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
     stopped = threading.Event()
     thread = threading.Thread(

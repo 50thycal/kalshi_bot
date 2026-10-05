@@ -2,10 +2,15 @@
 
 import hashlib
 import json
+import shutil
 import sqlite3
+import zlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+DOCUMENT_TABLES = ("objects", "revisions", "reviews", "evidence", "assessments")
+COMPRESSED_PREFIX = b"catalog:zlib:1\x00"
 
 SEMANTIC_FIELDS = (
     "resolution_mechanism",
@@ -55,6 +60,24 @@ def encode(value):
 
 def digest(value):
     return hashlib.sha256(encode(value).encode()).hexdigest()
+
+
+def pack(value):
+    """Lossless storage encoding; content hashes always use canonical JSON."""
+    text = encode(value)
+    raw = text.encode()
+    if len(raw) >= 1024:
+        compressed = COMPRESSED_PREFIX + zlib.compress(raw)
+        if len(compressed) + 32 < len(raw):
+            return compressed
+    return text
+
+
+def unpack(document):
+    """Read both the original JSON TEXT and the versioned compressed BLOB."""
+    if isinstance(document, bytes) and document.startswith(COMPRESSED_PREFIX):
+        document = zlib.decompress(document[len(COMPRESSED_PREFIX) :])
+    return json.loads(document)
 
 
 def rule_hash(raw):
@@ -107,7 +130,7 @@ class Store:
     def state(self, key, default=None):
         with self.connect() as db:
             row = db.execute("SELECT document FROM state WHERE key=?", (key,)).fetchone()
-        return json.loads(row[0]) if row else default
+        return unpack(row[0]) if row else default
 
     def set_state(self, key, value):
         with self.connect() as db:
@@ -118,7 +141,7 @@ class Store:
             previous = db.execute(
                 "SELECT document FROM objects WHERE kind=? AND ticker=?", (kind, ticker)
             ).fetchone()
-            old = json.loads(previous[0]) if previous else {}
+            old = unpack(previous[0]) if previous else {}
             stamp = now()
             parents = {}
             for parent_kind, parent_ticker in (
@@ -157,7 +180,7 @@ class Store:
             )
             db.execute(
                 "INSERT OR IGNORE INTO revisions VALUES (?,?,?,?,?)",
-                (kind, ticker, semantic, stamp, encode(document)),
+                (kind, ticker, semantic, stamp, pack(document)),
             )
             db.execute(
                 "INSERT OR REPLACE INTO objects VALUES (?,?,?,?,?,?)",
@@ -167,7 +190,7 @@ class Store:
                     document["series_ticker"],
                     document["rules_hash"],
                     stamp,
-                    encode(document),
+                    pack(document),
                 ),
             )
         return document
@@ -177,7 +200,7 @@ class Store:
             row = db.execute(
                 "SELECT document FROM objects WHERE kind=? AND ticker=?", (kind, ticker)
             ).fetchone()
-        return self.decorate(json.loads(row[0])) if row else None
+        return self.decorate(unpack(row[0])) if row else None
 
     def decorate(self, doc):
         with self.connect() as db:
@@ -205,7 +228,7 @@ class Store:
                 ).fetchone()
                 if (parent[0] if parent else None) != captured_hash:
                     parent_changed = True
-        facts = json.loads(review[0]) if review and not parent_changed else None
+        facts = unpack(review[0]) if review and not parent_changed else None
         doc["review"] = facts
         doc["review_status"] = "reviewed" if facts else "needs_review"
         doc["semantics"] = facts["semantics"] if facts else dict.fromkeys(SEMANTIC_FIELDS)
@@ -247,7 +270,7 @@ class Store:
             sql += " LIMIT ? OFFSET ?"
             args.extend([limit, offset])
         with self.connect() as db:
-            docs = [json.loads(row[0]) for row in db.execute(sql, args)]
+            docs = [unpack(row[0]) for row in db.execute(sql, args)]
         docs = [self.decorate(doc) for doc in docs]
         return (
             [d for d in docs if d["review_status"] == "needs_review"][offset : offset + limit]
@@ -294,25 +317,62 @@ class Store:
                     payload["rules_hash"],
                     bool(payload.get("template")),
                     result["created_at"],
-                    encode(result),
+                    pack(result),
                 ),
             )
         return result
 
-    def evidence_page(self, source, records, cursor):
+    def evidence_page(self, source, records, cursor, coverage=None):
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             for record in records:
                 series = record["market_ticker"].split("-", 1)[0]
                 db.execute(
                     "INSERT OR REPLACE INTO evidence VALUES (?,?,?,?)",
-                    (source, record["id"], series, encode(record)),
+                    (source, record["id"], series, pack(record)),
                 )
+            if coverage is not None:
+                fingerprint = hashlib.sha256()
+                local_records = 0
+                for row in db.execute(
+                    "SELECT source_id FROM evidence WHERE source=? AND source_id<=? "
+                    "ORDER BY source_id",
+                    (source, coverage["through_source_id"]),
+                ):
+                    if local_records:
+                        fingerprint.update(b",")
+                    fingerprint.update(str(row[0]).encode())
+                    local_records += 1
+                matched = (
+                    local_records == coverage["source_records"]
+                    and fingerprint.hexdigest() == coverage["source_ids_fingerprint"]
+                )
+                coverage = {
+                    **coverage,
+                    "local_records": local_records,
+                    "local_ids_fingerprint": fingerprint.hexdigest(),
+                    "ids_match": matched,
+                    "payload_parity_verified": False,
+                }
+                cursor = {
+                    **cursor,
+                    "initial_coverage_verified": bool(
+                        cursor.get("initial_coverage_verified") or matched
+                    ),
+                    "initial_complete": bool(cursor.get("initial_coverage_verified") or matched),
+                    "reconciliation_complete": matched,
+                    "last_coverage_check_at": coverage["checked_at"],
+                }
+                if matched:
+                    cursor["last_complete_at"] = coverage["checked_at"]
+                self.put_state(db, "source_coverage:" + source, coverage)
             self.put_state(db, "cursor:" + source, cursor)
+        return coverage
 
     def evidence(self):
         with self.connect() as db:
             return [
-                (row["source"], json.loads(row["document"]))
+                (row["source"], unpack(row["document"]))
                 for row in db.execute("SELECT source,document FROM evidence")
             ]
 
@@ -321,7 +381,7 @@ class Store:
         with self.connect() as db:
             db.execute(
                 "INSERT OR IGNORE INTO assessments VALUES (?,?,?,?)",
-                (assessment_id, scope, result["as_of"], encode(result)),
+                (assessment_id, scope, result["as_of"], pack(result)),
             )
             db.execute(
                 "INSERT OR REPLACE INTO current_assessments VALUES (?,?)", (scope, assessment_id)
@@ -334,7 +394,7 @@ class Store:
                 "SELECT a.id,a.document FROM assessments a "
                 "JOIN current_assessments c ON c.assessment_id=a.id"
             )
-            results = [{"assessment_id": row[0], **json.loads(row[1])} for row in rows]
+            results = [{"assessment_id": row[0], **unpack(row[1])} for row in rows]
         return [
             r
             for r in results
@@ -359,7 +419,95 @@ class Store:
                 "ORDER BY rowid DESC LIMIT ?",
                 (kind, ticker, limit),
             )
-            return [json.loads(row[0]) for row in rows]
+            return [unpack(row[0]) for row in rows]
+
+    def backup_before_compression(self):
+        """Keep one consistent pre-upgrade backup; publish only a complete copy."""
+        destination = Path(self.path + ".before-compression-v1")
+        if destination.exists():
+            return destination
+        required = Path(self.path).stat().st_size + 64 * 1024 * 1024
+        if shutil.disk_usage(destination.parent).free < required:
+            raise RuntimeError("Insufficient storage for catalog backup")
+        temporary = Path(str(destination) + ".incomplete")
+        with self.connect() as source:
+            target = sqlite3.connect(temporary)
+            try:
+                source.backup(target, pages=256)
+                if target.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                    raise RuntimeError("Catalog backup integrity check failed")
+            finally:
+                target.close()
+        temporary.replace(destination)
+        return destination
+
+    def compress_page(self, batch_size=1000):
+        """Re-encode old documents in bounded, atomic, resumable pages; delete nothing."""
+        progress = self.state("storage:compression", {"table_index": 0, "after": 0})
+        index = progress["table_index"]
+        if index >= len(DOCUMENT_TABLES):
+            return 0
+        table = DOCUMENT_TABLES[index]
+        saved = changed = 0
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = db.execute(
+                f"SELECT rowid,document FROM {table} WHERE rowid>? ORDER BY rowid LIMIT ?",
+                (progress["after"], batch_size),
+            ).fetchall()
+            for row in rows:
+                original = row["document"]
+                if not isinstance(original, str):
+                    continue
+                packed = pack(unpack(original))
+                if isinstance(packed, bytes):
+                    db.execute(f"UPDATE {table} SET document=? WHERE rowid=?", (packed, row[0]))
+                    saved += len(original.encode()) - len(packed)
+                    changed += 1
+            self.put_state(
+                db,
+                "storage:compression",
+                {
+                    "table_index": index if rows else index + 1,
+                    "after": rows[-1][0] if rows else 0,
+                    "complete": not rows and index + 1 == len(DOCUMENT_TABLES),
+                    "documents_compressed": progress.get("documents_compressed", 0) + changed,
+                    "document_bytes_saved": progress.get("document_bytes_saved", 0) + saved,
+                    "last_success_at": now(),
+                },
+            )
+        return len(rows)
+
+    def storage(self):
+        """Measure stored payloads and reusable pages without inflating documents."""
+        with self.connect() as db:
+            tables = {}
+            for table in DOCUMENT_TABLES:
+                row = db.execute(
+                    f"SELECT count(*),coalesce(sum(length(CAST(document AS BLOB))),0),"
+                    f"coalesce(sum(typeof(document)='blob'),0) FROM {table}"
+                ).fetchone()
+                tables[table] = {"rows": row[0], "document_bytes": row[1], "compressed": row[2]}
+            page_size = db.execute("PRAGMA page_size").fetchone()[0]
+            pages = db.execute("PRAGMA page_count").fetchone()[0]
+            free_pages = db.execute("PRAGMA freelist_count").fetchone()[0]
+            volume = shutil.disk_usage(Path(self.path).parent)
+            files = {}
+            for suffix in ("", "-wal", "-shm"):
+                path = Path(self.path + suffix)
+                try:
+                    files[suffix or "database"] = path.stat().st_size
+                except FileNotFoundError:
+                    files[suffix or "database"] = 0
+        return {
+            "captured_at": now(),
+            "tables": tables,
+            "file_bytes": files,
+            "allocated_bytes": pages * page_size,
+            "reusable_bytes": free_pages * page_size,
+            "volume_free_bytes": volume.free,
+            "volume_total_bytes": volume.total,
+        }
 
     def status(self):
         with self.connect() as db:
@@ -378,6 +526,19 @@ class Store:
             "evidence": evidence,
             "assessment_contexts": assessments,
             "jobs": states,
+            "backfill": {
+                source: {
+                    "local_records": evidence.get(source, 0),
+                    "initial_complete": states.get("cursor:" + source, {}).get(
+                        "initial_coverage_verified", False
+                    ),
+                    "reconciliation_complete": states.get("cursor:" + source, {}).get(
+                        "reconciliation_complete", False
+                    ),
+                    "coverage": states.get("source_coverage:" + source),
+                }
+                for source in ("paper", "live")
+            },
             "consumer_cutover": False,
             "confidence_calibrated": False,
         }
