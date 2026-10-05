@@ -1,1 +1,1 @@
-{"type":"script","id":"cc-b6-backlog","name":"series_registry_review","args":["--section","backlog","--top","140"]}
+{"type":"script","id":"cc-b6-rules","name":"series_rules_audit","args":["--only","KXMLBTEAMTOTAL,KXBRENTD,KXATPSETWINNER,KXLALIGASCORE,KXLALIGATOTAL,KXT20MATCH,KXMLBHRR,KXINX,KXLOLGAME,KXAAAGASW","--evidence"]}
