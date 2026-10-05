@@ -1,0 +1,23 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a06b4425681afe9775a011978ac65b7d01e2965f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-05T19:16:21Z",
+  "id": "catalog-live-export-20261005-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "Codex",
+    "purpose": "Seed actual fills through SELECT-only export",
+    "workstream": "WS-023"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/catalog-live-export-20261005-1.receipt.json",
+  "result_file": "ops/results/catalog-live-export-20261005-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37362028756",
+  "service": null,
+  "started_at": "2026-10-05T19:16:21Z",
+  "targets": [],
+  "type": "db"
+}
