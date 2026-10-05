@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop
-# code a06b4425681afe9775a011978ac65b7d01e2965f · started 2026-10-05T19:49:47Z
-(noop — nothing to do)
