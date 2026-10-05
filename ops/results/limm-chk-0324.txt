@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0324
-# code 9eab4f3021f4df935414e3b122263263ac40f8e6 · started 2026-10-05T03:25:05Z
-market_ticker                side  limit_price  quantity  status   created_at                      
----------------------------  ----  -----------  --------  -------  --------------------------------
-KXTRUMPMENTION-26OCT06-CRYP  yes   1            500       resting  2026-10-04 23:39:06.989112+00:00
-KXFEAR-26OCT09-XGREE         yes   1            500       resting  2026-10-04 23:36:09.762372+00:00
-
-(2 rows)

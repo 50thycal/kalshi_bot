@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "9ccb3f9090a495b775e861b58fb05bc975e50e92",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-05T21:18:41Z",
+  "id": "limm-px-2017",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-px-2017.receipt.json",
+  "result_file": "ops/results/limm-px-2017.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37375034741",
+  "service": null,
+  "started_at": "2026-10-05T21:18:40Z",
+  "targets": [],
+  "type": "db"
+}
