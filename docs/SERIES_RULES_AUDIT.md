@@ -649,3 +649,42 @@ row with real losses. `KXUFCFIGHT` is the opposite case, with nearly no multi-co
 The running `Rmmsell` tapes are unchanged (24 armed, 36 signed). Volume added is small: 5
 `KXDIMAYORGAME` trades in 30 days, and the other three signed series took none in that window.
 Nothing here gates anything.
+
+---
+
+## Batch 9 reviewed — 2026-10-05, by `50cal`: none signed
+
+Audit: `CONFIRMS=10 CONTRADICTS=0 INSUFFICIENT=0`. **36 of 138 rows reviewed (unchanged).**
+Worklist: the next ten unruled backlog rows. Measured as before (ops `cc-b9-rules`, `cc-b9-conc`,
+`cc-b6-pnl`).
+
+| series | contracts / outcome | P&L | edge | contests | own% | decision |
+|---|---:|---:|---:|---:|---:|---|
+| `KXJLEAGUEGAME` | 1.39 avg, 3 max | +$3.56 | +7.4 | 18 | 32% | not signed (thin) |
+| `KXVALORANTGAME` | 1.26 avg, 2 max | +$3.85 | +2.7 | 54 | 59% | not signed |
+| `KXKBOGAME` | 1.17 avg, 2 max | +$3.32 | +2.4 | 46 | 55% | not signed |
+| `KXLALIGASPREAD` | 2.18 avg, 5 max | +$2.88 | +1.5 | 34 | 47% | not ruled |
+| `KXODIMATCH` | 1.31 avg, 2 max | +$2.03 | +1.4 | 45 | 54% | not ruled |
+| `KXBRASILEIROTOTAL` | 1.50 avg, 3 max | +$1.48 | +1.0 | 30 | 44% | not ruled |
+| `KXARGPREMDIVGAME` | 1.76 avg, 3 max | +$1.82 | +0.9 | 54 | 59% | not ruled |
+| `KXECULPGAME` | 1.68 avg, 3 max | −$2.03 | −1.6 | 37 | 49% | rejected |
+| `KXNWSLGAME` | 1.74 avg, 3 max | −$1.44 | −1.6 | 19 | 33% | rejected |
+| `KXPGATOUR` | 6.50 avg, 10 max | −$1.99 | −0.5 | 12 | 24% | rejected |
+
+**The first batch with no signature, and the reason is the backlog, not the rules.** Every row
+reads cleanly and nine of ten are low-concentration. What is missing is edge: the three best
+candidates sit at +2.4 to +7.4pp, either on ≤ 18 games or under the bar the operator has applied
+since batch 3. The four "not ruled" rows are the familiar small-positive shape (+0.9 to +1.5pp).
+The backlog is ranked by live exposure, so by batch 9 it has reached series the book trades
+rarely and earns little on.
+
+`KXECULPGAME` is rejected while its sibling `KXECULPTOTAL` was signed in batch 7, the same
+game-vs-total split as `KXLIGAMXGAME` / `KXLIGAMXSPREAD`. `KXPGATOUR` joins `KXLPGATOUR`
+(held, batch 7) as a deep tournament ladder with nothing to show for it.
+
+### Where the backlog stands
+
+58 graduated rows remain unruled, and only 17 of them saw a live order in the last 30 days.
+Further batches are likely to return more rows like these. The volume the book is missing sits
+in series the manifest has never classified (`KXNCAAF*`, NFL player props), which never reach
+this backlog.
