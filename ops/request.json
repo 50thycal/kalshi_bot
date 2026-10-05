@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000008"],"id":"cc-fb-iss3"}
+{"type":"db","id":"cc-fb-ep1","sql":"SELECT x.key, v.version_number AS v, e.epoch_number AS ep, e.started_at, e.ended_at, e.platform_snapshot_id AS snap FROM experiment_epochs e JOIN experiment_versions v ON v.id=e.version_id JOIN experiments x ON x.id=v.experiment_id WHERE x.state NOT IN ('RETIRED') AND e.ended_at IS NULL ORDER BY x.key"}
