@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-list","args":["--owner","PLATFORM_CHANGE_REVIEW"],"id":"cc-fb-iss2"}
+{"type":"xos","command":"issue-show","args":["XOS-000008"],"id":"cc-fb-iss3"}
