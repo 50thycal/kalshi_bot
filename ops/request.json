@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-fb-iss1","sql":"SELECT key, status, kind, owner_role, left(title,110) AS title, created_at::date FROM experiment_os_issues WHERE title ILIKE '%taxonom%' OR title ILIKE '%KXUE%' OR title ILIKE '%SERIES_TYPES%' OR title ILIKE '%classif%' ORDER BY created_at"}
+{"type":"xos","command":"issue-list","args":["--owner","PLATFORM_CHANGE_REVIEW"],"id":"cc-fb-iss2"}
