@@ -455,3 +455,8 @@ registry configuration and expected namespace, plus an exact fingerprint bound t
 registered execution revision. A mismatch defers without consuming the command.
 It retains the canonical impact/epoch gates and cannot attest other workers or activate
 trading. Deployment procedure: `docs/desks/WORKER_PROTECTION.md`.
+
+
+## Market catalog service (WS-023)
+
+The additive `kalshi_bot.catalog` service owns contract facts, raw semantic revisions, human reviews and extensible strategy assessments on its Railway volume. Existing Postgres supplies read-only MMSELL paper/live evidence. Automatic public REST discovery and daily replay repair gaps; paper twins, context and deployment-arm lineage are preserved separately. API outputs are advisory, versioned and authenticated. Initial confidence is unqualified pending calibration; no existing strategy or Experiment OS gate consumes the catalog. Consumer adoption requires Platform Impact, with exact assessment attribution and recorded universe updates. Details: [MARKET_CATALOG_SERVICE.md](MARKET_CATALOG_SERVICE.md).
