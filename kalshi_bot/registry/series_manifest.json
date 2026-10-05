@@ -100,8 +100,8 @@
   {
    "series": "KXBRASILEIROGAME",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -184,8 +184,8 @@
   {
    "series": "KXCONMEBOLSUDTOTAL",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -198,8 +198,8 @@
   {
    "series": "KXCPLMATCH",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -219,15 +219,15 @@
   {
    "series": "KXDIMAYORGAME",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
    "series": "KXDOTA2GAME",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -247,8 +247,8 @@
   {
    "series": "KXECULPTOTAL",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -429,8 +429,8 @@
   {
    "series": "KXLIGAMXSPREAD",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -569,8 +569,8 @@
   {
    "series": "KXMLSSPREAD",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -758,8 +758,8 @@
   {
    "series": "KXUFCFIGHT",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-10-05",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
