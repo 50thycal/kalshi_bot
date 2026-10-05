@@ -1,1 +1,1 @@
-{"type": "db", "sql": "with t as (select distinct o.market_ticker from live_orders o join fills f on f.kalshi_order_id=o.kalshi_order_id where o.strategy='Jmmsell10' and o.action='buy'), p as (select distinct on (market_ticker) market_ticker, quantity, realized_pnl, captured_at from positions where market_ticker in (select market_ticker from t) order by market_ticker, captured_at desc, id desc) select * from p where quantity=0 and realized_pnl is not null order by captured_at", "max_rows": 200, "id": "jdash-q2-1791158356"}
+{"type":"noop"}
