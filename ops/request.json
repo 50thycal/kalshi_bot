@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","id":"cc-b7-rules","name":"series_rules_audit","args":["--only","KXLPGATOUR,KXITFWMATCH,KXMLSSPREAD,KXGOLDD,KXLIGAMXSPREAD,KXBRASILEIROGAME,KXECULPTOTAL,KXCONMEBOLSUDTOTAL,KXLIGAMXGAME,KXATPCHALLENGERMATCH","--evidence"]}
