@@ -134,7 +134,14 @@ class Discovery:
 
         initial_since = int(datetime.now(timezone.utc).timestamp()) - 86400
         state = self.store.state("discovery:updates", {"cursor": None, "since": initial_since})
-        params = {"limit": 1000, "mve_filter": "exclude", "min_updated_ts": state["since"]}
+        if not state["cursor"]:
+            state["scan_started_at"] = int(datetime.now(timezone.utc).timestamp())
+        params = {
+            "limit": 1000,
+            "mve_filter": "exclude",
+            "min_updated_ts": state["since"],
+            "max_updated_ts": state["scan_started_at"],
+        }
         if state["cursor"]:
             params["cursor"] = state["cursor"]
         response = self.client.get("/markets", params=params)
@@ -144,10 +151,6 @@ class Discovery:
             series = market.get("series_ticker") or market["ticker"].split("-", 1)[0]
             self.store.upsert("market", market["ticker"], market, series)
         next_state = {**state, "cursor": data.get("cursor"), "last_success_at": now()}
-        if not state["cursor"]:
-            from datetime import datetime, timezone
-
-            next_state["scan_started_at"] = int(datetime.now(timezone.utc).timestamp())
         if not next_state["cursor"]:
             # overlap avoids boundary precision races
             next_state["since"] = max(0, next_state["scan_started_at"] - 60)

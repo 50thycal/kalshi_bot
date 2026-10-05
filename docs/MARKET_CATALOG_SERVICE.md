@@ -29,6 +29,9 @@ No Kalshi trading credential, live arming variable or XOS write transport is con
 
 Private connection: `http://market-catalog.railway.internal:8080`, bearer token. A generated public domain supports health and authenticated integrations. `/health` is the only unauthenticated route. Public health means process/API is available, not that import is complete; `/v1/status` is authoritative for import/discovery cursors, completion and error types. Daily import reconciliation may still be running while initial completion is true; inspect cursor time and `last_complete_at`.
 
+## Existing-code adapter
+`kalshi_bot.catalog.client.CatalogClient(base_url, token)` provides read-only `assessments` and `select` methods. Selection requires qualified evidence by default, and supports settlement mechanism, net edge, confidence and paper/live filters. No existing strategy is wired to it yet. Unknown semantics/confidence never satisfy a numeric/type filter.
+
 ## API contract
 Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 
@@ -58,3 +61,7 @@ Review body: `kind`, `ticker`, `rules_hash`, `actor`, `rationale`, optional `tem
 The importer checks source role elevation and write grants and refuses privileged connections. A root-credential reference was rejected by automatic approval review; provision the existing SELECT-only connection directly through Railway variables.
 
 Source/discovery exceptions log only exception type; retries resume committed cursors. Inspect authenticated status and Railway logs. Restart preserves data on the volume. Reconcile daily rather than deleting/replacing legacy records. Before any volume operation or storage migration, stop this service and export a consistent SQLite backup; retain originals and historical snapshots.
+
+
+## Deployment verification — 2026-10-05
+The first deployment succeeded, health returned 200 and unauthenticated data returned 401. Registry seed verified all 140 rows. Public discovery returned 14,649 series and has continued paging events/markets. Through existing SELECT-only ops exports, the service accepted 200 recent paper records (including 6 separately preserved twins) and 200 actual live fills; this is explicitly partial coverage, not full historical migration. Ops transport returned to noop. Continuous historical backfill is blocked on configuring the SELECT-only source URL; the owner database URL was rejected by automatic approval review. Calibration and first consumer cutover remain subsequent WS-023 stages.

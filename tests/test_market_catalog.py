@@ -224,6 +224,13 @@ def test_http_auth_review_stale_conflict_and_selection(store):
             store.upsert("market", doc["ticker"], {"rules_primary": "changed"}, "KXTEST")
             assert client.post("/v1/reviews", json=review_payload(doc)).status_code == 409
             assert client.get("/v1/select?qualified=true").json()["items"] == []
+            payload = {"source": "paper", "records": [trade()], "provenance": "read-only fixture"}
+            assert client.post("/v1/import", json=payload).status_code == 201
+            assert client.post("/v1/import", json=payload).status_code == 201
+            assert store.status()["evidence"]["paper"] == 1
+            assert store.state("cursor:paper")["after"] == 0
+            assert store.state("evaluation_requested")
+            assert client.get("/v1/select?min_confidence=101").status_code == 400
     finally:
         server.shutdown()
         thread.join()
@@ -269,3 +276,39 @@ def test_admin_source_role_is_refused_before_import(store):
             source_page(store, "postgresql://private/source", "paper")
     assert store.evidence() == []
     assert store.state("cursor:paper") is None
+
+
+def test_consumer_adapter_is_qualified_by_default():
+    from kalshi_bot.catalog.client import CatalogClient
+
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"items": [], "advisory_only": True})
+
+    client = CatalogClient("https://catalog", "test-token", httpx.MockTransport(handler))
+    try:
+        assert client.select("mmsell", "fixed_observation", 1, 80, "live")["items"] == []
+        assert seen[0].url.params["qualified"] == "true"
+        assert seen[0].url.params["settlement_type"] == "fixed_observation"
+        assert seen[0].headers["Authorization"] == "Bearer test-token"
+    finally:
+        client.close()
+
+
+def test_incremental_scan_preserves_upper_boundary_across_restart(store):
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        if "cursor" in request.url.params:
+            return httpx.Response(200, json={"markets": [], "cursor": ""})
+        return httpx.Response(200, json={"markets": [], "cursor": "second"})
+
+    with httpx.Client(base_url="https://test", transport=httpx.MockTransport(handler)) as client:
+        Discovery(store, client).updates()
+        before = store.state("discovery:updates")
+        Discovery(Store(store.path), client).updates()
+    assert seen[0]["max_updated_ts"] == seen[1]["max_updated_ts"]
+    assert store.state("discovery:updates")["since"] == before["scan_started_at"] - 60

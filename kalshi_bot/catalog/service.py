@@ -53,8 +53,11 @@ def collect(store, stopped, source_url, interval):
                     lambda source=source: source_page(store, source_url, source),
                 )
                 changed = changed or bool(count)
-        if changed or stamp - last_evaluation >= 300:
-            run_job(store, "evaluation", lambda: refresh(store))
+        requested = store.state("evaluation_requested")
+        if changed or requested or stamp - last_evaluation >= 300:
+            result = run_job(store, "evaluation", lambda: refresh(store))
+            if result is not None and store.state("evaluation_requested") == requested:
+                store.set_state("evaluation_requested", None)
             last_evaluation = stamp
         LOG.info(
             "catalog_counts=%s",
@@ -114,9 +117,42 @@ def make_server(store, token, address=("::", 8080)):
                     result = store.assessments(
                         query.get("strategy", [None])[0],
                         series,
-                        query.get("qualified", ["false"])[0] == "true",
+                        query.get("qualified", ["true" if path == "/v1/select" else "false"])[0]
+                        == "true",
                         float(query["min_edge"][0]) if "min_edge" in query else None,
                     )
+                    settlement_type = query.get("settlement_type", [None])[0]
+                    source = query.get("evidence_source", [None])[0]
+                    minimum = (
+                        float(query["min_confidence"][0]) if "min_confidence" in query else None
+                    )
+                    if source and source not in ("paper", "live"):
+                        raise ValueError("Invalid evidence source")
+                    if minimum is not None and not 0 <= minimum <= 100:
+                        raise ValueError("Confidence must be in 0–100")
+                    if settlement_type:
+                        selected = []
+                        for record in result:
+                            facts = store.get("series", record["series_ticker"])
+                            if (
+                                facts
+                                and facts["review_status"] == "reviewed"
+                                and facts["settlement_type"] == settlement_type
+                            ):
+                                selected.append(record)
+                        result = selected
+                    result = [
+                        r
+                        for r in result
+                        if (not source or r["evidence_source"] == source)
+                        and (
+                            minimum is None
+                            or (
+                                r["confidence_score"] is not None
+                                and r["confidence_score"] >= minimum
+                            )
+                        )
+                    ]
                     result = {
                         "items": result[offset : offset + limit],
                         "total": len(result),
@@ -205,6 +241,7 @@ def make_server(store, token, address=("::", 8080)):
                             "provenance": provenance,
                         },
                     )
+                    store.set_state("evaluation_requested", now())
                     self.respond(201, {"imported": len(records), "source": source})
                 else:
                     self.respond(201, store.review(payload))
@@ -224,7 +261,11 @@ def make_server(store, token, address=("::", 8080)):
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    import sys
+
+    logging.basicConfig(
+        stream=sys.stdout, level=logging.INFO, format="%(asctime)s %(name)s %(message)s"
+    )
     store = Store(os.environ.get("CATALOG_DB_PATH", "/data/catalog.sqlite3"))
     token = os.environ.get("CATALOG_API_TOKEN", "")
     interval = max(10, int(os.environ.get("CATALOG_INTERVAL_SECONDS", "30")))
