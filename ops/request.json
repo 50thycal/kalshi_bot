@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select coalesce(parent_outcome,'-') parent, coalesce(live_outcome,'-') live, coalesce(twin_outcome,'-') twin, count(*) n from live_paper_parity_events where twin_tag='Jmmsell10_pt4' and twin_outcome='opened' group by 1,2,3 order by 4 desc", "max_rows": 500, "id": "v24-q1-1791223292"}
