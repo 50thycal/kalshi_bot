@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0526
-# code 9eab4f3021f4df935414e3b122263263ac40f8e6 · started 2026-10-05T05:26:27Z
-market_ticker             side  limit_price  quantity  status   created_at                      
-------------------------  ----  -----------  --------  -------  --------------------------------
-KXTRUMPSAY-26OCT12-SAVE   no    2            500       resting  2026-10-05 05:06:12.286382+00:00
-KXPLAGUECOUNT-26NOV01-A5  yes   4            250       resting  2026-10-05 03:37:19.695717+00:00
-
-(2 rows)
