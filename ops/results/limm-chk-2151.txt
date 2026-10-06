@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-2151
-# code 9ccb3f9090a495b775e861b58fb05bc975e50e92 · started 2026-10-05T21:51:14Z
-market_ticker              side  limit_price  quantity  status   created_at                      
--------------------------  ----  -----------  --------  -------  --------------------------------
-KXGPTAPP-26NOV08-T50       no    2            500       resting  2026-10-05 18:48:31.739326+00:00
-KXUSISMSERV-26NOV04-T55.8  yes   4            250       resting  2026-10-05 17:49:35.391371+00:00
-
-(2 rows)
