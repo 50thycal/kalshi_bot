@@ -1,0 +1,88 @@
+'use strict';
+const $ = id => document.getElementById(id);
+let token = '', generation = 0, busy = false;
+const number = value => Number(value || 0).toLocaleString();
+const date = value => value ? new Date(value).toLocaleString() : 'Never recorded';
+const gb = value => (value / 1e9).toFixed(1) + ' GB';
+function node(tag, text, className) { const el = document.createElement(tag); el.textContent = text; if(className) el.className = className; return el; }
+function pill(text, tone = 'neutral') { return node('span', text, 'pill ' + tone); }
+function row(parent, values) { const tr = document.createElement('tr'); for(const value of values) { const td = document.createElement('td'); td.append(value instanceof Node ? value : node('span', value)); tr.append(td); } parent.append(tr); }
+function stage(title, state, detail, tone) { const el = node('article', '', 'stage'); el.append(node('h3', title), pill(state, tone), node('p', detail)); $('pipeline').append(el); }
+function notice(text) { $('message').textContent = text; $('message').hidden = !text; }
+async function api(path, currentToken) {
+  const response = await fetch(path, {headers:{Authorization:'Bearer ' + currentToken},cache:'no-store',signal:AbortSignal.timeout(45000)});
+  if(response.status === 401) throw new Error('Token not accepted. Check CATALOG_API_TOKEN in Railway and reconnect.');
+  if(!response.ok) throw new Error('Catalog request failed (' + response.status + '). Check the service and try again.');
+  return response.json();
+}
+function renderStatus(s) {
+  const jobs = s.jobs || {}, reviews = s.series_reviews || {}, reviewed = reviews.reviewed || 0;
+  $('series').textContent = number(s.objects?.series); $('markets').textContent = number(s.objects?.market);
+  $('reviews').textContent = number(reviewed); $('review-detail').textContent = number(Math.max(0,(s.objects?.series || 0)-reviewed)) + ' series awaiting a current structured review';
+  $('contexts').textContent = number(s.assessment_contexts); $('pipeline').replaceChildren();
+  const discovery = ['series','events'].every(k => jobs['discovery:' + k]?.complete);
+  const discoveryErrors = Object.entries(jobs).some(([k,v])=>k.startsWith('job:discovery:') && v?.error);
+  stage('1. Discovery', discoveryErrors ? 'Needs attention' : discovery ? 'Pass complete' : 'Collecting', 'Public series, events, and market updates. Historical listings included.', discoveryErrors ? 'warn' : 'good');
+  stage('2. Reviews', reviewed ? 'In progress' : 'Not populated', 'Current structured series reviews; legacy classifications are preserved separately.', 'neutral');
+  const imported = ['paper','live'].every(k=>s.backfill?.[k]?.initial_complete);
+  const permissions = jobs.source_permissions;
+  stage('3. Evidence', imported ? 'Import verified' : permissions?.accepted === false ? 'Connection blocked' : 'Import incomplete', 'Paper and live history remain separate. Completion requires verified source-ID coverage.', imported ? 'good' : 'warn');
+  stage('4. Scoring', s.confidence_calibrated ? 'Calibrated' : 'Calibration pending', 'Descriptive assessments exist. Unknown confidence is not a zero score.', s.confidence_calibrated ? 'good' : 'neutral');
+  stage('5. Strategy connection', s.consumer_cutover ? 'Connected' : 'Not connected', 'Catalog selections are advisory. This page does not authorize or activate trades.', 'neutral');
+  $('attention').replaceChildren();
+  const add = text => $('attention').append(node('li',text));
+  if(permissions?.accepted === false) add('Historical import blocked: configure CATALOG_SOURCE_DATABASE_URL with the genuine bot_readonly account and its own password, then redeploy. An administrator URL is refused.');
+  else if(!imported) add('Finish and verify the historical paper and live imports. Missing coverage means incomplete, even if a seed is present.');
+  if(!reviewed) add('Migrate legacy approvals into the structured review format. Discovery alone does not approve a market.');
+  else if(reviewed < (s.objects?.series || 0)) add('Continue structured reviews for the intended strategy universe; unreviewed series stay unqualified.');
+  if(!s.confidence_calibrated) add('Validate attributable live economics, independent outcomes, and forward evidence before publishing confidence scores.');
+  if(!s.consumer_cutover) add('Compare selections in advisory mode before a controlled, versioned strategy cutover.');
+  const storage = jobs['storage:metrics'];
+  if(storage?.volume_total_bytes > 0) {
+    const used = storage.volume_total_bytes - storage.volume_free_bytes;
+    $('storage').textContent = gb(storage.volume_free_bytes) + ' free';
+    $('storage-detail').textContent = gb(used) + ' used of ' + gb(storage.volume_total_bytes) + '. Database: ' + gb(storage.file_bytes?.database || 0) + '. Volume usage includes backups and other files.';
+    $('storage-meter').value = Math.max(0,Math.min(100,used / storage.volume_total_bytes * 100));
+    $('storage-time').textContent = 'Measured ' + date(storage.captured_at);
+    if(storage.volume_free_bytes / storage.volume_total_bytes < .2) add('Volume has less than 20% free space. Review growth and capacity before it fills.');
+  } else { $('storage').textContent='Not measured yet'; $('storage-detail').textContent='Storage measurement is not available.'; $('storage-time').textContent=''; $('storage-meter').value=0; }
+  $('imports').replaceChildren();
+  for(const source of ['paper','live']) { const b=s.backfill?.[source] || {}; row($('imports'),[source,number(b.local_records),pill(b.initial_complete ? 'Verified' : 'Incomplete',b.initial_complete?'good':'warn'),pill(b.reconciliation_complete?'Verified':'Incomplete',b.reconciliation_complete?'good':'neutral'),date(b.coverage?.checked_at)]); }
+  $('jobs').replaceChildren();
+  for(const [key,value] of Object.entries(jobs).filter(([k])=>k.startsWith('job:')).sort()) {
+    const v=value || {}, deferred=v.error==='DiscoveryDeferred', stale=v.last_success_at && Date.now()-Date.parse(v.last_success_at)>15*60*1000;
+    const state=deferred?'Waiting to retry':v.error?'Error':!v.last_success_at?'Not run':stale?'Stale':'Last run OK';
+    const detail=v.error?(deferred?'Retry after '+date(v.retry_at_unix*1000):v.error+(v.http_status?' · HTTP '+v.http_status:'')):'Records in last run: '+number(v.records);
+    row($('jobs'),[key.slice(4),pill(state,v.error||stale?'warn':'neutral'),date(v.last_success_at),detail]);
+  }
+  $('connection').textContent='Snapshot received ' + date(s.captured_at) + ' · refreshes every 60 seconds';
+}
+function renderAssessments(data) {
+  $('assessments').replaceChildren();
+  for(const a of data.items || []) {
+    const identity=node('div',a.series_ticker); identity.append(node('small',a.strategy_id+' · '+a.strategy_version));
+    const qualification=node('div',''); qualification.append(pill(a.qualified?'Qualified':'Unqualified',a.qualified?'good':'neutral'));
+    qualification.append(node('small',(a.qualification_reasons || []).join(', ').replaceAll('_',' ')));
+    row($('assessments'),[identity,a.evidence_source+' / '+a.window,number(a.executions),Number(a.observation_span_days || 0).toFixed(1)+' days',a.edge_cents_per_contract == null?'Unknown':Number(a.edge_cents_per_contract).toFixed(2),a.confidence_score == null?'Unknown':String(a.confidence_score),qualification]);
+  }
+  if(!data.items?.length) row($('assessments'),['No assessments for this selection.','—','—','—','—','—','—']);
+  $('assessment-detail').textContent='Showing '+number(data.items?.length)+' of '+number(data.total)+' contexts. Limited to 100 per view; these are not unique market counts.';
+  for(const a of data.items || []) if(!Array.from($('strategy').options).some(o=>o.value===a.strategy_id)) { const option=node('option',a.strategy_id); option.value=a.strategy_id; $('strategy').append(option); }
+}
+async function refresh() {
+  if(!token || busy) return;
+  busy=true; $('refresh').disabled=true; $('connect').querySelector('button').disabled=true;
+  const g=generation, currentToken=token;
+  try {
+    const [status,assessments]=await Promise.all([api('/v1/status',currentToken),api('/v1/assessments?limit=100&strategy='+encodeURIComponent($('strategy').value),currentToken)]);
+    if(g!==generation) return;
+    renderStatus(status); renderAssessments(assessments); notice('');
+    $('content').hidden=false; $('login').hidden=true; $('refresh').hidden=false; $('disconnect').hidden=false;
+  } catch(error) { if(g===generation) { notice(error.message); $('connection').textContent='Refresh failed · displayed data may be stale'; } }
+  finally { busy=false; $('refresh').disabled=false; $('connect').querySelector('button').disabled=false; }
+}
+$('connect').addEventListener('submit',e=>{e.preventDefault(); token=$('token').value.trim(); $('token').value=''; generation++; refresh();});
+$('refresh').addEventListener('click',refresh);
+$('strategy').addEventListener('change',refresh);
+$('disconnect').addEventListener('click',()=>{token=''; generation++; $('content').hidden=true; $('login').hidden=false; $('refresh').hidden=true; $('disconnect').hidden=true; $('connection').textContent='Not connected'; notice(''); $('assessments').replaceChildren();});
+setInterval(refresh,60000);

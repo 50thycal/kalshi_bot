@@ -521,8 +521,19 @@ class Store:
             }
             states = {row[0]: json.loads(row[1]) for row in db.execute("SELECT * FROM state")}
             assessments = db.execute("SELECT count(*) FROM current_assessments").fetchone()[0]
+            reviewed = db.execute(
+                "SELECT count(*) FROM objects o WHERE o.kind='series' AND EXISTS "
+                "(SELECT 1 FROM reviews r WHERE r.kind=o.kind AND r.ticker=o.ticker "
+                "AND r.rules_hash=o.rules_hash)"
+            ).fetchone()[0]
+            series_reviews = {
+                "reviewed": reviewed,
+                "needs_review": counts.get("series", 0) - reviewed,
+            }
         return {
+            "captured_at": now(),
             "objects": counts,
+            "series_reviews": series_reviews,
             "evidence": evidence,
             "assessment_contexts": assessments,
             "jobs": states,

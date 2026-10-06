@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Market catalog · Overview</title><link rel="stylesheet" href="/dashboard/style.css"><script src="/dashboard/app.js" defer></script></head>
+<body>
+<header><div><span class="eyebrow">KALSHI / MARKET CATALOG</span><h1>Where things stand.</h1><p>Discovery, reviews, and evidence in one place.</p></div><span class="badge">Advisory catalog</span></header>
+<main>
+<section id="login" class="panel"><h2>Connect to your catalog</h2><p>Enter the catalog API token from Railway → market-catalog → Variables → CATALOG_API_TOKEN. It stays in this page’s memory and is cleared when you reload or disconnect.</p><form id="connect"><label for="token">Catalog API token</label><div class="controls"><input id="token" type="password" autocomplete="off" required minlength="24" placeholder="Paste your token"><button>Connect</button></div></form></section>
+<div class="toolbar"><span id="connection" role="status">Not connected</span><div><button id="refresh" hidden>Refresh</button><button id="disconnect" hidden>Disconnect</button></div></div>
+<div id="message" role="alert" hidden></div>
+<div id="content" hidden>
+<section class="stats" aria-label="Catalog totals"><article class="panel"><span>Series discovered</span><strong id="series">—</strong><small>Includes historical listings</small></article><article class="panel"><span>Markets discovered</span><strong id="markets">—</strong><small>Collected does not mean approved</small></article><article class="panel"><span>Structured series reviews</span><strong id="reviews">—</strong><small id="review-detail">—</small></article><article class="panel"><span>Assessment contexts</span><strong id="contexts">—</strong><small>Contexts, not qualified markets</small></article></section>
+<section class="panel"><div class="section-title"><h2>Pipeline progress</h2><span>Current state</span></div><div id="pipeline" class="pipeline"></div></section>
+<div class="columns"><section class="panel"><h2>What needs attention</h2><ul id="attention" class="attention"></ul></section><section class="panel"><h2>Storage</h2><strong class="storage-value" id="storage">Not measured yet</strong><p id="storage-detail">—</p><progress id="storage-meter" max="100" value="0" aria-label="Volume space used"></progress><small id="storage-time">—</small></section></div>
+<section class="panel"><h2>Evidence imports</h2><p>Collection completeness is separate from strategy confidence.</p><div class="table-scroll"><table><thead><tr><th>Source</th><th>Local records</th><th>Initial import</th><th>Daily reconciliation</th><th>Coverage checked</th></tr></thead><tbody id="imports"></tbody></table></div></section>
+<section class="panel"><h2>Background jobs</h2><div class="table-scroll"><table><thead><tr><th>Job</th><th>Status</th><th>Last successful run</th><th>Detail</th></tr></thead><tbody id="jobs"></tbody></table></div></section>
+<section class="panel"><div class="section-title"><h2>Strategy evidence</h2><label>Strategy <select id="strategy"><option value="">All strategies</option></select></label></div><p>Paper results describe the imported sample. They are not predicted edge or live returns. Unknown confidence stays unknown.</p><div class="table-scroll"><table><thead><tr><th>Series / strategy</th><th>Source / window</th><th>Executions</th><th>Evidence span</th><th>Observed net ¢/contract</th><th>Confidence</th><th>Qualification</th></tr></thead><tbody id="assessments"></tbody></table></div><small id="assessment-detail"></small></section>
+</div>
+<footer>Market catalog status only. Experiment lifecycle, trading activity, balances, and live P&amp;L belong to their source systems.</footer>
+</main></body></html>

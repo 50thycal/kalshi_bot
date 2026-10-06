@@ -1358,3 +1358,17 @@ Extends DEC-026; the one-week review reads `Jmmsell10`.
 Calvin approved all D1–D9 A choices in `MARKET_REVIEW_PIPELINE_PROPOSAL.md` and requested a new Railway service in the existing repository, followed by existing-data import. Completion, evidence maturity, strategy confidence and edge remain separate; MMSELL is the first evaluator and future strategies get isolated assessments. Paper cannot acquire established-live status by quantity alone. Qualification needs collected relevant evidence, independent outcomes, meaningful active coverage, integrity, precision and forward validation. Numerical cutoffs remain uncalibrated.
 
 Implement an additive catalog and read-only import first (WS-023, PR #541). It owns a separate persistent volume; originals and experiment consumers remain intact. Legacy signatures remain provenance, not automatically completed structured reviews. Backfill is a data migration, not semantic activation. Adopting catalog semantics or scores into experiment gates/universes requires the canonical Platform Impact workflow and explicit activation. Live canaries and scale changes remain separately authorized.
+
+## DEC-030 — Catalog dashboard shares the existing service
+
+**Date:** 2026-10-06. **Owner direction:** simplified public-domain dashboard for
+catalog progress, with Railway setup performed by Calvin.
+
+Serve a static, responsive, read-only operator view from the catalog service and
+reuse its authenticated API. This avoids another service or frontend build step.
+Public assets contain no catalog data or embedded credentials. The operator token
+stays only in page memory; reload/disconnect clears it. The existing token has
+catalog write privileges, though this UI uses GET only. Clearly distinguish
+collected listings, reviewed series, verified import coverage, and strategy
+qualification. Unknown scores remain unknown; live trading state stays with its
+source systems. No deployment or trading activation follows from this decision.

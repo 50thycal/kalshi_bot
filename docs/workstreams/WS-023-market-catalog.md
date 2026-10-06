@@ -16,3 +16,24 @@ Repair validation: Railway deployment 5912e85b-c964-4bb9-af26-865ab443875b SUCCE
 Continuation: source audit found 126,380 paper rows across 746 series and 2,741 live fills across 249 series, versus the catalog's 200/200 seed. Added source/local ID fingerprint verification so an empty page or a matching count alone cannot claim complete coverage. Coverage and compression acquire the write lock before reading so concurrent imports cannot corrupt a checkpoint or be overwritten by re-encoding. Observed provider 429s prompted persisted shared Retry-After/exponential backoff without blocking independent jobs. 33 catalog tests pass. Baseline and credential diagnosis: [MARKET_CATALOG_SOURCE_COVERAGE.md](../MARKET_CATALOG_SOURCE_COVERAGE.md). Deployment/head verification is recorded on PR #542; earlier finalization is reopened by executable changes.
 
 Final continuation validation: deployment 949a9124-86cc-4729-85c7-ed5d4b18fe4a SUCCESS on executable commit 118b14b9cdfa2a4842375fec9e4807d274e0b410; backup reused, public discovery returned 200 and preserved cursors, source superuser remained refused. Current finalization is documentation only. No independent review or owner acceptance verdict is claimed. The external credential blocker remains.
+
+## Dashboard continuation — 2026-10-06
+
+Calvin authorized a simplified Railway dashboard for the catalog. Scope is a
+read-only operator view inside the existing service, with public static assets
+and authenticated API reads. It shows discovery, structured series review
+coverage, evidence backfill/reconciliation, uncalibrated scoring, consumer status,
+storage, job freshness, and a bounded assessment table. It does not mirror
+Experiment OS lifecycle or add live trading controls.
+
+Acceptance checks: shell works at the Railway domain root on desktop/mobile;
+unauthenticated requests cannot read catalog data; no token is embedded or
+persisted in browser storage/URLs; imported history and unknown scores are not
+represented as qualification; errors/stale snapshots remain visible; existing
+catalog checks pass. Source credential blocker remains separate from dashboard
+release readiness. Owner configures the public domain and deploys the dashboard
+release; no production deployment is performed in this continuation.
+
+Build OS compatibility checked against canonical v0.12 on 2026-10-06.
+
+Dashboard implementation checks: 34 catalog tests plus 20 session-system checks passed; Ruff, JavaScript syntax, compile and diff checks passed. DOM behavior checks passed for authenticated rendering, unknown scores, escaped text, no token persistence, stale errors, disconnect and invalid tokens. Browser visual verification remains unperformed: agent-browser could not start and Chromium download failed in this environment. Owner acceptance and production deployment remain pending.
