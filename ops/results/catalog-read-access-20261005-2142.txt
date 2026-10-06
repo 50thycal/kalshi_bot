@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-read-access-20261005-2142
-# code 9ccb3f9090a495b775e861b58fb05bc975e50e92 · started 2026-10-05T21:43:10Z
-can_login  schema_usage  paper_select  fills_select  orders_select  twins_select
----------  ------------  ------------  ------------  -------------  ------------
-True       True          True          True          True           True        
-
-(1 row)
