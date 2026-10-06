@@ -27,7 +27,7 @@ import bisect
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import select
 
 from .. import models as m
 
@@ -151,30 +151,30 @@ class MarkIndex:
         price_col = cls._price_column(side)
         tick = m.MmSellPositionTick
 
-        def _scoped(query):
-            query = query.where(
-                tick.market_ticker.in_(sorted(index._requested)),
+        # One index walk per ticker, newest first, stopping at the first usable row.
+        # The obvious set-based form (GROUP BY ticker / MAX(captured_at), joined back)
+        # has to visit every tick in the window to test the price for NULL — on a
+        # week-long pair that was 50-100 s and left the compare page spinning. Each
+        # query here is a backward scan of `ix_mmsell_ticks_ticker_time` that reads
+        # one row, so the whole load is milliseconds per ticker on any dialect.
+        for ticker in sorted(index._requested):
+            query = select(tick).where(
+                tick.market_ticker == ticker,
                 tick.captured_at >= since,
                 price_col.is_not(None),
             )
-            return query if until is None else query.where(tick.captured_at <= until)
-
-        newest = _scoped(
-            select(tick.market_ticker.label("ticker"),
-                   func.max(tick.captured_at).label("captured_at"))
-            .group_by(tick.market_ticker)
-        ).subquery()
-        rows = session.scalars(_scoped(select(tick)).join(
-            newest,
-            and_(tick.market_ticker == newest.c.ticker,
-                 tick.captured_at == newest.c.captured_at),
-        ))
-        for row in rows:
+            if until is not None:
+                query = query.where(tick.captured_at <= until)
+            # Two captures can share an instant; the later-written one wins, exactly as
+            # it would in `load`, which appends in captured_at order.
+            row = session.scalars(
+                query.order_by(tick.captured_at.desc(), tick.id.desc()).limit(1)
+            ).first()
+            if row is None:
+                continue
             at = _aware(row.captured_at)
             if at is None:
                 continue
-            # Two captures can share an instant; the last one read wins, exactly as it
-            # would in `load`, which appends in captured_at order.
             index._by_ticker[row.market_ticker] = [Mark(
                 ticker=row.market_ticker, at=at,
                 price_cents=float(row.no_bid if side == "no" else row.yes_bid),

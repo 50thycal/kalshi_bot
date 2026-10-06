@@ -830,6 +830,36 @@ def test_latest_marks_skip_an_unpriceable_newest_tick_exactly_as_the_full_load_d
     assert latest.coverage()["covered"] == 1 and latest.coverage()["missing_count"] == 0
 
 
+def test_latest_marks_walk_the_index_per_ticker_instead_of_scanning_the_window():
+    """The GROUP BY / MAX form had to read every tick in the window to test the price for
+    NULL: 50-100 s on a week-long pair, and the compare page sat on its skeleton. Each read
+    must be a newest-first LIMIT 1 the (ticker, captured_at) index can answer."""
+    session, statements = _counting_session()
+    _epoch(session)
+    for hour in range(1, 5):
+        _tick(session, "AAA", T0 + timedelta(hours=hour), no_bid=90 + hour)
+    session.flush()
+    statements.clear()
+
+    latest = marks.MarkIndex.load_latest(session, {"AAA", "BBB"}, T0, NOW)
+    reads = [s for s in statements if "mmsell_position_ticks" in s]
+    assert len(reads) == 2
+    assert all("LIMIT" in s and "GROUP BY" not in s for s in reads)
+    assert latest.mark_for("AAA").price_cents == 94
+    assert latest.coverage()["missing"] == ["BBB"]
+
+
+def test_latest_marks_break_a_same_instant_tie_toward_the_later_capture():
+    session = _session()
+    _epoch(session)
+    _tick(session, "AAA", T0 + timedelta(hours=1), no_bid=91)
+    _tick(session, "AAA", T0 + timedelta(hours=1), no_bid=97)
+    session.flush()
+    full = marks.MarkIndex.load(session, {"AAA"}, T0, NOW)
+    latest = marks.MarkIndex.load_latest(session, {"AAA"}, T0, NOW)
+    assert latest.mark_for("AAA").price_cents == full.mark_for("AAA").price_cents == 97
+
+
 def test_latest_marks_refuse_a_historical_question_instead_of_answering_it_wrong():
     """A latest-only index holds one mark per ticker, so every `when` at or after it would
     return the CURRENT price — the backwards-applied mark `mark_as_of` exists to prevent."""
