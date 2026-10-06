@@ -617,3 +617,46 @@ def test_retry_after_starts_when_response_arrives(store):
             with pytest.raises(httpx.HTTPStatusError):
                 Discovery(store, client).page("events")
     assert store.state("discovery:backoff")["not_before_unix"] == 1150
+
+
+def test_dashboard_shell_is_public_but_data_requires_token(store):
+    store.upsert("series", "KXTEST", {"title": "A <script> is only text"})
+    server = make_server(store, "a" * 32, ("127.0.0.1", 0))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with httpx.Client(
+            base_url=f"http://127.0.0.1:{server.server_port}", trust_env=False
+        ) as client:
+            for path in (
+                "/",
+                "/dashboard",
+                "/dashboard/",
+                "/dashboard/app.js",
+                "/dashboard/style.css",
+            ):
+                response = client.get(path)
+                assert response.status_code == 200
+                assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+                assert response.headers["Cache-Control"] == "no-store"
+                assert "a" * 32 not in response.text
+            assert client.get("/v1/status").status_code == 401
+            assert client.get("/v1/assessments").status_code == 401
+            assert client.get("/dashboard/not-an-asset").status_code == 401
+            client.headers["Authorization"] = "Bearer " + "a" * 32
+            status = client.get("/v1/status").json()
+            assert status["series_reviews"] == {"reviewed": 0, "needs_review": 1}
+            assert status["captured_at"]
+            assert status["confidence_calibrated"] is False
+            assert status["consumer_cutover"] is False
+            assert not status["backfill"]["paper"]["initial_complete"]
+            doc = store.get("series", "KXTEST")
+            store.review(review_payload(doc))
+            assert store.status()["series_reviews"] == {"reviewed": 1, "needs_review": 0}
+            store.upsert("series", "KXTEST", {"title": "Changed rules"})
+            assert store.status()["series_reviews"] == {"reviewed": 0, "needs_review": 1}
+            assert client.get("/dashboard/not-an-asset").status_code == 404
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()

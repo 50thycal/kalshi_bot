@@ -78,3 +78,40 @@ The first deployment succeeded, health returned 200 and unauthenticated data ret
 Operational follow-up [PR #542](https://github.com/50thycal/kalshi_bot/pull/542): PR #541 merged. Railway deployment `2518cd96-d621-44fd-b84a-0c4f2f27721e` recovered from confirmed disk-full startup failures after the volume expansion. Discovery passed 136,000 markets. Repair deployment `5912e85b-c964-4bb9-af26-865ab443875b` succeeded on tested executable commit `420abc498bd2042a4bbad1db1bce03f511ac45e6`. The consistent pre-compression backup passed integrity checking and occupies 1,269,624,832 bytes. Discovery resumed, all 226 assessment contexts remained, and the original 200/200 paper/live seed persisted. Live permission diagnostics confirm that the configured connection has `rolsuper`, `rolcreatedb`, `rolcreaterole`, `rolreplication`, `rolbypassrls` and public-table write privileges. Continuous full import is correctly refused. The subsequent source audit corrected the earlier recommendation to reuse `DATABASE_URL_RO`: that secret uses the owner role too. Supply the actual `bot_readonly` URL and redeploy. Compression preserves history; calibration and consumer cutover remain subsequent stages.
 
 Final continuation deployment `949a9124-86cc-4729-85c7-ed5d4b18fe4a` SUCCESS on executable commit `118b14b9cdfa2a4842375fec9e4807d274e0b410`: coverage verification, serialized compression/import and persisted provider backoff deployed. Startup reused the existing checked backup. Public event/update requests returned 200 and resumed their cursors; evidence/assessment seed remained intact. 33 catalog tests plus session-system checks passed. Initial source import is still refused by the privilege guard; positive full-import verification requires the actual scoped credential. Ops was returned to noop after the three read-only source audits.
+
+## Operator dashboard
+
+The catalog service serves a responsive, read-only dashboard at `/` and
+`/dashboard`. It is included by the existing `deploy/catalog/Dockerfile`; no
+separate frontend service, package install, or volume is required. The public
+shell contains no operational data. API reads still require `CATALOG_API_TOKEN`.
+Enter that token in the dashboard's Connect form. The token stays in page memory
+only, is never put in URLs or browser storage, and clears on reload/disconnect.
+Treat it as a secret: the existing API token also authorizes the catalog's write
+endpoints, although the dashboard only issues GET requests.
+
+Dashboard sections cover discovery totals, current structured series reviews,
+initial import versus reconciliation coverage, calibration and consumer readiness,
+source permission blockers, storage measurements, job freshness/errors/retries,
+and up to 100 assessment contexts per selected strategy. Historical listing counts
+are not active or approved market counts. Observed paper net economics are not
+predicted edge; unknown scores are displayed as Unknown. This page does not show
+account balances, active orders, live P&L, or Experiment OS lifecycle state.
+
+### Railway setup after merge
+
+1. Open `market-catalog` in the production environment.
+2. Deploy the merged dashboard code using `deploy/catalog/Dockerfile`, retaining
+   the existing start command, variables, `/data` volume, and single replica.
+   The service was pinned to a previous commit/feature branch; explicitly update
+   its source to the intended merged release rather than assuming merge deploys it.
+3. Generate or use a Railway public domain targeting port 8080 (or the configured
+   PORT). Open the domain root; no `/v1` suffix is required.
+4. In Railway Variables, obtain `CATALOG_API_TOKEN` and enter it in Connect.
+   Never paste the token into a public issue, PR, or dashboard URL.
+5. Confirm authenticated snapshots refresh and disconnect hides the data.
+
+The dashboard works with a blocked historical import and displays that blocker.
+Correcting `CATALOG_SOURCE_DATABASE_URL` is a separate prerequisite for full
+history, not for rendering the dashboard. Snapshot requests time out after 45
+seconds and refresh every 60 seconds; failures keep a visible stale-data warning.

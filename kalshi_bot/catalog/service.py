@@ -8,6 +8,7 @@ import signal
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -149,6 +150,29 @@ def make_server(store, token, address=("::", 8080)):
         def do_GET(self):
             parsed = urlsplit(self.path)
             path = parsed.path.rstrip("/")
+            assets = {
+                "": ("index.html", "text/html; charset=utf-8"),
+                "/dashboard": ("index.html", "text/html; charset=utf-8"),
+                "/dashboard/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                "/dashboard/style.css": ("style.css", "text/css; charset=utf-8"),
+            }
+            if path in assets:
+                name, content_type = assets[path]
+                body = (Path(__file__).parent / "dashboard" / name).read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Referrer-Policy", "no-referrer")
+                self.send_header(
+                    "Content-Security-Policy",
+                    "default-src 'self'; script-src 'self'; style-src 'self'; "
+                    "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+                )
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if path == "/health":
                 self.respond(
                     200, {"service": "market-catalog", "status": "ok", "schema_version": 1}

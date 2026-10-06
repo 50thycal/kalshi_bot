@@ -466,3 +466,14 @@ Catalog storage accepts original JSON and losslessly compressed documents. Upgra
 Backfill completion requires matching counts and ordered source-ID fingerprints at a bounded cursor, committed with the local coverage checkpoint. Initial completion and current reconciliation are distinct; legacy EOF flags do not imply verified coverage. ID completeness never verifies payload parity or strategy confidence. Read-only access is established by the actual database role and grants, not a credential variable's label.
 
 Public discovery persists shared provider backoff for rate limits/server failures. Retry-After and exponential fallback preserve REST cursors across restart while independent database import and storage work continue; deferred jobs retain their last-success timestamp.
+
+### Catalog operator view
+
+The standalone market-catalog service includes a responsive dashboard at its
+public domain root. Static assets are public, while operational data uses the
+existing bearer-authenticated catalog API. The browser holds the operator token
+only in page memory. The view separates discovery, current structured series
+reviews, verified import coverage, descriptive strategy evidence, and calibration
+and consumer readiness. It offers no trading or review mutation controls and does
+not replace Experiment OS for lifecycle, exposure, or gate state. Deployment setup
+is in `docs/MARKET_CATALOG_SERVICE.md`.
