@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-gem-1145","sql":"select program_id, incentive_type, period_reward_usd, start_date, end_date, first_seen_at, last_seen_at from incentive_programs where market_ticker='KXGEMINI-NEXTPRO-26OCT16' order by last_seen_at desc"}
+{"type":"noop"}
