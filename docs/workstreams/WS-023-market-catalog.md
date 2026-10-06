@@ -37,3 +37,5 @@ release; no production deployment is performed in this continuation.
 Build OS compatibility checked against canonical v0.12 on 2026-10-06.
 
 Dashboard implementation checks: 34 catalog tests plus 20 session-system checks passed; Ruff, JavaScript syntax, compile and diff checks passed. DOM behavior checks passed for authenticated rendering, unknown scores, escaped text, no token persistence, stale errors, disconnect and invalid tokens. Browser visual verification remains unperformed: agent-browser could not start and Chromium download failed in this environment. Owner acceptance and production deployment remain pending.
+
+Dashboard PR: [#544](https://github.com/50thycal/kalshi_bot/pull/544). Executable implementation head: `48a17e7970435dd20a99159242fd2a96a170cc87`. Owner acceptance, visual verification, and Railway deployment pending. Existing full-history credential blocker remains. No independent review claimed.
