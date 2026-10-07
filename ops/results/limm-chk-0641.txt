@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0641
-# code 5896c4922cffbfee3d65770d534e298873d813b5 · started 2026-10-07T06:38:21Z
-market_ticker                side  limit_price  quantity  status    cancel_reason  created_at                        fc  ks     
----------------------------  ----  -----------  --------  --------  -------------  --------------------------------  --  -------
-KXTRUMPMENTION-26OCT09-CHIN  no    10           100       canceled  replaced       2026-10-07 01:19:55.161010+00:00      resting
-
-(1 row)
