@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select 'discovery_cycle' k, max(started_at)::text v from incentive_discovery_cycles\nunion all select 'programs_last_seen', max(last_seen_at)::text from incentive_programs\nunion all select 'book_events_last', max(received_at)::text from incentive_book_events where id > (select max(id)-1000 from incentive_book_events)\nunion all select 'evo_heartbeat_last', max(at)::text from evo_heartbeats\nunion all select 'now', now()::text", "max_rows": 10, "id": "memcost-evo-alive-1"}
