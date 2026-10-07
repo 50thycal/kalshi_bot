@@ -2747,3 +2747,34 @@ scratch a maker fee; live it is a taker sell (about $1.66 on 500 at 5¢).
 **Parked for later (operator: "remember these other options"):** A, size to the pool (≤ $3 at risk;
 cut losses 64% but kept 49% of net); C, long shots only (≤ 5¢ and stand aside while active; raised
 net but cut losses only 18%); A+B+C together (worst fill −$3, 80% of net). Revisit after B has run.
+
+### 9.49 Stay to programme end; re-price in place; rank by payout; count the credits (2026-10-07)
+
+**Evidence.** Kalshi credits a liquidity programme only after it ends, and pays nothing on a
+programme where our reward is under $1.00 (§9.41). Since §9.47–§9.48 the book swapped ~15 times
+in 30h, stints of 4–5h, because any 4h-old quote was replaced by a candidate estimated ≥ 1.25×
+per hour — a rule that ignores both facts, so every move forfeited what had accrued.
+KXGEMINI-NEXTPRO (est. ≈ $1.84/day, programme to Oct 12) was left after ~8h. Both credits the
+book has ever received came from programmes it stayed in until they ended: **$2.21** (Sep 29,
+KXANTHVREQ, ~15h) and **$2.75** (Oct 6 21:32Z, 17 minutes after the KXTRUMPMENTION-26OCT06
+programmes ended at 21:15Z). The 16 short-stint programmes that ended Oct 4 paid nothing.
+Both credits were also invisible: `EXTERNAL_TRANSFER_CENTS` (100) tagged every residual ≥ $1 a
+deposit, and every real credit is ≥ $1, so the dashboard read $0.
+
+**Decision (operator, 2026-10-07: "go ahead with A, B and C"):**
+- **A — stay to the end.** A held quote is replaced only when it is DEAD: estimated reward per
+  hour < `DEAD_QUOTE_FRACTION` (0.10) of the best new candidate's. A quote that has fallen
+  below its own market's reference price is **re-priced in the same market** (cancel, re-place
+  at the reference; outcome `repriced`), keeping the programme. `STALE_PAIR_SECONDS` 4h → 1h is
+  now only how long a quote must rest before either check may touch it.
+  `REPLACE_MIN_GAIN_MULTIPLE` is retired.
+- **C — rank by payout.** Placeable candidates are ordered by projected payout to programme end
+  (est. reward/h × hours left), and dropped when that is under `MIN_PROJECTED_PROGRAM_USD`
+  ($1.00; outcome `low_projected_payout`).
+- **B — count the credits.** A presumed-transfer residual is read as a reward when it lands
+  within 24h after a liquidity programme this book quoted ended, is ≤ $25, and is not a whole
+  number of dollars (`reward_ledger.attributable_reward`). The stored flag is unchanged; the
+  dashboard now shows $4.96.
+
+Caps, sizes, exits, the side rule and the budget are unchanged. Risk-neutral: no new exposure;
+re-pricing moves a bid by cents within the same 10¢ cap and $10 leg budget.
