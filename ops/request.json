@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ev-1940","sql":"select distinct on (market_ticker) market_ticker, start_date, end_date, period_reward_usd, target_size, discount_factor_bps, market_title from incentive_programs where market_ticker in ('KXTRUMPMENTION-26OCT09-AFFO','KXCFBUNRANKEDUPSET-26W6-9') order by market_ticker, end_date desc"}
+{"type":"noop"}
