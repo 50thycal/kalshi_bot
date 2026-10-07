@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ledger-0124","sql":"select at, balance_cents, residual_cents, presumed_transfer, left(coalesce(notes_json::text,''),80) notes from incentive_balance_observations where residual_cents is not null and residual_cents <> 0 order by at desc limit 40"}
+{"type":"noop"}
