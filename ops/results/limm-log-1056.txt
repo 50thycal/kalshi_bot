@@ -1,8 +1,0 @@
-# latest deployment 99ecca35-521d-4b4f-91fb-3b25a99169e9 (status=SUCCESS, created=2026-10-07T03:48:18.679Z)
-# ops request [READ]
-# type=logs  service=main  id=limm-log-1056
-# code 5896c4922cffbfee3d65770d534e298873d813b5 · started 2026-10-07T10:57:13Z
-# target service: main
-2026-10-07T05:30:43.233327863Z INFO  incentive book: replaced KXTRUMPMENTION-26OCT09-CHIN (~$0.0006/h) with KXCFBUNRANKEDUPSET-26W6-9 (~$0.0304/h)
-2026-10-07T06:33:49.377649045Z INFO  incentive book: re-priced KXCFBUNRANKEDUPSET-26W6-9 yes 2c -> 3c (placed)
-2026-10-07T08:43:09.251595044Z INFO  incentive book: replaced KXAMZNCC-26NOV07-T157 (~$0.0135/h) with KXTRUMPMENTION-26OCT09-AFFO (~$0.1384/h)
