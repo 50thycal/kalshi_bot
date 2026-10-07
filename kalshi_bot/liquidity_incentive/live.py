@@ -97,8 +97,23 @@ FLATTEN_HOURS_BEFORE_CLOSE = 1.0
 #: older than STALE_PAIR_SECONDS and every slot is full, it is cancelled only when a new
 #: candidate's estimated reward per hour beats the held pair's by REPLACE_MIN_GAIN_MULTIPLE (a
 #: held pair whose programme has ended is worth 0/h).
-STALE_PAIR_SECONDS = 4 * 3600.0
-REPLACE_MIN_GAIN_MULTIPLE = 1.25
+#:
+#: Stay to the end (§9.49, operator decision 2026-10-07). Kalshi pays a programme only after it
+#: ends and only if our reward in it is at least $1.00, so leaving a programme early forfeits
+#: everything accrued there. The 4h / 1.25x rule churned ~15 times in 30h (stints of 4-5h) and
+#: left programmes like KXGEMINI-NEXTPRO before they could pay; both credits the book has ever
+#: received ($2.21 Sep 29, $2.75 Oct 6) came from programmes it stayed in until they ended.
+#: Now a held quote is replaced only when it is DEAD: its estimated reward per hour is below
+#: DEAD_QUOTE_FRACTION of the best new candidate's (book moved away, programme ended). A quote
+#: that has merely fallen behind its own market's reference price is re-priced IN PLACE
+#: (same market, same programme) rather than abandoned. STALE_PAIR_SECONDS is now only how long
+#: a quote must rest before either check may touch it, so a momentary book does not move it.
+STALE_PAIR_SECONDS = 1 * 3600.0
+DEAD_QUOTE_FRACTION = 0.10
+#: Rank new entries by projected payout over what is left of the programme (est reward per
+#: hour x hours remaining), and skip any whose projection is under this — a programme that cannot
+#: plausibly clear Kalshi's $1.00 minimum pays nothing however long we rest there (§9.49).
+MIN_PROJECTED_PROGRAM_USD = 1.00
 
 #: How an entry is quoted (§9.48, operator decision 2026-10-04, probe LIMM-PLACEMENT P1):
 #:   "cheap_side" — ONE bid, on the side whose reference price is <= MAX_PRICE_CENTS (the

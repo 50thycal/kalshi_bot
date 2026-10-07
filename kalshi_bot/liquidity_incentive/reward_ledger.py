@@ -65,6 +65,28 @@ from datetime import datetime
 #: Presumed, not discarded: the row is still written, with `presumed_transfer` set.
 EXTERNAL_TRANSFER_CENTS = 100
 
+#: §9.49 (2026-10-07): that $1 line hides EVERY real reward. Kalshi pays nothing under $1.00 per
+#: programme, so each credit is >= $1 and was tagged a transfer — both credits the book has
+#: received ($2.21 on Sep 29, $2.75 on Oct 6) read as deposits and the dashboard showed $0.
+#: A presumed transfer is re-read as a reward when it lands within REWARD_ATTRIBUTION_HOURS AFTER
+#: a liquidity programme this book quoted ended, is at most REWARD_MAX_CENTS, and is not a whole
+#: number of dollars (deposits and withdrawals have been whole dollars; the credits were not).
+REWARD_ATTRIBUTION_HOURS = 24.0
+REWARD_MAX_CENTS = 2500
+
+
+def attributable_reward(residual_cents: int | None, at: datetime | None,
+                        program_ends: list[datetime]) -> bool:
+    """True when a presumed-transfer residual is better read as a programme reward (§9.49).
+    `program_ends` are the end times of liquidity programmes this book quoted (tz-aware)."""
+    if residual_cents is None or at is None:
+        return False
+    cents = int(residual_cents)
+    if cents < EXTERNAL_TRANSFER_CENTS or cents > REWARD_MAX_CENTS or cents % 100 == 0:
+        return False
+    window = REWARD_ATTRIBUTION_HOURS * 3600.0
+    return any(0.0 <= (at - end).total_seconds() <= window for end in program_ends)
+
 #: Residuals smaller than this in magnitude are treated as accounting noise rather than signal
 #: when summarising. Kept at one cent because a cent is the smallest unit the balance moves in:
 #: the first real reward we could ever SEE in a balance is 1c, whatever Kalshi accrued.
@@ -472,6 +494,9 @@ def observe(client, *, prev_balance_cents: int | None,
 
 __all__ = [
     "EXTERNAL_TRANSFER_CENTS",
+    "REWARD_ATTRIBUTION_HOURS",
+    "REWARD_MAX_CENTS",
+    "attributable_reward",
     "MATERIAL_RESIDUAL_CENTS",
     "Reconciliation",
     "netting_credit_cents",

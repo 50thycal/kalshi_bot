@@ -27,6 +27,7 @@ from sqlalchemy import select
 from .. import models as m
 from ..liquidity_incentive import live as limm
 from ..liquidity_incentive import programs as progs
+from ..liquidity_incentive.reward_ledger import attributable_reward
 from ..liquidity_incentive.scoring import discount_factor, order_multiplier
 
 #: A collector snapshot older than this is too stale to estimate a reward from.
@@ -97,12 +98,29 @@ def estimate_reward_per_day(order, program, snap) -> float | None:
     return per_day * share / 2.0
 
 
-def _rewards(session) -> tuple[float, float, datetime | None]:
-    """(cash in, cash out, last credit time) from the reward ledger's trustworthy residuals."""
+def _program_ends(session, tickers: list[str]) -> list[datetime]:
+    """End times of the liquidity programmes on markets this book quoted."""
+    if not tickers:
+        return []
+    rows = session.scalars(select(m.IncentiveProgram.end_date).where(
+        m.IncentiveProgram.market_ticker.in_(tickers),
+        m.IncentiveProgram.incentive_type == "liquidity",
+        m.IncentiveProgram.end_date.is_not(None)))
+    return sorted({_aware(e) for e in rows})
+
+
+def _rewards(session, tickers: list[str] | None = None) -> tuple[float, float, datetime | None]:
+    """(cash in, cash out, last credit time) from the reward ledger's trustworthy residuals.
+    A presumed transfer counts as a credit when it is attributable to one of this book's
+    programmes ending (§9.49, `reward_ledger.attributable_reward`)."""
     cash_in = cash_out = 0.0
     last_in = None
+    ends = _program_ends(session, tickers or [])
     for row in session.scalars(select(m.IncentiveBalanceObservation)):
-        if row.residual_cents is None or row.presumed_transfer:
+        if row.residual_cents is None:
+            continue
+        if row.presumed_transfer and not attributable_reward(
+                row.residual_cents, _aware(row.at), ends):
             continue
         if (row.notes_json or {}).get("residual_untrustworthy"):
             continue
@@ -131,7 +149,7 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         if s is not None and (s.quantity or 0) == 0 and s.realized_pnl is not None:
             realized += float(s.realized_pnl)
             settled += 1
-    cash_in, cash_out, last_in = _rewards(session)
+    cash_in, cash_out, last_in = _rewards(session, tickers)
 
     working = [o for o in orders if (o.status or "").lower() in WORKING]
     by_ticker = {}

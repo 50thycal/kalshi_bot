@@ -108,3 +108,32 @@ def test_only_the_incentive_book_gets_the_section(session):
     books = {b["live_tag"]: b for b in d["headline"]["books"]}
     assert books[limm.LIVE_TAG]["incentive"]["reward_credits_usd"] == 2.21
     assert books["Fmmsell10"]["incentive"] is None
+
+
+def test_a_dollar_scale_credit_after_our_programme_ends_is_a_reward(session):
+    # §9.49: Kalshi pays >= $1 per programme, so every real credit crossed the old $1 "transfer"
+    # line. One landing within a day after a programme we quoted ended, not a whole dollar
+    # amount, counts; a whole-dollar one (a deposit) does not.
+    _setup(session)
+    session.add(m.IncentiveProgram(
+        program_id="p-old", market_ticker="KXOLD-1", incentive_type="liquidity",
+        start_date=NOW - timedelta(days=25), end_date=NOW - timedelta(days=2, minutes=17),
+        period_reward_usd=100.0, target_size=1000.0, terms_hash="h2",
+        first_seen_at=NOW - timedelta(days=25), last_seen_at=NOW - timedelta(days=2)))
+    for cents in (275, 300):
+        session.add(m.IncentiveBalanceObservation(at=NOW - timedelta(days=2), balance_cents=1,
+                                                  residual_cents=cents, presumed_transfer=True))
+    session.flush()
+    x = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
+    assert x["reward_credits_usd"] == 4.96                   # 2.21 + 2.75; the $3.00 is not
+
+
+def test_attributable_reward_rules():
+    from kalshi_bot.liquidity_incentive.reward_ledger import attributable_reward
+    end = NOW - timedelta(hours=1)
+    assert attributable_reward(275, NOW, [end])
+    assert not attributable_reward(300, NOW, [end])                       # whole dollars
+    assert not attributable_reward(4999, NOW, [end])                      # too large
+    assert not attributable_reward(275, NOW, [NOW + timedelta(hours=1)])  # before the end
+    assert not attributable_reward(275, NOW, [NOW - timedelta(hours=30)]) # too long after
+    assert not attributable_reward(75, NOW, [end])                        # not a transfer at all

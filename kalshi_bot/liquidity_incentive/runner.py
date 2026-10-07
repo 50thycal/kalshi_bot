@@ -50,6 +50,8 @@ logger = logging.getLogger(__name__)
 PLACED = "placed"
 SKIP_BOOK_ERROR = "book_error"
 SKIP_NO_SLOTS = "no_slots"
+#: A placeable candidate whose projected programme payout is under limm.MIN_PROJECTED_PROGRAM_USD.
+SKIP_LOW_PROJECTED = "low_projected_payout"
 
 #: A market whose BOOK refused a pair is skipped for this long before its book is fetched again.
 #: Without it the bounded fetch budget is spent on the same first-ranked books every cycle: on
@@ -161,6 +163,33 @@ def est_reward_per_hour(candidate: dict, *, yes_price: int | None, no_price: int
     return float(est.reward_per_hour_usd or 0.0)
 
 
+def quote_rate(cq) -> float:
+    """Estimated reward per hour for a ranked (candidate, quote) as it would rest."""
+    c, q = cq
+    prices = {leg.side: leg.price_cents for leg in q.legs}
+    return est_reward_per_hour(c, yes_price=prices.get(limm.SIDE_YES),
+                               no_price=prices.get(limm.SIDE_NO), qty=q.quantity)
+
+
+def projected_payout(cq) -> float:
+    """Estimated reward over what is left of the programme if the quote rests to the end."""
+    hours_left = cq[0].get("program_hours_remaining")
+    if hours_left is None or hours_left <= 0:
+        return 0.0
+    return quote_rate(cq) * float(hours_left)
+
+
+def rank_by_projected_payout(ranked: list) -> tuple[list, list]:
+    """§9.49: order entries by projected payout to programme end, best first, and drop those
+    projected under `MIN_PROJECTED_PROGRAM_USD` (Kalshi pays nothing under $1.00 per programme).
+    Returns (kept, dropped); the sort is stable, so ties keep `rank_candidates`' order."""
+    scored = [(projected_payout(cq), cq) for cq in ranked]
+    kept = [cq for p, cq in sorted(scored, key=lambda t: -t[0])
+            if p >= limm.MIN_PROJECTED_PROGRAM_USD]
+    dropped = [cq for p, cq in scored if p < limm.MIN_PROJECTED_PROGRAM_USD]
+    return kept, dropped
+
+
 class IncentiveLiveRunner:
     """One cycle of the two-sided live book: manage what is held, then quote new pairs."""
 
@@ -228,7 +257,11 @@ class IncentiveLiveRunner:
             summary["outcomes"]["balance_backoff"] = 1
             return summary
 
-        open_now = repo.count_live_book_open_tradeable(session, limm.LIVE_TAG, now)
+        repriced = self._reprice_held(session, executor, now, account_state)
+        if repriced:
+            summary["outcomes"]["repriced"] = repriced
+
+        open_now =repo.count_live_book_open_tradeable(session, limm.LIVE_TAG, now)
         exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
         slots = limm.MAX_OPEN_ORDERS - int(open_now)
         # Full book: carry on only if a held pair is old enough to be swapped for a better one.
@@ -272,9 +305,12 @@ class IncentiveLiveRunner:
                 blocked_events.add(ev)
         ranked = limm.rank_candidates(built, excluded_series=excluded,
                                       blocked_event_tickers=frozenset(blocked_events))
+        ranked, dropped = rank_by_projected_payout(ranked)
+        if dropped:
+            summary["outcomes"][SKIP_LOW_PROJECTED] = len(dropped)
         # Every candidate that produced no pair is still reported, by its refusal code, so a
         # cycle that placed nothing says which cap or which book stopped it.
-        placeable = {c["market_ticker"] for c, _ in ranked}
+        placeable = {c["market_ticker"] for c, _ in ranked + dropped}
         for c in built:
             if c["market_ticker"] in placeable:
                 continue
@@ -390,6 +426,59 @@ class IncentiveLiveRunner:
                 n += 1
         return n
 
+    def _reprice_held(self, session, executor, now: datetime, account_state=None) -> int:
+        """§9.49: a held single-side quote that has fallen BELOW its own market's reference
+        price (so it scores at a discount) is moved to the reference in the SAME market — the
+        programme, and what it has accrued, is kept. Only quotes resting at least
+        `STALE_PAIR_SECONDS`, only when the market still yields a quote on the same side, and
+        only to a different price. A book that cannot be read or quoted leaves the quote alone
+        (the dead check decides whether to leave the market). Returns the number re-priced."""
+        held = self._stale_held_pairs(session, now)
+        if not held:
+            return 0
+        programs = {p.market_ticker: p for p in progs.current_programs(
+            session, now=now, liquidity_only=True)}
+        n = 0
+        for ticker, working in held.items():
+            if len(working) != 1 or ticker not in programs:
+                continue
+            row = working[0]
+            try:
+                ob = self.client.get_orderbook(ticker)
+            except Exception:  # noqa: BLE001 — unknown book: keep the quote
+                continue
+            c = candidate_from_book(programs[ticker], ob, now=now)
+            ref = (c.get("reference_price_by_side") or {}).get(row.side)
+            if ref is None or int(row.limit_price) >= int(ref):
+                continue            # at or above the reference: full credit already
+            # Our own resting order is in this book; take it out before quoting.
+            for key in ("yes_levels", "no_levels"):
+                if (key == "yes_levels") == (row.side == limm.SIDE_YES):
+                    lv = dict(c.get(key) or {})
+                    left = lv.get(int(row.limit_price), 0.0) - float(row.quantity)
+                    if left > 1e-9:
+                        lv[int(row.limit_price)] = left
+                    else:
+                        lv.pop(int(row.limit_price), None)
+                    c[key] = lv
+            q = limm.quote_candidate(c, excluded_series=self.excluded_series())
+            if not isinstance(q, limm.SideQuote) or q.leg.side != row.side \
+                    or int(q.leg.price_cents) == int(row.limit_price):
+                continue
+            if not executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                    ticker=ticker, reason="repriced"):
+                continue            # part-cancelled: next cycle re-checks
+            outcome, legs = executor.mirror_incentive_pair(
+                session, strategy=limm.LIVE_TAG, event_ticker=c.get("event_ticker") or ticker,
+                ticker=ticker, pair=q, account_state=account_state)
+            logger.info(f"incentive book: re-priced {ticker} {row.side} "
+                        f"{row.limit_price}c -> {q.leg.price_cents}c ({outcome})")
+            if legs:
+                n += 1
+                for leg in legs:
+                    self._open_twin(session, leg)
+        return n
+
     def _held_reward_per_hour(self, ticker: str, working: list, programs: dict,
                               now: datetime) -> float | None:
         """A held pair's estimated reward per hour on its CURRENT book. 0.0 when its programme
@@ -411,15 +500,10 @@ class IncentiveLiveRunner:
 
     def _replace_stale_pair(self, session, executor, stale: dict, ranked: list,
                             now: datetime, summary: dict):
-        """Cancel the weakest stale held pair when a new candidate is estimated to earn at least
-        `REPLACE_MIN_GAIN_MULTIPLE` times its reward per hour, and return that candidate.
-        None leaves every held pair resting."""
-        def rate(cq) -> float:
-            c, q = cq
-            prices = {leg.side: leg.price_cents for leg in q.legs}
-            return est_reward_per_hour(c, yes_price=prices.get(limm.SIDE_YES),
-                                       no_price=prices.get(limm.SIDE_NO), qty=q.quantity)
-
+        """Cancel the weakest stale held quote only when it is DEAD — its estimated reward per
+        hour below `DEAD_QUOTE_FRACTION` of the best new candidate's (§9.49) — and return that
+        candidate. None leaves every held quote resting."""
+        rate = quote_rate
         fresh = [cq for cq in ranked if cq[0]["market_ticker"] not in stale]
         if not fresh:
             return None
@@ -440,7 +524,10 @@ class IncentiveLiveRunner:
         summary["replace_check"] = {"held": ticker, "held_per_hour": round(held_rate, 4),
                                     "new": best[0]["market_ticker"],
                                     "new_per_hour": round(best_rate, 4)}
-        if best_rate <= held_rate or best_rate < held_rate * limm.REPLACE_MIN_GAIN_MULTIPLE:
+        # §9.49: only a DEAD quote is abandoned. Leaving a live programme early forfeits what it
+        # has accrued (Kalshi pays at programme end, $1.00 minimum), so "the new one is a bit
+        # better per hour" is not a reason to move.
+        if held_rate >= best_rate * limm.DEAD_QUOTE_FRACTION:
             return None
         if not executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
                                                 reason="replaced"):

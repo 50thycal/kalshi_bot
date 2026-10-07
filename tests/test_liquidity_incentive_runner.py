@@ -982,8 +982,26 @@ def test_a_fresh_full_book_fetches_nothing_and_keeps_its_pairs(live_db, settings
     assert client.asked == [] and client.canceled == [] and client.placed == []
 
 
-def test_a_stale_pair_is_replaced_by_a_clearly_better_market(live_db, settings):
+def test_a_live_quote_is_kept_even_when_another_market_is_better(live_db, settings):
+    # §9.49: KXTEST-N earns more per hour than KXHELD-1, but KXHELD-1 is not DEAD. Leaving a
+    # programme early forfeits what it accrued (paid at programme end, $1.00 minimum), so stay.
     client = FakeClient(_replace_books(500))
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        _program(s, "KXTEST-N")
+        out = _cycle(client, settings, s)
+    check = out["replace_check"]
+    assert check["new_per_hour"] > check["held_per_hour"] * 1.25        # the old rule would move
+    assert check["held_per_hour"] >= check["new_per_hour"] * limm.DEAD_QUOTE_FRACTION
+    assert "replaced" not in out["outcomes"] and out["placed"] == 0
+    assert client.canceled == [] and client.placed == []
+
+
+def test_a_dead_quote_is_replaced(live_db, settings):
+    books = _replace_books(500)
+    books["KXHELD-1"] = _book([(3, 40000)], [(4, 40000)])             # our 250 is now ~nothing
+    client = FakeClient(books)
     with db.session_scope() as s:
         _held_pair(s, "KXHELD-1", hours_old=5)
         _held_pair(s, "KXHELD-2", hours_old=5)
@@ -991,8 +1009,9 @@ def test_a_stale_pair_is_replaced_by_a_clearly_better_market(live_db, settings):
         out = _cycle(client, settings, s)
         statuses = _status_by_ticker(s)
     assert out["outcomes"].get("replaced") == 1 and out["placed"] == 1
-    assert out["replace_check"]["held"] == "KXHELD-1"
-    assert out["replace_check"]["new_per_hour"] > out["replace_check"]["held_per_hour"] * 1.25
+    check = out["replace_check"]
+    assert check["held"] == "KXHELD-1"
+    assert check["held_per_hour"] < check["new_per_hour"] * limm.DEAD_QUOTE_FRACTION
     assert sorted(client.canceled) == ["K-KXHELD-1-n", "K-KXHELD-1-y"]
     assert {o["ticker"] for o in client.placed} == {"KXTEST-N"}
     assert statuses["KXHELD-2"] == "resting"
@@ -1093,3 +1112,51 @@ def test_insufficient_balance_stops_the_cycle_and_backs_off(live_db, settings):
         later = runner.cycle(s, ex, {"cash_balance": 500.0},
                              now=NOW + timedelta(seconds=limm.BALANCE_BACKOFF_SECONDS + 60))
         assert "balance_backoff" not in later["outcomes"] and len(client.placed) == 2
+
+
+# --- §9.49: re-price in place; rank by projected payout ----------------------------------------
+
+def test_a_quote_behind_its_reference_is_repriced_in_the_same_market(live_db, settings):
+    # Held: NO 2c x500 (in the book). Someone stacked 3c, so the NO reference is now 3c and our
+    # bid scores at a discount. Move it to 3c in the SAME market rather than leave the programme.
+    t = "KXTEST-R"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 800)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        s.add(m.LiveOrder(market_ticker=t, event_ticker=t, strategy=limm.LIVE_TAG, side="no",
+                          action="buy", limit_price=2, quantity=500, status="resting",
+                          kalshi_order_id="K-R", client_order_id="K-R",
+                          created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        out = _cycle(client, settings, s)
+        rows = [(r.side, r.limit_price, r.status) for r in s.scalars(
+            sa_select(m.LiveOrder).where(m.LiveOrder.market_ticker == t)
+            .order_by(m.LiveOrder.id))]
+    assert out["outcomes"].get("repriced") == 1
+    assert client.canceled == ["K-R"]
+    assert [(o["ticker"], o["price"]) for o in client.placed] == [(t, "0.9700")]
+    assert rows == [("no", 2, "canceled"), ("no", 3, "resting")]
+
+
+def test_a_quote_at_its_reference_is_left_alone(live_db, settings):
+    t = "KXTEST-R"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 30), (3, 800)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        s.add(m.LiveOrder(market_ticker=t, event_ticker=t, strategy=limm.LIVE_TAG, side="no",
+                          action="buy", limit_price=3, quantity=500, status="resting",
+                          kalshi_order_id="K-R", client_order_id="K-R",
+                          created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert "repriced" not in out["outcomes"] and client.canceled == []
+
+
+def test_rank_by_projected_payout_sorts_and_drops_hopeless(monkeypatch):
+    monkeypatch.setattr(run, "quote_rate", lambda cq: cq[0]["r"])
+    a = ({"r": 0.10, "program_hours_remaining": 100}, "a")    # $10 projected
+    b = ({"r": 0.50, "program_hours_remaining": 48}, "b")     # $24
+    c = ({"r": 0.01, "program_hours_remaining": 50}, "c")     # $0.50 -> under $1, dropped
+    kept, dropped = run.rank_by_projected_payout([a, b, c])
+    assert [q for _, q in kept] == ["b", "a"]
+    assert [q for _, q in dropped] == ["c"]
