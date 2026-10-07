@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=memcost-progs-1
-# code c23081e9d71901d2143235a8ac591c5e7dbaa3b0 · started 2026-10-07T02:54:22Z
-total   not_superseded  current_all  current_liq  current_liq_live  paid_out_current  raw_sz  mkt_sz  last_cycle                     now                          
-------  --------------  -----------  -----------  ----------------  ----------------  ------  ------  -----------------------------  -----------------------------
-162687  102242          36085        36085        6085              88361             64 MB   217 MB  2026-10-07 02:47:33.163666+00  2026-10-07 02:54:22.412392+00
-
-(1 row)
