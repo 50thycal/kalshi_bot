@@ -22,8 +22,9 @@ frame — `yes_price_cents` + `taker_outcome_side` — can be matched without co
   our NO bid at no-price n rests at yes-price 100-n on the NO side; it is hit when a taker
   BUYS yes (`taker_outcome_side == "yes"`) at yes price >= 100-n.
 
-Everything is derived from `incentive_shadow_events` (persisted) so a later, better model can
-be replayed over the same tape.
+The models run on in-memory state; fills, marks and outcomes are persisted. The raw replay
+inputs (`incentive_book_events`, `incentive_shadow_events`) are OFF by default since 2026-10-07
+(see config) — turn them back on before building a model that must be replayed over a tape.
 """
 
 from __future__ import annotations

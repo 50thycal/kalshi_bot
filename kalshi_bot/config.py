@@ -1417,7 +1417,14 @@ class Settings(BaseSettings):
     liquidity_incentive_requote_seconds: float = 60.0
     # Bound on markets subscribed at once (highest period reward first) and on raw rows/min.
     liquidity_incentive_max_markets: int = 150
-    liquidity_incentive_book_events_max_per_minute: int = 3000
+    # Raw WebSocket book frames persisted to `incentive_book_events`. 0 = persist none (the
+    # local book is still maintained in memory; nothing reads the table back). Default 0 since
+    # 2026-10-07: the tape had grown to 8.5 GB (~584 MiB/day) with a row count as its only
+    # reader, and it was a large share of the Railway Postgres bill. Set >0 to record it again.
+    liquidity_incentive_book_events_max_per_minute: int = 0
+    # Persist per-pair `incentive_shadow_events` rows (trade_hit / end). Nothing reads them —
+    # fills, marks and outcomes carry the evidence — so default OFF since 2026-10-07.
+    liquidity_incentive_persist_shadow_events: bool = False
     # A resting pair is refreshed after this long (recorded as `refresh_max_rest`, not a
     # cancel), and is cancelled when either side's fresh policy price moves this many ticks.
     liquidity_incentive_max_rest_seconds: int = 3600

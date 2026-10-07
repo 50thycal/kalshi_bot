@@ -21,7 +21,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
+from sqlalchemy.orm import defer
 
 from .. import models as m
 from ..execution.parse import fp_to_float, int_or_none
@@ -96,14 +97,33 @@ class DiscoveryResult:
     errors: int = 0
 
 
+# Verbatim payloads no caller of `current_programs` or the discovery pass reads. They are about
+# half the table (market_raw_json alone is ~217 MB at 36k current rows, 2026-10-07), and loading
+# them on every call made this the single heaviest read in Postgres — 6.3 TB read over the
+# table's life, against a 520 MB table. Deferred, not dropped: an attribute access still loads it.
+_HEAVY_COLUMNS = (m.IncentiveProgram.raw_json, m.IncentiveProgram.market_raw_json,
+                  m.IncentiveProgram.extra_params_json)
+
+
+def _light(stmt):
+    return stmt.options(*(defer(col) for col in _HEAVY_COLUMNS))
+
+
 def current_programs(session, *, now: datetime | None = None,
                      liquidity_only: bool = True) -> list[m.IncentiveProgram]:
-    """Current (not superseded, not disappeared) rows, optionally liquidity-type only."""
+    """Current (not superseded, not disappeared) rows, optionally liquidity-type only.
+
+    With `now`, programmes that have already ended are filtered in SQL as well as here: every
+    programme ever paid out stays "current" (the paid_out listing keeps re-observing it), so
+    without the SQL filter each call loaded ~6x the rows it returned."""
     stmt = select(m.IncentiveProgram).where(
         m.IncentiveProgram.superseded_at.is_(None), m.IncentiveProgram.disappeared_at.is_(None))
     if liquidity_only:
         stmt = stmt.where(m.IncentiveProgram.incentive_type == "liquidity")
-    rows = list(session.scalars(stmt).all())
+    if now is not None:
+        stmt = stmt.where(or_(m.IncentiveProgram.end_date.is_(None),
+                              m.IncentiveProgram.end_date > _aware(now)))
+    rows = list(session.scalars(_light(stmt)).all())
     if now is not None:
         rows = [r for r in rows if r.end_date is None or _aware(r.end_date) > now]
     return rows
@@ -163,8 +183,8 @@ def run_discovery(client, session, *, now: datetime | None = None,
             by_id[pid_key] = (prog, observed)
     listed = list(by_id.values())
 
-    existing = {(r.program_id, r.terms_hash): r for r in session.scalars(
-        select(m.IncentiveProgram).where(m.IncentiveProgram.superseded_at.is_(None))).all()}
+    existing = {(r.program_id, r.terms_hash): r for r in session.scalars(_light(
+        select(m.IncentiveProgram).where(m.IncentiveProgram.superseded_at.is_(None)))).all()}
     by_program: dict[str, m.IncentiveProgram] = {}
     for (pid, _h), r in existing.items():
         by_program[pid] = r
