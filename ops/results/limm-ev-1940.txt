@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-ev-1940
-# code 636f04c60275aeb81e634de11f26f7327ef67129 · started 2026-10-07T20:14:20Z
-market_ticker                start_date                        end_date                          period_reward_usd  target_size  discount_factor_bps  market_title                                                                                                   
----------------------------  --------------------------------  --------------------------------  -----------------  -----------  -------------------  ---------------------------------------------------------------------------------------------------------------
-KXCFBUNRANKEDUPSET-26W6-9    2026-10-07 01:46:37.151586+00:00  2026-10-14 01:46:37.151586+00:00  100.0000           1000.00      5000                 Will at least 9 unranked teams win against an AP Top 25 team in Week 6 of the 2026-27 college football season? 
-KXTRUMPMENTION-26OCT09-AFFO  2026-10-06 20:45:00+00:00         2026-10-10 02:00:00+00:00         100.0000           1000.00      5000                 What will Donald Trump say during Midterm Rally in Syracuse, New York originally scheduled for October 9, 2026?
-
-(2 rows)
