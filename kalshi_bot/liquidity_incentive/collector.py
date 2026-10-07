@@ -251,7 +251,9 @@ class ShadowState:
             logger.exception("incentive shadow: could not record %s", kind)
 
     def _persist_allowed(self, now: datetime) -> bool:
-        cap = int(self._cfg("book_events_max_per_minute", 3000))
+        cap = int(self._cfg("book_events_max_per_minute", 0))
+        if cap <= 0:
+            return False            # tape persistence off: not a throttle, so nothing to report
         cutoff = now - timedelta(seconds=60)
         while self._persist_times and self._persist_times[0] < cutoff:
             self._persist_times.popleft()
@@ -570,11 +572,12 @@ class ShadowState:
                     # would be the largest table in the schema for no extra information.
                     continue
                 with self.session_factory() as session:
-                    store.insert_shadow_event(
-                        session, quote_id=pair.quote_id, market_ticker=mk.ticker, at=at,
-                        kind="trade_hit", side=leg.side, yes_price_cents=yes_px, count=count,
-                        taker_outcome_side=taker_out, trade_id=trade_id,
-                        detail_json={"newly_filled": newly, "queue_ahead_before": before})
+                    if self._cfg("persist_shadow_events", False):
+                        store.insert_shadow_event(
+                            session, quote_id=pair.quote_id, market_ticker=mk.ticker, at=at,
+                            kind="trade_hit", side=leg.side, yes_price_cents=yes_px, count=count,
+                            taker_outcome_side=taker_out, trade_id=trade_id,
+                            detail_json={"newly_filled": newly, "queue_ahead_before": before})
                     for model, got in newly.items():
                         store.insert_fill(
                             session, quote_id=pair.quote_id, market_ticker=mk.ticker,
@@ -805,8 +808,9 @@ class ShadowState:
         t = mk.terms
         with self.session_factory() as session:
             store.end_quote(session, pair.quote_id, ended_at=now, reason=reason, rest_seconds=rest)
-            store.insert_shadow_event(session, quote_id=pair.quote_id, market_ticker=mk.ticker,
-                                      at=now, kind="end", detail_json={"reason": reason})
+            if self._cfg("persist_shadow_events", False):
+                store.insert_shadow_event(session, quote_id=pair.quote_id, market_ticker=mk.ticker,
+                                          at=now, kind="end", detail_json={"reason": reason})
             for model in fm.FILL_MODELS:
                 # A filled leg stops earning: prorate that side's accrual by its resting time.
                 ry = self._prorated(pair.reward_yes_usd, pair.yes_leg, model, pair.placed_at, now)

@@ -176,6 +176,54 @@ def test_discovery_versions_terms_and_marks_disappearance(settings):
         assert len(cycles) == 4 and cycles[0].total_period_reward_usd == 100
 
 
+def test_current_programs_filters_ended_programmes_and_defers_payloads(settings):
+    """`now` filters ended programmes in SQL (the paid_out listing keeps every programme ever
+    paid "current"), and the verbatim payloads stay unloaded until something touches them."""
+    from sqlalchemy import inspect as sa_inspect
+
+    _db(settings)
+    client = _ReadClient(programs=[
+        _program(pid="live", ticker="KXT-A"),
+        _program(pid="ended", ticker="KXT-B", start=T0 - timedelta(days=3),
+                 end=T0 - timedelta(days=1)),
+    ])
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    with db.session_scope() as s:
+        assert {r.program_id for r in pg.current_programs(s)} == {"live", "ended"}
+        rows = pg.current_programs(s, now=T0)
+        assert [r.program_id for r in rows] == ["live"]
+        unloaded = sa_inspect(rows[0]).unloaded
+        assert {"raw_json", "market_raw_json", "extra_params_json"} <= unloaded
+        assert "fee_rule_json" not in unloaded
+        assert rows[0].raw_json["id"] == "live"          # deferred, still readable on access
+
+
+def test_raw_tape_and_shadow_events_are_off_by_default(settings):
+    """Neither replay input is written unless switched back on, and an off tape is not reported
+    as throttling."""
+    from kalshi_bot.config import Settings
+
+    fresh = Settings(_env_file=None)
+    assert fresh.liquidity_incentive_book_events_max_per_minute == 0
+    assert fresh.liquidity_incentive_persist_shadow_events is False
+    _db(settings)
+    clock = _Clock()
+    st = _bring_up(settings, clock, liquidity_incentive_capital_tiers="25,100",
+                   liquidity_incentive_book_events_max_per_minute=0,
+                   liquidity_incentive_persist_shadow_events=False)
+    st.handle_message(_snapshot("KXT-A", yes=[(46, 900), (40, 50)], no=[(48, 900), (60, 30)]))
+    st.tick()
+    clock.tick(10)
+    st.handle_message(_trade("KXT-A", 46, 30, "no", "t1"))
+    with db.session_scope() as s:
+        assert s.scalar(select(m.IncentiveBookEvent.id)) is None
+        assert s.scalar(select(m.IncentiveShadowEvent.id)) is None
+        assert s.scalar(select(m.IncentiveShadowFill.id)) is not None      # evidence still kept
+        assert s.scalar(select(m.IncentiveCollectorEvent.id).where(
+            m.IncentiveCollectorEvent.kind == c.EV_THROTTLED)) is None
+
+
 def test_discovery_failure_is_a_cycle_row_not_an_exception(settings):
     _db(settings)
     client = _ReadClient(programs=RuntimeError("boom"))
@@ -212,7 +260,8 @@ def _bring_up(settings, clock, client=None, **overrides):
 def test_end_to_end_quote_fill_mark_outcome(settings):
     _db(settings)
     clock = _Clock()
-    st = _bring_up(settings, clock, liquidity_incentive_capital_tiers="25,100")
+    st = _bring_up(settings, clock, liquidity_incentive_capital_tiers="25,100",
+                   liquidity_incentive_persist_shadow_events=True)
     # Book: yes 46 x 900, no 52 (yes-scale 48) x 900. Target 1000 -> our size makes it qualify.
     st.handle_message(_snapshot("KXT-A", yes=[(46, 900), (40, 50)], no=[(48, 900), (60, 30)]))
     st.tick()
