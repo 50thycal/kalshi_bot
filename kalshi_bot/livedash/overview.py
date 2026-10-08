@@ -305,6 +305,17 @@ def _share(held, book: str, ticker: str) -> float:
     return held.get((book, ticker), 0.0) / total if total else 0.0
 
 
+def month_peak(events: list[tuple[datetime, float]]) -> dict:
+    """Highest month-to-date realized total, replaying settlements in time order from $0 at
+    the start of the month. `at` is when that high was set (None while it is still $0)."""
+    running, best, best_at = 0.0, 0.0, None
+    for at, pnl in sorted(events, key=lambda e: e[0]):
+        running += pnl
+        if running > best + 1e-9:
+            best, best_at = running, at
+    return {"usd": best, "at": best_at}
+
+
 def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) -> dict:
     start = month_start(now)
     marks = _open_marks(session, snaps, now)
@@ -332,6 +343,7 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
     rows = []
     month_total = unreal_total = 0.0
     unpriced_total = 0
+    settled_events: list[tuple[datetime, float]] = []
     for book in books:
         month_pnl, settled_month, wins = 0.0, 0, 0
         open_n, open_cost, unreal, unpriced = 0, 0.0, 0.0, 0
@@ -344,6 +356,7 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
                 if _aware(snap.captured_at) >= start:
                     pnl = float(snap.realized_pnl) * share
                     month_pnl += pnl
+                    settled_events.append((_aware(snap.captured_at), pnl))
                     settled_month += 1
                     wins += pnl > 0
             elif snap is not None and abs(float(snap.quantity_fp or snap.quantity or 0)):
@@ -382,6 +395,7 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             "health": _health(session, book, pair, last_order.get(book), now),
             "incentive": _incentive_block(session, book, now),
         })
+    peak = month_peak(settled_events)
     days_in = (now - start).total_seconds() / 86400
     next_month = (start + timedelta(days=32)).replace(day=1)
     days_total = (next_month - start).total_seconds() / 86400
@@ -397,6 +411,11 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
         "trades_this_month": sum(r["trades_this_month"] for r in rows),
         "trades_all_time": sum(r["trades_all_time"] for r in rows),
         "progress_pct": _r(month_total / MONTHLY_GOAL_USD * 100, 1),
+        # The month's high-water mark of the same realized figure, and how far below it the
+        # month now sits. Realized only, like the goal: open positions have no history here.
+        "month_peak_usd": _r(peak["usd"]),
+        "month_peak_at": _iso(peak["at"]),
+        "below_peak_usd": _r(peak["usd"] - month_total),
         # A straight-line pace, labelled as such on the page; early in a month it is noise.
         "pace_usd": _r(month_total / days_in * days_total) if days_in >= 1 else None,
         "day_of_month": int(days_in) + 1,
