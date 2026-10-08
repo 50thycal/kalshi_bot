@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "8a94eebec5cc840ca78ce65c9773d1fccdb65e04",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-08T16:58:10Z",
+  "id": "catalog-fractional-proof-20261008-1700b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/catalog-fractional-proof-20261008-1700b.receipt.json",
+  "result_file": "ops/results/catalog-fractional-proof-20261008-1700b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37812886824",
+  "service": null,
+  "started_at": "2026-10-08T16:58:09Z",
+  "targets": [],
+  "type": "db"
+}
