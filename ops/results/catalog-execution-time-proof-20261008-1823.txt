@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-execution-time-proof-20261008-1823
-# code 3d662500ffe6b6d2f3c8847b14f6d9abeb5aa28d · started 2026-10-08T18:21:33Z
-fills  raw_time_present  raw_epoch_present  raw_fields_agree_to_second  collected_after_execution  collected_before_execution  source_time_missing  minimum_collection_lag_seconds  maximum_collection_lag_seconds
------  ----------------  -----------------  --------------------------  -------------------------  --------------------------  -------------------  ------------------------------  ------------------------------
-2836   2836              2836               2836                        2836                       0                           0                    0.184374                        70975.799750                  
-
-(1 row)
