@@ -208,3 +208,9 @@ Review State: solo, pending owner acceptance; no independent review claimed.
 WS-023 remains REVIEW / Active. Next: owner merges the clock repair, then verify v4
 restoration/exception counts. Structured review, calibration and consumer cutover remain
 subsequent work within the approved boundary.
+
+Execution-clock PR: [#563](https://github.com/50thycal/kalshi_bot/pull/563).
+Executable validation head: `80fba0ea676e482f65943f000792d6c1f223f588`.
+Documentation-only merge-finalization pushed; WS-023 remains REVIEW / Active on merge.
+Review State: solo, pending owner acceptance; no independent review claimed.
+Production v4 restoration counts and the diagnosed timestamp exception remain release checks.
