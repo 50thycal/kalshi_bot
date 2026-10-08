@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-1212
-# code a4aa3684c67ff6ae9b4c2f95997a41ffb5049867 · started 2026-10-08T12:12:03Z
-market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                     last_discovery               
----------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------
-KXC4POS-26NOV03-T110         no    buy     6            166       resting                 2026-10-08 06:33:54.157036+00  2026-10-08 12:07:42.600835+00
-KXTRUMPMENTION-26OCT09-AFFO  no    buy     10           100       resting                 2026-10-07 08:43:11.528812+00  2026-10-08 12:07:42.600835+00
-
-(2 rows)
