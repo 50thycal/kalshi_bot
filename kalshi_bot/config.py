@@ -1464,8 +1464,8 @@ class Settings(BaseSettings):
     liquidity_incentive_runner_discovery: bool = True
     # New or changed programme terms resolved per runner pass (each costs a market GET and a
     # series GET). The rest are deferred to the next pass, not dropped: a historical cycle
-    # resolved up to ~4,800 at once (~250 s), which must not stall the real-money cycle or burst
-    # the shared read budget (Basic tier: 20 reads/s); steady state is ~15-25 per pass.
+    # resolved up to ~4,800 at once (~250 s), which must not stall the real-money cycle or
+    # hog the shared read budget other books use; steady state is ~15-25 per pass.
     # 0 = no cap.
     liquidity_incentive_runner_discovery_max_new_terms: int = 100
     # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
