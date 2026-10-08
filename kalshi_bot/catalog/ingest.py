@@ -132,6 +132,14 @@ def seed(store):
         },
     )
 
+    summary = store.state("registry_seed")
+    logging.getLogger("market_catalog").info(
+        "catalog_review_migration=%s",
+        json.dumps(
+            {"series": summary["series"], "historical_signatures": summary["historical_signatures"]}
+        ),
+    )
+
 
 def source_page(store, url, source, batch_size=PAGE_SIZE):
     cursor = store.state("cursor:" + source, {"after": 0, "initial_complete": False})

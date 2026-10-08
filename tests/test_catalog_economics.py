@@ -362,3 +362,38 @@ def test_assessment_page_filters_and_counts_before_pagination(store):
     assert page["items"][0]["edge_cents_per_contract"] == 3
     assert store.assessment_page(source="live", minimum=1)["total"] == 0
     assert store.assessment_page(qualified=True)["total"] == 0
+
+
+@pytest.mark.parametrize("status", ["settled", "finalized"])
+def test_final_lifecycle_aliases_attribute_but_provisional_and_missing_timestamp_block(
+    store, status
+):
+    settled(store, status=status)
+    assert calculate(store, [fill()])["net_pnl_dollars"] == "1.90"
+    settled(store, status=status, is_provisional=True)
+    assert "final_settlement_missing" in calculate(store, [fill()])["blocked_reasons"]
+    settled(store, status=status, settlement_ts=None)
+    assert "settlement_time_missing_or_future" in calculate(store, [fill()])["blocked_reasons"]
+
+
+def test_sanitized_summary_logs_expose_blockers_without_cost_payloads(store, caplog):
+    import logging
+
+    settled(store, status="finalized")
+    row = fill()
+    row["raw_fill_json"].pop("fee_cost")
+    store.evidence_page("live", [row], {"after": 1})
+    with caplog.at_level(logging.INFO, logger="market_catalog"):
+        refresh(store, MOMENT)
+        seed(store)
+    messages = [r.getMessage() for r in caplog.records if r.name == "market_catalog"]
+    economics = json.loads(
+        next(m.split("=", 1)[1] for m in messages if m.startswith("catalog_live_economics="))
+    )
+    assert economics["blocked_reason_counts"]["actual_fill_costs_missing_or_invalid"] == 1
+    assert economics["attributed"] == 0 and economics["blocked"] == 1
+    assert all(
+        "fee_cost" not in m and "net_pnl_dollars" not in m and "raw_fill_json" not in m
+        for m in messages
+    )
+    assert any(m.startswith("catalog_review_migration=") for m in messages)

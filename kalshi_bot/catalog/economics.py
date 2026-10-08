@@ -82,7 +82,9 @@ def live_economics(store, records, as_of):
         ids = [r.get("kalshi_fill_id") for r in rows]
         if not all(ids) or len(set(ids)) != len(ids):
             reasons.add("exchange_fill_identity_missing_or_duplicate")
-        if raw_market.get("status") != "settled" or raw_market.get("is_provisional"):
+        if raw_market.get("status") not in ("settled", "finalized") or raw_market.get(
+            "is_provisional"
+        ):
             reasons.add("final_settlement_missing")
         settlement_time = fill_time({"filled_at": raw_market.get("settlement_ts")})
         if settlement_time is None or settlement_time > as_of:

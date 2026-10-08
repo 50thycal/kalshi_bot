@@ -68,3 +68,28 @@ it is not a production economics audit. Compatibility remains canonical Build OS
 Evidence PR: [#552](https://github.com/50thycal/kalshi_bot/pull/552).
 Initial executable commit: `3a2f114c3597adb5dee816398507dd4e9e5aa53c`, superseded by
 the fill/order identity follow-up in PR #552. Final executable validation: 89 tests. Owner acceptance and catalog-only release pending.
+
+
+## Production verification and lifecycle repair — 2026-10-08
+
+Owner deployed merged default commit `2dc466845801bd092a39ee6a05de40518660e53e`:
+Railway deployment `b450a0dd-55fb-4133-9e73-3b578d277c9d` SUCCESS, online with one replica.
+Startup reused the checked backup. Live ownership replay imported its first 1,000-row page,
+public live outcome refresh fetched five markets, and evaluation processed 146,372 contexts.
+These prove pipeline execution, not successful attribution or completed replay.
+
+Direct public market verification found `KXAAAGASD-26AUG11-4.015` with `status=finalized`,
+binary $1 notional, result=no, explicit $0 yes payout and a settlement timestamp. The new
+catalog accepted only settled; finalized markets were therefore falsely blocked. Repair
+accepts both final lifecycle names, consistent with the existing desk settlement adapter,
+while still requiring non-provisional final payout/time and all ownership/fill/cost checks.
+It adds sanitized migration totals and live-attribution/blocker reason counts to runtime logs.
+No source writes, trading controls, confidence qualification or metric formula changes.
+Owner acceptance/release of this follow-up remain pending; no attribution totals inferred.
+
+Latest post-release logs at 04:52 UTC: 130,492 paper rows, 2,824 live fills, 14,717 series,
+2,076,472 markets and 146,372 current assessment contexts. Structured reviews remain zero.
+Database 8.83 GB; volume free 9.57 GB. No runtime error logged in the checked release window.
+The storage diagnostic took about five minutes after evaluation; pipeline refresh is currently
+slower than its nominal loop interval. This observation does not certify new replay completion.
+Follow-up validation: 92 catalog/economics/session tests, Ruff and diff checks passed.

@@ -1,7 +1,9 @@
 """Strategy plug-ins produce records; they cannot change trading admission."""
 
+import json
+import logging
 import statistics
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 from .economics import SCORING_REQUIREMENTS, fill_time, ledger_assessments, live_economics
@@ -224,15 +226,18 @@ def refresh(store, as_of=None):
                 yield scope, result
 
     count = store.assessment_batch(results())
-    store.set_state(
-        "live_economics_summary",
-        {
-            "markets": len(economics),
-            "attributed": sum(r["status"] == "attributed_source_ledger" for r in economics),
-            "blocked": sum(r["status"] == "blocked" for r in economics),
-            "exchange_fill_coverage_verified": False,
-        },
-    )
+    summary = {
+        "markets": len(economics),
+        "attributed": sum(r["status"] == "attributed_source_ledger" for r in economics),
+        "blocked": sum(r["status"] == "blocked" for r in economics),
+        "blocked_reason_counts": dict(
+            Counter(reason for r in economics for reason in r["blocked_reasons"])
+        ),
+        "exchange_fill_coverage_verified": False,
+    }
+    store.set_state("live_economics_summary", summary)
+    # Counts and fixed reason codes only; no P&L, credentials or fill payloads.
+    logging.getLogger("market_catalog").info("catalog_live_economics=%s", json.dumps(summary))
     store.set_state(
         "evaluation",
         {
