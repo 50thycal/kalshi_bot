@@ -7,7 +7,7 @@ retrospective leg still does not kill (+2.00¢ separation, ranking unchanged). T
 has 35 top-pair and 14 other-type fills since 10-01 against floors of 150 and 100, so the verdict
 stays HOLD (accrual); its early sign is negative and means nothing at that size. The useful news
 is operational: Fmmsell10 placed about 11 orders a day this week against about 44 a day in
-September, which pushes the earliest decisive read to mid-to-late November. The drop coincides
+September, which pushes the earliest decisive read to late November. The drop coincides
 with the end of the MLB regular season; whether anything else changed belongs to Live Ops.
 
 ## MMSELL 2026-10-04 — three read-only probes; no supported live treatment

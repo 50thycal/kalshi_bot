@@ -193,7 +193,7 @@ on fills after the day it is written.
    leg-R sign are unchanged. If it recurs, the probe should retry failed lookups rather than skip.
 2. **Forward flow is much slower than window B.** 87 orders and 56 fills in 7.6 days (about 11
    orders and 7 fills a day) against about 44 orders and 31 fills a day in window B. At this rate
-   leg F reaches 150 TOP fills in roughly three more weeks and 100 REST fills in roughly six,
-   so the earliest decisive read is mid-to-late November. The drop coincides with the end of the
+   leg F reaches 150 TOP fills in about three and a half more weeks and 100 REST fills in about seven,
+   so the earliest decisive read is late November. The drop coincides with the end of the
    MLB regular season (09-28), which supplied a third of B's fills; whether anything else changed
    is a Live Ops question, not this thesis's.
