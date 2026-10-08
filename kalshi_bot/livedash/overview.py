@@ -649,9 +649,15 @@ class OverviewCache:
     A request never waits for a rebuild that is already fresh enough; the first request
     after start (or after the refresher dies) builds inline, so the page can never be empty
     because a thread did not start. A failed rebuild keeps serving the last good payload and
-    says how old it is."""
+    says how old it is.
 
-    def __init__(self, builder, *, refresh_seconds: int = 120, stale_seconds: int = 600):
+    The refresher only rebuilds while someone is looking: after `idle_seconds` with no
+    request it stops touching the database, so the service sends no outbound traffic and
+    Railway's app sleep can stop it (WS-024 step 3). A request after that serves the cached
+    payload when it is fresh enough and builds inline when it is not, exactly as on start."""
+
+    def __init__(self, builder, *, refresh_seconds: int = 120, stale_seconds: int = 600,
+                 idle_seconds: int = 900, clock=time.monotonic):
         self._builder = builder
         self.refresh_seconds = refresh_seconds
         self.stale_seconds = stale_seconds
@@ -660,6 +666,22 @@ class OverviewCache:
         self._built_at = 0.0
         self._error: str | None = None
         self._thread: threading.Thread | None = None
+        self.idle_seconds = idle_seconds
+        self._clock = clock
+        #: When a request last read the cache; start() counts as one, so a fresh process
+        #: (often woken by the very request that is about to arrive) warms its payload.
+        self._last_used: float | None = None
+
+    def in_use(self) -> bool:
+        return (self._last_used is not None
+                and self._clock() - self._last_used < self.idle_seconds)
+
+    def tick(self) -> bool:
+        """One refresher step: rebuild only while in use. Returns whether it rebuilt."""
+        if not self.in_use():
+            return False
+        self.refresh()
+        return True
 
     def refresh(self) -> None:
         try:
@@ -672,6 +694,7 @@ class OverviewCache:
             self._payload, self._built_at, self._error = payload, time.monotonic(), None
 
     def get(self) -> dict:
+        self._last_used = self._clock()
         if self._payload is None or time.monotonic() - self._built_at > self.stale_seconds:
             self.refresh()
         with self._lock:
@@ -685,9 +708,11 @@ class OverviewCache:
         if self._thread is not None and self._thread.is_alive():
             return
 
+        self._last_used = self._clock()
+
         def loop():
             while True:
-                self.refresh()
+                self.tick()
                 time.sleep(self.refresh_seconds)
 
         self._thread = threading.Thread(target=loop, name="livedash-overview", daemon=True)
