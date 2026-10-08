@@ -61,6 +61,29 @@ def canonical_direction(raw):
     return outcome
 
 
+class QuantityEvidenceError(ValueError):
+    """Raw quantity is not explained by the known source projection."""
+
+
+def exact_quantity(row):
+    """Recover exact exchange count only when the source's rounding is reproducible.
+
+    The executor persists int(round(float(count_fp))). A rounded zero is not an
+    absent execution. Caller must first prove raw execution identity and direction.
+    """
+    raw = row.get("raw_fill_json") or {}
+    try:
+        quantity = decimal(raw.get("count_fp", raw.get("count", raw.get("quantity"))))
+        stored = decimal(row["quantity"])
+        if quantity <= 0 or quantity * 100 != (quantity * 100).to_integral_value():
+            raise ValueError("Invalid fixed-point contract count")
+        if stored != quantity and stored != int(round(float(quantity))):
+            raise ValueError("Unexplained source quantity mismatch")
+    except (KeyError, InvalidOperation, ValueError, TypeError, OverflowError) as error:
+        raise QuantityEvidenceError("Raw quantity missing or inconsistent") from error
+    return quantity
+
+
 def ledger_fill(row):
     """Translate a proven exchange execution into the bot's held-contract vocabulary.
 
@@ -105,7 +128,15 @@ def ledger_fill(row):
         raise ValueError("Unverified complementary prices")
     if prices[source_side] != decimal(row["price"]) / 100:
         raise ValueError("Source price disagrees with raw fill")
-    return {**row, "side": side, "action": action, "price": str(prices[side] * 100)}
+    quantity = exact_quantity(row)
+    return {
+        **row,
+        "side": side,
+        "action": action,
+        "price": str(prices[side] * 100),
+        "quantity": str(quantity),
+        "source_quantity_rounding_restored": quantity != decimal(row["quantity"]),
+    }
 
 
 def live_economics(store, records, as_of):
@@ -125,6 +156,8 @@ def live_economics(store, records, as_of):
             reasons.add("ownership_ambiguous_or_unverified")
         try:
             rows = [ledger_fill(row) for row in rows]
+        except QuantityEvidenceError:
+            reasons.add("raw_quantity_missing_or_inconsistent")
         except (KeyError, InvalidOperation, ValueError, TypeError):
             reasons.add("order_fill_identity_inconsistent_or_unverified")
         sides = {r.get("side") for r in rows}
@@ -212,8 +245,12 @@ def live_economics(store, records, as_of):
         owner = next(iter(owners)) if len(owners) == 1 else (None, None)
         yield {
             "schema_version": 1,
-            "method_version": "exclusive-binary-ledger-v2",
+            "method_version": "exclusive-binary-ledger-v3",
             "direction_method": "verified-order-intent-canonical-exposure-v1",
+            "quantity_method": "verified-fixed-point-source-rounding-v1",
+            "source_quantity_rounding_restored_fills": sum(
+                bool(r.get("source_quantity_rounding_restored")) for r in rows
+            ),
             "market_ticker": ticker,
             "series_ticker": ticker.split("-", 1)[0],
             "strategy_version": owner[0],
@@ -255,7 +292,7 @@ def ledger_assessments(documents, as_of):
         yield {
             "schema_version": 1,
             "strategy_id": "mmsell",
-            "evaluator_version": "exclusive-binary-ledger-v2",
+            "evaluator_version": "exclusive-binary-ledger-v3",
             "strategy_version": book,
             "series_ticker": series,
             "deployment_arm_id": arm,

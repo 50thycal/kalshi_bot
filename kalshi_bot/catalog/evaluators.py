@@ -189,7 +189,7 @@ def refresh(store, as_of=None):
                         coverage.get(result["evidence_source"], {}).get("ids_match")
                     ),
                     "live_economics_attributed": result["evaluator_version"]
-                    == "exclusive-binary-ledger-v2",
+                    == "exclusive-binary-ledger-v3",
                     "exchange_fill_coverage_verified": False,
                     "independent_outcomes_verified": False,
                     "strategy_lineage_known": result.get("deployment_arm_id") is not None,
@@ -234,10 +234,31 @@ def refresh(store, as_of=None):
             Counter(reason for r in economics for reason in r["blocked_reasons"])
         ),
         "exchange_fill_coverage_verified": False,
+        "source_quantity_rounding_restored_fills": sum(
+            r["source_quantity_rounding_restored_fills"] for r in economics
+        ),
     }
     store.set_state("live_economics_summary", summary)
     # Counts and fixed reason codes only; no P&L, credentials or fill payloads.
     logging.getLogger("market_catalog").info("catalog_live_economics=%s", json.dumps(summary))
+    # Public market tickers only, bounded samples to investigate rare evidence conflicts.
+    samples = {}
+    for document in economics:
+        for reason in document["blocked_reasons"]:
+            if (
+                reason
+                in {
+                    "fill_after_settlement",
+                    "ownership_ambiguous_or_unverified",
+                    "raw_quantity_missing_or_inconsistent",
+                    "actual_fill_costs_missing_or_invalid",
+                }
+                and len(samples.setdefault(reason, [])) < 5
+            ):
+                samples[reason].append(document["market_ticker"])
+    logging.getLogger("market_catalog").info(
+        "catalog_evidence_exception_markets=%s", json.dumps(samples)
+    )
     store.set_state(
         "evaluation",
         {

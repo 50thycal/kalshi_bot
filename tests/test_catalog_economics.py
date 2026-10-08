@@ -113,7 +113,7 @@ def test_production_canonical_no_entry_is_a_purchase_not_an_inventory_deficit(st
     assert result["side"] == "no"
     assert Decimal(result["net_pnl_dollars"]) == Decimal("1.90")
     assert result["buy_contracts"] == "10"
-    assert result["method_version"] == "exclusive-binary-ledger-v2"
+    assert result["method_version"] == "exclusive-binary-ledger-v3"
     assert row == original  # Original legacy labels remain evidence, never rewritten.
 
 
@@ -190,6 +190,67 @@ def test_canonical_translation_keeps_loss_fees_and_confidence_guards(store):
     assert result["net_pnl_dollars"] is None
 
 
+@pytest.mark.parametrize("quantity", ["0.01", "0.25", "0.50", "1.25", "1.50", "2.50", "2.75"])
+def test_exact_fractional_execution_recovers_source_rounding(store, quantity):
+    settled(store, result="no", settlement_value_dollars="0")
+    row = canonical_fill(quantity=quantity)
+    row["quantity"] = int(round(float(quantity)))
+    original = json.loads(json.dumps(row))
+    result = calculate(store, [row])
+    assert result["status"] == "attributed_source_ledger"
+    assert Decimal(result["buy_contracts"]) == Decimal(quantity)
+    assert Decimal(result["net_pnl_dollars"]) == Decimal(quantity) * Decimal("0.20") - Decimal(
+        "0.10"
+    )
+    assert result["source_quantity_rounding_restored_fills"] == 1
+    assert row == original
+    assert not result["qualified"] and result["confidence_score"] is None
+
+
+def test_fractional_entry_and_exit_keep_exact_inventory_and_fees(store):
+    settled(store, result="no", settlement_value_dollars="0")
+    rows = [
+        canonical_fill(quantity="1.25", market_fill_count=2),
+        canonical_fill(2, "sell", "0.50", 90, market_fill_count=2),
+    ]
+    for row in rows:
+        row["quantity"] = int(round(float(row["quantity"])))
+    result = calculate(store, rows)
+    assert result["status"] == "attributed_source_ledger"
+    assert Decimal(result["remaining_settlement_contracts"]) == Decimal("0.75")
+    assert Decimal(result["net_pnl_dollars"]) == Decimal("0")
+    assert Decimal(result["actual_fees_dollars"]) == Decimal("0.20")
+
+
+@pytest.mark.parametrize(
+    "raw_quantity,stored", [("1.25", 3), ("0", 0), ("-1", -1), ("NaN", 0), ("0.001", 0), (None, 1)]
+)
+def test_unexplained_or_invalid_raw_quantity_remains_blocked(store, raw_quantity, stored):
+    settled(store)
+    row = canonical_fill()
+    row["quantity"] = stored
+    row["raw_fill_json"]["count_fp"] = raw_quantity
+    result = calculate(store, [row])
+    assert "raw_quantity_missing_or_inconsistent" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_fractional_recovery_does_not_relax_identity_fees_or_ownership(store):
+    settled(store)
+    row = canonical_fill(quantity="0.25", market_owner_count=2)
+    row["quantity"] = 0
+    result = calculate(store, [row])
+    assert "ownership_ambiguous_or_unverified" in result["blocked_reasons"]
+    row["market_owner_count"] = 1
+    del row["raw_fill_json"]["fee_cost"]
+    result = calculate(store, [row])
+    assert "actual_fill_costs_missing_or_invalid" in result["blocked_reasons"]
+    row["raw_fill_json"]["order_id"] = "conflicting"
+    result = calculate(store, [row])
+    assert "order_fill_identity_inconsistent_or_unverified" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
 def test_old_projection_replays_raw_order_evidence_once(store):
     store.set_state("live_projection_version", "ownership-v1")
     store.set_state("cursor:live", {"after": 99, "initial_coverage_verified": True})
@@ -201,6 +262,41 @@ def test_old_projection_replays_raw_order_evidence_once(store):
     seed(store)
     assert store.state("cursor:live")["after"] == 10
     assert "o.raw_order_json AS raw_order_json" in SOURCE_QUERIES["live"]
+
+
+def test_exception_diagnostics_emit_only_bounded_public_market_samples(store, caplog):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="market_catalog")
+    records = []
+    for index in range(8):
+        ticker = f"KXTEST-E-{index}"
+        store.upsert(
+            "market",
+            ticker,
+            {
+                "status": "settled",
+                "market_type": "binary",
+                "result": "yes",
+                "notional_value_dollars": "1",
+                "settlement_ts": "2026-10-02T00:00:00Z",
+            },
+            "KXTEST",
+        )
+        row = fill(id=index + 1, market_ticker=ticker, order_market_ticker=ticker)
+        row["raw_fill_json"]["created_time"] = "2026-10-03T00:00:00Z"
+        records.append(row)
+    store.evidence_page("live", records, {"after": 8})
+    refresh(store, MOMENT)
+    message = next(
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("catalog_evidence_exception_markets=")
+    )
+    sample = json.loads(message.split("=", 1)[1])
+    assert len(sample["fill_after_settlement"]) == 5
+    assert all(t.startswith("KXTEST-E-") for t in sample["fill_after_settlement"])
+    assert "exchange-" not in message and "net_pnl" not in message
 
 
 def test_cashflows_partial_exit_and_remaining_settlement_use_actual_fees(store):
@@ -333,7 +429,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     store.evidence_page("live", [fill()], {"after": 1})
     refresh(store, MOMENT)
     first = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v2"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v3"
     )
     assert first["net_pnl_dollars"] == "1.90"
     refresh(store, MOMENT + timedelta(minutes=1))
@@ -341,7 +437,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     settled(store, result="no", settlement_value_dollars="0")
     refresh(store, MOMENT + timedelta(minutes=2))
     current = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v2"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v3"
     )
     assert current["net_pnl_dollars"] == "-8.10"
     assert first["assessment_id"] != current["assessment_id"]

@@ -125,3 +125,42 @@ Framework compatibility verified against canonical Build OS v0.12.
 No independent review or owner acceptance claimed. Next: owner accepts this repair
 PR, deploy catalog only, verify complete replay and inspect remaining settlement /
 ownership / actual-cost blockers. No numerical score or consumer cutover follows.
+
+## Fractional source evidence repair — 2026-10-08
+
+PR #561 is merged and deployed at `8a94eebec5cc840ca78ce65c9773d1fccdb65e04`,
+Railway deployment `0d6b73d8-18f9-4615-a3e0-cefe14597fa8`. Direction-proof replay
+caught up with 132,271 paper / 2,833 live source rows. At 16:51 UTC, source-ledger
+economics attributed 1,128 of 2,772 live markets and blocked 1,644; reason counts
+overlap and most remaining blockers concern settlement evidence. These are catalog
+diagnostics, not exchange-account reconciliation or an experiment verdict.
+
+Calvin authorized continued investigation. SELECT-only proof audit at 16:58 UTC
+found 85 fills across 47 markets whose raw fractional quantities were rounded by
+the source convenience column; all 85 differences reproduced the executor's
+rounding, including 41 rounded-zero fills. All 2,833 scoped fills had explicit
+nonnegative exchange fees. Receipt:
+`ops/results/catalog-fractional-proof-20261008-1700b.txt`.
+
+The isolated v3 ledger restores exact raw quantities only after canonical identity,
+direction and price proof, and only for positive counts with at most two decimals
+whose source rounding is reproducible. Original records remain intact; unexplained
+differences still block. Versioned v3 snapshots preserve v2 history. No additional
+import replay is needed. No shared executor, XOS metric, source database, exposure
+or consumer changes; no Platform Revision activated.
+
+Ownership proof at 17:00 UTC distinguishes 17 markets with multiple executed owners
+and 22 with multiple order owners but only one executed owner. All 39 remain blocked
+under the existing exclusive-owner policy. Receipt:
+`ops/results/catalog-shared-owner-proof-20261008-1705.txt`. Ops returned to noop.
+The public outcome sweep continues successfully in five-market batches, including
+archived-market fallback. One fill-after-settlement exception remains blocked;
+bounded public ticker diagnostics make it traceable after this release.
+
+Validation: 135 catalog/economics/session checks passed plus Ruff. Tests cover
+fractional rounding ties/zero, partial exits, invalid quantities, unchanged evidence,
+ownership/identity/actual-fee guards and bounded diagnostic logs. No independent
+review or owner acceptance claimed. This PR does not complete WS-023. Next: owner
+accepts/merges the catalog-only repair, then verify deployed v3 counts and remaining
+exceptions. Confidence stays null, qualification false; calibration and consumer
+cutover remain subsequent work under the approved boundary.
