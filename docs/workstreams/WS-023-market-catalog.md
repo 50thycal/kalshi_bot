@@ -239,3 +239,12 @@ Calibration includes blocked inputs, unverified event hints and unassigned forwa
 partitions. Future strategies register their own provider/check contract. GETs do not
 approve reviews or freeze data. WS-023 remains REVIEW / Active; owner review and
 catalog-only rollout pending.
+
+Readiness PR: [#564](https://github.com/50thycal/kalshi_bot/pull/564).
+Executable validation head: `5f3ec4fd210d03498a4bd435ed46c4c16646ab67`.
+167 catalog/readiness/economics/session checks passed; Ruff, JavaScript syntax,
+whitespace and readiness DOM smoke checks passed. Production rollout and browser
+visual rendering remain release checks. Numerical confidence remains null.
+Merge-finalization is documentation-only; WS-023 stays REVIEW / Active on merge.
+Review State: solo, pending owner acceptance; no independent party reviewed this change.
+Next: owner reviews/merges after finalized-head CI, then verify market-catalog only.
