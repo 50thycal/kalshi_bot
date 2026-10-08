@@ -30,6 +30,7 @@ SOURCE_PROJECTIONS = {
     "paper": """p.*, EXISTS(SELECT 1 FROM live_paper_twins t
                               WHERE t.twin_tag=p.strategy) AS is_twin""",
     "live": """f.*, o.strategy,o.event_ticker,o.experiment_deployment_arm_id,
+        o.market_ticker AS order_market_ticker,o.side AS order_side,o.action AS order_action,
         (SELECT count(DISTINCT (x.strategy,x.experiment_deployment_arm_id))
          FROM live_orders x WHERE x.kalshi_order_id=f.kalshi_order_id) AS order_owner_count""",
 }

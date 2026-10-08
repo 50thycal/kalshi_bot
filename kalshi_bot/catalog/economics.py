@@ -68,6 +68,13 @@ def live_economics(store, records, as_of):
             r.get("market_owner_count") != 1 or r.get("order_owner_count") != 1 for r in rows
         ):
             reasons.add("ownership_ambiguous_or_unverified")
+        if any(
+            r.get("order_market_ticker") != ticker
+            or r.get("order_side") != r.get("side")
+            or r.get("order_action") != r.get("action")
+            for r in rows
+        ):
+            reasons.add("order_fill_identity_inconsistent_or_unverified")
         if len(sides) != 1 or not sides <= {"yes", "no"}:
             reasons.add("mixed_or_unknown_side")
         if any(r.get("market_fill_count") != len(rows) for r in rows):

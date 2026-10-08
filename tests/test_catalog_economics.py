@@ -24,6 +24,9 @@ def fill(id=1, action="buy", quantity=10, price=80, **changes):
         "id": id,
         "kalshi_fill_id": f"exchange-{id}",
         "market_ticker": "KXTEST-E-M",
+        "order_market_ticker": "KXTEST-E-M",
+        "order_side": "yes",
+        "order_action": action,
         "strategy": "mmsell10",
         "experiment_deployment_arm_id": 1,
         "side": "yes",
@@ -81,7 +84,7 @@ def test_cashflows_partial_exit_and_remaining_settlement_use_actual_fees(store):
 
 def test_no_side_settlement_and_realized_exit(store):
     settled(store, result="no", settlement_value_dollars="0")
-    row = fill(side="no")
+    row = fill(side="no", order_side="no")
     row["raw_fill_json"]["no_price_dollars"] = "0.8"
     assert calculate(store, [row])["net_pnl_dollars"] == "1.90"
     settled(store, result="yes", settlement_value_dollars="1")
@@ -91,6 +94,8 @@ def test_no_side_settlement_and_realized_exit(store):
 @pytest.mark.parametrize(
     "change,reason",
     [
+        ({"order_market_ticker": "KXOTHER-E-M"}, "order_fill_identity_inconsistent_or_unverified"),
+        ({"order_side": "no"}, "order_fill_identity_inconsistent_or_unverified"),
         ({"market_owner_count": 2}, "ownership_ambiguous_or_unverified"),
         ({"order_owner_count": None}, "ownership_ambiguous_or_unverified"),
         ({"market_fill_count": 2}, "source_market_fill_coverage_incomplete"),

@@ -40,7 +40,7 @@ backoff. Missing outcomes are retried on subsequent sweeps. Changed settlement v
 included in immutable revisions. No private trading credential is required.
 
 Supported attribution is intentionally narrow: one strategy/deployment owner, one side,
-all source fills accounted for, distinct exchange-fill identities, exact raw quantity/price,
+all source fills accounted for, distinct exchange-fill identities, matching order/fill market, side and action, exact raw quantity/price,
 explicit exchange `fee_cost`, valid execution times, and final non-provisional $1 binary
 settlement. Missing or inconsistent evidence blocks P&L with named reasons. Stored fee values
 are not proof of actual fees: the source executor sometimes substitutes an estimate.
@@ -111,7 +111,7 @@ Primary API references checked 2026-10-08:
 [historical market](https://docs.kalshi.com/api-reference/historical/get-historical-market),
 [fills](https://docs.kalshi.com/api-reference/portfolio/get-fills).
 
-Validation: 87 catalog/economics/session-system tests passed; Ruff, JavaScript syntax and
+Validation: 89 catalog/economics/session-system tests passed; Ruff, JavaScript syntax and
 whitespace checks passed. A temporary local benchmark with 150,000 synthetic contexts took
 5.64 seconds for an atomic snapshot batch and 1.52 seconds to count/filter a 100-item API page;
 peak process RSS was 46.0 MB and status JSON 471 bytes. This tests storage/API mechanics with
