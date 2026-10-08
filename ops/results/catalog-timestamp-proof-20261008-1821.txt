@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-timestamp-proof-20261008-1821
-# code 3d662500ffe6b6d2f3c8847b14f6d9abeb5aa28d · started 2026-10-08T18:20:26Z
-market_ticker                   filled_at                         exchange_created_time        exchange_ts  exchange_count  exchange_fee  order_created_at                  strategy   fill_equals_order_created_at
-------------------------------  --------------------------------  ---------------------------  -----------  --------------  ------------  --------------------------------  ---------  ----------------------------
-KXINXU-26AUG10H1600-T7774.9999  2026-08-10 20:03:25.875334+00:00  2026-08-10T19:59:55.567904Z  1786391995   1.00            0.000000      2026-08-10 16:52:50.869140+00:00  mmsell10b  False                       
-
-(1 row)
