@@ -78,8 +78,38 @@ assessments use a separate v2 method scope; old snapshots remain immutable. Actu
 fee, ownership, inventory, settlement and confidence requirements remain enforced.
 
 `GET /v1/live-economics` returns market-level results/reasons, paginated like review migrations.
-The corresponding MMSELL assessments use method `exclusive-binary-ledger-v2` and maturity
+The corresponding MMSELL assessments use method `exclusive-binary-ledger-v3` and maturity
 `live_attributed_source_ledger`. Existing paper and raw live-fill assessments remain distinct.
+
+### Verified fractional quantities
+
+The source executor's convenience quantity column uses `int(round(float(count_fp)))`.
+Real fractional fills can therefore become whole numbers, including zero, while the exact
+exchange quantity remains in the raw payload. The v3 catalog restores that exact Decimal
+quantity only after the canonical order/fill identity, direction and price checks above pass.
+The raw quantity must be positive, use at most two decimal places, and either equal the source
+column or reproduce its known rounding exactly. Unexplained differences remain blocked.
+Legacy fills without canonical proof retain exact-match requirements. Reference:
+https://docs.kalshi.com/getting_started/fixed_point_migration.
+
+This correction affects the catalog's calculation copy only. It does not rewrite source or
+imported evidence, estimate fees, relax ownership or change confidence requirements. Results
+identify `verified-fixed-point-source-rounding-v1` and count restored fills. Assessments use
+a separate v3 scope; historical v2 snapshots remain immutable. The existing live projection
+already contains the required proof, so this release needs no additional import replay.
+
+SELECT-only audit at 16:58 UTC on 2026-10-08: all 85 quantity mismatches across 47 markets
+were explained by positive fractional rounding; 41 fills had rounded to zero. All 2,833 scoped
+fills contained explicit nonnegative exchange fees. These are source observations, not a
+promise that every affected market becomes attributable after release. Ownership audit at
+17:00 UTC found 17 markets with multiple executed owners and another 22 with multiple order
+owners but only one executed owner; all 39 remain blocked under the exclusive-owner policy.
+Receipts: `ops/results/catalog-fractional-proof-20261008-1700b.txt` and
+`ops/results/catalog-shared-owner-proof-20261008-1705.txt`. Ops returned to noop.
+
+Runtime logs include at most five public market tickers for each quantity, actual-cost,
+ownership or fill-after-settlement exception. They exclude private execution identifiers,
+payloads and P&L. This makes rare residual conflicts traceable without weakening their guards.
 
 ## Completion, maturity and confidence
 
@@ -109,9 +139,9 @@ claiming that those contexts are unique markets or validated independent outcome
 
 ## Release and verification
 
-1. Owner accepts/merges the PR. Deploy its tested commit to **market-catalog only**; Railway
-   currently pins the earlier storage-diagnostics branch, so a default-branch merge alone
-   does not update that service. Keep the existing volume, token and SELECT-only source URL.
+1. Owner accepts/merges the PR. Deploy its tested commit to **market-catalog only**. Railway
+   now follows the repository default branch with auto-deploy enabled; verify the deployed
+   SHA after merge. Keep the existing volume, token and SELECT-only source URL.
 2. Confirm health, seed migration counts, live replay and `discovery:live_outcomes` freshness.
    Use authenticated endpoints; never put tokens in a URL or commit.
 3. Verify source-ID coverage again after replay. Inspect attributable/blocked market counts
@@ -140,3 +170,10 @@ whitespace checks passed. A temporary local benchmark with 150,000 synthetic con
 peak process RSS was 46.0 MB and status JSON 471 bytes. This tests storage/API mechanics with
 small synthetic documents, not production collector memory, source-query plans or attribution.
 Production verification remains the release checklist above.
+
+2026-10-08 continuation: #561 is deployed as `8a94eebec5cc840ca78ce65c9773d1fccdb65e04`;
+the direction-proof replay caught up. Fractional v3 validation: 135 catalog/economics/session
+checks passed plus Ruff. Fixtures cover source rounding (including ties and zero), exact
+fractional partial exits, unexplained differences, ownership/identity/actual-fee guards and
+bounded public exception diagnostics. Production v3 attribution remains unverified until
+this release is merged and deployed; confidence and qualification remain withheld.
