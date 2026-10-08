@@ -167,7 +167,80 @@
   details.sec>summary{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
     color:var(--muted);font-weight:600;margin:22px 0 10px;padding:0}
 
+  /* ---- Total P&L chart ----------------------------------------------------------------
+     Chart-only series colours, validated (dataviz validate_palette.js, dark, surface
+     #181b24): lightness band, chroma, CVD and contrast all PASS. The page tokens above are
+     a step lighter and fail the dark lightness band as a plotted set, so they stay for
+     chips/tags and these are used for marks. */
+  .pnlp{--c-live:#6a87f5;--c-paper:#bb8a2c;--c-gap:#bb63ca;padding:12px 14px;
+    display:flex;flex-direction:column;gap:10px}
+  .pnl-top{display:flex;align-items:flex-start;gap:12px}
+  .pnl-stats{display:flex;flex-wrap:wrap;gap:8px 26px;flex:1;min-width:0}
+  .stat{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .stat .k{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .stat .k i{width:14px;height:2px;border-radius:1px;display:inline-block}
+  .stat .v1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .stat .v2{font-size:15px;font-weight:600}
+  .stat .sub{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .fsbtn{display:inline-flex;align-items:center;gap:6px;flex:none;border:1px solid var(--line);
+    color:var(--muted);padding:6px 10px}
+  .fsbtn:hover{color:var(--text)}
+  .seg{display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:2px;width:max-content;max-width:100%}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:none;border:0;background:transparent;color:var(--muted);padding:6px 11px;
+    border-radius:7px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;min-height:32px}
+  .seg button[aria-pressed="true"]{background:var(--panel3);color:var(--text)}
+  .pnl-ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip.more{color:var(--muted)}
+  .chip{display:inline-flex;align-items:center;gap:7px;border-radius:16px;padding:5px 11px;
+    font-size:12px;color:var(--dim);background:transparent;border:1px solid var(--line);min-height:30px}
+  .chip svg{flex:none}
+  .chip[aria-pressed="true"]{color:var(--text);background:var(--panel2);border-color:#3d445a}
+  .chip[aria-pressed="false"] svg{opacity:.45}
+  .chip.opt{font-style:normal}
+  .chipsep{width:1px;align-self:stretch;background:var(--line);margin:2px 2px}
+  .pnlbox{position:relative;height:clamp(300px,52vh,560px);min-height:0}
+  .pnlbox.dimmed svg{opacity:.45;transition:opacity .2s}
+  .pnlbox svg{display:block;touch-action:pan-y}
+  .pnlbox .empty{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center}
+  .pnl-foot{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;font-size:12px}
+  .pnlmore>summary{font-size:12px}
+  .pnlmore[open]{flex-basis:100%}
+  #pnltable table{font-size:12px} #pnltable td,#pnltable th{padding:4px 8px}
+  #pnltable{max-height:320px;overflow:auto}
+  .tip .row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .tip .row i{width:14px;height:2px;border-radius:1px;flex:none}
+  .tip .row span{color:var(--muted);flex:1}
+  .tip .row b{display:inline;margin:0;color:var(--text);font-weight:700}
+  /* Full screen: the panel takes the whole viewport and the plot takes whatever the
+     controls leave, so it fills a phone held either way up. Native fullscreen is asked for
+     where the browser has it; iPhone Safari does not, and this overlay is the same view. */
+  .pnlp.fs{position:fixed;inset:0;z-index:50;border-radius:0;border:0;
+    padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+            max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+    overflow:hidden}
+  .pnlp.fs .pnlbox{flex:1 1 auto;height:auto}
+  .pnlp.fs .pnl-foot{display:none}
+  body.pnl-fs{overflow:hidden}
+  @media(orientation:landscape) and (max-height:500px){
+    .pnlp.fs{gap:6px}
+    .pnlp.fs .stat .v1{font-size:17px} .pnlp.fs .stat .v2{font-size:13px}
+    .pnlp.fs .stat .sub{display:none}
+    .pnlp.fs .seg button{padding:4px 9px;min-height:28px}
+    .pnlp.fs .chip{padding:3px 9px;min-height:26px}
+    .pnlp.fs .pnl-stats{display:flex} .pnlp.fs .seg{width:auto}
+    .pnlp.fs .seg button{flex:none;padding:4px 8px}
+  }
+
   @media(max-width:700px){
+    .pnlp{padding:10px}
+    .fsbtn .fslbl{display:none}
+    .pnl-stats{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:8px}
+    .stat .v1{font-size:19px} .stat .v2{font-size:15px}
+    .stat .sub{font-size:10px;white-space:normal}
+    .seg{width:100%} .seg button{flex:1 1 0;padding:6px 0;font-size:12px;min-width:30px}
     .bar{grid-template-columns:110px 1fr 78px}
     .feed li{grid-template-columns:60px 46px 1fr;padding:7px 10px}
     /* A phone has no room to give a permanent bar. Even one line of it is a tenth of
@@ -233,29 +306,29 @@
 
   <!-- 2. P&L overlay -->
   <div class="m-chart">
-  <h2>P&amp;L over time <span class="dim" style="text-transform:none;letter-spacing:0">— live vs paper, marked off the same tick</span></h2>
-  <div class="panel pad">
-    <div class="toolbar">
-      <label>Series <select id="sermode">
-        <option value="gross">Gross (realized + unrealized)</option>
-        <option value="net">Net of open-position fees</option>
-      </select></label>
-      <label>Window <select id="serwin">
-        <option value="">Whole run</option>
-        <option value="6">Last 6h</option><option value="24">Last 24h</option>
-        <option value="72" selected>Last 3 days</option>
-      </select></label>
+  <h2>Total P&amp;L <span class="dim" style="text-transform:none;letter-spacing:0">— realized + unrealized, live and paper marked off the same tick</span></h2>
+  <section class="panel pnlp" id="pnlpanel" aria-label="Total P&L over time">
+    <div class="pnl-top">
+      <div class="pnl-stats" id="pnlstats"></div>
+      <button class="ghost fsbtn" id="pnlfs" type="button" aria-pressed="false"
+        title="Full screen (turn your phone sideways for the widest view)">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="fslbl">Full screen</span></button>
+    </div>
+    <div class="pnl-ctl">
+      <div class="seg" id="pnlrange" role="group" aria-label="Time window"></div>
+      <div class="chips" id="pnlseries" role="group" aria-label="Lines shown"></div>
+    </div>
+    <div class="pnlbox" id="pnlchart"></div>
+    <div class="tip" id="pnltip" role="status"></div>
+    <div class="pnl-foot">
       <span class="dim" id="sermeta"></span>
+      <details class="pnlmore"><summary>About this chart</summary>
+        <div class="note" id="pnlnote"></div></details>
+      <details class="pnlmore" id="pnltablebox"><summary>Data table</summary>
+        <div class="scroll" id="pnltable"></div></details>
     </div>
-    <div class="legend">
-      <span><i style="background:var(--live)"></i>Live</span>
-      <span><i style="background:var(--paper)"></i>Paper twin</span>
-      <span><i style="background:var(--diff)"></i>Paper − live</span>
-      <span><i style="background:var(--dim)"></i>data gap</span>
-    </div>
-    <div id="pnlchart"></div>
-    <div class="note" id="pnlnote"></div>
-  </div>
+  </section>
 
   <!-- 3. price + execution -->
   <h2>Price &amp; execution</h2>
@@ -417,7 +490,7 @@ function dur(sec){
 
 const S = {
   runs:null, history:null, run:null, series:null, orders:null, events:null,
-  tag:null, serMode:"gross", serWin:"72", ticker:"",
+  tag:null, serWin:"72", ticker:"",
   ordEnv:"", ordOffset:0, evCat:"all", evEnv:"", evCursor:null, evItems:[],
   divGroup:true, divExpanded:new Set(), incumbent:null,
 };
@@ -707,38 +780,328 @@ function lineChart(el, opts){
   svg.addEventListener("touchend", ()=>{ tip.style.display="none"; });
 }
 
+/* ============ Total P&L chart ============
+   Drawn at the container's real pixel size (no stretched viewBox), so text stays crisp and
+   undistorted at any width, and redrawn on resize/rotation. The data is the same honest
+   reconstruction as before (series.build_pnl_series); only the reading of it changed. */
+const PNL_WINDOWS = [["1","1H"],["2","2H"],["3","3H"],["6","6H"],["12","12H"],["24","24H"],
+  ["72","3D"],["168","1W"],["336","2W"],["","All"]];
+// key(mode) -> point field; colour follows the ENTITY (live / paper), dash encodes the part.
+const PNL_SERIES = [
+  {id:"live",  label:"Live",              col:"--c-live",  dash:"",      w:2.25, key:m=>`live_${m}`},
+  {id:"paper", label:"Paper twin",        col:"--c-paper", dash:"",      w:2,    key:m=>`paper_${m}`},
+  {id:"gap",   label:"Gap (paper − live)",col:"--c-gap",   dash:"5 4",   w:1.5,  key:m=>`gap_${m}`},
+  {id:"lreal", label:"Live realized",     col:"--c-live",  dash:"7 4",   w:1.5,  key:()=>"live_realized"},
+  {id:"lunr",  label:"Live unrealized",   col:"--c-live",  dash:"1.5 3.5",w:1.75,key:()=>"live_unrealized"},
+  {id:"preal", label:"Paper realized",    col:"--c-paper", dash:"7 4",   w:1.5,  key:()=>"paper_realized"},
+  {id:"punr",  label:"Paper unrealized",  col:"--c-paper", dash:"1.5 3.5",w:1.75,key:()=>"paper_unrealized"},
+];
+const PNL_OPTS = [
+  {id:"net",    label:"Net of fees", title:"Subtract entry fees still sitting in open positions"},
+  {id:"trades", label:"Trades",      title:"Entries and settlements along the time axis"},
+  {id:"gaps",   label:"Data gaps",   title:"Shade points where a held market had no mark"},
+];
+const PNL = {on:new Set(["live","paper"]), opt:new Set(["gaps"]), fs:false, more:false, view:null};
+try{
+  const saved = JSON.parse(localStorage.getItem("livedash.pnl") || "null");
+  if(saved){
+    if(PNL_WINDOWS.some(w => w[0] === saved.win)) S.serWin = saved.win;
+    if(Array.isArray(saved.on) && saved.on.length) PNL.on = new Set(saved.on.filter(i => PNL_SERIES.some(s => s.id === i)));
+    if(Array.isArray(saved.opt)) PNL.opt = new Set(saved.opt.filter(i => PNL_OPTS.some(o => o.id === i)));
+  }
+}catch(e){ /* storage unavailable: defaults */ }
+function savePnlPrefs(){
+  try{ localStorage.setItem("livedash.pnl", JSON.stringify({win:S.serWin, on:[...PNL.on], opt:[...PNL.opt]})); }
+  catch(e){ /* storage unavailable */ }
+}
+const pnlMode = () => PNL.opt.has("net") ? "net" : "gross";
+const cssv = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
+const dashIcon = (color, dash, w=2) =>
+  `<svg width="18" height="8" aria-hidden="true"><line x1="1" x2="17" y1="4" y2="4" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/></svg>`;
+
+function renderPnlControls(){
+  $("#pnlrange").innerHTML = PNL_WINDOWS.map(([v,l]) =>
+    `<button type="button" data-win="${v}" aria-pressed="${S.serWin===v}">${l}</button>`).join("");
+  const panel = $("#pnlpanel");
+  const chip = s => `<button type="button" class="chip" data-ser="${s.id}" aria-pressed="${PNL.on.has(s.id)}">${dashIcon(cssv(panel, s.col), s.dash, 2)}${esc(s.label)}</button>`;
+  const primary = PNL_SERIES.slice(0, 3), extra = PNL_SERIES.slice(3);
+  // Everything past the three totals sits behind "More" so the plot keeps the screen; the
+  // count says how many hidden choices are switched on, so nothing is silently active.
+  const hiddenOn = extra.filter(s => PNL.on.has(s.id)).length + PNL.opt.size;
+  $("#pnlseries").innerHTML = primary.map(chip).join("") +
+    `<button type="button" class="chip more" data-more="1" aria-expanded="${PNL.more}">${PNL.more ? "Less ▴" : `More${hiddenOn ? ` · ${hiddenOn}` : ""} ▾`}</button>` +
+    (PNL.more ? extra.map(chip).join("") + `<span class="chipsep" aria-hidden="true"></span>` + PNL_OPTS.map(o =>
+      `<button type="button" class="chip opt" data-opt="${o.id}" aria-pressed="${PNL.opt.has(o.id)}" title="${esc(o.title)}">${esc(o.label)}</button>`
+    ).join("") : "");
+}
+
+// Points carry both modes; the net-mode gap is derived here so every series is a plain key.
+function pnlPoints(){
+  const p = S.series && S.series.pnl; if(!p) return [];
+  return p.points.map(pt => ({...pt, t:new Date(pt.at).getTime(),
+    gap_gross: pt.difference,
+    gap_net: has(pt.paper_net) && has(pt.live_net) ? pt.paper_net - pt.live_net : null}));
+}
+
+function niceStep(raw){
+  const e = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / e;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+}
+const MIN = 60e3, HR = 3600e3, DAY = 86400e3;
+const TSTEPS = [5*MIN,10*MIN,15*MIN,30*MIN,HR,2*HR,3*HR,6*HR,12*HR,DAY,2*DAY,7*DAY];
+function timeTicks(x0, x1, maxTicks){
+  const step = TSTEPS.find(s => (x1-x0)/s <= maxTicks) || 14*DAY;
+  const off = new Date(x0).getTimezoneOffset()*MIN;   // align to LOCAL clock boundaries
+  const out = [];
+  for(let t = Math.ceil((x0 - off)/step)*step + off; t <= x1; t += step) out.push(t);
+  return {ticks:out, step};
+}
+function tickLabel(t, step){
+  const d = new Date(t);
+  const date = d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  if(step >= DAY) return date;
+  const time = d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  const midnight = d.getHours() === 0 && d.getMinutes() === 0;
+  return midnight ? date : time;
+}
+const money2 = v => !has(v) ? "—" : (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
+const smoney = v => !has(v) ? "—" : (v > 0 ? "+" : "") + money2(v);
+const fmtWhen = t => new Date(t).toLocaleString(undefined,
+  {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+
+function renderPnlStats(pts){
+  const m = pnlMode(), last = pts[pts.length-1], first = pts[0];
+  const panel = $("#pnlpanel");
+  const k = (label, col) => `<span class="k"><i style="background:${cssv(panel,col)}"></i>${esc(label)}</span>`;
+  if(!last){ $("#pnlstats").innerHTML = ""; return; }
+  const lv = last[`live_${m}`], pv = last[`paper_${m}`], gv = last[`gap_${m}`];
+  const chg = has(lv) && has(first[`live_${m}`]) ? lv - first[`live_${m}`] : null;
+  const winLabel = (PNL_WINDOWS.find(w => w[0] === S.serWin) || [,"window"])[1];
+  $("#pnlstats").innerHTML =
+    `<div class="stat">${k("Live total","--c-live")}
+       <span class="v1 ${sign(lv)}">${esc(smoney(lv))}</span>
+       <span class="sub">${esc(smoney(chg))} over ${esc(winLabel === "All" ? "the run" : winLabel)}</span></div>
+     <div class="stat">${k("Paper twin","--c-paper")}
+       <span class="v2 ${sign(pv)}">${esc(smoney(pv))}</span>
+       <span class="sub">realized ${esc(smoney(last.paper_realized))}</span></div>
+     <div class="stat">${k("Gap","--c-gap")}
+       <span class="v2">${esc(smoney(gv))}</span>
+       <span class="sub">paper − live</span></div>`;
+  $("#pnlstats").querySelector(".stat .sub").title = `realized ${smoney(last.live_realized)}, unrealized ${smoney(last.live_unrealized)}`;
+}
+
 function renderPnlChart(){
   const s = S.series; if(!s) return;
-  const p = s.pnl, mode = S.serMode;
-  const colors = {run_start:"#9aa3b2", entry:"#3ecf8e", exit:"#c86dd7", unfilled_order:"#f2555a"};
-  lineChart($("#pnlchart"), {
-    points: p.points,
-    emptyNote:" The series starts when the orderbook capture has data for a held market.",
-    markers: (p.markers||[]).map(mk => ({...mk, color: colors[mk.kind] || "#6c7583"})),
-    series: [
-      {key:`live_${mode}`, color:"var(--live)", width:2},
-      {key:`paper_${mode}`, color:"var(--paper)", width:2},
-      {key:"difference", color:"var(--diff)", width:1.5, dash:"4 3"},
-    ],
-    fmtY: v => (v<0?"−$":"$") + Math.abs(v).toFixed(2),
-    aria:"Live and paper profit and loss over time",
-    fmtTip: pt => `<b>${esc(dayTime(pt.at))}</b>`
-      + `Live &nbsp;<b>${esc(signedUsd(pt[`live_${mode}`]))}</b><br>`
-      + `Paper <b>${esc(signedUsd(pt[`paper_${mode}`]))}</b><br>`
-      + `Diff &nbsp;<b>${esc(signedUsd(pt.difference))}</b>`
-      + (pt.partial ? `<br><span style="color:var(--warn)">partial: a market had no mark</span>` : ""),
-  });
-  const ex = s.excursions || {};
-  $("#sermeta").textContent = `${p.points.length} points`;
+  renderPnlControls();
+  const pts = pnlPoints();
+  renderPnlStats(pts);
+  drawPnl(pts);
+  renderPnlTable(pts);
+  const p = s.pnl, ex = s.excursions || {};
+  $("#sermeta").textContent = pts.length ? `${pts.length} points · ${fmtWhen(pts[0].t)} → ${fmtWhen(pts[pts.length-1].t)}` : "";
   $("#pnlnote").innerHTML =
     esc(p.note) +
     `<br>Reconstructed from real timestamped records — entries, settlements and the
      <code>mmsell_position_ticks</code> orderbook capture read strictly as-of each point.
-     The current price is never applied backwards. Coverage begins when that capture has data.` +
+     The current price is never applied backwards. Coverage begins when that capture has data.
+     Times are shown in your local time zone.` +
     (ex.live ? `<br>Live max favourable ${esc(signedUsd(ex.live.max_favorable_usd))},
        max adverse ${esc(signedUsd(ex.live.max_adverse_usd))},
        max drawdown ${esc(signedUsd(ex.live.max_drawdown_usd))},
        ${has(ex.live.time_profitable_pct)?esc(ex.live.time_profitable_pct)+"% of samples above water":"time above water n/a"}.` : "");
+}
+
+function drawPnl(pts){
+  const el = $("#pnlchart");
+  el.classList.remove("dimmed");
+  if(!pts) pts = pnlPoints();
+  const W = Math.max(280, Math.floor(el.clientWidth)), H = Math.max(200, Math.floor(el.clientHeight));
+  if(!pts.length){
+    el.innerHTML = `<div class="empty"><b>No data in this window.</b> The series starts when the orderbook capture has data for a held market. Try a longer window.</div>`;
+    PNL.view = null; return;
+  }
+  const panel = $("#pnlpanel"), m = pnlMode();
+  const shown = PNL_SERIES.filter(s => PNL.on.has(s.id))
+    .map(s => ({...s, k:s.key(m), color:cssv(panel, s.col)}));
+  const narrow = W < 520;
+  const L = narrow ? 50 : 60, R = shown.length ? (narrow ? 58 : 70) : 12, T = 10;
+  const showTrades = PNL.opt.has("trades");
+  const B = 26 + (showTrades ? 14 : 0);
+  const pw = W - L - R, ph = H - T - B;
+  const x0 = pts[0].t, x1 = Math.max(pts[pts.length-1].t, x0 + 1);
+  let vals = [];
+  for(const s of shown) for(const p of pts) if(has(p[s.k])) vals.push(p[s.k]);
+  if(!vals.length) vals = [0];
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  // Auto-scale to the window so a 1-hour view shows its movement; break-even ($0) joins
+  // the scale only when the data comes within a third of a range of it.
+  const near = (hi - lo || 1) / 3;
+  if(lo > 0 && lo <= near) lo = 0;
+  if(hi < 0 && -hi <= near) hi = 0;
+  if(hi - lo < 0.5){ const c = (hi+lo)/2; lo = c - 0.25; hi = c + 0.25; }
+  const nY = Math.max(3, Math.min(8, Math.floor(ph / 52)));
+  const ys = niceStep((hi - lo) / nY);
+  lo = Math.floor(lo / ys) * ys; hi = Math.ceil(hi / ys) * ys;
+  const X = t => L + (t - x0) / (x1 - x0) * pw;
+  const Y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
+  const f = n => n.toFixed(1);
+  const ink = {grid:"#232837", zero:"#4a5169", axis:"#7d8696"};
+  let g = "";
+  // y grid + labels (solid hairlines; the zero line one step stronger)
+  const dec = ys < 0.1 ? 2 : ys < 1 ? (ys % 0.5 ? 2 : 1) : 0;
+  for(let v = lo; v <= hi + ys/2; v += ys){
+    const y = f(Y(v)), z = Math.abs(v) < ys/1000;
+    g += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${z?ink.zero:ink.grid}" stroke-width="1"/>`;
+    g += `<text x="${L-8}" y="${f(Y(v)+4)}" fill="${ink.axis}" font-size="11" text-anchor="end" style="font-variant-numeric:tabular-nums">${esc((v<0?"−$":"$")+Math.abs(z?0:v).toFixed(dec))}</text>`;
+  }
+  // x ticks at local clock boundaries
+  const {ticks, step} = timeTicks(x0, x1, Math.max(2, Math.floor(pw / (narrow ? 70 : 92))));
+  ticks.forEach((t, i) => {
+    const x = f(X(t));
+    g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ph}" stroke="${ink.grid}" stroke-width="1"/>`;
+    g += `<text x="${x}" y="${H-8}" fill="${ink.axis}" font-size="11" text-anchor="middle">${esc(tickLabel(t, step))}</text>`;
+  });
+  // data gaps: contiguous partial runs as faint bands
+  if(PNL.opt.has("gaps")){
+    let start = null;
+    pts.forEach((p, i) => {
+      if(p.partial && start === null) start = i;
+      if((!p.partial || i === pts.length-1) && start !== null){
+        const end = p.partial ? i : i - 1;
+        const xa = X(pts[Math.max(0,start-1)].t), xb = X(pts[Math.min(pts.length-1,end+1)].t);
+        g += `<rect x="${f(xa)}" y="${T}" width="${f(Math.max(2, xb-xa))}" height="${f(ph)}" fill="#8a93a3" opacity=".08"><title>Data gap: a held market had no mark</title></rect>`;
+        start = null;
+      }
+    });
+  }
+  // soft area under the live total, to zero
+  const lt = shown.find(s => s.id === "live");
+  const pathOf = s => { let d = "", pen = false;
+    for(const p of pts){ if(!has(p[s.k])){ pen = false; continue; }
+      d += `${pen?"L":"M"}${f(X(p.t))},${f(Y(p[s.k]))}`; pen = true; } return d; };
+  if(lt){
+    const d = pathOf(lt);
+    if(d) g += `<defs><linearGradient id="pnlfill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="${lt.color}" stop-opacity=".22"/><stop offset="1" stop-color="${lt.color}" stop-opacity="0"/></linearGradient>
+        <clipPath id="pnlclip"><rect x="${L}" y="${T}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+    const segs = d.split("M").filter(Boolean);
+    for(const sg of segs){
+      const nums = sg.split("L"); const xa = nums[0].split(",")[0], xb = nums[nums.length-1].split(",")[0];
+      const base = f(Math.min(T + ph, Math.max(T, Y(Math.max(lo, Math.min(hi, 0))))));
+      g += `<path d="M${sg}L${xb},${base}L${xa},${base}Z" fill="url(#pnlfill)" clip-path="url(#pnlclip)"/>`;
+    }
+  }
+  // lines: secondary first so the two totals sit on top
+  const order = [...shown].sort((a,b) => (a.id==="live")-(b.id==="live") || (a.id==="paper")-(b.id==="paper"));
+  for(const s of order){
+    g += `<path d="${pathOf(s)}" fill="none" stroke="${s.color}" stroke-width="${s.w}" stroke-dasharray="${s.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  // trades: short ticks in their own band under the axis labels' line
+  if(showTrades){
+    const mk = ((S.series.pnl.markers)||[]).filter(k => k.kind !== "run_start");
+    const by = T + ph + 6;
+    for(const k of mk){
+      const t = new Date(k.at).getTime(); if(t < x0 || t > x1) continue;
+      const c = k.environment === "live" ? cssv(panel,"--c-live") : cssv(panel,"--c-paper");
+      const x = f(X(t)), y = k.environment === "live" ? by : by + 6;
+      g += k.kind === "exit"
+        ? `<circle cx="${x}" cy="${y+2}" r="2" fill="none" stroke="${c}" stroke-width="1.2"><title>${esc(k.label)}</title></circle>`
+        : `<line x1="${x}" x2="${x}" y1="${y}" y2="${y+4}" stroke="${k.kind==="unfilled_order"?"#7d8696":c}" stroke-width="1.5"><title>${esc(k.label)}</title></line>`;
+    }
+  }
+  // direct labels at each line's end, nudged apart so they never overlap
+  const ends = [];
+  for(const s of shown){
+    for(let i = pts.length-1; i >= 0; i--) if(has(pts[i][s.k])){ ends.push({s, v:pts[i][s.k], y:Y(pts[i][s.k])}); break; }
+  }
+  ends.sort((a,b) => a.y - b.y);
+  for(let i = 1; i < ends.length; i++) if(ends[i].y - ends[i-1].y < 14) ends[i].y = ends[i-1].y + 14;
+  const over = ends.length ? ends[ends.length-1].y - (T + ph) : 0;
+  if(over > 0) ends.forEach(e => e.y -= over);
+  for(const e of ends){
+    g += `<line x1="${W-R+2}" x2="${W-R+9}" y1="${f(e.y)}" y2="${f(e.y)}" stroke="${e.s.color}" stroke-width="2" stroke-dasharray="${e.s.dash}"/>`;
+    g += `<text x="${W-R+12}" y="${f(e.y+4)}" fill="#e6e8ee" font-size="11" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(smoney(e.v))}</text>`;
+  }
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Total profit and loss over time, ${esc(shown.map(s=>s.label).join(", "))}">${g}
+      <g id="pnlhover" pointer-events="none"></g>
+      <rect id="pnlhit" x="${L}" y="${T}" width="${pw}" height="${ph + (showTrades?14:0)}" fill="transparent"/></svg>`;
+  PNL.view = {pts, shown, X, Y, L, R, T, ph, pw, W, x0, x1};
+  bindPnlHover(el);
+}
+
+function pnlNearest(pts, t){
+  let a = 0, b = pts.length - 1;
+  while(b - a > 1){ const mid = (a + b) >> 1; if(pts[mid].t < t) a = mid; else b = mid; }
+  return Math.abs(pts[a].t - t) <= Math.abs(pts[b].t - t) ? pts[a] : pts[b];
+}
+function bindPnlHover(el){
+  const svg = el.querySelector("svg"), hov = svg.querySelector("#pnlhover"), tip = $("#pnltip");
+  let hideTimer = null;
+  const hide = () => { hov.innerHTML = ""; tip.style.display = "none"; };
+  const show = ev => {
+    const v = PNL.view; if(!v) return;
+    const box = svg.getBoundingClientRect();
+    const px = ev.clientX - box.left;
+    if(px < v.L - 4 || px > v.W - v.R + 4){ hide(); return; }
+    const t = v.x0 + (Math.min(Math.max(px, v.L), v.L + v.pw) - v.L) / v.pw * (v.x1 - v.x0);
+    const p = pnlNearest(v.pts, t), x = v.X(p.t).toFixed(1);
+    let h = `<line x1="${x}" x2="${x}" y1="${v.T}" y2="${v.T+v.ph}" stroke="#9aa3b2" stroke-width="1" opacity=".6"/>`;
+    for(const s of v.shown) if(has(p[s.k]))
+      h += `<circle cx="${x}" cy="${v.Y(p[s.k]).toFixed(1)}" r="4" fill="${s.color}" stroke="#181b24" stroke-width="2"/>`;
+    hov.innerHTML = h;
+    const rows = v.shown.map(s =>
+      `<div class="row"><i style="background:${s.color}"></i><span>${esc(s.label)}</span><b>${esc(smoney(p[s.k]))}</b></div>`).join("");
+    tip.innerHTML = `<b>${esc(fmtWhen(p.t))}</b>${rows}` +
+      (p.partial ? `<div style="color:var(--warn);margin-top:4px">partial: a held market had no mark</div>` : "");
+    tip.style.display = "block";
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    const cx = box.left + Number(x);
+    let left = cx + 14; if(left + tw > window.innerWidth - 8) left = cx - tw - 14;
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(8, Math.min(window.innerHeight - th - 8, ev.clientY - th/2)) + "px";
+  };
+  svg.addEventListener("pointermove", e => { clearTimeout(hideTimer); show(e); });
+  svg.addEventListener("pointerdown", e => { clearTimeout(hideTimer); show(e); });
+  svg.addEventListener("pointerleave", e => { if(e.pointerType === "mouse") hide(); });
+  svg.addEventListener("pointerup", e => { if(e.pointerType !== "mouse"){ clearTimeout(hideTimer); hideTimer = setTimeout(hide, 2500); } });
+  svg.addEventListener("pointercancel", hide);
+}
+
+// The table twin: the same numbers without hovering, thinned to at most ~120 rows.
+function renderPnlTable(pts){
+  const box = $("#pnltable"); if(!box) return;
+  if(!pts.length){ box.innerHTML = `<div class="empty">No data.</div>`; return; }
+  const m = pnlMode(), step = Math.max(1, Math.ceil(pts.length / 120));
+  const rows = [];
+  for(let i = pts.length - 1; i >= 0; i -= step) rows.push(pts[i]);
+  box.innerHTML = `<table><thead><tr><th>Time</th><th class="r">Live total</th><th class="r">Paper total</th>
+    <th class="r">Gap</th><th class="r">Live realized</th><th class="r">Live unrealized</th></tr></thead><tbody>` +
+    rows.map(p => `<tr><td>${esc(fmtWhen(p.t))}${p.partial?' <span class="dim">·gap</span>':""}</td>
+      <td class="r">${money(p[`live_${m}`])}</td><td class="r">${money(p[`paper_${m}`])}</td>
+      <td class="r">${money(p[`gap_${m}`])}</td><td class="r">${money(p.live_realized)}</td>
+      <td class="r">${money(p.live_unrealized)}</td></tr>`).join("") + `</tbody></table>`;
+}
+
+function setPnlFullscreen(on){
+  const panel = $("#pnlpanel"), btn = $("#pnlfs");
+  PNL.fs = on;
+  if(on && PNL.more){ PNL.more = false; renderPnlControls(); }   // the plot gets the room
+  panel.classList.toggle("fs", on);
+  document.body.classList.toggle("pnl-fs", on);
+  btn.setAttribute("aria-pressed", String(on));
+  btn.querySelector(".fslbl").textContent = on ? "Exit full screen" : "Full screen";
+  btn.title = on ? "Exit full screen (Esc)" : "Full screen (turn your phone sideways for the widest view)";
+  if(on){
+    if(panel.requestFullscreen && !document.fullscreenElement)
+      panel.requestFullscreen({navigationUI:"hide"}).then(() => {
+        if(screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(()=>{});
+      }).catch(()=>{ /* not allowed here (iPhone Safari): the CSS overlay is the full view */ });
+  } else if(document.fullscreenElement){
+    if(screen.orientation && screen.orientation.unlock) try{ screen.orientation.unlock(); }catch(e){}
+    document.exitFullscreen().catch(()=>{});
+  }
+  requestAnimationFrame(() => drawPnl());
 }
 
 function renderPriceChart(){
@@ -1003,7 +1366,10 @@ async function loadRun(gen){
 }
 async function loadSeries(gen){
   const since = S.serWin ? new Date(Date.now()-Number(S.serWin)*3600e3).toISOString() : "";
-  S.series = await getJSON(runUrl("/series", qs({since, ticker:S.ticker})), gen);
+  // Refetch keeps the frame: the previous chart stays, dimmed, until the new one lands.
+  const box = $("#pnlchart"); if(box && box.querySelector("svg")) box.classList.add("dimmed");
+  const points = !S.serWin || Number(S.serWin) >= 72 ? 800 : 500;
+  S.series = await getJSON(runUrl("/series", qs({since, ticker:S.ticker, points})), gen);
   const sel = $("#tickersel");
   const cur = S.ticker || (S.series.price ? S.series.price.ticker : "");
   sel.innerHTML = (S.series.available_tickers||[]).map(t =>
@@ -1196,8 +1562,36 @@ const reload = (sel, fn) => section(GEN, sel, fn);
 $("#runsel").onchange = e => selectRun(e.target.value);
 $("#showretired").onchange = () => renderRunOptions();
 $("#refresh").onclick = () => selectRun(S.tag);
-$("#sermode").onchange = e => { S.serMode = e.target.value; renderPnlChart(); };
-$("#serwin").onchange = e => { S.serWin = e.target.value; reload("#pnlchart", loadSeries); };
+$("#pnlrange").addEventListener("click", e => {
+  const b = e.target.closest("button[data-win]"); if(!b || b.dataset.win === S.serWin) return;
+  S.serWin = b.dataset.win; savePnlPrefs(); renderPnlControls();
+  reload("#pnlchart", loadSeries);
+});
+$("#pnlseries").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.more){ PNL.more = !PNL.more; renderPnlControls(); return; }
+  if(b.dataset.ser){
+    if(PNL.on.has(b.dataset.ser)){ if(PNL.on.size > 1) PNL.on.delete(b.dataset.ser); }
+    else PNL.on.add(b.dataset.ser);
+  } else if(b.dataset.opt){
+    if(PNL.opt.has(b.dataset.opt)) PNL.opt.delete(b.dataset.opt); else PNL.opt.add(b.dataset.opt);
+  } else return;
+  savePnlPrefs();
+  if(S.series) renderPnlChart(); else renderPnlControls();
+});
+$("#pnlfs").onclick = () => setPnlFullscreen(!PNL.fs);
+document.addEventListener("keydown", e => { if(e.key === "Escape" && PNL.fs) setPnlFullscreen(false); });
+// Leaving native fullscreen by the browser's own gesture must also leave the overlay.
+document.addEventListener("fullscreenchange", () => {
+  if(!document.fullscreenElement && PNL.fs) setPnlFullscreen(false);
+});
+{ // redraw at the real size on resize / rotation, at most once a frame
+  let raf = 0;
+  const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if(S.series) drawPnl(); }); };
+  if(window.ResizeObserver) new ResizeObserver(redraw).observe($("#pnlchart"));
+  else window.addEventListener("resize", redraw);
+}
+renderPnlControls();
 $("#tickersel").onchange = e => { S.ticker = e.target.value; reload("#pricechart", loadSeries); };
 $("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0;
   reload("#ordbody", g => loadOrders(false, g)); };
