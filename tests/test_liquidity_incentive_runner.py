@@ -1160,3 +1160,171 @@ def test_rank_by_projected_payout_sorts_and_drops_hopeless(monkeypatch):
     kept, dropped = run.rank_by_projected_payout([a, b, c])
     assert [q for _, q in kept] == ["b", "a"]
     assert [q for _, q in dropped] == ["c"]
+
+
+# --- programme discovery inside the runner (WS-024 D1) --------------------------------------
+#
+# The shadow collector on `evo` was the only writer of `incentive_programs`; with it gone the
+# list this book reads froze. The armed runner now refreshes it itself — only when nothing else
+# has, in a savepoint, through the GET-only wrapper, and never at the cost of the cycle.
+
+
+def _listed(pid, ticker, *, hours=48.0):
+    return {"id": pid, "market_id": f"m-{pid}", "market_ticker": ticker,
+            "incentive_type": "liquidity", "incentive_description": "Rest size near the touch.",
+            "start_date": (NOW - timedelta(hours=1)).isoformat(),
+            "end_date": (NOW + timedelta(hours=hours)).isoformat(), "period_reward": 1_000_000,
+            "paid_out": False, "discount_factor_bps": 9000, "target_size_fp": "200.00"}
+
+
+class DiscoveryClient(FakeClient):
+    """FakeClient plus the discovery GETs, counting how often the listing is asked for."""
+
+    def __init__(self, books, programs=()):
+        super().__init__(books)
+        self.programs = list(programs)
+        self.listings: list[str] = []
+
+    def iter_incentive_programs(self, **kw):
+        status = kw.get("status", "active")
+        self.listings.append(status)
+        yield from (self.programs if status == "active" else [])
+
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker, "event_ticker": ticker, "status": "active",
+                           "title": ticker,
+                           "close_time": (NOW + timedelta(hours=240)).isoformat()}}
+
+    def get_series(self, series_ticker):
+        return {"series": {"fee_type": "quadratic", "fee_multiplier": 1.0}}
+
+
+def _cycles(s):
+    return s.scalars(sa_select(m.IncentiveDiscoveryCycle)).all()
+
+
+def _clear_discovery(s):
+    s.execute(sa_delete(m.IncentiveDiscoveryCycle))
+    s.execute(sa_delete(m.IncentiveProgram))
+
+
+def test_a_stale_programme_list_is_refreshed_and_the_new_programme_is_quoted(
+        live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "QUOTE_MODE", "pair")
+    client = DiscoveryClient({"KXTEST-NEW": _book([(3, 500)], [(4, 500)])},
+                             programs=[_listed("p-new", "KXTEST-NEW")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        out = _cycle(client, settings, s)
+        assert out["discovery"]["new"] == 1 and out["discovery"]["errors"] == 0
+        assert client.listings == ["active", "paid_out"]
+        assert len(_cycles(s)) == 1
+        row = s.scalars(sa_select(m.IncentiveProgram)).one()
+        assert row.market_ticker == "KXTEST-NEW" and run._aware(row.last_seen_at) == NOW
+        # Same cycle, fresh list: the new programme is a candidate and gets its pair.
+        assert out["placed"] == 1
+
+
+def test_a_fresh_programme_list_is_left_to_whoever_keeps_it_fresh(live_db, settings):
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        s.add(m.IncentiveDiscoveryCycle(started_at=NOW - timedelta(seconds=60)))
+        s.flush()
+        out = _cycle(client, settings, s)
+        assert "discovery" not in out and client.listings == []
+        assert len(_cycles(s)) == 1
+
+
+def test_a_programme_list_older_than_the_cadence_is_refreshed(live_db, settings):
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        s.add(m.IncentiveDiscoveryCycle(started_at=NOW - timedelta(seconds=301)))
+        s.flush()
+        out = _cycle(client, settings, s)
+        assert out["discovery"]["new"] == 1 and len(_cycles(s)) == 2
+
+
+def test_runner_discovery_is_off_with_its_flag(live_db, settings):
+    settings.liquidity_incentive_runner_discovery = False
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        out = _cycle(client, settings, s)
+        assert "discovery" not in out and client.listings == [] and _cycles(s) == []
+
+
+def test_an_unarmed_runner_runs_no_discovery(live_db, settings):
+    settings.liquidity_incentive_live_enabled = False
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        out = _cycle(client, settings, s)
+        assert out["armed"] is False and client.listings == [] and _cycles(s) == []
+
+
+def test_discovery_goes_through_the_get_only_wrapper(live_db, settings):
+    from kalshi_bot.liquidity_incentive.readonly import IncentiveReadOnlyKalshi
+
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        r.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+    assert isinstance(r._discovery_client, IncentiveReadOnlyKalshi)
+    for name in ("create_events_order", "cancel_events_order", "create_order", "cancel_order"):
+        assert not hasattr(r._discovery_client, name)
+
+
+def test_a_failed_discovery_rolls_back_alone_and_the_book_still_places(
+        live_db, settings, monkeypatch):
+    """The savepoint: whatever the pass wrote before failing is gone, the cycle's own work is
+    not, and the failure is a summary entry rather than an exception."""
+    monkeypatch.setattr(limm, "QUOTE_MODE", "pair")
+    from kalshi_bot.liquidity_incentive import programs as progs
+
+    def half_then_boom(client, session, **kw):
+        session.add(m.IncentiveDiscoveryCycle(started_at=NOW))
+        session.flush()
+        raise RuntimeError("db went away mid-pass")
+
+    monkeypatch.setattr(progs, "run_discovery", half_then_boom)
+    client = DiscoveryClient({"KXTEST-A": _book([(3, 500)], [(4, 500)])})
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        _program(s, "KXTEST-A")
+        out = r.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+        assert "db went away" in out["discovery"]["failed"]
+        assert _cycles(s) == []
+        assert out["placed"] == 1
+    # Not retried every cycle: the next attempt waits for the discovery cadence.
+    calls = []
+    monkeypatch.setattr(progs, "run_discovery", lambda *a, **k: calls.append(1))
+    with db.session_scope() as s:
+        out = r.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
+                      now=NOW + timedelta(seconds=60))
+    assert calls == [] and "discovery" not in out
+
+
+def test_a_full_book_still_refreshes_the_programme_list(live_db, settings, monkeypatch):
+    """The no-slots early return comes after the refresh: a book holding every slot is the
+    one that most needs to know when a programme it rests in has ended."""
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 0)
+    client = DiscoveryClient({}, programs=[_listed("p-x", "KXTEST-X")])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        out = _cycle(client, settings, s)
+        assert out["outcomes"].get(run.SKIP_NO_SLOTS) == 1
+        assert out["discovery"]["new"] == 1
+
+
+def test_runner_discovery_is_bounded_per_pass(live_db, settings):
+    settings.liquidity_incentive_runner_discovery_max_new_terms = 2
+    client = DiscoveryClient({}, programs=[_listed(f"p-{i}", f"KXTEST-{i}") for i in range(5)])
+    with db.session_scope() as s:
+        _clear_discovery(s)
+        out = _cycle(client, settings, s)
+        assert out["discovery"]["new"] == 2 and out["discovery"]["deferred"] == 3
+        assert len(s.scalars(sa_select(m.IncentiveProgram)).all()) == 2

@@ -234,6 +234,53 @@ def test_discovery_failure_is_a_cycle_row_not_an_exception(settings):
         assert cyc.errors == 1 and "boom" in cyc.notes_json["fetch"]
 
 
+def test_a_bounded_poll_defers_new_terms_without_losing_or_retiring_them(settings):
+    """WS-024 D1: `max_new_terms` bounds the GETs one poll spends. A programme past the bound
+    is left exactly as it was — its current row not superseded, not bumped and not marked
+    disappeared — so the next poll resolves it."""
+    _db(settings)
+    client = _ReadClient(programs=[_program(pid="p1", ticker="KXT-A")])
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    client.programs = [_program(pid="p1", ticker="KXT-A", reward=2_000_000),
+                       _program(pid="p2", ticker="KXT-B"), _program(pid="p3", ticker="KXT-C")]
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=5), max_new_terms=1,
+                             load_current=False)
+        assert (r.changed_terms, r.new_terms, r.deferred, r.disappeared) == (1, 0, 2, 0)
+        assert r.current == []
+        cyc = s.scalars(select(m.IncentiveDiscoveryCycle).order_by(
+            m.IncentiveDiscoveryCycle.id.desc())).first()
+        assert cyc.notes_json["deferred_new_terms"] == 2
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=10), max_new_terms=1)
+        assert (r.new_terms, r.deferred) == (1, 1)
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=15), max_new_terms=1)
+        assert (r.new_terms, r.changed_terms, r.deferred) == (1, 0, 0)
+        assert sorted(p.program_id for p in pg.current_programs(s)) == ["p1", "p2", "p3"]
+        p1 = [p for p in pg.current_programs(s) if p.program_id == "p1"]
+        assert len(p1) == 1 and p1[0].period_reward_usd == 200
+
+
+def test_a_bounded_poll_defers_a_changed_programme_with_its_old_row_intact(settings):
+    _db(settings)
+    client = _ReadClient(programs=[_program(pid="p1", ticker="KXT-A"),
+                                   _program(pid="p2", ticker="KXT-B")])
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    client.programs = [_program(pid="p1", ticker="KXT-A", reward=3_000_000),
+                       _program(pid="p2", ticker="KXT-B", reward=3_000_000)]
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=5), max_new_terms=1)
+        assert (r.changed_terms, r.deferred) == (1, 1)
+        p2 = s.scalars(select(m.IncentiveProgram).where(
+            m.IncentiveProgram.program_id == "p2")).one()
+        assert p2.superseded_at is None and p2.disappeared_at is None
+        assert p2.period_reward_usd == 100
+        assert p2.last_seen_at.replace(tzinfo=None) == T0.replace(tzinfo=None)
+
+
 def test_fee_rule_from_series_variants():
     assert pg.fee_rule_from_series({"fee_type": "quadratic_with_maker_fees", "fee_multiplier": 2.0}).maker_rate == 0.035
     assert pg.fee_rule_from_series({"fee_type": "quadratic", "fee_multiplier": 1.0}).maker_rate == 0.0

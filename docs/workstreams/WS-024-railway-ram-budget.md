@@ -1,9 +1,9 @@
 # WS-024 — Railway RAM budget: ~$15/month, $10 stretch
 
-**Phase:** READY_TO_BUILD
+**Phase:** BUILDING
 **Status:** Active
 **Created:** 2026-10-08
-**Updated:** 2026-10-08
+**Updated:** 2026-10-08 (step 1 built)
 **Build OS:** v0.12
 **Session role:** Live Ops (`.claude/sessions/live-ops.md`)
 
@@ -141,9 +141,49 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
 Inline: the Acceptance Checks above, worked in order **1 → 3 → 2 → 4 → 5**. Item 1 is the
 real-money/research blocker; 3 is the cheapest; 2 needs D2.
 
+## RAM log (Railway `get-service-metrics`, `MEMORY_USAGE_GB`)
+
+Every step records a before and an after here. Windows end at the stated time.
+
+### Baseline — before step 1 (24h to 2026-10-08 ~02:45Z)
+
+| Service | 24h avg | 24h max | Limit | Note |
+|---|---|---|---|---|
+| Postgres | **1.24** | 3.43 | 2.0 | 6h avg **1.50** (min 0.75, max 1.77) — above the 0.8 GB the handoff saw; the 24h window still includes pre-cap samples |
+| main | 0.42 | 0.85 | 32 | |
+| market-catalog | **1.00** | 1.00 | 1.0 | pinned at its limit all day; disk 11.3 GB |
+| live-dash | 0.28 | 0.71 | 32 | |
+| website | 0.07 | 0.14 | 32 | |
+| **Total** | **≈ 3.0 GB ≈ $30/mo** | | | target ≤ 1.5 GB |
+
+### Step 1 — discovery restored in `main`
+
+- Before: as baseline (main 0.42 avg / 0.85 max; Postgres 1.24 avg).
+- After: _pending — measure 24h after the PR deploys._ Expect a small rise in `main` (one pass
+  every 5 min loads ~36k light terms rows and the ~36k-programme listing, transiently) and in
+  Postgres (the discovery write churn the evo service used to generate returns).
+
 ## Implementation State
 
-PR #547 merged (precursor). Nothing from this workstream is built yet.
+PR #547 merged (precursor).
+
+**Step 1 (D1) — built, PR open, owner approved the live-runner edit in-session 2026-10-08.**
+
+- `IncentiveLiveRunner._refresh_programs` runs after exits and before every read of the
+  programme list (so a full book still refreshes). It runs only when the runner is armed, the
+  flag `LIQUIDITY_INCENTIVE_RUNNER_DISCOVERY` (default true) is on, and no
+  `incentive_discovery_cycles` row is newer than `LIQUIDITY_INCENTIVE_DISCOVERY_SECONDS` (300 s).
+- REST only, through `IncentiveReadOnlyKalshi`; inside `session.begin_nested()`; a failure is
+  logged (`incentive runner discovery failed`), returned in the cycle summary, and retried on
+  the cadence, not every cycle.
+- **Added beyond D1, for the real-money cycle:** a per-pass bound,
+  `LIQUIDITY_INCENTIVE_RUNNER_DISCOVERY_MAX_NEW_TERMS` (default 100). Measured on the evo
+  history (ops `ws024-disc-1`, 2026-09-29→10-07): passes averaged 12–17 s, but spiked to
+  ~250 s with up to ~4,800 new/changed terms (two GETs each). Past the bound a programme is
+  deferred to the next pass with its current row untouched; steady state (~15–25 per pass)
+  never reaches it. The catch-up after the 2026-10-07 freeze drains at ≤ 1,200 terms/hour.
+- `run_discovery(load_current=False)` skips the unfiltered current-programmes load the runner
+  never reads (the read #547 cut elsewhere).
 
 ## Review State
 
@@ -174,5 +214,7 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
 
 ## Next Step
 
-Live Ops session: get the owner's in-session approval for D1, then build and test the runner
-discovery fallback and open its PR.
+Owner merges the step-1 PR. Then Live Ops verifies acceptance check 1 (fresh cycle row < 10 min,
+`last_seen_at` advancing, no `incentive runner discovery failed` / `incentive smoke cycle
+failed` in `main` logs, `deferred_new_terms` draining to zero), records the after-RAM above,
+and moves to step 3 (live-dash / website sleep — verify no background work first).
