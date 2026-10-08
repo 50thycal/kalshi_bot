@@ -135,6 +135,11 @@ class Store:
     def put_state(db, key, value):
         db.execute("INSERT OR REPLACE INTO state VALUES (?,?)", (key, encode(value)))
 
+    @staticmethod
+    def _state_in(db, key):
+        row = db.execute("SELECT document FROM state WHERE key=?", (key,)).fetchone()
+        return unpack(row[0]) if row else None
+
     def state(self, key, default=None):
         with self.connect() as db:
             row = db.execute("SELECT document FROM state WHERE key=?", (key,)).fetchone()
@@ -334,11 +339,25 @@ class Store:
     def evidence_page(self, source, records, cursor, coverage=None):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            changed = 0
             for record in records:
+                # A reconciliation pass re-reads rows already held. An identical row is not a
+                # change: rewriting it churns pages and made every pass look like new evidence.
+                existing = db.execute(
+                    "SELECT document FROM evidence WHERE source=? AND source_id=?",
+                    (source, record["id"]),
+                ).fetchone()
+                if existing is not None and encode(unpack(existing[0])) == encode(record):
+                    continue
                 series = record["market_ticker"].split("-", 1)[0]
                 db.execute(
                     "INSERT OR REPLACE INTO evidence VALUES (?,?,?,?)",
                     (source, record["id"], series, pack(record)),
+                )
+                changed += 1
+            if changed:
+                self.put_state(
+                    db, "evidence:changes", (self._state_in(db, "evidence:changes") or 0) + changed
                 )
             if coverage is not None:
                 fingerprint = hashlib.sha256()
@@ -615,16 +634,26 @@ class Store:
             )
         return len(rows)
 
-    def storage(self):
-        """Measure stored payloads and reusable pages without inflating documents."""
+    def storage(self, detail=True, previous=None):
+        """Measure stored payloads and reusable pages without inflating documents.
+
+        `detail=True` reads every stored document to sum its bytes: a full pass over the file.
+        `detail=False` measures only the file, pages and volume, and carries the per-table
+        figures (and when they were taken) from `previous` — run every few minutes, the full
+        pass kept the whole file hot in memory."""
         with self.connect() as db:
             tables = {}
-            for table in DOCUMENT_TABLES:
-                row = db.execute(
-                    f"SELECT count(*),coalesce(sum(length(CAST(document AS BLOB))),0),"
-                    f"coalesce(sum(typeof(document)='blob'),0) FROM {table}"
-                ).fetchone()
-                tables[table] = {"rows": row[0], "document_bytes": row[1], "compressed": row[2]}
+            if detail:
+                for table in DOCUMENT_TABLES:
+                    row = db.execute(
+                        f"SELECT count(*),coalesce(sum(length(CAST(document AS BLOB))),0),"
+                        f"coalesce(sum(typeof(document)='blob'),0) FROM {table}"
+                    ).fetchone()
+                    tables[table] = {
+                        "rows": row[0], "document_bytes": row[1], "compressed": row[2]
+                    }
+            else:
+                tables = dict((previous or {}).get("tables") or {})
             page_size = db.execute("PRAGMA page_size").fetchone()[0]
             pages = db.execute("PRAGMA page_count").fetchone()[0]
             free_pages = db.execute("PRAGMA freelist_count").fetchone()[0]
@@ -636,8 +665,12 @@ class Store:
                     files[suffix or "database"] = path.stat().st_size
                 except FileNotFoundError:
                     files[suffix or "database"] = 0
+        captured = now()
         return {
-            "captured_at": now(),
+            "captured_at": captured,
+            "tables_captured_at": captured if detail else (previous or {}).get(
+                "tables_captured_at", (previous or {}).get("captured_at")
+            ),
             "tables": tables,
             "file_bytes": files,
             "allocated_bytes": pages * page_size,

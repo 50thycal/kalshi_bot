@@ -660,3 +660,78 @@ def test_dashboard_shell_is_public_but_data_requires_token(store):
         server.shutdown()
         thread.join()
         server.server_close()
+
+
+# --- WS-024 D2-B: resource use (identical re-imports, cheap storage reports, freed heap) -----
+
+
+def _rowid(store, source, source_id):
+    with store.connect() as db:
+        return db.execute(
+            "SELECT rowid FROM evidence WHERE source=? AND source_id=?", (source, source_id)
+        ).fetchone()[0]
+
+
+def test_identical_reimport_is_not_a_change_and_is_not_rewritten(store):
+    store.evidence_page("paper", [trade(1), trade(2)], {"after": 2})
+    assert store.state("evidence:changes") == 2
+    first = _rowid(store, "paper", 1)
+    # A reconciliation pass re-reads both rows unchanged: nothing is rewritten or counted.
+    store.evidence_page("paper", [trade(1), trade(2)], {"after": 2})
+    assert store.state("evidence:changes") == 2
+    assert _rowid(store, "paper", 1) == first
+    # A real change is still applied and counted.
+    store.evidence_page("paper", [trade(1, pnl=-1)], {"after": 2})
+    assert store.state("evidence:changes") == 3
+    assert [r["pnl"] for s, r in store.evidence() if r["id"] == 1] == [-1]
+
+
+def test_identical_reimport_matches_a_compressed_stored_row(store):
+    record = trade(1, notes="historical context " * 200)
+    store.evidence_page("paper", [record], {"after": 1})
+    with store.connect() as db:
+        stored = db.execute("SELECT document FROM evidence").fetchone()[0]
+    assert isinstance(stored, bytes)  # large enough to be stored compressed
+    store.evidence_page("paper", [record], {"after": 1})
+    assert store.state("evidence:changes") == 1
+
+
+def test_cheap_storage_report_carries_table_figures_without_rescanning(store):
+    store.evidence_page("paper", [trade(1)], {"after": 1})
+    full = store.storage()
+    assert full["tables_captured_at"] == full["captured_at"]
+    store.evidence_page("paper", [trade(2)], {"after": 2})
+    cheap = store.storage(detail=False, previous=full)
+    # Table figures are the last full pass's, labelled with when it ran; file figures are new.
+    assert cheap["tables"] == full["tables"]
+    assert cheap["tables_captured_at"] == full["captured_at"]
+    assert cheap["captured_at"] >= full["captured_at"]
+    assert set(cheap["file_bytes"]) == {"database", "-wal", "-shm"}
+    assert cheap["volume_total_bytes"] > 0
+    # Carried figures survive a second cheap report.
+    again = store.storage(detail=False, previous=cheap)
+    assert again["tables_captured_at"] == full["captured_at"]
+
+
+def test_cheap_storage_report_reads_no_documents(store):
+    store.evidence_page("paper", [trade(1)], {"after": 1})
+    statements = []
+    real_connect = store.connect
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def tracing():
+        with real_connect() as db:
+            db.set_trace_callback(statements.append)
+            yield db
+
+    store.connect = tracing
+    store.storage(detail=False, previous=None)
+    assert not any("document" in sql for sql in statements)
+
+
+def test_release_memory_is_safe_anywhere():
+    from kalshi_bot.catalog.service import release_memory
+
+    release_memory()

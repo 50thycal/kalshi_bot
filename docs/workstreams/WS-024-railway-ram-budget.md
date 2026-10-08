@@ -74,6 +74,8 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
 - **No `positions` change-detection.** The `max_total_exposure` breaker
   (`live_total_exposure`, 48h lookback) and `live_realized_pnl_today` (since UTC midnight)
   would under-count. Recorded in PR #547.
+- **D2 = option B: keep market-catalog continuous; fix its memory and disk use.** Owner,
+  2026-10-08. D3 and D4 stay open.
 - **`incentive_programs.last_seen_at` bump semantics stay.** The XOS metric
   `incentive_programs_observed` reads it; changing it is Platform Change Review.
 
@@ -88,11 +90,11 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
   - Behind a config flag `liquidity_incentive_runner_discovery` (default true).
   - It touches the live runner, so the **operator approves the edit in-session**; it was
     blocked by the permission policy on 2026-10-07. Owner merges.
-- **D2. market-catalog freshness.** It is running continuously and pinned at its cap.
-  - A scheduled run (Railway cron, a few times a day) reaches the $10 stretch.
-  - Continuous running keeps it near $15.
-  - Owner chooses; WS-023 owns the catalog's design, so this links there and does not
-    restate it.
+- **D2. market-catalog — DECIDED 2026-10-08: option B** (continuous; fix memory and disk).
+  Cron (option A) was declined for now. WS-023 owns the catalog's design; this workstream
+  changes only its resource use. Revision retention (deleting old snapshots) is **not** part of
+  the step-2 PR: it deletes data and changes WS-023's "immutable snapshots" rule, so it is an
+  owner decision of its own.
 - **D3. Retire the unread tapes.** Archive-then-truncate per `docs/TELEMETRY_ARCHIVE_RUNBOOK.md`
   (bucket `kalshi-bot-research-archive`, empty today), or truncate without archiving.
   - Tables: `incentive_book_events` (8.5 GB) and `incentive_shadow_events` (0.6 GB).
@@ -192,7 +194,43 @@ Every step records a before and an after here. Windows end at the stated time.
   awake — by design.
 - Both deploy from the default branch, so every merge redeploys (wakes) them.
 
-### Step 2 evidence — market-catalog (for D2; not acted on)
+### Step 2 — market-catalog (D2 = B)
+
+**Diagnosis from the code (2026-10-08):**
+
+- `report_storage` ran `Store.storage()` every 300 s, and `storage()` sums
+  `length(CAST(document AS BLOB))` over every document table. That is a full read of ~6 GB of
+  documents in an 8.5 GB file, every five minutes, which keeps the file's pages hot. The
+  service sat at exactly its 1.0 GB limit without being OOM-killed, which is the signature of
+  reclaimable file cache, not heap.
+- The daily source reconciliation re-reads all ~130k paper evidence rows, 1,000 per cycle.
+  Each re-read was `INSERT OR REPLACE`d and counted as "changed", so the full evaluation
+  (`store.evidence()` materialises every row) ran almost every cycle for most of the day.
+  The heap peak then stayed resident, because CPython/glibc do not return it on their own.
+
+**Step-2 PR (resource use only; no deletion, no semantic change):**
+
+- `storage(detail=False)` measures only the file, pages and volume. Per-table figures carry
+  from the last full pass, with `tables_captured_at`. The full pass runs every
+  `CATALOG_STORAGE_DETAIL_SECONDS` (default 86,400).
+- `evidence_page` skips a row whose stored content is identical, and counts real changes in
+  `evidence:changes`. Evaluation triggers on that counter rather than on rows fetched. This
+  removes the rewrite churn.
+- `release_memory()` (gc + glibc `malloc_trim`) runs after each evaluation, so the evaluation
+  peak is returned to the OS instead of staying resident.
+- Evaluation cadence is now `CATALOG_EVALUATION_SECONDS`, default 300, which is unchanged.
+  The collect loop takes ~7 min, longer than 300 s, so the evaluation still runs every cycle.
+  Fewer evaluations needs that variable raised, e.g. to 1800. Real evidence changes would
+  still trigger one at once; only time-based changes would wait. That is an owner/WS-023
+  call, not part of the PR.
+
+**Disk:** the owner live-resizes the `market-catalog-data` volume in the dashboard (Railway →
+market-catalog → Volume → Settings → size). This session's Railway tools cannot. About 1.3 GB
+of the volume is a file other than the database, most likely the one-time
+`catalog.sqlite3.before-compression-v1` backup. Removing it is a deletion, so it waits for the
+owner.
+
+**Evidence before the change:**
 
 - RAM 1.00 GB avg, pinned at its 1.0 GB limit all 24h. CPU ~0.02–0.12 vCPU.
 - **Volume growth is the nearer risk.** Disk 7.89 → 11.34 GB over 48h. The SQLite file grew

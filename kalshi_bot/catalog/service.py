@@ -1,5 +1,7 @@
 """Run only the market catalog API and collectors: python -m kalshi_bot.catalog.service."""
 
+import ctypes
+import gc
 import hmac
 import json
 import logging
@@ -7,6 +9,7 @@ import os
 import signal
 import threading
 import time
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -63,10 +66,24 @@ def run_job(store, key, action):
         return None
 
 
+def release_memory():
+    """Hand freed heap back to the OS after a large pass. The evaluation materialises every
+    evidence row; without this the process keeps that peak resident, and billed, until restart."""
+    gc.collect()
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):  # not glibc: nothing to trim
+        pass
+
+
 def collect(store, stopped, source_url, interval):
     discovery = Discovery(store)
     last_evaluation = 0
     last_storage_check = 0
+    evaluation_every = max(60, int(os.environ.get("CATALOG_EVALUATION_SECONDS", "300")))
+    storage_detail_every = max(
+        300, int(os.environ.get("CATALOG_STORAGE_DETAIL_SECONDS", "86400"))
+    )
     last_reconciliation = store.state("last_reconciliation", 0)
     while not stopped.is_set():
         stamp = time.time()
@@ -80,25 +97,37 @@ def collect(store, stopped, source_url, interval):
         run_job(store, "discovery:updates", discovery.updates)
         changed = False
         if source_url:
+            # Only rows whose content differs count as new evidence (Store.evidence_page).
+            evidence_changes = store.state("evidence:changes", 0)
             for source in ("paper", "live"):
-                count = run_job(
+                run_job(
                     store,
                     "import:" + source,
                     lambda source=source: source_page(store, source_url, source),
                 )
-                changed = changed or bool(count)
+            changed = store.state("evidence:changes", 0) != evidence_changes
         outcomes = run_job(store, "discovery:live_outcomes", discovery.live_outcomes)
         changed = changed or bool(outcomes)
         requested = store.state("evaluation_requested")
-        if changed or requested or stamp - last_evaluation >= 300:
+        if changed or requested or stamp - last_evaluation >= evaluation_every:
             result = run_job(store, "evaluation", lambda: refresh(store))
+            release_memory()
             if result is not None and store.state("evaluation_requested") == requested:
                 store.set_state("evaluation_requested", None)
             last_evaluation = stamp
         if stamp - last_storage_check >= 300:
 
             def report_storage():
-                storage = store.storage()
+                previous = store.state("storage:metrics")
+                taken = (previous or {}).get("tables_captured_at")
+                detail = (
+                    not taken
+                    or (
+                        datetime.now(timezone.utc) - datetime.fromisoformat(taken)
+                    ).total_seconds()
+                    >= storage_detail_every
+                )
+                storage = store.storage(detail=detail, previous=previous)
                 store.set_state("storage:metrics", storage)
                 LOG.info("catalog_storage=%s", json.dumps(storage))
                 return 0
