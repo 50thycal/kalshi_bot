@@ -95,6 +95,8 @@ class DiscoveryResult:
     changed_terms: int = 0
     disappeared: int = 0
     errors: int = 0
+    #: New/changed terms skipped because `max_new_terms` was reached; picked up next poll.
+    deferred: int = 0
 
 
 # Verbatim payloads no caller of `current_programs` or the discovery pass reads. They are about
@@ -136,8 +138,18 @@ def _aware(dt: datetime | None) -> datetime | None:
 
 
 def run_discovery(client, session, *, now: datetime | None = None,
-                  resolve_market: bool = True) -> DiscoveryResult:
-    """One poll. Never raises: a failed fetch is a cycle row with `errors` and notes."""
+                  resolve_market: bool = True,
+                  max_new_terms: int | None = None,
+                  load_current: bool = True) -> DiscoveryResult:
+    """One poll. Never raises: a failed fetch is a cycle row with `errors` and notes.
+
+    `max_new_terms` bounds how many new or changed terms rows this poll writes (each costs two
+    GETs when `resolve_market`). A programme past the bound is DEFERRED, not dropped: its
+    current row is neither superseded, bumped nor marked disappeared, so the next poll sees it
+    exactly as this one did. None = unbounded (the collector's behaviour).
+
+    `load_current=False` leaves `DiscoveryResult.current` empty instead of loading every current
+    liquidity row — a caller that reads the list itself (the live runner) does not pay for it."""
     now = now or datetime.now(timezone.utc)
     cycle = m.IncentiveDiscoveryCycle(started_at=now)
     session.add(cycle)
@@ -155,7 +167,9 @@ def run_discovery(client, session, *, now: datetime | None = None,
         logger.warning("incentive discovery fetch failed: %s", notes["fetch"])
         cycle.finished_at = datetime.now(timezone.utc)
         cycle.notes_json = notes
-        return DiscoveryResult(cycle_id=cycle.id, current=current_programs(session), errors=cycle.errors)
+        return DiscoveryResult(cycle_id=cycle.id,
+                               current=current_programs(session) if load_current else [],
+                               errors=cycle.errors)
 
     # The payout leg, which polling `active` alone can never see. A programme leaves the active
     # listing when it ends, so its row froze at the last state observed WHILE it was active —
@@ -214,6 +228,9 @@ def run_discovery(client, session, *, now: datetime | None = None,
                 row.disappeared_at = None
                 notes.setdefault("reappeared", []).append(pid)
             continue
+        if max_new_terms is not None and result.new_terms + result.changed_terms >= max_new_terms:
+            result.deferred += 1
+            continue
         prev = by_program.get(pid)
         if prev is not None:
             prev.superseded_at = now
@@ -263,10 +280,13 @@ def run_discovery(client, session, *, now: datetime | None = None,
         result.new_terms, result.changed_terms, result.disappeared)
     cycle.total_period_reward_usd = round(total_usd, 4)
     cycle.pages = pages
+    if result.deferred:
+        notes["deferred_new_terms"] = result.deferred
     cycle.finished_at = datetime.now(timezone.utc)
     cycle.notes_json = notes or None
     session.flush()
-    result.current = current_programs(session)
+    if load_current:
+        result.current = current_programs(session)
     # The cycle row already carried this; the returned result did not, so a caller checking
     # `result.errors` saw 0 through a failed fetch.
     result.errors = cycle.errors

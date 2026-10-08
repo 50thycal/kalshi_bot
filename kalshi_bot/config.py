@@ -1456,6 +1456,18 @@ class Settings(BaseSettings):
     # per-ticker dedup gate. Empty by default; set it to keep the test clear of a series another
     # armed live book trades, so no two books ever contest the same market.
     liquidity_incentive_excluded_series: str = ""
+    # WS-024 D1: the ARMED runner refreshes `incentive_programs` itself (REST discovery through
+    # the GET-only wrapper, in a savepoint) whenever no `incentive_discovery_cycles` row is newer
+    # than `liquidity_incentive_discovery_seconds`. A no-op while any other writer keeps the
+    # table fresh. Needed since 2026-10-07, when the evo service — the shadow collector, the
+    # only other writer — was deleted and the programme list froze. ON by default.
+    liquidity_incentive_runner_discovery: bool = True
+    # New or changed programme terms resolved per runner pass (each costs a market GET and a
+    # series GET). The rest are deferred to the next pass, not dropped: a historical cycle
+    # resolved up to ~4,800 at once (~250 s), which must not stall the real-money cycle or burst
+    # the shared read budget (Basic tier: 20 reads/s); steady state is ~15-25 per pass.
+    # 0 = no cap.
+    liquidity_incentive_runner_discovery_max_new_terms: int = 100
     # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
     # DEFAULT OFF. "shadow" evaluates the frozen rule against every resting live order each
     # reconcile and writes an audit row per order per cycle to live_order_queue_decisions —

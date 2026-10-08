@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import models as m
 from .. import repository as repo
@@ -42,6 +42,7 @@ from . import live as limm
 from . import programs as progs
 from . import reward_ledger as rl
 from . import store
+from .readonly import IncentiveReadOnlyKalshi
 from .scoring import discount_factor, estimate, side_score
 
 logger = logging.getLogger(__name__)
@@ -208,6 +209,11 @@ class IncentiveLiveRunner:
         self._cooldown_saved_at: datetime | None = None
         #: No entries before this: Kalshi said the account has no free cash (see live.py).
         self._balance_backoff_until: datetime | None = None
+        #: WS-024 D1 programme discovery: the GET-only client it runs through (built on first
+        #: use), and when this process last attempted a pass — success or not, so a failing
+        #: pass is retried on the discovery cadence, never every cycle.
+        self._discovery_client = None
+        self._discovery_attempted_at: datetime | None = None
 
     # --- arming ---------------------------------------------------------------
 
@@ -249,6 +255,11 @@ class IncentiveLiveRunner:
         # Exits before entries: a cycle's first job is the capital already out, and an exit
         # frees the slot and the budget an entry below might use.
         summary["managed"] = self._manage_positions(session, executor, now)
+        # Then refresh the programme list, before anything below reads it (retire, reprice,
+        # candidates). Runs before every early return, so a full book still keeps it fresh.
+        discovery = self._refresh_programs(session, now)
+        if discovery is not None:
+            summary["discovery"] = discovery
         retired = self._retire_unpaid_pairs(session, executor, now)
         if retired:
             summary["outcomes"]["program_ended"] = retired
@@ -378,6 +389,50 @@ class IncentiveLiveRunner:
                 if self._open_twin(session, leg):
                     summary["twin_opened"] += 1
         return summary
+
+    # --- programme discovery (WS-024 D1) ---------------------------------------
+
+    def _refresh_programs(self, session, now: datetime) -> dict | None:
+        """Run one programme-discovery pass when nothing else has kept the table fresh.
+
+        WHY THIS LIVES HERE. `incentive_programs` was written only by the shadow collector,
+        which ran on the `evo` service; when that service was deleted on 2026-10-07 the list
+        this book reads froze (WS-024). This restores the writer inside the process that needs
+        it, with the collector's own boundaries: REST GETs only, through the same GET-only
+        `IncentiveReadOnlyKalshi` wrapper, never the order path.
+
+        - A no-op while any other writer keeps the table fresh: it runs only when no
+          `incentive_discovery_cycles` row is newer than `liquidity_incentive_discovery_seconds`.
+        - Inside a SAVEPOINT: a failure rolls back the discovery pass alone, and the cycle goes
+          on to place and manage as before. Failure is logged and returned, never raised.
+        - Bounded: at most `liquidity_incentive_runner_discovery_max_new_terms` new or changed
+          terms per pass; the rest wait for the next pass.
+        - Off with `LIQUIDITY_INCENTIVE_RUNNER_DISCOVERY=false`."""
+        if not getattr(self.settings, "liquidity_incentive_runner_discovery", True):
+            return None
+        every = float(getattr(self.settings, "liquidity_incentive_discovery_seconds", 300.0))
+        if (self._discovery_attempted_at is not None
+                and (now - self._discovery_attempted_at).total_seconds() < every):
+            return None
+        latest = session.scalar(select(func.max(m.IncentiveDiscoveryCycle.started_at)))
+        if latest is not None and (now - _aware(latest)).total_seconds() < every:
+            return None
+        self._discovery_attempted_at = now
+        cap = int(getattr(self.settings, "liquidity_incentive_runner_discovery_max_new_terms",
+                          100) or 0)
+        try:
+            if self._discovery_client is None:
+                self._discovery_client = IncentiveReadOnlyKalshi(self.client, self.settings)
+            with session.begin_nested():
+                result = progs.run_discovery(self._discovery_client, session, now=now,
+                                             max_new_terms=cap if cap > 0 else None,
+                                             load_current=False)
+        except Exception as exc:  # noqa: BLE001 — a failed pass must never stop the book
+            logger.exception("incentive runner discovery failed (book unaffected)")
+            return {"failed": f"{type(exc).__name__}: {str(exc)[:200]}"}
+        return {"cycle_id": result.cycle_id, "new": result.new_terms,
+                "changed": result.changed_terms, "gone": result.disappeared,
+                "deferred": result.deferred, "errors": result.errors}
 
     # --- replace only when better (§9.47) ---------------------------------------
 

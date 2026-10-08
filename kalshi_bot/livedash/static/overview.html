@@ -40,6 +40,7 @@
   .track{height:12px;background:var(--panel2);border-radius:6px;overflow:hidden;position:relative}
   .track i{position:absolute;top:0;bottom:0;left:0;border-radius:6px;background:var(--pos)}
   .track i.neg{background:var(--neg)}
+  .track b.peak{top:0;bottom:0;width:2px;background:var(--pos);opacity:.55}
   .track b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted)}
   .book{display:flex;flex-direction:column;gap:6px}
   .book .top{display:flex;align-items:center;gap:8px}
@@ -172,6 +173,12 @@ function renderHeadline(){
   const h = S.d.headline;
   const p = Math.max(0, Math.min(100, h.progress_pct || 0));
   const dayMark = (h.day_of_month - 1) / h.days_in_month * 100;
+  const peakLine = h => {
+    if(!h.month_peak_at) return `<span>peak <b>$0.00</b> · no gain banked yet</span>`;
+    const when = new Date(h.month_peak_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+    return `<span title="Highest the realized total reached this month (settled, after fees)">peak <b>${usd(h.month_peak_usd)}</b> on ${esc(when)} · ${
+      h.below_peak_usd > 0.004 ? `<b>${usd(h.below_peak_usd)}</b> below it` : "at the peak now"}</span>`;
+  };
   const books = h.books.map(b => {
     const hl = b.health;
     const lights = [`<span class="light ${hl.state}"><span class="dot"></span>${esc(hl.text)}</span>`]
@@ -210,10 +217,12 @@ function renderHeadline(){
             <span><b>${pct(h.progress_pct)}</b> of goal</span>
             <span>day <b>${h.day_of_month}</b> of ${h.days_in_month}</span>
             <span>straight-line pace <b>${h.pace_usd === null ? "—" : usd(h.pace_usd)}</b>/month</span>
+            ${peakLine(h)}
           </div>
           <div class="track" title="Bar: realized vs goal. Tick: how far through the month we are.">
             <i class="${(h.month_realized_usd||0) < 0 ? "neg" : ""}" style="width:${p}%"></i>
-            <b style="left:${dayMark}%"></b></div>
+            <b style="left:${dayMark}%"></b>${h.month_peak_at && h.below_peak_usd > 0.004
+              ? `<b class="peak" style="left:${Math.min(100, h.month_peak_usd / h.goal_usd * 100)}%"></b>` : ""}</div>
         </div>
       </div>
       <div class="tiles">
@@ -230,7 +239,7 @@ function renderHeadline(){
           <div class="v">${h.trades_this_month}</div>
           <div class="s">this month · ${h.trades_all_time} all time</div></div>
       </div>
-      <div class="note">The goal bar counts realized money only — settled markets, after the fees Kalshi charged. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on.
+      <div class="note">The goal bar counts realized money only — settled markets, after the fees Kalshi charged. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on. Peak is the highest the realized total reached this month; the faint green tick on the bar marks it.
         ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
     </div>
     <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;
