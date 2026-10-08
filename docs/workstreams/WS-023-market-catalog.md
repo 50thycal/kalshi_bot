@@ -164,3 +164,9 @@ review or owner acceptance claimed. This PR does not complete WS-023. Next: owne
 accepts/merges the catalog-only repair, then verify deployed v3 counts and remaining
 exceptions. Confidence stays null, qualification false; calibration and consumer
 cutover remain subsequent work under the approved boundary.
+
+Fractional repair PR: [#562](https://github.com/50thycal/kalshi_bot/pull/562).
+Executable validation head: `7397c6cbbe01f9d823eb1c4ff3ae3d66eb994155`.
+Merge-finalization is documentation-only; WS-023 remains REVIEW / Active on merge.
+Review State: solo mode, pending owner acceptance; no independent review claimed.
+Owner merge and catalog-only runtime verification remain pending.
