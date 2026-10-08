@@ -1,7 +1,0 @@
-# latest deployment cd4f17e0-7450-45c0-ba36-cf3cf8cffd75 (status=SUCCESS, created=2026-10-08T18:32:40.995Z)
-# ops request [READ]
-# type=logs  service=main  id=limm-log-2236
-# code 1f8dd034f27cc825ab84f6f9546d6ac0ca700960 · started 2026-10-08T22:37:08Z
-# target service: main
-2026-10-08T19:18:35.070414895Z INFO  incentive book: replaced KXMONSTERPOS-26NOV03-T110 (~$0.0050/h) with KXMILLERLITEPOS-26NOV03-T82 (~$0.0926/h)
-2026-10-08T20:19:03.634067548Z INFO  incentive book: replaced KXMILLERLITEPOS-26NOV03-T82 (~$0.0000/h) with KXYTVIEWSHIGH-TAT26NOV-3.0M (~$0.0372/h)
