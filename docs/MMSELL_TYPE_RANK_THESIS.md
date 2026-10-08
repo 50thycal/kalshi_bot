@@ -4,8 +4,8 @@
 kill criteria are pre-registered here and are not re-scoped after results. Operator request
 (Calvin, 2026-10-01): "review which markets give us the best results and increase our position
 size on those." Run doc: [`IDEA_MODEL_20261001_MMSELL_SIZEUP.md`](IDEA_MODEL_20261001_MMSELL_SIZEUP.md).
-Status: **HOLD (accrual) — leg R did not kill (2026-10-01); leg F accrues from 10-01, re-run
-weekly.** Probe: `scripts/mmsell_type_rank_probe.py` (#509).*
+Status: **HOLD (accrual) — leg R did not kill (runs 1–2); leg F accrues from 10-01 (run 2,
+2026-10-08: 35 TOP / 14 REST of 150 / 100), re-run weekly.** Probe: `scripts/mmsell_type_rank_probe.py` (#509).*
 
 ## One-liner
 
@@ -173,3 +173,27 @@ on fills after the day it is written.
 
 **Next read.** Re-run weekly; leg F needs 150 TOP and 100 REST settled fills from 10-01
 (roughly two to four weeks, slower if MLB props vanish from TOP).
+
+
+### Run 2 — 2026-10-08 (ops `typerank-20261008-1`, code `a4aa3684`). Verdict: **HOLD (accrual)**.
+
+| gate | result |
+|---|---|
+| T0 instrument | A: classify 95.4%, settle-map 97.1%. B: 100.0% / 99.7%. Forward: 100.0% / 98.2% → PASS |
+| T1 cells | 5 readable in A and A ∪ B → PASS (ranking unchanged: h2h, player_prop on top) |
+| T2 retrospective | TOP +0.74¢ (n=494) vs REST −1.26¢ (n=183): separation **+2.00¢** → not killed (date-block p5 −2.61¢) |
+| T3 forward floor | **35 TOP / 14 REST** settled fills from 10-01, against 150 / 100 → **HOLD (accrual)** |
+| leg F so far (not decisive) | TOP +4.40¢ (n=35) vs REST +6.86¢ (n=14): separation −2.46¢, date-block p5 −6.96¢ |
+
+**Two things this run shows that are not verdicts.**
+
+1. **Window A moved slightly between runs** (settle-map 100.0% → 97.1%, h2h n 272 → 261). Window A
+   is closed, so the change is the instrument: a few settlement lookups against the public API
+   failed this run and those fills dropped out unscored. T0 still passes; the ranking and the
+   leg-R sign are unchanged. If it recurs, the probe should retry failed lookups rather than skip.
+2. **Forward flow is much slower than window B.** 87 orders and 56 fills in 7.6 days (about 11
+   orders and 7 fills a day) against about 44 orders and 31 fills a day in window B. At this rate
+   leg F reaches 150 TOP fills in roughly three more weeks and 100 REST fills in roughly six,
+   so the earliest decisive read is mid-to-late November. The drop coincides with the end of the
+   MLB regular season (09-28), which supplied a third of B's fills; whether anything else changed
+   is a Live Ops question, not this thesis's.
