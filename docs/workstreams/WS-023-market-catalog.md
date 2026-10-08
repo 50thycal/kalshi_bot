@@ -93,3 +93,35 @@ Database 8.83 GB; volume free 9.57 GB. No runtime error logged in the checked re
 The storage diagnostic took about five minutes after evaluation; pipeline refresh is currently
 slower than its nominal loop interval. This observation does not certify new replay completion.
 Follow-up validation: 92 catalog/economics/session tests, Ruff and diff checks passed.
+
+## Canonical fill direction investigation — 2026-10-08
+
+Task-specific catalog continuation, authorized by Calvin. Owner reconnected the
+Railway source, removing its old commit pin. Deployment
+`cb885981-d853-4ebe-8099-bdc5c7267147` succeeded on default commit `076e7b5`,
+which includes #556. Runtime verified 140 migrated series / 38 historical signatures.
+The first v2-era diagnostic (before this repair) blocked all 2,771 live markets on
+literal order/fill action comparison. These are catalog diagnostics, not XOS verdicts.
+
+Two SELECT-only ops audits established the defect on all 2,832 scoped source fills:
+bot intent NO/buy; deprecated fill labels NO/sell; raw exchange order YES/sell;
+canonical fill and order both NO/ask. Raw order IDs, markets, stored NO prices,
+complementary prices and NO order limits matched on every audited row. Sanitized
+receipts: `ops/results/catalog-order-fill-shape-20261008-1456.txt` and
+`ops/results/catalog-canonical-direction-20261008-1458.txt`. The request was reset
+to noop. No account identifiers or raw private payloads were exported.
+
+Repair stays inside the catalog: import raw order evidence, replay once, verify
+canonical direction plus raw identity/price proof, and calculate cashflows using
+the bot order's held-contract intent. Missing proof fails closed. Original records
+remain intact. Method version becomes exclusive-binary-ledger-v2; confidence stays
+null and qualification false. No shared executor, source database, XOS metric,
+experiment, trading consumer or exposure changes; no Platform Revision activated.
+
+Validation: 119 catalog/economics/session checks passed plus Ruff. Regressions cover
+the production mismatch, all four intents, complementary-leg exits, identity and
+price conflicts, legacy ambiguity, actual-fee/loss guards and one-time replay.
+Framework compatibility verified against canonical Build OS v0.12.
+No independent review or owner acceptance claimed. Next: owner accepts this repair
+PR, deploy catalog only, verify complete replay and inspect remaining settlement /
+ownership / actual-cost blockers. No numerical score or consumer cutover follows.

@@ -53,28 +53,81 @@ def fill_time(row):
         return None
 
 
+def canonical_direction(raw):
+    """Canonical fields agree on exposure; deprecated action/side are not authoritative."""
+    outcome, book = raw.get("outcome_side"), raw.get("book_side")
+    if outcome not in ("yes", "no") or book != {"yes": "bid", "no": "ask"}[outcome]:
+        raise ValueError("Missing or conflicting canonical direction")
+    return outcome
+
+
+def ledger_fill(row):
+    """Translate a proven exchange execution into the bot's held-contract vocabulary.
+
+    Preserve source evidence. Canonical exposure alone cannot tell an entry from an
+    exit: the joined order's intent supplies that distinction, with raw identity proof.
+    Legacy exact matches remain supported; a mismatch never falls back to an assumption.
+    """
+    side, action = row.get("order_side"), row.get("order_action")
+    if row.get("order_market_ticker") != row["market_ticker"]:
+        raise ValueError("Order market mismatch")
+    if side not in ("yes", "no") or action not in ("buy", "sell"):
+        raise ValueError("Unknown order intent")
+    raw = row.get("raw_fill_json") or {}
+    canonical = "outcome_side" in raw or "book_side" in raw
+    if not canonical:
+        if (row.get("side"), row.get("action")) != (side, action):
+            raise ValueError("Unverified legacy mismatch")
+        return row
+    order = row.get("raw_order_json") or {}
+    expected = side if action == "buy" else {"yes": "no", "no": "yes"}[side]
+    if canonical_direction(raw) != expected or canonical_direction(order) != expected:
+        raise ValueError("Exchange direction disagrees with intent")
+    order_id = row.get("kalshi_order_id")
+    if not order_id or raw.get("order_id") != order_id or order.get("order_id") != order_id:
+        raise ValueError("Exchange order identity unverified")
+    if (raw.get("trade_id") or raw.get("fill_id")) != row.get("kalshi_fill_id"):
+        raise ValueError("Exchange fill identity unverified")
+    for payload in (raw, order):
+        tickers = [payload[k] for k in ("ticker", "market_ticker") if payload.get(k)]
+        if not tickers or any(t != row["market_ticker"] for t in tickers):
+            raise ValueError("Exchange market identity unverified")
+    # Validate the source column against its original price scale before changing legs.
+    source_side = row.get("side")
+    if source_side not in ("yes", "no"):
+        raise ValueError("Unknown source price scale")
+    if raw.get("side") is not None and raw["side"] != source_side:
+        raise ValueError("Source side disagrees with raw fill")
+    if raw.get("action") is not None and raw["action"] != row.get("action"):
+        raise ValueError("Source action disagrees with raw fill")
+    prices = {s: decimal(raw[s + "_price_dollars"]) for s in ("yes", "no")}
+    if any(not 0 <= p <= 1 for p in prices.values()) or sum(prices.values()) != 1:
+        raise ValueError("Unverified complementary prices")
+    if prices[source_side] != decimal(row["price"]) / 100:
+        raise ValueError("Source price disagrees with raw fill")
+    return {**row, "side": side, "action": action, "price": str(prices[side] * 100)}
+
+
 def live_economics(store, records, as_of):
     grouped = defaultdict(list)
     for source, row in records:
         if source == "live" and "mmsell" in (row.get("strategy") or "").lower():
             grouped[row["market_ticker"]].append(row)
     for ticker, rows in sorted(grouped.items()):
+        source_rows = rows
         market = store.get("market", ticker)
         raw_market = (market or {}).get("raw", {})
         reasons = set()
         owners = {(r.get("strategy"), r.get("experiment_deployment_arm_id")) for r in rows}
-        sides = {r.get("side") for r in rows}
         if len(owners) != 1 or any(
             r.get("market_owner_count") != 1 or r.get("order_owner_count") != 1 for r in rows
         ):
             reasons.add("ownership_ambiguous_or_unverified")
-        if any(
-            r.get("order_market_ticker") != ticker
-            or r.get("order_side") != r.get("side")
-            or r.get("order_action") != r.get("action")
-            for r in rows
-        ):
+        try:
+            rows = [ledger_fill(row) for row in rows]
+        except (KeyError, InvalidOperation, ValueError, TypeError):
             reasons.add("order_fill_identity_inconsistent_or_unverified")
+        sides = {r.get("side") for r in rows}
         if len(sides) != 1 or not sides <= {"yes", "no"}:
             reasons.add("mixed_or_unknown_side")
         if any(r.get("market_fill_count") != len(rows) for r in rows):
@@ -159,7 +212,8 @@ def live_economics(store, records, as_of):
         owner = next(iter(owners)) if len(owners) == 1 else (None, None)
         yield {
             "schema_version": 1,
-            "method_version": "exclusive-binary-ledger-v1",
+            "method_version": "exclusive-binary-ledger-v2",
+            "direction_method": "verified-order-intent-canonical-exposure-v1",
             "market_ticker": ticker,
             "series_ticker": ticker.split("-", 1)[0],
             "strategy_version": owner[0],
@@ -180,7 +234,7 @@ def live_economics(store, records, as_of):
             "independent_outcomes_verified": False,
             "confidence_score": None,
             "qualified": False,
-            "input_fingerprint": digest({"rows": rows, "market": raw_market}),
+            "input_fingerprint": digest({"rows": source_rows, "market": raw_market}),
         }
 
 
@@ -201,7 +255,7 @@ def ledger_assessments(documents, as_of):
         yield {
             "schema_version": 1,
             "strategy_id": "mmsell",
-            "evaluator_version": "exclusive-binary-ledger-v1",
+            "evaluator_version": "exclusive-binary-ledger-v2",
             "strategy_version": book,
             "series_ticker": series,
             "deployment_arm_id": arm,
