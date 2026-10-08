@@ -4,14 +4,19 @@ import statistics
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
+from .economics import SCORING_REQUIREMENTS, fill_time, ledger_assessments, live_economics
 from .store import digest, now
 
 EVALUATORS = {}
 
 
-def register(strategy_id, evaluator):
+def register(strategy_id, evaluator, scoring_requirements=None):
     if strategy_id in EVALUATORS:
         raise ValueError("Evaluator already registered")
+    if scoring_requirements is not None:
+        if not isinstance(scoring_requirements, dict) or not scoring_requirements.get("version"):
+            raise ValueError("A strategy evidence bar requires its own version")
+        SCORING_REQUIREMENTS[strategy_id] = dict(scoring_requirements)
     EVALUATORS[strategy_id] = evaluator
 
 
@@ -44,7 +49,7 @@ def mmsell(records, as_of):
             policy = "live_recorded_fill"
         if price is None or not row.get("quantity") or float(row["quantity"]) <= 0:
             continue
-        created = timestamp(row.get("filled_at") or row.get("created_at"))
+        created = fill_time(row) if source == "live" else timestamp(row.get("created_at"))
         if not created or created > as_of:
             continue
         series = row["market_ticker"].split("-", 1)[0]
@@ -62,7 +67,7 @@ def mmsell(records, as_of):
                 groups[(*key, window)].append(row)
     for key, rows in sorted(groups.items(), key=lambda item: str(item[0])):
         series, book, arm, side, band, policy, source, window = key
-        times = [timestamp(r.get("filled_at") or r.get("created_at")) for r in rows]
+        times = [fill_time(r) if source == "live" else timestamp(r.get("created_at")) for r in rows]
         clusters = defaultdict(list)
         for row in rows:
             # A conservative event token is a grouping hint, not verified independence.
@@ -130,43 +135,111 @@ register("mmsell", mmsell)
 def refresh(store, as_of=None):
     as_of = as_of or datetime.now(timezone.utc)
     records = store.evidence()
-    count = 0
-    active_scopes = []
-    for evaluator in EVALUATORS.values():
-        for result in evaluator(records, as_of):
-            scope = digest(
-                {
-                    key: result[key]
-                    for key in (
-                        "strategy_id",
-                        "evaluator_version",
-                        "strategy_version",
-                        "series_ticker",
-                        "deployment_arm_id",
-                        "side",
-                        "entry_band_cents",
-                        "execution_policy",
-                        "evidence_source",
-                        "window",
-                    )
+    economics = list(live_economics(store, records, as_of))
+    store.save_live_economics(economics)
+    facts = {}
+    coverage = {
+        source: store.state("source_coverage:" + source, {}) for source in ("paper", "live")
+    }
+
+    def results():
+        streams = [(name, evaluator(records, as_of)) for name, evaluator in EVALUATORS.items()]
+        streams.append(("mmsell", ledger_assessments(economics, as_of)))
+        for strategy_id, stream in streams:
+            for result in stream:
+                if result["strategy_id"] != strategy_id:
+                    raise ValueError("Evaluator cannot publish another strategy's assessments")
+                # Confidence publication awaits the separately validated calibration release.
+                result["qualified"] = False
+                result["confidence_score"] = None
+                series = result["series_ticker"]
+                if series not in facts:
+                    facts[series] = store.get("series", series)
+                document = facts[series] or {}
+                reviewed = document.get("review_status") == "reviewed"
+                result["review_completion_percent"] = document.get("review_completion_pct", 0)
+                result["bound_series_rules_hash"] = document.get("rules_hash") if reviewed else None
+                result["scoring_requirements_version"] = SCORING_REQUIREMENTS.get(
+                    result["strategy_id"], {}
+                ).get("version")
+                reasons = result.setdefault("qualification_reasons", [])
+                if result["scoring_requirements_version"] is None:
+                    reasons.append("strategy_scoring_requirements_not_registered")
+                if "calibration_pending" not in reasons:
+                    reasons.append("calibration_pending")
+                if not reviewed and "semantic_review_not_bound" not in reasons:
+                    reasons.append("semantic_review_not_bound")
+                elif reviewed and "semantic_review_not_bound" in reasons:
+                    reasons.remove("semantic_review_not_bound")
+                # A reviewed series is not proof that every traded market's rules match it.
+                reasons.append("market_semantic_review_not_bound")
+                if not coverage.get(result["evidence_source"], {}).get("ids_match"):
+                    reasons.append("source_id_coverage_unverified")
+                if (
+                    result.get("deployment_arm_id") is None
+                    and "legacy_version_epoch_lineage_unknown" not in reasons
+                ):
+                    reasons.append("legacy_version_epoch_lineage_unknown")
+                result["evidence_bar"] = {
+                    "current_series_semantic_review": reviewed,
+                    "current_market_semantic_review": False,
+                    "source_ids_verified": bool(
+                        coverage.get(result["evidence_source"], {}).get("ids_match")
+                    ),
+                    "live_economics_attributed": result["evaluator_version"]
+                    == "exclusive-binary-ledger-v1",
+                    "exchange_fill_coverage_verified": False,
+                    "independent_outcomes_verified": False,
+                    "strategy_lineage_known": result.get("deployment_arm_id") is not None,
+                    "forward_validation_complete": False,
+                    "numeric_requirements_calibrated": False,
                 }
-            )
-            active_scopes.append(scope)
-            previous = store.state("assessment_input:" + scope)
-            # No new snapshot on a no-op refresh; freshness of the job is separate.
-            if previous != result["input_fingerprint"]:
-                store.assessment(scope, result)
-                store.set_state("assessment_input:" + scope, result["input_fingerprint"])
-            count += 1
-    with store.connect() as db:
-        # Retain historical snapshots but remove aged-out windows from current selection.
-        current = db.execute("SELECT scope FROM current_assessments").fetchall()
-        active = set(active_scopes)
-        for row in current:
-            if row[0] not in active:
-                db.execute("DELETE FROM current_assessments WHERE scope=?", (row[0],))
+                result["input_fingerprint"] = digest(
+                    {
+                        "evidence": result["input_fingerprint"],
+                        "review_hash": document.get("rules_hash"),
+                        "review_status": document.get("review_status"),
+                        "review": document.get("review"),
+                        "qualification_reasons": reasons,
+                        "requirements": result["scoring_requirements_version"],
+                    }
+                )
+                scope = digest(
+                    {
+                        key: result[key]
+                        for key in (
+                            "strategy_id",
+                            "evaluator_version",
+                            "strategy_version",
+                            "series_ticker",
+                            "deployment_arm_id",
+                            "side",
+                            "entry_band_cents",
+                            "execution_policy",
+                            "evidence_source",
+                            "window",
+                        )
+                    }
+                )
+                yield scope, result
+
+    count = store.assessment_batch(results())
+    store.set_state(
+        "live_economics_summary",
+        {
+            "markets": len(economics),
+            "attributed": sum(r["status"] == "attributed_source_ledger" for r in economics),
+            "blocked": sum(r["status"] == "blocked" for r in economics),
+            "exchange_fill_coverage_verified": False,
+        },
+    )
     store.set_state(
         "evaluation",
-        {"last_success_at": now(), "contexts": count, "qualified": 0, "calibration": "pending"},
+        {
+            "last_success_at": now(),
+            "contexts": count,
+            "qualified": 0,
+            "calibration": "pending",
+        },
     )
     return count

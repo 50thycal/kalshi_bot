@@ -14,7 +14,7 @@ from psycopg.rows import dict_row
 
 from kalshi_bot.mmsell.market_types import classify
 
-from .store import now, pack, unpack
+from .store import SEMANTIC_FIELDS, digest, now, pack, unpack
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
@@ -29,7 +29,10 @@ SOURCE_RELATIONS = {
 SOURCE_PROJECTIONS = {
     "paper": """p.*, EXISTS(SELECT 1 FROM live_paper_twins t
                               WHERE t.twin_tag=p.strategy) AS is_twin""",
-    "live": "f.*, o.strategy,o.event_ticker,o.experiment_deployment_arm_id",
+    "live": """f.*, o.strategy,o.event_ticker,o.experiment_deployment_arm_id,
+        o.market_ticker AS order_market_ticker,o.side AS order_side,o.action AS order_action,
+        (SELECT count(DISTINCT (x.strategy,x.experiment_deployment_arm_id))
+         FROM live_orders x WHERE x.kalshi_order_id=f.kalshi_order_id) AS order_owner_count""",
 }
 SOURCE_IDS = {"paper": "p.id", "live": "f.id"}
 SOURCE_QUERIES = {
@@ -37,6 +40,23 @@ SOURCE_QUERIES = {
     f"AND {SOURCE_IDS[source]} > %s ORDER BY {SOURCE_IDS[source]} LIMIT %s"
     for source, relation in SOURCE_RELATIONS.items()
 }
+# Aggregate each page's market audits once, avoiding a table scan per fill when
+# the source has no market_ticker index. All values share one statement snapshot.
+SOURCE_QUERIES["live"] = f"""WITH page AS MATERIALIZED (
+    {SOURCE_QUERIES["live"]}
+), owners AS (
+    SELECT market_ticker,count(DISTINCT (strategy,experiment_deployment_arm_id)) AS market_owner_count
+    FROM live_orders WHERE market_ticker IN (SELECT market_ticker FROM page)
+    GROUP BY market_ticker
+), counts AS (
+    SELECT market_ticker,count(*) AS market_fill_count
+    FROM fills WHERE market_ticker IN (SELECT market_ticker FROM page)
+    GROUP BY market_ticker
+)
+SELECT page.*, owners.market_owner_count,counts.market_fill_count
+FROM page JOIN owners USING(market_ticker) JOIN counts USING(market_ticker)
+ORDER BY page.id"""
+
 SOURCE_COVERAGE_QUERIES = {
     source: "SELECT count(*) AS source_records,encode(sha256(convert_to("
     f"coalesce(string_agg({SOURCE_IDS[source]}::text,',' ORDER BY {SOURCE_IDS[source]}),''),"
@@ -71,7 +91,46 @@ def seed(store):
                 "UPDATE objects SET document=? WHERE kind=? AND ticker=?",
                 (pack(doc), "series", ticker),
             )
-    store.set_state("registry_seed", {"last_success_at": now(), "series": len(manifest["series"])})
+        signed = bool(row.get("rules_reviewed_at") and row.get("rules_reviewed_by"))
+        migration = {
+            "schema_version": 1,
+            "series_ticker": ticker,
+            "migration_version": "registry-v1",
+            "provenance": "kalshi_bot/registry/series_manifest.json",
+            "legacy_digest": digest(row),
+            "legacy_record": row,
+            "classification_hints": doc["legacy_classification"],
+            "historical_signature_present": signed,
+            "status": "partial_historical_review" if signed else "classification_only",
+            "semantics": dict.fromkeys(SEMANTIC_FIELDS),
+            "missing_fields": list(SEMANTIC_FIELDS),
+            "completion_percent": 0,
+            "approved_for_selection": False,
+        }
+        store.migrate_review(migration)
+    if store.state("live_projection_version") != "ownership-v1":
+        cursor = store.state("cursor:live", {"initial_complete": False})
+        store.set_state(
+            "cursor:live",
+            {
+                **cursor,
+                "after": 0,
+                "reconciliation_complete": False,
+                "last_coverage_check_at": None,
+            },
+        )
+        store.set_state("live_projection_version", "ownership-v1")
+    store.set_state(
+        "registry_seed",
+        {
+            "last_success_at": now(),
+            "series": len(manifest["series"]),
+            "historical_signatures": sum(
+                bool(r.get("rules_reviewed_at") and r.get("rules_reviewed_by"))
+                for r in manifest["series"]
+            ),
+        },
+    )
 
 
 def source_page(store, url, source, batch_size=PAGE_SIZE):
@@ -257,6 +316,50 @@ class Discovery:
             next_state["since"] = max(0, next_state["scan_started_at"] - 60)
         self.store.set_state("discovery:updates", next_state)
         return len(data["markets"])
+
+    def live_outcomes(self, batch_size=5):
+        """Revisit actual live-market outcomes, including archived markets, in bounded pages."""
+        from urllib.parse import quote
+
+        with self.store.connect() as db:
+            tickers = sorted(
+                {
+                    unpack(r[0])["market_ticker"]
+                    for r in db.execute("SELECT document FROM evidence WHERE source='live'")
+                }
+            )
+        state = self.store.state("discovery:live_outcomes", {"after": ""})
+        pending = [ticker for ticker in tickers if ticker > state["after"]][:batch_size]
+        if not pending:
+            self.store.set_state(
+                "discovery:live_outcomes",
+                {"after": "", "last_sweep_at": now(), "last_success_at": now()},
+            )
+            return 0
+        count = 0
+        for ticker in pending:
+            data = None
+            for prefix in ("/markets/", "/historical/markets/"):
+                try:
+                    data = self.get_json(prefix + quote(ticker, safe=""), {})
+                    break
+                except httpx.HTTPStatusError as error:
+                    if error.response.status_code != 404:
+                        raise
+            if data:
+                market = data["market"]
+                self.store.upsert("market", ticker, market, ticker.split("-", 1)[0])
+                count += 1
+            # A retry/deferred request leaves this ticker pending; 404 is revisited next sweep.
+            self.store.set_state(
+                "discovery:live_outcomes",
+                {
+                    "after": ticker,
+                    "last_success_at": now(),
+                    "last_not_found": ticker if data is None else None,
+                },
+            )
+        return count
 
     def reset(self):
         for job in ("series", "events"):

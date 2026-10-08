@@ -87,6 +87,8 @@ def collect(store, stopped, source_url, interval):
                     lambda source=source: source_page(store, source_url, source),
                 )
                 changed = changed or bool(count)
+        outcomes = run_job(store, "discovery:live_outcomes", discovery.live_outcomes)
+        changed = changed or bool(outcomes)
         requested = store.state("evaluation_requested")
         if changed or requested or stamp - last_evaluation >= 300:
             result = run_job(store, "evaluation", lambda: refresh(store))
@@ -187,14 +189,13 @@ def make_server(store, token, address=("::", 8080)):
                 series = query.get("series", [None])[0]
                 if path == "/v1/status":
                     result = store.status()
+                elif path in ("/v1/review-migrations", "/v1/live-economics"):
+                    result = store.pipeline_items(path.split("/")[-1], limit, offset, series)
+                elif path == "/v1/scoring-requirements":
+                    from .economics import SCORING_REQUIREMENTS
+
+                    result = {"strategies": SCORING_REQUIREMENTS, "advisory_only": True}
                 elif path in ("/v1/assessments", "/v1/select"):
-                    result = store.assessments(
-                        query.get("strategy", [None])[0],
-                        series,
-                        query.get("qualified", ["true" if path == "/v1/select" else "false"])[0]
-                        == "true",
-                        float(query["min_edge"][0]) if "min_edge" in query else None,
-                    )
                     settlement_type = query.get("settlement_type", [None])[0]
                     source = query.get("evidence_source", [None])[0]
                     minimum = (
@@ -204,34 +205,20 @@ def make_server(store, token, address=("::", 8080)):
                         raise ValueError("Invalid evidence source")
                     if minimum is not None and not 0 <= minimum <= 100:
                         raise ValueError("Confidence must be in 0–100")
-                    if settlement_type:
-                        selected = []
-                        for record in result:
-                            facts = store.get("series", record["series_ticker"])
-                            if (
-                                facts
-                                and facts["review_status"] == "reviewed"
-                                and facts["settlement_type"] == settlement_type
-                            ):
-                                selected.append(record)
-                        result = selected
-                    result = [
-                        r
-                        for r in result
-                        if (not source or r["evidence_source"] == source)
-                        and (
-                            minimum is None
-                            or (
-                                r["confidence_score"] is not None
-                                and r["confidence_score"] >= minimum
-                            )
-                        )
-                    ]
-                    result = {
-                        "items": result[offset : offset + limit],
-                        "total": len(result),
-                        "advisory_only": True,
-                    }
+                    result = store.assessment_page(
+                        strategy=query.get("strategy", [None])[0],
+                        series=series,
+                        qualified=query.get(
+                            "qualified", ["true" if path == "/v1/select" else "false"]
+                        )[0]
+                        == "true",
+                        min_edge=float(query["min_edge"][0]) if "min_edge" in query else None,
+                        source=source,
+                        minimum=minimum,
+                        settlement_type=settlement_type,
+                        limit=limit,
+                        offset=offset,
+                    )
                 elif path.startswith("/v1/assessments/"):
                     with store.connect() as db:
                         row = db.execute(

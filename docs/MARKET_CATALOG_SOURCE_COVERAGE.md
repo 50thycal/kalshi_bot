@@ -32,7 +32,7 @@ The existing `bot_readonly` role was verified at 21:39–21:43 UTC:
 
 Evidence: [role and ID audit](https://github.com/50thycal/kalshi_bot/blob/ops/ops/results/catalog-role-id-audit-20261005-2138.txt), [required access audit](https://github.com/50thycal/kalshi_bot/blob/ops/ops/results/catalog-read-access-20261005-2142.txt).
 
-## External unblocker
+## Historical external unblocker — resolved
 
 Calvin/database administrator supplies the actual URL for `bot_readonly`, with that role's own password, as `CATALOG_SOURCE_DATABASE_URL` on `market-catalog`, then redeploys only that service. No read-only URL was found in Railway variables that the agent could reference, and the actual role password is unavailable to the agent. Do not copy the current `DATABASE_URL_RO` value unchanged. Correcting that GitHub secret to the same properly scoped connection is also an operator credential action; no ops workflow change is required.
 
@@ -41,3 +41,16 @@ Calvin/database administrator supplies the actual URL for `bot_readonly`, with t
 The catalog audits the source and local ID sets through its committed source cursor. Both row count and sorted-ID SHA-256 must match before a pass is marked complete. Audit, local comparison and completion cursor publish atomically; interrupted commits leave the prior checkpoint. New/daily reconciliation has a separate completion flag. Missing, substituted or extra IDs fail even when counts coincide. Original history remains retained.
 
 Source-ID equality is a completeness check, not full payload parity. Daily replay repairs changed rows. Scientific confidence remains uncalibrated and unqualified until its independent review, integrity, attribution and forward-validation requirements are satisfied.
+
+
+## Credential resolution and latest observation — 2026-10-08
+
+The owner corrected CATALOG_SOURCE_DATABASE_URL to the actual bot_readonly values and
+redeployed. The source permission guard accepted the role and continuous collection resumed.
+Runtime observations: 130,492 paper and 2,823 live rows; live ID equality through source ID
+4,416 at approximately 02:47 UTC; paper equality through 145,015 was previously recorded
+on 2026-10-07 19:09 UTC. Daily replay continues. Payload parity remains unverified, and
+neither ID equality nor successful collection establishes strategy confidence. The volume
+is 20 GB (observed database ~8.56 GB, free ~9.84 GB at that check). These are timestamped
+observations, not permanently current totals. See MARKET_CATALOG_EVIDENCE.md for the next
+review/attribution/scoring release; no credential change is needed for that release.
