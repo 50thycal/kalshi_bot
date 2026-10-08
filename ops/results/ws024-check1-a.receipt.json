@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a60751c0a17569f42a4bfcb6b99a0b1cebddc11f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-08T04:28:47Z",
+  "id": "ws024-check1-a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ws024-check1-a.receipt.json",
+  "result_file": "ops/results/ws024-check1-a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37727656951",
+  "service": null,
+  "started_at": "2026-10-08T04:28:44Z",
+  "targets": [],
+  "type": "db"
+}
