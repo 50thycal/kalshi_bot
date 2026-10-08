@@ -3,14 +3,15 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-10-03 (WS-021 quote clock repair) · **Build OS v0.12**
+**Updated:** 2026-10-08 (WS-024 Railway RAM budget opened; WS-020 shadow stopped) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-024](WS-024-railway-ram-budget.md) | Railway RAM budget: ≤ $15/month, $10 stretch | READY_TO_BUILD | Active | Live Ops: owner approves D1 in-session (restore programme discovery inside `main` — `Alimm1`'s list frozen since 2026-10-07 02:47Z), then build + PR | [#547 merged](https://github.com/50thycal/kalshi_bot/pull/547) |
 | [WS-023](WS-023-market-catalog.md) | Market catalog and strategy evidence service | REVIEW | Blocked | Calvin/database administrator supplies actual bot_readonly URL; named DATABASE_URL_RO also uses postgres. Source-ID coverage/compression repair merged in #542; dashboard #544 implemented, pending owner deployment | [#541 merged](https://github.com/50thycal/kalshi_bot/pull/541), [#542 merged](https://github.com/50thycal/kalshi_bot/pull/542), [#544 dashboard](https://github.com/50thycal/kalshi_bot/pull/544) |
 | [WS-022](WS-022-desk-research-v2.md) | Desk research v2: open market discovery, open web evidence, fresh round | REVIEW | Active | Owner merges/deploys to desk-service, then runs `docs/desks/ROUND_2_CUTOVER.md` (round switch and start are hard stops; balances carry, same DB) | v2 PR (this branch) |
 | [WS-021](WS-021-autonomous-desks.md) | Autonomous ChatGPT and Claude desks | REVIEW | Active | Review quote validation clock repair PR; owner decides desk-service deployment after merge | [#517](https://github.com/50thycal/kalshi_bot/pull/517) |
-| [WS-020](WS-020-liquidity-incentive-shadow.md) | Liquidity-incentive shadow market maker — Phase 0 instrumentation, no orders | REVIEW | Active — **RUNNING** | Shadow RUNNING on evo since 2026-09-17 12:24Z; first outcomes ended at hour 1.5 with **P(both|one)=0.000 at n=15** and single-leg marks ~160x the reward — thin, HOLD, recorded in thesis §9.2, not acted on. Phase 1a added on operator authorization: the one-sided live smoke test (<=$1/order, <=25c, 3 resting, $10 book) with its own XOS package, gates and paper twin — **ARMED AND LIVE** 2026-09-17 15:57Z (#420, #422); first three bids rested 16:00:47Z for $0.05 total, all caps held, twin mirrored. Operator: thesis §10.6 arming sequence (steps 2 and 4 are hard stops); separately, day-one check 3 before any `est_` reward figure is believed | [#415](https://github.com/50thycal/kalshi_bot/pull/415), [#416](https://github.com/50thycal/kalshi_bot/pull/416) merged |
+| [WS-020](WS-020-liquidity-incentive-shadow.md) | Liquidity-incentive shadow market maker — Phase 0 instrumentation, no orders | REVIEW | Active — **STOPPED** | **Shadow STOPPED 2026-10-07 02:49Z: the evo service was deleted** (no collector runs; `incentive_programs` no longer refreshed — restoration tracked in WS-024 D1). Previously: shadow RUNNING on evo since 2026-09-17 12:24Z; first outcomes ended at hour 1.5 with **P(both|one)=0.000 at n=15** and single-leg marks ~160x the reward — thin, HOLD, recorded in thesis §9.2, not acted on. Phase 1a added on operator authorization: the one-sided live smoke test (<=$1/order, <=25c, 3 resting, $10 book) with its own XOS package, gates and paper twin — **ARMED AND LIVE** 2026-09-17 15:57Z (#420, #422); first three bids rested 16:00:47Z for $0.05 total, all caps held, twin mirrored. Operator: thesis §10.6 arming sequence (steps 2 and 4 are hard stops); separately, day-one check 3 before any `est_` reward figure is believed | [#415](https://github.com/50thycal/kalshi_bot/pull/415), [#416](https://github.com/50thycal/kalshi_bot/pull/416) merged |
 | [WS-019](WS-019-mmsell-queue-fill-telemetry.md) | MMSELL queue / fill telemetry — Phase 1 instrumentation, no behaviour change | RUNNING | Active | Merged and collecting; let ticks accrue and read `execution_telemetry` weekly. Operator decision open: raw-event retention | [#411](https://github.com/50thycal/kalshi_bot/pull/411), [#412](https://github.com/50thycal/kalshi_bot/pull/412), [#417](https://github.com/50thycal/kalshi_bot/pull/417), [#419](https://github.com/50thycal/kalshi_bot/pull/419) |
 | [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | Sizes/sources resolved; API rate conversion and permission for approved-transport quote check after HTTP403 remain | [#402 merged](https://github.com/50thycal/kalshi_bot/pull/402) |
 | [WS-002](WS-002-mmsell-settlement-taxonomy-repair.md) | MMSELL settlement-taxonomy repair | REVIEW | Blocked | Merge guard: verify in XOS that the revision is registered + impacts accepted | [#257](https://github.com/50thycal/kalshi_bot/pull/257) |
@@ -37,6 +38,7 @@ WS-017 temporarily added one explicitly requested bounded probe; it completed th
 day and left this board. The pre-existing five Active rows are unchanged.
 WS-019 was opened on an explicit operator handoff (2026-09-16); it is the sixth Active row
 and the WS-016 D1 question (which row pauses) is still the operator's to answer.
+WS-024 was opened on an explicit operator handoff (2026-10-08, Railway RAM cost); it adds one Active row on top of the existing overage, and the WS-016 D1 question still stands.
 WS-020 was opened on a second explicit operator handoff the same day (the liquidity-incentive
 Phase 0 build); it is the seventh Active row. The board is three over the limit and no session
 has been asked which rows pause — that remains the operator's WS-016 D1 answer.
@@ -63,6 +65,7 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
+- `docs/PROJECT_MODEL.md` incentive section says nothing in the trading path reads `incentive_*`; stale — `Alimm1` and the executor close-time slot rule read `incentive_programs` (PR #547, 2026-10-07).
 - `Hmmsell10` readout script: compute S0–S3 (size arms recomputed by `ticker_size`) and the contest-key report from `docs/MMSELL_SIZE_SPLIT_CANARY.md` §5, ops-allowlisted; needed before the first readout, ~2–3 weeks after arming (WS-007, PR #518, 2026-10-03).
 - Desk PDF evidence capture through an isolated, time-limited parser; refused today so untrusted PDFs are never parsed inside the real-money desk service (WS-022, 2026-10-01).
 - ECON-REACT script: enumerate settled econ prints by `series_ticker` (KXCPI, KXPAYROLLS, KXU3, KXGDP, KXJOBLESS/KXICSA) instead of paging all settled events — the 2026-09-29 re-run reached only 13 settled prints (Calvin, 2026-09-29).
