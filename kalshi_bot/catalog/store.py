@@ -418,6 +418,15 @@ class Store:
         return migration_id
 
     def pipeline_items(self, kind, limit=100, offset=0, series=None):
+        items, total = [], 0
+        for record in self.iter_pipeline_items(kind, series):
+            if offset <= total < offset + limit:
+                items.append(record)
+            total += 1
+        return {"items": items, "total": total, "advisory_only": True}
+
+    def iter_pipeline_items(self, kind, series=None):
+        """Stream current pipeline documents without materialising their history."""
         tables = {
             "review-migrations": (
                 "review_migrations",
@@ -438,10 +447,10 @@ class Store:
                 f"SELECT a.id,a.document FROM {table} a "
                 f"JOIN {current} c ON c.{reference}=a.id ORDER BY a.{key}"
             )
-            items = [{"record_id": r[0], **unpack(r[1])} for r in rows]
-        if series:
-            items = [r for r in items if r["series_ticker"] == series]
-        return {"items": items[offset : offset + limit], "total": len(items), "advisory_only": True}
+            for row in rows:
+                record = {"record_id": row[0], **unpack(row[1])}
+                if not series or record["series_ticker"] == series:
+                    yield record
 
     def save_live_economics(self, documents):
         active = set()
