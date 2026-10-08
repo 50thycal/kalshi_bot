@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-c4-1420","sql":"select 'o' k, market_ticker a, status b, cancel_reason c, created_at::text d from live_orders where strategy='Alimm1' and market_ticker in ('KXC4POS-26NOV03-T110','KXMONSTERPOS-26NOV03-T110') union all select 'p', market_ticker, start_date::text, end_date::text, period_reward_usd::text from (select distinct on (market_ticker) * from incentive_programs where market_ticker='KXMONSTERPOS-26NOV03-T110' order by market_ticker, end_date desc) p"}
+{"type":"noop"}
