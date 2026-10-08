@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "2dc466845801bd092a39ee6a05de40518660e53e",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-08T10:08:10Z",
+  "id": "limm-log-1007",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-log-1007.receipt.json",
+  "result_file": "ops/results/limm-log-1007.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37761446401",
+  "service": "main",
+  "started_at": "2026-10-08T10:08:09Z",
+  "targets": [],
+  "type": "logs"
+}
