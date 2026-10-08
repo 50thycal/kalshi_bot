@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-order-fill-shape-20261008-1456
-# code 076e7b529a61701402d3489075fcf414788f269d · started 2026-10-08T14:54:24Z
-side  action  order_side  order_action  raw_side  raw_action  raw_order_side  raw_order_action  raw_order_action_v1  fills  market_match  raw_order_id_match  raw_ticker_match  explicit_fee
-----  ------  ----------  ------------  --------  ----------  --------------  ----------------  -------------------  -----  ------------  ------------------  ----------------  ------------
-no    sell    no          buy           no        sell        yes             sell                                   2832   2832          2832                2832              2832        
-
-(1 row)
