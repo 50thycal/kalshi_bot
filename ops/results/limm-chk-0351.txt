@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0351
-# code 751d3f86314cad89263b8b336424af87dc3b82f6 · started 2026-10-08T03:51:52Z
-market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                      
----------------------------  ----  ------  -----------  --------  -------  -------------  --------------------------------
-KXTRUMPMENTION-26OCT09-AFFO  no    buy     10           100       resting                 2026-10-07 08:43:11.528812+00:00
-KXCFBUNRANKEDUPSET-26W6-9    yes   buy     3            333       resting                 2026-10-07 06:33:49.323053+00:00
-
-(2 rows)
