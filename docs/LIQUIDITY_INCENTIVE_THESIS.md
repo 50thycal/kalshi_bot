@@ -2810,3 +2810,13 @@ knowing the candidate set behind them was frozen.
 
 The 9.8% swap is the borderline case §9.49 A did not anticipate. It is noted and not acted on
 here.
+
+**Window closed: 2026-10-08 04:30:19Z.** This is the first discovery cycle after the freeze,
+run by `main` (WS-024 D1). Cycles have stayed under 5 minutes apart since then (11 by 05:50Z).
+The degraded window is therefore **2026-10-07 02:47:33Z – 2026-10-08 04:30:19Z**.
+
+When discovery came back, the bot swapped KXCFBUNRANKEDUPSET-26W6-9 (held ~22h; programme to
+Oct 14) at 04:30Z as dead for KXC4POS-26NOV03-T110, a programme first seen at 04:02Z ($100,
+to Oct 15). It then re-priced that bid in place, 2¢ to 4¢, at 05:32Z. The swap's rate log was
+lost to the 04:37Z redeploy, so whether it cleared the dead line comfortably or by a hair is
+unknown. This is the second dead swap out of a programme with a week to run.
