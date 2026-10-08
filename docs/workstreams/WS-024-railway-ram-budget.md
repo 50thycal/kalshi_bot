@@ -163,6 +163,32 @@ Every step records a before and an after here. Windows end at the stated time.
   every 5 min loads ~36k light terms rows and the ~36k-programme listing, transiently) and in
   Postgres (the discovery write churn the evo service used to generate returns).
 
+### Step 3 — live-dash and website sleep (started 2026-10-08)
+
+- **website** (`python -m kalshi_bot.dashboard`): no background work — a `ThreadingHTTPServer`
+  that reads Postgres per request. **App sleep enabled 2026-10-08 ~03:06Z** (Railway
+  `sleepApplication=true`, redeployed). Before: 0.07 GB avg / 0.14 max. After: _pending 24h._
+  The sandbox cannot reach `*.up.railway.app` (egress policy), so "still loads" is checked
+  from Railway HTTP logs and by the owner opening the URL.
+- **live-dash** (`python -m kalshi_bot.livedash`): **cannot sleep as deployed.**
+  `OverviewCache` rebuilds the landing payload from Postgres every 120 s on a daemon thread,
+  forever — continuous outbound traffic, and Railway sleeps a service only after ~10 min with
+  none. Fix written (refresher idles 15 min after the last request; start counts as one), held
+  for its own PR after step 1 merges; enable sleep only after it deploys. Before: 0.28 GB avg /
+  0.71 max. Open tabs poll every 60 s (`overview.html`, `index.html`), so an open tab keeps it
+  awake — by design.
+- Both deploy from the default branch, so every merge redeploys (wakes) them.
+
+### Step 2 evidence — market-catalog (for D2; not acted on)
+
+- RAM 1.00 GB avg, pinned at its 1.0 GB limit all 24h. CPU ~0.02–0.12 vCPU.
+- **Volume growth is the nearer risk.** Disk 7.89 → 11.34 GB over 48h. The SQLite file grew
+  8,563,892,224 → 8,568,143,872 bytes in 7.5 min (≈ 0.8 GB/day). Volume 19.7 GB, 9.8 GB free
+  at 03:01Z → **full in roughly 10–12 days** at this rate unless bounded (WS-023 owns the
+  catalog's design; this is the D2 input).
+- Rows at 03:01Z: objects 2.21M (2.07M markets), revisions 2.65M, evidence 133k,
+  assessments 183k. An `evaluation` pass over ~146.5k contexts runs every ~7 min.
+
 ## Implementation State
 
 PR #547 merged (precursor).
