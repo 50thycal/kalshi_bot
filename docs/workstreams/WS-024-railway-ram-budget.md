@@ -159,8 +159,18 @@ Every step records a before and an after here. Windows end at the stated time.
 ### Step 1 — discovery restored in `main`
 
 - Before: as baseline (main 0.42 avg / 0.85 max; Postgres 1.24 avg).
-- After: _pending — measure 24h after the PR deploys._ Expect a small rise in `main` (one pass
-  every 5 min loads ~36k light terms rows and the ~36k-programme listing, transiently) and in
+- **Deployed 2026-10-08 04:28Z** ([#553](https://github.com/50thycal/kalshi_bot/pull/553) merged
+  04:27Z; carried forward by #551/#554 deploys). First pass, cycle 7115 at 04:30:19Z: listed
+  35,674, new 100, **deferred 4,773**, gone 4,385, errors 0, 12.0 s. `max(last_seen_at)` moved
+  2026-10-07 02:47Z → 2026-10-08 04:30Z (ops `ws024-check1-c`).
+- The 4,385 "gone" are real: of programmes marked gone in that hour, only **3** have not ended —
+  the rest ended during the 26h freeze. The 4,773 deferred drain at 100/pass (~4h).
+- No `incentive runner discovery failed` / `incentive smoke cycle failed` in `main` logs; the
+  same cycle still placed and mirrored (Alimm1 placed 1, twin opened 1).
+- Correction: the account is on the **Advanced** API tier (300 reads/s refill, per the worker's
+  startup `api limits probe`), not Basic. The per-pass bound still stands for cycle time.
+- After RAM: _pending — measure 24h after deploy (≥ 2026-10-09 04:30Z)._ Expect a small rise in
+  `main` (one pass every 5 min holds the ~36k listing and ~36k light rows transiently) and in
   Postgres (the discovery write churn the evo service used to generate returns).
 
 ### Step 3 — live-dash and website sleep (started 2026-10-08)
@@ -173,8 +183,11 @@ Every step records a before and an after here. Windows end at the stated time.
 - **live-dash** (`python -m kalshi_bot.livedash`): **cannot sleep as deployed.**
   `OverviewCache` rebuilds the landing payload from Postgres every 120 s on a daemon thread,
   forever — continuous outbound traffic, and Railway sleeps a service only after ~10 min with
-  none. Fix written (refresher idles 15 min after the last request; start counts as one), held
-  for its own PR after step 1 merges; enable sleep only after it deploys. Before: 0.28 GB avg /
+  none. Fix: the refresher idles 15 min after the last request (start counts as one) — the
+  step-3 PR. Enable sleep on live-dash only after it deploys.
+- website after enabling sleep: no HTTP requests, no network flows and 0 TX bytes from 03:10Z
+  to 04:10Z, but Railway still reported the deployment `SUCCESS`, not `SLEEPING`, at 04:10Z.
+  Owner to confirm in the dashboard; the 24h average settles it. Before: 0.28 GB avg /
   0.71 max. Open tabs poll every 60 s (`overview.html`, `index.html`), so an open tab keeps it
   awake — by design.
 - Both deploy from the default branch, so every merge redeploys (wakes) them.
@@ -193,7 +206,8 @@ Every step records a before and an after here. Windows end at the stated time.
 
 PR #547 merged (precursor).
 
-**Step 1 (D1) — built, PR open, owner approved the live-runner edit in-session 2026-10-08.**
+**Step 1 (D1) — merged and deployed 2026-10-08 (#553); check 1 passing at first read, 24h
+freshness still to confirm.** Owner approved the live-runner edit in-session 2026-10-08.
 
 - `IncentiveLiveRunner._refresh_programs` runs after exits and before every read of the
   programme list (so a full book still refreshes). It runs only when the runner is armed, the
@@ -240,7 +254,7 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
 
 ## Next Step
 
-Owner merges the step-1 PR. Then Live Ops verifies acceptance check 1 (fresh cycle row < 10 min,
-`last_seen_at` advancing, no `incentive runner discovery failed` / `incentive smoke cycle
-failed` in `main` logs, `deferred_new_terms` draining to zero), records the after-RAM above,
-and moves to step 3 (live-dash / website sleep — verify no background work first).
+Owner merges the step-3 PR (live-dash idle refresher); Live Ops then enables app sleep on
+live-dash. At ≥ 2026-10-09 04:30Z: confirm check 1 held for 24h (cycle rows every ~5 min,
+`deferred_new_terms` back to 0) and record after-RAM for steps 1 and 3. Then D2 (catalog —
+volume fills in ~10–12 days) and D3/D4, each an owner decision.

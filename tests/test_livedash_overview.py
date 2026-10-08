@@ -283,6 +283,28 @@ def test_the_cache_builds_inline_once_and_keeps_the_last_good_build():
     assert cache.get() == {**cache.get(), "build": 3, "cache_error": None}
 
 
+def test_the_refresher_stops_touching_the_database_when_nobody_is_looking():
+    """WS-024 step 3: an idle dashboard sends no outbound traffic, so Railway can sleep it."""
+    now = {"t": 1000.0}
+    calls = {"n": 0}
+
+    def builder():
+        calls["n"] += 1
+        return {"build": calls["n"]}
+
+    cache = ov.OverviewCache(builder, refresh_seconds=3600, idle_seconds=900,
+                             clock=lambda: now["t"])
+    assert cache.tick() is False and calls["n"] == 0        # never used, never started
+    cache.get()
+    assert calls["n"] == 1
+    now["t"] += 600
+    assert cache.tick() is True and calls["n"] == 2         # looked at 10 min ago: keep fresh
+    now["t"] += 301
+    assert cache.tick() is False and calls["n"] == 2        # idle 15 min: stop
+    assert cache.get()["build"] == 2                        # still served when asked again
+    assert cache.tick() is True and calls["n"] == 3
+
+
 def test_a_cache_that_never_built_raises_rather_than_serving_nothing():
     cache = ov.OverviewCache(lambda: (_ for _ in ()).throw(RuntimeError("x")))
     with pytest.raises(RuntimeError):
