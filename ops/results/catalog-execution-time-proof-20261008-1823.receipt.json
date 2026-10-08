@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "3d662500ffe6b6d2f3c8847b14f6d9abeb5aa28d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-08T18:21:34Z",
+  "id": "catalog-execution-time-proof-20261008-1823",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/catalog-execution-time-proof-20261008-1823.receipt.json",
+  "result_file": "ops/results/catalog-execution-time-proof-20261008-1823.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37823634519",
+  "service": null,
+  "started_at": "2026-10-08T18:21:33Z",
+  "targets": [],
+  "type": "db"
+}
