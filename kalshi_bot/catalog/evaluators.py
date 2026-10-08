@@ -189,8 +189,11 @@ def refresh(store, as_of=None):
                         coverage.get(result["evidence_source"], {}).get("ids_match")
                     ),
                     "live_economics_attributed": result["evaluator_version"]
-                    == "exclusive-binary-ledger-v3",
+                    == "exclusive-binary-ledger-v4",
                     "exchange_fill_coverage_verified": False,
+                    "exchange_execution_times_verified": result.get(
+                        "exchange_execution_times_verified", False
+                    ),
                     "independent_outcomes_verified": False,
                     "strategy_lineage_known": result.get("deployment_arm_id") is not None,
                     "forward_validation_complete": False,
@@ -237,6 +240,9 @@ def refresh(store, as_of=None):
         "source_quantity_rounding_restored_fills": sum(
             r["source_quantity_rounding_restored_fills"] for r in economics
         ),
+        "source_execution_time_restored_fills": sum(
+            r["source_execution_time_restored_fills"] for r in economics
+        ),
     }
     store.set_state("live_economics_summary", summary)
     # Counts and fixed reason codes only; no P&L, credentials or fill payloads.
@@ -249,6 +255,7 @@ def refresh(store, as_of=None):
                 reason
                 in {
                     "fill_after_settlement",
+                    "exchange_fill_time_missing_or_inconsistent",
                     "ownership_ambiguous_or_unverified",
                     "raw_quantity_missing_or_inconsistent",
                     "actual_fill_costs_missing_or_invalid",
