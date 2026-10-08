@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MMSELL TYPE-RANK run 2 2026-10-08 — still HOLD; forward flow has slowed sharply
+
+Weekly re-run of [TYPE-RANK](MMSELL_TYPE_RANK_THESIS.md) (ops `typerank-20261008-1`). The
+retrospective leg still does not kill (+2.00¢ separation, ranking unchanged). The forward leg
+has 35 top-pair and 14 other-type fills since 10-01 against floors of 150 and 100, so the verdict
+stays HOLD (accrual); its early sign is negative and means nothing at that size. The useful news
+is operational: Fmmsell10 placed about 11 orders a day this week against about 44 a day in
+September, which pushes the earliest decisive read to late November. The drop coincides
+with the end of the MLB regular season; whether anything else changed belongs to Live Ops.
+
 ## MMSELL 2026-10-04 — three read-only probes; no supported live treatment
 
 Calvin authorized measurement of cheaper NO quotes, reserved quality slots and broad NO-book
