@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "076e7b529a61701402d3489075fcf414788f269d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-08T14:55:10Z",
+  "id": "catalog-canonical-direction-20261008-1458",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/catalog-canonical-direction-20261008-1458.receipt.json",
+  "result_file": "ops/results/catalog-canonical-direction-20261008-1458.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37796404672",
+  "service": null,
+  "started_at": "2026-10-08T14:55:10Z",
+  "targets": [],
+  "type": "db"
+}
