@@ -347,3 +347,26 @@ def test_trades_count_markets_filled_this_month_and_all_time(session):
     b = _book(p, "Hbook")
     assert (b["trades_this_month"], b["trades_all_time"]) == (1, 3)
     assert (p["headline"]["trades_this_month"], p["headline"]["trades_all_time"]) == (1, 3)
+
+
+def test_the_months_peak_is_the_realized_high_water_mark_replayed_in_time_order(session):
+    """+$0.07, +$0.07 (high $0.14), then −$0.93: the card says the month peaked at $0.14 on
+    the second settlement and now sits $0.93 below it. September's win never counts."""
+    _order(session, "KXP-0", filled=1, at=NOW - timedelta(days=9))
+    _settle(session, "KXP-0", 5.0, at=datetime(2026, 9, 30, tzinfo=timezone.utc))
+    for i, (pnl, days) in enumerate([(0.07, 3), (0.07, 2), (-0.93, 1)], start=1):
+        _order(session, f"KXP-{i}", filled=1, at=NOW - timedelta(days=4))
+        _settle(session, f"KXP-{i}", pnl, at=NOW - timedelta(days=days))
+
+    h = ov.build_overview(session, now=NOW)["headline"]
+    assert h["month_peak_usd"] == pytest.approx(0.14)
+    assert h["month_peak_at"].startswith((NOW - timedelta(days=2)).date().isoformat())
+    assert h["below_peak_usd"] == pytest.approx(0.93)
+
+
+def test_a_month_that_only_lost_has_a_zero_peak_and_no_peak_time(session):
+    _order(session, "KXL-1", filled=1, at=NOW - timedelta(days=3))
+    _settle(session, "KXL-1", -0.93, at=NOW - timedelta(days=1))
+    h = ov.build_overview(session, now=NOW)["headline"]
+    assert (h["month_peak_usd"], h["month_peak_at"]) == (0.0, None)
+    assert h["below_peak_usd"] == pytest.approx(0.93)
