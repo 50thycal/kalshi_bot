@@ -189,7 +189,7 @@ def refresh(store, as_of=None):
                         coverage.get(result["evidence_source"], {}).get("ids_match")
                     ),
                     "live_economics_attributed": result["evaluator_version"]
-                    == "exclusive-binary-ledger-v1",
+                    == "exclusive-binary-ledger-v2",
                     "exchange_fill_coverage_verified": False,
                     "independent_outcomes_verified": False,
                     "strategy_lineage_known": result.get("deployment_arm_id") is not None,

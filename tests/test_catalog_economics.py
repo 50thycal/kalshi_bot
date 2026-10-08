@@ -1,11 +1,12 @@
 import json
 import threading
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import httpx
 import pytest
 
-from kalshi_bot.catalog.economics import SCORING_REQUIREMENTS, live_economics
+from kalshi_bot.catalog.economics import SCORING_REQUIREMENTS, ledger_fill, live_economics
 from kalshi_bot.catalog.evaluators import refresh
 from kalshi_bot.catalog.ingest import ROOT, SOURCE_QUERIES, Discovery, DiscoveryDeferred, seed
 from kalshi_bot.catalog.service import make_server
@@ -67,6 +68,139 @@ def settled(store, **changes):
 
 def calculate(store, rows):
     return next(live_economics(store, [("live", row) for row in rows], MOMENT))
+
+
+def canonical_fill(id=1, action="buy", quantity=10, price=80, side="no", **changes):
+    row = fill(id, action, quantity, price, side=side, order_side=side, **changes)
+    outcome = side if action == "buy" else {"yes": "no", "no": "yes"}[side]
+    book = {"yes": "bid", "no": "ask"}[outcome]
+    yes_price = price / 100 if side == "yes" else 1 - price / 100
+    no_price = 1 - yes_price
+    row.update(
+        kalshi_order_id=f"order-{id}",
+        side=outcome,
+        action="sell" if book == "ask" else "buy",
+        price=round((yes_price if outcome == "yes" else no_price) * 100),
+    )
+    row["raw_fill_json"].update(
+        outcome_side=outcome,
+        book_side=book,
+        side=row["side"],
+        action=row["action"],
+        order_id=row["kalshi_order_id"],
+        trade_id=row["kalshi_fill_id"],
+        ticker=row["market_ticker"],
+        yes_price_dollars=f"{yes_price:.4f}",
+        no_price_dollars=f"{no_price:.4f}",
+    )
+    row["raw_order_json"] = {
+        "outcome_side": outcome,
+        "book_side": book,
+        "side": "yes",
+        "action": "sell" if book == "ask" else "buy",
+        "order_id": row["kalshi_order_id"],
+        "ticker": row["market_ticker"],
+    }
+    return row
+
+
+def test_production_canonical_no_entry_is_a_purchase_not_an_inventory_deficit(store):
+    settled(store, result="no", settlement_value_dollars="0")
+    row = canonical_fill()
+    original = json.loads(json.dumps(row))
+    result = calculate(store, [row])
+    assert result["status"] == "attributed_source_ledger"
+    assert result["side"] == "no"
+    assert Decimal(result["net_pnl_dollars"]) == Decimal("1.90")
+    assert result["buy_contracts"] == "10"
+    assert result["method_version"] == "exclusive-binary-ledger-v2"
+    assert row == original  # Original legacy labels remain evidence, never rewritten.
+
+
+def test_canonical_exit_uses_held_leg_price_and_preserves_cashflows(store):
+    settled(store, result="no", settlement_value_dollars="0")
+    rows = [
+        canonical_fill(market_fill_count=2),
+        canonical_fill(2, "sell", 4, 90, market_fill_count=2),
+    ]
+    assert rows[1]["side"] == "yes" and rows[1]["price"] == 10
+    result = calculate(store, rows)
+    assert result["status"] == "attributed_source_ledger"
+    assert Decimal(result["net_pnl_dollars"]) == Decimal("1.40")
+    assert result["remaining_settlement_contracts"] == "6"
+
+
+@pytest.mark.parametrize(
+    "side,action", [("yes", "buy"), ("no", "buy"), ("yes", "sell"), ("no", "sell")]
+)
+def test_canonical_direction_maps_all_four_order_intents(side, action):
+    normalized = ledger_fill(canonical_fill(side=side, action=action))
+    assert (normalized["side"], normalized["action"]) == (side, action)
+    assert float(normalized["price"]) == 80
+
+
+@pytest.mark.parametrize(
+    "payload,field,value",
+    [
+        ("raw_fill_json", "outcome_side", "yes"),
+        ("raw_fill_json", "book_side", "bid"),
+        ("raw_fill_json", "outcome_side", None),
+        ("raw_fill_json", "order_id", "other"),
+        ("raw_fill_json", "trade_id", "other"),
+        ("raw_fill_json", "ticker", "other"),
+        ("raw_fill_json", "market_ticker", "other"),
+        ("raw_fill_json", "side", "yes"),
+        ("raw_fill_json", "action", "buy"),
+        ("raw_fill_json", "yes_price_dollars", "0.3"),
+        ("raw_order_json", "outcome_side", "yes"),
+        ("raw_order_json", "order_id", None),
+        ("raw_order_json", "ticker", "other"),
+    ],
+)
+def test_canonical_translation_requires_identity_direction_and_exact_prices(
+    store, payload, field, value
+):
+    settled(store)
+    row = canonical_fill()
+    row[payload][field] = value
+    result = calculate(store, [row])
+    assert "order_fill_identity_inconsistent_or_unverified" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_legacy_action_mismatch_without_canonical_proof_remains_blocked(store):
+    settled(store)
+    row = fill()
+    row["action"] = "sell"
+    assert (
+        "order_fill_identity_inconsistent_or_unverified"
+        in calculate(store, [row])["blocked_reasons"]
+    )
+
+
+def test_canonical_translation_keeps_loss_fees_and_confidence_guards(store):
+    settled(store, result="yes", settlement_value_dollars="1")
+    row = canonical_fill()
+    result = calculate(store, [row])
+    assert Decimal(result["net_pnl_dollars"]) == Decimal("-8.10")
+    assert not result["qualified"] and result["confidence_score"] is None
+    del row["raw_fill_json"]["fee_cost"]
+    result = calculate(store, [row])
+    assert "actual_fill_costs_missing_or_invalid" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_old_projection_replays_raw_order_evidence_once(store):
+    store.set_state("live_projection_version", "ownership-v1")
+    store.set_state("cursor:live", {"after": 99, "initial_coverage_verified": True})
+    seed(store)
+    assert store.state("live_projection_version") == "canonical-direction-v2"
+    assert store.state("cursor:live")["after"] == 0
+    assert not store.state("cursor:live")["reconciliation_complete"]
+    store.set_state("cursor:live", {"after": 10})
+    seed(store)
+    assert store.state("cursor:live")["after"] == 10
+    assert "o.raw_order_json AS raw_order_json" in SOURCE_QUERIES["live"]
 
 
 def test_cashflows_partial_exit_and_remaining_settlement_use_actual_fees(store):
@@ -199,7 +333,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     store.evidence_page("live", [fill()], {"after": 1})
     refresh(store, MOMENT)
     first = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v1"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v2"
     )
     assert first["net_pnl_dollars"] == "1.90"
     refresh(store, MOMENT + timedelta(minutes=1))
@@ -207,7 +341,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     settled(store, result="no", settlement_value_dollars="0")
     refresh(store, MOMENT + timedelta(minutes=2))
     current = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v1"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v2"
     )
     assert current["net_pnl_dollars"] == "-8.10"
     assert first["assessment_id"] != current["assessment_id"]

@@ -40,7 +40,8 @@ backoff. Missing outcomes are retried on subsequent sweeps. Changed settlement v
 included in immutable revisions. No private trading credential is required.
 
 Supported attribution is intentionally narrow: one strategy/deployment owner, one side,
-all source fills accounted for, distinct exchange-fill identities, matching order/fill market, side and action, exact raw quantity/price,
+all source fills accounted for, distinct exchange-fill identities, matching order/fill market
+and verified contract intent, exact raw quantity/price,
 explicit exchange `fee_cost`, valid execution times, and final non-provisional $1 binary
 settlement. Missing or inconsistent evidence blocks P&L with named reasons. Stored fee values
 are not proof of actual fees: the source executor sometimes substitutes an estimate.
@@ -54,8 +55,30 @@ This is reconstructed **source-ledger** economics, not independently reconciled 
 account P&L. Complete source IDs cannot prove every exchange fill was originally ingested.
 Mixed-owner/side markets require a later allocation method and remain blocked here.
 
+### Canonical direction repair
+
+Kalshi's `outcome_side` and `book_side` describe exposure: yes/bid or no/ask.
+Buying NO and selling YES both produce NO exposure. Deprecated fill `side`/`action`
+labels need not reproduce the bot's held-contract intent. Reference:
+https://docs.kalshi.com/getting_started/order_direction.
+
+The v2 ledger imports the raw exchange order alongside each source fill. When a fill
+carries canonical fields, both canonical fields on the fill and order must agree with
+the joined bot order's intent. Raw order IDs, raw fill identity, market identities,
+source price scale and complementary YES/NO prices must also agree. Only then does
+an in-memory copy use the bot order's held side/action and that held leg's price.
+This distinguishes entries from exits; exposure alone cannot do that. Original
+source columns and payloads remain unchanged. Legacy rows without canonical fields
+still require exact side/action agreement; mismatches remain blocked.
+
+Deployment changes the live projection checkpoint to `canonical-direction-v2`,
+replaying live evidence once to collect raw order proof without deleting history.
+Source-ID reconciliation becomes incomplete until this replay catches up. New ledger
+assessments use a separate v2 method scope; old snapshots remain immutable. Actual
+fee, ownership, inventory, settlement and confidence requirements remain enforced.
+
 `GET /v1/live-economics` returns market-level results/reasons, paginated like review migrations.
-The corresponding MMSELL assessments use method `exclusive-binary-ledger-v1` and maturity
+The corresponding MMSELL assessments use method `exclusive-binary-ledger-v2` and maturity
 `live_attributed_source_ledger`. Existing paper and raw live-fill assessments remain distinct.
 
 ## Completion, maturity and confidence
