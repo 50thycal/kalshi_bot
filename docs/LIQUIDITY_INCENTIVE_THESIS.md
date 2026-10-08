@@ -2778,3 +2778,35 @@ deposit, and every real credit is ≥ $1, so the dashboard read $0.
 
 Caps, sizes, exits, the side rule and the budget are unchanged. Risk-neutral: no new exposure;
 re-pricing moves a bid by cents within the same 10¢ cap and $10 leg budget.
+
+### 9.50 Degraded window: programme discovery frozen from 2026-10-07 02:47Z (2026-10-08)
+
+**What happened.** The Railway `evo bot` service, the only writer of `incentive_programs` (the
+WS-020 shadow collector), was deleted on 2026-10-07 during the RAM cleanup (WS-024). Last
+discovery cycle **2026-10-07 02:47:33Z**; last shadow quote 02:49Z. Alimm1 stayed live on `main`
+reading a **frozen programme list**: ended programmes still drop out, but new programmes,
+changed terms, market status and close times are not seen. Caps and exposure are unchanged.
+The fix (WS-024 item D1: `main` runs REST discovery itself when no cycle is < 5 min old) is
+owned by Live Ops; this book does not build a competing one.
+
+**Readout rule.** From 2026-10-07 02:47Z until `max(incentive_discovery_cycles.started_at)` is
+fresh again, the window is **degraded**:
+- candidate sets were stale, so skip rates, `no_slots` / `low_projected_payout` counts and
+  "placed nothing" in this window are not strategy signal;
+- the shadow-quote / shadow-outcome tape has a gap, so it is not evidence for the
+  liquidity-incentive-mm gate (no zero-fill or zero-reward inference across it);
+- since PR #547, `incentive_book_events` and `incentive_shadow_events` are off by default, so
+  their absence after that merge is configuration, not behaviour.
+
+Live fills, exits and reward credits are real money and still count; they are only to be read
+knowing the candidate set behind them was frozen.
+
+**§9.49 decisions taken inside the window** (all against the frozen candidate set):
+- 05:30Z: KXTRUMPMENTION-26OCT09-CHIN was replaced as dead (~$0.0006/h vs ~$0.0304/h, 2%) by
+  KXCFBUNRANKEDUPSET-26W6-9.
+- 06:33Z: that bid was re-priced in place, 2¢ to 3¢.
+- 08:43Z: KXAMZNCC-26NOV07-T157 was replaced as dead (~$0.0135/h vs ~$0.1384/h, **9.8%**,
+  just under the 0.10 line, with ~7 days of programme left) by KXTRUMPMENTION-26OCT09-AFFO.
+
+The 9.8% swap is the borderline case §9.49 A did not anticipate. It is noted and not acted on
+here.
