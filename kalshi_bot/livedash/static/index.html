@@ -797,24 +797,28 @@ const PNL_SERIES = [
   {id:"punr",  label:"Paper unrealized",  col:"--c-paper", dash:"1.5 3.5",w:1.75,key:()=>"paper_unrealized"},
 ];
 const PNL_OPTS = [
+  {id:"peak",   label:"Peak",        title:"The highest total P&L reached in this window, and how far below it we are now", primary:true},
   {id:"net",    label:"Net of fees", title:"Subtract entry fees still sitting in open positions"},
   {id:"trades", label:"Trades",      title:"Entries and settlements along the time axis"},
   {id:"gaps",   label:"Data gaps",   title:"Shade points where a held market had no mark"},
 ];
-const PNL = {on:new Set(["live","paper"]), opt:new Set(["gaps"]), fs:false, more:false, view:null};
+const PNL = {on:new Set(["live","paper"]), opt:new Set(["gaps","peak"]), fs:false, more:false, view:null};
 try{
   const saved = JSON.parse(localStorage.getItem("livedash.pnl") || "null");
   if(saved){
     if(PNL_WINDOWS.some(w => w[0] === saved.win)) S.serWin = saved.win;
     if(Array.isArray(saved.on) && saved.on.length) PNL.on = new Set(saved.on.filter(i => PNL_SERIES.some(s => s.id === i)));
     if(Array.isArray(saved.opt)) PNL.opt = new Set(saved.opt.filter(i => PNL_OPTS.some(o => o.id === i)));
+    if(!(saved.v >= 2)) PNL.opt.add("peak");   // saved before Peak existed: it starts on
   }
 }catch(e){ /* storage unavailable: defaults */ }
 function savePnlPrefs(){
-  try{ localStorage.setItem("livedash.pnl", JSON.stringify({win:S.serWin, on:[...PNL.on], opt:[...PNL.opt]})); }
+  try{ localStorage.setItem("livedash.pnl", JSON.stringify({v:2, win:S.serWin, on:[...PNL.on], opt:[...PNL.opt]})); }
   catch(e){ /* storage unavailable */ }
 }
 const pnlMode = () => PNL.opt.has("net") ? "net" : "gross";
+// The peak is a reference line, not a series: neutral ink and its own dash, never a palette hue.
+const PEAK_INK = "#c3c9d4", PEAK_DASH = "2 4";
 const cssv = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
 const dashIcon = (color, dash, w=2) =>
   `<svg width="18" height="8" aria-hidden="true"><line x1="1" x2="17" y1="4" y2="4" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/></svg>`;
@@ -827,12 +831,13 @@ function renderPnlControls(){
   const primary = PNL_SERIES.slice(0, 3), extra = PNL_SERIES.slice(3);
   // Everything past the three totals sits behind "More" so the plot keeps the screen; the
   // count says how many hidden choices are switched on, so nothing is silently active.
-  const hiddenOn = extra.filter(s => PNL.on.has(s.id)).length + PNL.opt.size;
-  $("#pnlseries").innerHTML = primary.map(chip).join("") +
+  const optChip = o =>
+    `<button type="button" class="chip opt" data-opt="${o.id}" aria-pressed="${PNL.opt.has(o.id)}" title="${esc(o.title)}">${o.primary ? dashIcon(PEAK_INK, PEAK_DASH, 1.5) : ""}${esc(o.label)}</button>`;
+  const hiddenOn = extra.filter(s => PNL.on.has(s.id)).length + PNL_OPTS.filter(o => !o.primary && PNL.opt.has(o.id)).length;
+  $("#pnlseries").innerHTML = primary.map(chip).join("") + PNL_OPTS.filter(o => o.primary).map(optChip).join("") +
     `<button type="button" class="chip more" data-more="1" aria-expanded="${PNL.more}">${PNL.more ? "Less ▴" : `More${hiddenOn ? ` · ${hiddenOn}` : ""} ▾`}</button>` +
-    (PNL.more ? extra.map(chip).join("") + `<span class="chipsep" aria-hidden="true"></span>` + PNL_OPTS.map(o =>
-      `<button type="button" class="chip opt" data-opt="${o.id}" aria-pressed="${PNL.opt.has(o.id)}" title="${esc(o.title)}">${esc(o.label)}</button>`
-    ).join("") : "");
+    (PNL.more ? extra.map(chip).join("") + `<span class="chipsep" aria-hidden="true"></span>` +
+      PNL_OPTS.filter(o => !o.primary).map(optChip).join("") : "");
 }
 
 // Points carry both modes; the net-mode gap is derived here so every series is a plain key.
@@ -841,6 +846,19 @@ function pnlPoints(){
   return p.points.map(pt => ({...pt, t:new Date(pt.at).getTime(),
     gap_gross: pt.difference,
     gap_net: has(pt.paper_net) && has(pt.live_net) ? pt.paper_net - pt.live_net : null}));
+}
+
+// Highest total reached in the window, on the live line (paper when live is hidden).
+function pnlPeak(pts){
+  const m = pnlMode();
+  const who = PNL.on.has("live") || !PNL.on.has("paper") ? "live" : "paper";
+  const k = `${who}_${m}`;
+  let best = null;
+  for(const p of pts) if(has(p[k]) && (!best || p[k] > best.v)) best = {v:p[k], t:p.t};
+  if(!best) return null;
+  let cur = null;
+  for(let i = pts.length-1; i >= 0; i--) if(has(pts[i][k])){ cur = pts[i][k]; break; }
+  return {...best, who, k, off: has(cur) ? cur - best.v : null};
 }
 
 function niceStep(raw){
@@ -877,10 +895,13 @@ function renderPnlStats(pts){
   const lv = last[`live_${m}`], pv = last[`paper_${m}`], gv = last[`gap_${m}`];
   const chg = has(lv) && has(first[`live_${m}`]) ? lv - first[`live_${m}`] : null;
   const winLabel = (PNL_WINDOWS.find(w => w[0] === S.serWin) || [,"window"])[1];
+  const pk = pnlPeak(pts);
+  const peakSub = pk && pk.who === "live" ? `<span class="sub" title="Highest live total in this window, reached ${esc(fmtWhen(pk.t))}">peak ${esc(smoney(pk.v))}${
+    pk.off < -0.005 ? ` · ${esc(money2(-pk.off))} below` : " · at peak"}</span>` : "";
   $("#pnlstats").innerHTML =
     `<div class="stat">${k("Live total","--c-live")}
        <span class="v1 ${sign(lv)}">${esc(smoney(lv))}</span>
-       <span class="sub">${esc(smoney(chg))} over ${esc(winLabel === "All" ? "the run" : winLabel)}</span></div>
+       <span class="sub">${esc(smoney(chg))} over ${esc(winLabel === "All" ? "the run" : winLabel)}</span>${peakSub}</div>
      <div class="stat">${k("Paper twin","--c-paper")}
        <span class="v2 ${sign(pv)}">${esc(smoney(pv))}</span>
        <span class="sub">realized ${esc(smoney(last.paper_realized))}</span></div>
@@ -991,11 +1012,30 @@ function drawPnl(pts){
       g += `<path d="M${sg}L${xb},${base}L${xa},${base}Z" fill="url(#pnlfill)" clip-path="url(#pnlclip)"/>`;
     }
   }
+  // peak: a neutral reference line at the window's high, a ring where it was set, and a label
+  const pk0 = PNL.opt.has("peak") ? pnlPeak(pts) : null;
+  const pk = pk0 && shown.some(s => s.id === pk0.who) ? pk0 : null;
+  let peakMark = "";
+  if(pk){
+    const py = Y(pk.v), px = X(pk.t);
+    g += `<line x1="${L}" x2="${W-R}" y1="${f(py)}" y2="${f(py)}" stroke="${PEAK_INK}" stroke-width="1.25" stroke-dasharray="${PEAK_DASH}" opacity=".85"/>`;
+    const txt = `Peak ${smoney(pk.v)} · ${fmtWhen(pk.t)}`;
+    // An opaque pill drawn over the lines, beside the ring (left of it when there is room)
+    // and above the line unless it hugs the top, so it never sits on the peak itself.
+    const tw = txt.length * 6.1 + 12, th = 18;
+    let tx = px - 10 - tw; if(tx < L + 2) tx = Math.min(W - R - tw - 2, px + 10);
+    const ty = py - th - 6 < T ? py + 6 : py - th - 6;
+    const col = cssv(panel, pk.who === "live" ? "--c-live" : "--c-paper");
+    peakMark = `<circle cx="${f(px)}" cy="${f(py)}" r="4.5" fill="#181b24" stroke="${col}" stroke-width="2"><title>${esc(txt)}</title></circle>
+      <rect x="${f(tx)}" y="${f(ty)}" width="${f(tw)}" height="${th}" rx="9" fill="#181b24" stroke="${PEAK_INK}" stroke-opacity=".35"/>
+      <text x="${f(tx + 6)}" y="${f(ty + 12.5)}" fill="#e6e8ee" font-size="11" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(txt)}</text>`;
+  }
   // lines: secondary first so the two totals sit on top
   const order = [...shown].sort((a,b) => (a.id==="live")-(b.id==="live") || (a.id==="paper")-(b.id==="paper"));
   for(const s of order){
     g += `<path d="${pathOf(s)}" fill="none" stroke="${s.color}" stroke-width="${s.w}" stroke-dasharray="${s.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
   }
+  g += peakMark;   // on top of the lines so the ring reads
   // trades: short ticks in their own band under the axis labels' line
   if(showTrades){
     const mk = ((S.series.pnl.markers)||[]).filter(k => k.kind !== "run_start");
