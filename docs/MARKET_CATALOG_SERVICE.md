@@ -115,3 +115,12 @@ The dashboard works with a blocked historical import and displays that blocker.
 Correcting `CATALOG_SOURCE_DATABASE_URL` is a separate prerequisite for full
 history, not for rendering the dashboard. Snapshot requests time out after 45
 seconds and refresh every 60 seconds; failures keep a visible stale-data warning.
+
+
+## Current continuation — 2026-10-08
+
+The scoped credential blocker described above is resolved; full source-ID coverage has
+been observed and daily replay is running. The next release adds review migrations,
+guarded live economics, targeted outcome refresh and strategy evidence bars. See
+[release and verification](MARKET_CATALOG_EVIDENCE.md). That release requires a catalog-only
+deployment; numerical confidence and experimental consumer cutover remain pending.

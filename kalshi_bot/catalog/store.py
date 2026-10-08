@@ -111,6 +111,14 @@ class Store:
             CREATE TABLE IF NOT EXISTS current_assessments (
               scope TEXT PRIMARY KEY, assessment_id TEXT);
             CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, document TEXT);
+            CREATE TABLE IF NOT EXISTS review_migrations (
+              id TEXT PRIMARY KEY, series TEXT, document BLOB);
+            CREATE TABLE IF NOT EXISTS current_review_migrations (
+              series TEXT PRIMARY KEY, migration_id TEXT);
+            CREATE TABLE IF NOT EXISTS live_economics (
+              id TEXT PRIMARY KEY, ticker TEXT, document BLOB);
+            CREATE TABLE IF NOT EXISTS current_live_economics (
+              ticker TEXT PRIMARY KEY, economics_id TEXT);
             """)
 
     @contextmanager
@@ -176,6 +184,7 @@ class Store:
                     "status": raw.get("status"),
                     "result": raw.get("result"),
                     "settlement_ts": raw.get("settlement_ts"),
+                    "settlement_value_dollars": raw.get("settlement_value_dollars"),
                 }
             )
             db.execute(
@@ -376,6 +385,94 @@ class Store:
                 for row in db.execute("SELECT source,document FROM evidence")
             ]
 
+    def migrate_review(self, document):
+        migration_id = digest(document)
+        with self.connect() as db:
+            db.execute(
+                "INSERT OR IGNORE INTO review_migrations VALUES (?,?,?)",
+                (migration_id, document["series_ticker"], pack(document)),
+            )
+            db.execute(
+                "INSERT OR REPLACE INTO current_review_migrations VALUES (?,?)",
+                (document["series_ticker"], migration_id),
+            )
+        return migration_id
+
+    def pipeline_items(self, kind, limit=100, offset=0, series=None):
+        tables = {
+            "review-migrations": (
+                "review_migrations",
+                "current_review_migrations",
+                "migration_id",
+                "series",
+            ),
+            "live-economics": (
+                "live_economics",
+                "current_live_economics",
+                "economics_id",
+                "ticker",
+            ),
+        }
+        table, current, reference, key = tables[kind]
+        with self.connect() as db:
+            rows = db.execute(
+                f"SELECT a.id,a.document FROM {table} a "
+                f"JOIN {current} c ON c.{reference}=a.id ORDER BY a.{key}"
+            )
+            items = [{"record_id": r[0], **unpack(r[1])} for r in rows]
+        if series:
+            items = [r for r in items if r["series_ticker"] == series]
+        return {"items": items[offset : offset + limit], "total": len(items), "advisory_only": True}
+
+    def save_live_economics(self, documents):
+        active = set()
+        with self.connect() as db:
+            for document in documents:
+                ticker = document["market_ticker"]
+                active.add(ticker)
+                record_id = digest(document)
+                db.execute(
+                    "INSERT OR IGNORE INTO live_economics VALUES (?,?,?)",
+                    (record_id, ticker, pack(document)),
+                )
+                db.execute(
+                    "INSERT OR REPLACE INTO current_live_economics VALUES (?,?)",
+                    (ticker, record_id),
+                )
+            for row in db.execute("SELECT ticker FROM current_live_economics").fetchall():
+                if row[0] not in active:
+                    db.execute("DELETE FROM current_live_economics WHERE ticker=?", (row[0],))
+
+    def assessment_batch(self, results):
+        # One transaction for snapshots, fingerprints and selection: no half-written refresh.
+        active = set()
+        with self.connect() as db:
+            previous = {
+                r[0]: unpack(r[1])
+                for r in db.execute(
+                    "SELECT key,document FROM state WHERE key LIKE 'assessment_input:%'"
+                )
+            }
+            for scope, result in results:
+                active.add(scope)
+                key = "assessment_input:" + scope
+                if previous.get(key) != result["input_fingerprint"]:
+                    assessment_id = digest(result)
+                    db.execute(
+                        "INSERT OR IGNORE INTO assessments VALUES (?,?,?,?)",
+                        (assessment_id, scope, result["as_of"], pack(result)),
+                    )
+                    db.execute(
+                        "INSERT OR REPLACE INTO current_assessments VALUES (?,?)",
+                        (scope, assessment_id),
+                    )
+                    self.put_state(db, key, result["input_fingerprint"])
+            for row in db.execute("SELECT scope FROM current_assessments").fetchall():
+                if row[0] not in active:
+                    db.execute("DELETE FROM current_assessments WHERE scope=?", (row[0],))
+                    db.execute("DELETE FROM state WHERE key=?", ("assessment_input:" + row[0],))
+        return len(active)
+
     def assessment(self, scope, result):
         assessment_id = digest(result)
         with self.connect() as db:
@@ -388,27 +485,67 @@ class Store:
             )
         return assessment_id
 
-    def assessments(self, strategy=None, series=None, qualified=False, min_edge=None):
+    def iter_assessments(self, strategy=None, series=None, qualified=False, min_edge=None):
         with self.connect() as db:
             rows = db.execute(
                 "SELECT a.id,a.document FROM assessments a "
-                "JOIN current_assessments c ON c.assessment_id=a.id"
+                "JOIN current_assessments c ON c.assessment_id=a.id ORDER BY c.scope"
             )
-            results = [{"assessment_id": row[0], **unpack(row[1])} for row in rows]
-        return [
-            r
-            for r in results
-            if (not strategy or r["strategy_id"] == strategy)
-            and (not series or r["series_ticker"] == series)
-            and (not qualified or r["qualified"])
-            and (
-                min_edge is None
-                or (
-                    r["edge_cents_per_contract"] is not None
-                    and r["edge_cents_per_contract"] >= min_edge
-                )
-            )
-        ]
+            for row in rows:
+                record = {"assessment_id": row[0], **unpack(row[1])}
+                if (
+                    (not strategy or record["strategy_id"] == strategy)
+                    and (not series or record["series_ticker"] == series)
+                    and (not qualified or record["qualified"])
+                    and (
+                        min_edge is None
+                        or (
+                            record["edge_cents_per_contract"] is not None
+                            and record["edge_cents_per_contract"] >= min_edge
+                        )
+                    )
+                ):
+                    yield record
+
+    def assessments(self, strategy=None, series=None, qualified=False, min_edge=None):
+        return list(self.iter_assessments(strategy, series, qualified, min_edge))
+
+    def assessment_page(
+        self,
+        strategy=None,
+        series=None,
+        qualified=False,
+        min_edge=None,
+        source=None,
+        minimum=None,
+        settlement_type=None,
+        limit=100,
+        offset=0,
+    ):
+        # Decode one snapshot at a time; do not hold the full historical universe in RAM.
+        items, total, facts = [], 0, {}
+        for record in self.iter_assessments(strategy, series, qualified, min_edge):
+            if source and record["evidence_source"] != source:
+                continue
+            if minimum is not None and (
+                record["confidence_score"] is None or record["confidence_score"] < minimum
+            ):
+                continue
+            if settlement_type:
+                ticker = record["series_ticker"]
+                if ticker not in facts:
+                    facts[ticker] = self.get("series", ticker)
+                fact = facts[ticker]
+                if (
+                    not fact
+                    or fact["review_status"] != "reviewed"
+                    or fact["settlement_type"] != settlement_type
+                ):
+                    continue
+            if offset <= total < offset + limit:
+                items.append(record)
+            total += 1
+        return {"items": items, "total": total, "advisory_only": True}
 
     def history(self, table, kind, ticker, limit=100):
         if table not in ("revisions", "reviews"):
@@ -519,7 +656,10 @@ class Store:
                 row[0]: row[1]
                 for row in db.execute("SELECT source,count(*) FROM evidence GROUP BY source")
             }
-            states = {row[0]: json.loads(row[1]) for row in db.execute("SELECT * FROM state")}
+            states = {
+                row[0]: json.loads(row[1])
+                for row in db.execute("SELECT * FROM state WHERE key NOT LIKE 'assessment_input:%'")
+            }
             assessments = db.execute("SELECT count(*) FROM current_assessments").fetchone()[0]
             reviewed = db.execute(
                 "SELECT count(*) FROM objects o WHERE o.kind='series' AND EXISTS "
