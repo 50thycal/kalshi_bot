@@ -12,9 +12,9 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: owner accepts and deploys the evidence continuation described in
-[MARKET_CATALOG_EVIDENCE.md](../MARKET_CATALOG_EVIDENCE.md), verifies replay/outcomes,
-then completes structured semantics, independent-outcome verification and calibration.
+Next step: owner accepts the execution-clock repair described in
+[MARKET_CATALOG_EVIDENCE.md](../MARKET_CATALOG_EVIDENCE.md); verify deployed v4 economics,
+then complete structured semantics, independent-outcome verification and calibration.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -170,3 +170,47 @@ Executable validation head: `7397c6cbbe01f9d823eb1c4ff3ae3d66eb994155`.
 Merge-finalization is documentation-only; WS-023 remains REVIEW / Active on merge.
 Review State: solo mode, pending owner acceptance; no independent review claimed.
 Owner merge and catalog-only runtime verification remain pending.
+
+## Execution-clock verification and repair — 2026-10-08
+
+Mission: verify #562's production attribution and resolve the remaining catalog execution-time
+conflict using preserved evidence. Non-goals: source/executor/XOS changes, mixed-owner allocation,
+numerical confidence or consumer activation. Material interrupts: unproven identity/time or future
+data must stay blocked. Finish condition: tested isolated repair and reviewable release handoff.
+Acceptance checks: distinguish execution from collection, retain original evidence, require
+agreeing timezone/epoch proof, preserve actual-after-settlement/future/conflict guards, order
+cashflows and measure attributable duration by execution time, preserve old snapshot history.
+
+#562 merged and deployed on `db5ec4534a0be32944ef37b6f7e33da9e6e56509`, Railway
+`8f82568e-695f-42be-9a1f-85bcdc52a15b`; finalized-head GitHub CI passed. At 18:18 UTC:
+1,358 / 2,775 live markets attributable; 1,417 blocked. All 85 fractional fills restored,
+zero quantity/actual-cost exceptions. Settlement remains the main blocker; 39 ownership
+exceptions stay blocked. The later unrelated #559 merge was skipped by catalog watch paths;
+this does not undo the active #562 deployment. No independent review/acceptance inferred.
+
+SELECT-only receipts `catalog-timestamp-proof-20261008-1821` and
+`catalog-execution-time-proof-20261008-1823` proved source `filled_at` is collection time:
+the executor passes None, and insertion supplies its current time. All 2,836 scoped fills
+have agreeing raw exchange timestamps and later source collection times; maximum lag is
+70,975.799750 seconds. The diagnosed public ticker executed before settlement but was
+collected afterward. Ops returned to noop. Exact facts and public verification are in the
+evidence document; no private identifiers or payloads were exported.
+
+The v4 catalog restores exchange execution time after identity/direction/price/quantity proof,
+requires matching explicit timezone/epoch fields, rejects invalid/backward collection time,
+and retains future and true after-settlement guards. Legacy clock evidence is not claimed
+verified. Cashflow ordering and attributable evidence duration now use execution time.
+Method-scoped v4 snapshots preserve v3 history; no replay or shared-system changes.
+Confidence remains null and qualification false. No Platform Revision activated.
+
+Validation: 155 catalog/economics/session checks, Ruff and whitespace checks passed.
+Review State: solo, pending owner acceptance; no independent review claimed.
+WS-023 remains REVIEW / Active. Next: owner merges the clock repair, then verify v4
+restoration/exception counts. Structured review, calibration and consumer cutover remain
+subsequent work within the approved boundary.
+
+Execution-clock PR: [#563](https://github.com/50thycal/kalshi_bot/pull/563).
+Executable validation head: `80fba0ea676e482f65943f000792d6c1f223f588`.
+Documentation-only merge-finalization pushed; WS-023 remains REVIEW / Active on merge.
+Review State: solo, pending owner acceptance; no independent review claimed.
+Production v4 restoration counts and the diagnosed timestamp exception remain release checks.

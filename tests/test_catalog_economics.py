@@ -6,7 +6,12 @@ from decimal import Decimal
 import httpx
 import pytest
 
-from kalshi_bot.catalog.economics import SCORING_REQUIREMENTS, ledger_fill, live_economics
+from kalshi_bot.catalog.economics import (
+    SCORING_REQUIREMENTS,
+    ledger_assessments,
+    ledger_fill,
+    live_economics,
+)
 from kalshi_bot.catalog.evaluators import refresh
 from kalshi_bot.catalog.ingest import ROOT, SOURCE_QUERIES, Discovery, DiscoveryDeferred, seed
 from kalshi_bot.catalog.service import make_server
@@ -92,6 +97,11 @@ def canonical_fill(id=1, action="buy", quantity=10, price=80, side="no", **chang
         ticker=row["market_ticker"],
         yes_price_dollars=f"{yes_price:.4f}",
         no_price_dollars=f"{no_price:.4f}",
+        ts=int(
+            datetime.fromisoformat(
+                row["raw_fill_json"]["created_time"].replace("Z", "+00:00")
+            ).timestamp()
+        ),
     )
     row["raw_order_json"] = {
         "outcome_side": outcome,
@@ -113,7 +123,7 @@ def test_production_canonical_no_entry_is_a_purchase_not_an_inventory_deficit(st
     assert result["side"] == "no"
     assert Decimal(result["net_pnl_dollars"]) == Decimal("1.90")
     assert result["buy_contracts"] == "10"
-    assert result["method_version"] == "exclusive-binary-ledger-v3"
+    assert result["method_version"] == "exclusive-binary-ledger-v4"
     assert row == original  # Original legacy labels remain evidence, never rewritten.
 
 
@@ -262,6 +272,154 @@ def test_old_projection_replays_raw_order_evidence_once(store):
     seed(store)
     assert store.state("cursor:live")["after"] == 10
     assert "o.raw_order_json AS raw_order_json" in SOURCE_QUERIES["live"]
+
+
+def exchange_timestamp(row, value):
+    row["raw_fill_json"]["created_time"] = value
+    row["raw_fill_json"]["ts"] = int(
+        datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    )
+    return row
+
+
+def test_collection_after_settlement_does_not_mean_execution_after_settlement(store):
+    settled(
+        store,
+        result="no",
+        settlement_value_dollars="0",
+        settlement_ts="2026-08-10T20:02:05.469593Z",
+    )
+    row = exchange_timestamp(
+        canonical_fill(filled_at="2026-08-10T20:03:25.875334Z"),
+        "2026-08-10T19:59:55.567904Z",
+    )
+    original = json.loads(json.dumps(row))
+    result = calculate(store, [row])
+    assert result["status"] == "attributed_source_ledger"
+    assert result["first_fill_at"] == "2026-08-10T19:59:55.567904+00:00"
+    assert result["source_execution_time_restored_fills"] == 1
+    assert result["execution_time_method"] == "verified-exchange-execution-time-v1"
+    assert result["exchange_execution_times_verified"]
+    assert row == original
+    assert not result["qualified"] and result["confidence_score"] is None
+
+
+def test_exchange_execution_after_settlement_still_blocks(store):
+    settled(store)
+    row = exchange_timestamp(
+        canonical_fill(filled_at="2026-10-03T00:01:00Z"), "2026-10-03T00:00:00Z"
+    )
+    result = calculate(store, [row])
+    assert "fill_after_settlement" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("created_time", None),
+        ("created_time", "invalid"),
+        ("created_time", "2026-10-01T00:00:01"),
+        ("ts", None),
+        ("ts", "NaN"),
+        ("ts", 0),
+        ("ts", -1),
+        ("ts", 1790812801.5),
+        ("ts", 1790812801000),
+    ],
+)
+def test_missing_or_conflicting_exchange_time_remains_blocked(store, field, value):
+    settled(store)
+    row = canonical_fill(filled_at="2026-10-01T00:01:00Z")
+    row["raw_fill_json"][field] = value
+    result = calculate(store, [row])
+    assert "exchange_fill_time_missing_or_inconsistent" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+@pytest.mark.parametrize("collected", ["invalid", "2026-09-30T23:59:00Z"])
+def test_collection_before_execution_or_invalid_source_time_remains_blocked(store, collected):
+    settled(store)
+    result = calculate(store, [canonical_fill(filled_at=collected)])
+    assert "exchange_fill_time_missing_or_inconsistent" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_future_collection_is_not_hidden_by_past_execution_time(store):
+    settled(store)
+    result = calculate(store, [canonical_fill(filled_at="2027-01-01T00:00:00Z")])
+    assert "fill_time_missing_or_future" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_exchange_timestamp_preserves_future_execution_guard(store):
+    settled(store)
+    row = exchange_timestamp(canonical_fill(), "2027-01-01T00:00:00Z")
+    result = calculate(store, [row])
+    assert "fill_time_missing_or_future" in result["blocked_reasons"]
+    assert result["net_pnl_dollars"] is None
+
+
+def test_execution_order_not_collection_order_drives_inventory(store):
+    settled(store, result="no", settlement_value_dollars="0")
+    rows = [
+        canonical_fill(market_fill_count=2, filled_at="2026-10-01T00:00:05Z"),
+        canonical_fill(2, "sell", 4, 90, market_fill_count=2, filled_at="2026-10-01T00:00:04Z"),
+    ]
+    result = calculate(store, rows)
+    assert result["status"] == "attributed_source_ledger"
+    assert result["net_pnl_dollars"] == "1.4000"
+    assert result["source_execution_time_restored_fills"] == 2
+
+
+def test_timestamp_repair_never_bypasses_raw_identity_proof(store):
+    settled(store)
+    row = canonical_fill(filled_at="2026-10-03T00:00:00Z")
+    row["raw_fill_json"]["order_id"] = "conflicting"
+    result = calculate(store, [row])
+    assert "order_fill_identity_inconsistent_or_unverified" in result["blocked_reasons"]
+    assert result["source_execution_time_restored_fills"] == 0
+    assert result["net_pnl_dollars"] is None
+
+
+def test_attributed_duration_uses_exchange_times_not_recollection_span(store):
+    settled(store, settlement_ts="2026-10-05T00:00:00Z")
+    documents = []
+    for index, executed in enumerate(["2026-10-01T00:00:01Z", "2026-10-03T00:00:01Z"]):
+        ticker = f"KXTEST-E-{index}"
+        store.upsert("market", ticker, store.get("market", "KXTEST-E-M")["raw"], "KXTEST")
+        row = exchange_timestamp(
+            canonical_fill(
+                market_ticker=ticker, order_market_ticker=ticker, filled_at="2026-10-06T00:00:00Z"
+            ),
+            executed,
+        )
+        documents.append(calculate(store, [row]))
+    assessment = next(ledger_assessments(documents, MOMENT))
+    assert assessment["observation_span_days"] == 2
+    assert assessment["active_days"] == 2
+    assert assessment["exchange_execution_times_verified"]
+    assert not assessment["qualified"] and assessment["confidence_score"] is None
+
+
+def test_legacy_time_fallback_is_not_claimed_as_verified_exchange_time(store):
+    settled(store)
+    result = calculate(store, [fill()])
+    assert result["status"] == "attributed_source_ledger"
+    assert not result["exchange_execution_times_verified"]
+    assert result["source_execution_time_restored_fills"] == 0
+    assessment = next(ledger_assessments([result], MOMENT))
+    assert not assessment["exchange_execution_times_verified"]
+
+
+def test_timezone_offset_is_normalized_without_losing_execution_precision(store):
+    settled(store)
+    row = exchange_timestamp(
+        canonical_fill(filled_at="2026-10-01T00:01:00Z"), "2026-09-30T19:00:01.123456-05:00"
+    )
+    result = calculate(store, [row])
+    assert result["first_fill_at"] == "2026-10-01T00:00:01.123456+00:00"
+    assert result["status"] == "attributed_source_ledger"
 
 
 def test_exception_diagnostics_emit_only_bounded_public_market_samples(store, caplog):
@@ -429,7 +587,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     store.evidence_page("live", [fill()], {"after": 1})
     refresh(store, MOMENT)
     first = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v3"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v4"
     )
     assert first["net_pnl_dollars"] == "1.90"
     refresh(store, MOMENT + timedelta(minutes=1))
@@ -437,7 +595,7 @@ def test_outcome_corrections_refresh_snapshots_and_confidence_stays_withheld(sto
     settled(store, result="no", settlement_value_dollars="0")
     refresh(store, MOMENT + timedelta(minutes=2))
     current = next(
-        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v3"
+        r for r in store.assessments() if r["evaluator_version"] == "exclusive-binary-ledger-v4"
     )
     assert current["net_pnl_dollars"] == "-8.10"
     assert first["assessment_id"] != current["assessment_id"]

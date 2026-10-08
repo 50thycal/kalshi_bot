@@ -84,6 +84,31 @@ def exact_quantity(row):
     return quantity
 
 
+class ExecutionTimeEvidenceError(ValueError):
+    """Exchange execution time is missing or conflicts with preserved evidence."""
+
+
+def execution_time(row):
+    """Prove execution time separately from the executor's collection timestamp."""
+    raw = row.get("raw_fill_json") or {}
+    try:
+        stamp = datetime.fromisoformat(str(raw["created_time"]).replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            raise ValueError("Exchange time requires an explicit timezone")
+        epoch = decimal(raw["ts"])
+        if epoch < 0 or epoch != epoch.to_integral_value() or epoch != int(stamp.timestamp()):
+            raise ValueError("Exchange timestamp fields disagree")
+        recorded = row.get("filled_at")
+        collected = fill_time({"filled_at": recorded}) if recorded is not None else None
+        if recorded is not None and (collected is None or collected < stamp):
+            raise ValueError("Source collection precedes execution or is invalid")
+    except (KeyError, InvalidOperation, ValueError, TypeError, OverflowError, OSError) as error:
+        raise ExecutionTimeEvidenceError(
+            "Exchange execution time missing or inconsistent"
+        ) from error
+    return stamp.astimezone(timezone.utc), collected
+
+
 def ledger_fill(row):
     """Translate a proven exchange execution into the bot's held-contract vocabulary.
 
@@ -129,6 +154,7 @@ def ledger_fill(row):
     if prices[source_side] != decimal(row["price"]) / 100:
         raise ValueError("Source price disagrees with raw fill")
     quantity = exact_quantity(row)
+    stamp, collected = execution_time(row)
     return {
         **row,
         "side": side,
@@ -136,6 +162,10 @@ def ledger_fill(row):
         "price": str(prices[side] * 100),
         "quantity": str(quantity),
         "source_quantity_rounding_restored": quantity != decimal(row["quantity"]),
+        "filled_at": stamp.isoformat(),
+        "source_recorded_at": row.get("filled_at"),
+        "source_execution_time_restored": collected is not None and collected != stamp,
+        "exchange_execution_time_verified": True,
     }
 
 
@@ -158,6 +188,8 @@ def live_economics(store, records, as_of):
             rows = [ledger_fill(row) for row in rows]
         except QuantityEvidenceError:
             reasons.add("raw_quantity_missing_or_inconsistent")
+        except ExecutionTimeEvidenceError:
+            reasons.add("exchange_fill_time_missing_or_inconsistent")
         except (KeyError, InvalidOperation, ValueError, TypeError):
             reasons.add("order_fill_identity_inconsistent_or_unverified")
         sides = {r.get("side") for r in rows}
@@ -197,7 +229,10 @@ def live_economics(store, records, as_of):
         for row in rows:
             raw = row.get("raw_fill_json") or {}
             stamp = fill_time(row)
+            collected = fill_time({"filled_at": row.get("source_recorded_at")})
             if stamp is None or stamp > as_of:
+                reasons.add("fill_time_missing_or_future")
+            if collected and collected > as_of:
                 reasons.add("fill_time_missing_or_future")
             if stamp and settlement_time and stamp > settlement_time:
                 reasons.add("fill_after_settlement")
@@ -245,9 +280,16 @@ def live_economics(store, records, as_of):
         owner = next(iter(owners)) if len(owners) == 1 else (None, None)
         yield {
             "schema_version": 1,
-            "method_version": "exclusive-binary-ledger-v3",
+            "method_version": "exclusive-binary-ledger-v4",
             "direction_method": "verified-order-intent-canonical-exposure-v1",
             "quantity_method": "verified-fixed-point-source-rounding-v1",
+            "execution_time_method": "verified-exchange-execution-time-v1",
+            "exchange_execution_times_verified": all(
+                r.get("exchange_execution_time_verified", False) for r in rows
+            ),
+            "source_execution_time_restored_fills": sum(
+                bool(r.get("source_execution_time_restored")) for r in rows
+            ),
             "source_quantity_rounding_restored_fills": sum(
                 bool(r.get("source_quantity_rounding_restored")) for r in rows
             ),
@@ -292,7 +334,7 @@ def ledger_assessments(documents, as_of):
         yield {
             "schema_version": 1,
             "strategy_id": "mmsell",
-            "evaluator_version": "exclusive-binary-ledger-v3",
+            "evaluator_version": "exclusive-binary-ledger-v4",
             "strategy_version": book,
             "series_ticker": series,
             "deployment_arm_id": arm,
@@ -311,6 +353,9 @@ def ledger_assessments(documents, as_of):
             "observation_span_days": (last - first).total_seconds() / 86400,
             "active_days": len({r["first_fill_at"][:10] for r in rows}),
             "active_days_definition": "distinct market-entry days; full ledger retained",
+            "exchange_execution_times_verified": all(
+                r["exchange_execution_times_verified"] for r in rows
+            ),
             "independent_outcomes_verified": False,
             "net_pnl_dollars": str(net),
             "actual_fees_dollars": str(sum(decimal(r["actual_fees_dollars"]) for r in rows)),

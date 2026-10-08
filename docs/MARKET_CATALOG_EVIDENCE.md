@@ -78,7 +78,7 @@ assessments use a separate v2 method scope; old snapshots remain immutable. Actu
 fee, ownership, inventory, settlement and confidence requirements remain enforced.
 
 `GET /v1/live-economics` returns market-level results/reasons, paginated like review migrations.
-The corresponding MMSELL assessments use method `exclusive-binary-ledger-v3` and maturity
+The corresponding MMSELL assessments use method `exclusive-binary-ledger-v4` and maturity
 `live_attributed_source_ledger`. Existing paper and raw live-fill assessments remain distinct.
 
 ### Verified fractional quantities
@@ -110,6 +110,37 @@ Receipts: `ops/results/catalog-fractional-proof-20261008-1700b.txt` and
 Runtime logs include at most five public market tickers for each quantity, actual-cost,
 ownership or fill-after-settlement exception. They exclude private execution identifiers,
 payloads and P&L. This makes rare residual conflicts traceable without weakening their guards.
+
+### Verified execution clock
+
+The source executor passes no execution time to `insert_fill`, so `filled_at` is the bot's
+collection time. It is not necessarily when the exchange matched the trade. SELECT-only
+audit at 18:21 UTC on 2026-10-08 found all 2,836 scoped fills had agreeing exchange
+`created_time`/`ts` fields and later collection times. Collection lag ranged from 0.184374
+to 70,975.799750 seconds. Receipts:
+`ops/results/catalog-timestamp-proof-20261008-1821.txt` and
+`ops/results/catalog-execution-time-proof-20261008-1823.txt`. Ops returned to noop.
+
+The specific conflict `KXINXU-26AUG10H1600-T7774.9999` executed at
+2026-08-10 19:59:55.567904 UTC, settled at 20:02:05.469593 UTC, and was collected at
+20:03:25.875334 UTC. Public market verification confirmed the settlement timestamp.
+The previous catalog incorrectly compared collection time with settlement time.
+
+The v4 ledger uses an in-memory execution-time copy only after canonical raw identity,
+direction, price and quantity proof. `created_time` must include its timezone, and its Unix
+second must equal an explicit nonnegative integral `ts`. A supplied source collection time
+must parse and must not precede execution. Conflicts or missing raw clock proof block
+attribution; a future execution or collection and an execution after settlement still block.
+Original payloads and source columns are preserved. No new source import replay is needed.
+
+Cashflow ordering, first/last execution, attributed observation span and market-entry days
+now use the verified exchange clock. Results expose restoration counts and the measured
+`exchange_execution_times_verified` flag, propagated to attributed assessments/readiness.
+Legacy rows retain existing timestamp behavior and never claim this clock proof. Provisional
+raw-fill descriptive assessments remain separate. Old v3 snapshots remain immutable; v4
+refreshes in its own method scope. No confidence floor, score, scientific metric or trading
+permission changes. Local validation: 155 catalog/economics/session checks plus Ruff passed.
+Production v4 attribution remains unverified until this repair is deployed.
 
 ## Completion, maturity and confidence
 
@@ -175,5 +206,9 @@ Production verification remains the release checklist above.
 the direction-proof replay caught up. Fractional v3 validation: 135 catalog/economics/session
 checks passed plus Ruff. Fixtures cover source rounding (including ties and zero), exact
 fractional partial exits, unexplained differences, ownership/identity/actual-fee guards and
-bounded public exception diagnostics. Production v3 attribution remains unverified until
-this release is merged and deployed; confidence and qualification remain withheld.
+bounded public exception diagnostics. #562 merged and deployed as
+`db5ec4534a0be32944ef37b6f7e33da9e6e56509`; finalized-head GitHub CI passed. At 18:18 UTC,
+the deployed v3 ledger restored all 85 audited fractional fills, with zero quantity/actual-cost
+exceptions. It attributed 1,358 / 2,775 live markets and blocked 1,417; reason counts overlap.
+Remaining diagnostics: 1,395 lacking final settlement, 1,397 unsupported/conflicting settlement,
+39 ownership exceptions and one collection-time conflict. Confidence remains withheld.
