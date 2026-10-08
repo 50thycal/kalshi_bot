@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-canonical-direction-20261008-1458
-# code 076e7b529a61701402d3489075fcf414788f269d · started 2026-10-08T14:55:10Z
-fill_outcome  fill_book  order_outcome  order_book  fills  no_price_matches  complementary_prices  no_limit_respected  exchange_order_id_matches  exchange_order_ticker_matches
-------------  ---------  -------------  ----------  -----  ----------------  --------------------  ------------------  -------------------------  -----------------------------
-no            ask        no             ask         2832   2832              2832                  2832                2832                       2832                         
-
-(1 row)
