@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=catalog-fractional-proof-20261008-1700b
-# code 8a94eebec5cc840ca78ce65c9773d1fccdb65e04 · started 2026-10-08T16:58:09Z
-fills  quantity_mismatches  mismatch_markets  explained_by_positive_fractional_rounding  stored_zero_or_negative  actual_fee_missing_or_negative  raw_fill_identity_match  canonical_direction_match
------  -------------------  ----------------  -----------------------------------------  -----------------------  ------------------------------  -----------------------  -------------------------
-2833   85                   47                85                                         41                       0                               2833                     2833                     
-
-(1 row)
