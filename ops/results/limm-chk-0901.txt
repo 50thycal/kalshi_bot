@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0901
-# code 6064538101d81c6131aaa63f2163b49922236d9b · started 2026-10-09T09:02:00Z
-market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                   
----------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------
-KXMSFTPERM-26OCT-26DEC01     yes   buy     5            200       resting                 2026-10-09 06:27:28.830907+00
-KXYTVIEWSHIGH-TAT26NOV-3.0M  no    buy     2            500       resting                 2026-10-08 20:19:05.97186+00 
-
-(2 rows)
