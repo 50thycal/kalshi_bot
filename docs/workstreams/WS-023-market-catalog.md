@@ -12,8 +12,8 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: review the proposed classifications and document-proof requirement in
-[MARKET_CATALOG_REVIEW_PILOT.md](../MARKET_CATALOG_REVIEW_PILOT.md), then verify
+Next step: review the bounded archive in
+[MARKET_CATALOG_CONTRACT_CAPTURE.md](../MARKET_CATALOG_CONTRACT_CAPTURE.md), then verify
 its catalog-only deployment. Establish authoritative document/version binding before
 approving semantics; independence and calibration remain subsequent stages.
 No consumer cutover or trading action is implied.
@@ -282,3 +282,20 @@ snapshot smoke checks passed. Remote implementation tree matched the local files
 GitHub CI is pending; owner review/merge and catalog-only rollout remain release gates.
 Merge-finalization changes only this workstream record and its ACTIVE board row.
 Review State: solo, pending owner acceptance; no independent review claimed.
+
+## Contract archive continuation — 2026-10-09 UTC
+
+Calvin reported #565 merged and continued the existing task. Mission, acceptance,
+non-goals, interrupts, release and rollback are in
+[contract capture](../MARKET_CATALOG_CONTRACT_CAPTURE.md). #565 merged/deployed SUCCESS;
+finalized-head CI passed, health and runtime jobs verified. At 04:11 UTC, 2,737 / 2,795
+recorded live markets attributed, 58 blocked. Dated source-ID coverage and storage
+receipts are in the specification and on merged #565. Authenticated production packet
+contents and browser rendering remain unverified; no token was exported.
+
+The bounded collector preserves opaque official PDF bytes and dated observations,
+deduplicates shared content, exposes failed refreshes and authenticated history, and
+adds dashboard collection progress. Current captures do not prove historical versions,
+approve semantics or clear confidence requirements. No source/shared metric/consumer
+changes or Platform Revision activation. Existing listing/review identities stay intact.
+WS-023 remains REVIEW / Active; owner review and catalog-only rollout remain pending.

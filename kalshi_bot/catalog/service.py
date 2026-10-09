@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
+from .documents import ContractCapture
 from .evaluators import refresh
 from .ingest import Discovery, DiscoveryDeferred, reset_source_reconciliation, seed, source_page
 from .store import Store, now, unpack
@@ -78,6 +79,7 @@ def release_memory():
 
 def collect(store, stopped, source_url, interval):
     discovery = Discovery(store)
+    contracts = ContractCapture(store)
     last_evaluation = 0
     last_storage_check = 0
     evaluation_every = max(60, int(os.environ.get("CATALOG_EVALUATION_SECONDS", "300")))
@@ -95,6 +97,7 @@ def collect(store, stopped, source_url, interval):
         for job in ("series", "events"):
             run_job(store, "discovery:" + job, lambda job=job: discovery.page(job))
         run_job(store, "discovery:updates", discovery.updates)
+        run_job(store, "documents:capture", contracts.step)
         changed = False
         if source_url:
             # Only rows whose content differs count as new evidence (Store.evidence_page).
@@ -147,12 +150,13 @@ def collect(store, stopped, source_url, interval):
                 {
                     key: value
                     for key, value in store.status().items()
-                    if key in ("objects", "evidence", "assessment_contexts")
+                    if key in ("objects", "evidence", "assessment_contexts", "contract_archive")
                 }
             ),
         )
         stopped.wait(interval)
     discovery.client.close()
+    contracts.client.close()
 
 
 def make_server(store, token, address=("::", 8080)):
@@ -218,6 +222,10 @@ def make_server(store, token, address=("::", 8080)):
                 series = query.get("series", [None])[0]
                 if path == "/v1/status":
                     result = store.status()
+                elif path == "/v1/contract-documents":
+                    from .documents import history
+
+                    result = history(store, query.get("url", [None])[0], limit, offset)
                 elif path in ("/v1/review-packets", "/v1/calibration-inputs"):
                     from .readiness import calibration_inputs, review_packets
 
