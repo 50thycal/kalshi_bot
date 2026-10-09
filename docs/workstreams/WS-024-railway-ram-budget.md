@@ -171,9 +171,22 @@ Every step records a before and an after here. Windows end at the stated time.
   same cycle still placed and mirrored (Alimm1 placed 1, twin opened 1).
 - Correction: the account is on the **Advanced** API tier (300 reads/s refill, per the worker's
   startup `api limits probe`), not Basic. The per-pass bound still stands for cycle time.
-- After RAM: _pending — measure 24h after deploy (≥ 2026-10-09 04:30Z)._ Expect a small rise in
-  `main` (one pass every 5 min holds the ~36k listing and ~36k light rows transiently) and in
-  Postgres (the discovery write churn the evo service used to generate returns).
+- **Check 1 PASSED over 24h** (ops `ws024-24h-a`, 2026-10-08 04:30Z → 2026-10-09 04:46Z):
+  - 233 passes (8–11 per hour; the live cycle is slightly longer than 5 min), **0 errors**.
+  - The 4,773-term backlog drained to 0 by 2026-10-08 15:00Z. The longest pass was 18.3 s.
+  - The newest pass was 40 s old at read time, and `max(last_seen_at)` was current.
+  - No `incentive runner discovery failed` / `incentive smoke cycle failed` in `main` logs.
+
+### 24h after-RAM (2026-10-09 04:45Z, Railway 24h average / max, GB)
+
+| Service | Baseline (10-08) | After (10-09) | Note |
+|---|---|---|---|
+| Postgres | 1.24 / 3.43 | **1.64 / 1.98** | 6h avg 1.74; pinned near its 2 GB cap. Discovery write churn is back, plus a busier day. |
+| main | 0.42 / 0.85 | 0.58 / 0.92 | Up 0.16: the discovery pass, and more deploys (6 merges in 24h). |
+| market-catalog | 1.00 / 1.00 | 0.86 / 1.00 | 6h avg 0.73, min 0.35: no longer pinned all day. #557 live since the 10-08 18:32Z deploy. |
+| live-dash | 0.28 / 0.71 | 0.19 / 0.36 | `SLEEPING` at 04:25Z. Every merge redeploys and wakes it. |
+| website | 0.07 / 0.14 | 0.07 / 0.14 | `SLEEPING` at 04:10Z. The metric repeats its last value while asleep. |
+| **Total** | **≈ 3.0** | **≈ 3.3** | **Worse.** Postgres alone gave back more than the other steps saved. |
 
 ### Step 3 — live-dash and website sleep (started 2026-10-08)
 
@@ -195,6 +208,29 @@ Every step records a before and an after here. Windows end at the stated time.
 - Both deploy from the default branch, so every merge redeploys (wakes) them.
 
 ### Step 2 — market-catalog (D2 = B)
+
+**2026-10-09 — disk emergency.** The database file is growing much faster than its documents:
+
+| When | File size | Growth rate |
+|---|---|---|
+| 10-08 03:01Z | 8.57 GB | 0.8 GB/day |
+| 10-08 12:09Z | 9.36 GB | 2 GB/day |
+| 10-09 04:45Z | 12.11 GB | 4 GB/day |
+| 10-09 11:54Z | 14.72 GB | about 9–11 GB/day |
+
+- The document tables grew only ~1 GB/day, so the rest is in tables the storage report did not
+  measure.
+- The acceleration began after the 10-08 04:44Z deploy of #552, the catalog evidence review that
+  added `live_economics` and ledger assessments. Assessments went from 183k to 359k rows in 12h.
+- Contract-PDF capture (#565) is bounded at about 0.5 GB/day and started later, so it is not the
+  driver.
+- **Volume resized 20 → 40 GB** (D2-B "more disk", owner-approved) on 10-09 ~11:58Z through
+  Railway's agent. Committing it redeployed market-catalog (`885b2a96`, same commit, healthy).
+  At the current rate 40 GB buys only ~2–3 days.
+- **Diagnostic PR:** the full storage pass now reports `objects_bytes`, the bytes per table and
+  index from SQLite `dbstat`, and it runs once on the first boot after deploy. That names the
+  growing table. Fixing it is WS-023's code, plus any deletion, which is the owner's call.
+
 
 **Diagnosis from the code (2026-10-08):**
 
@@ -292,7 +328,11 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
 
 ## Next Step
 
-Owner merges the step-3 PR (live-dash idle refresher); Live Ops then enables app sleep on
-live-dash. At ≥ 2026-10-09 04:30Z: confirm check 1 held for 24h (cycle rows every ~5 min,
-`deferred_new_terms` back to 0) and record after-RAM for steps 1 and 3. Then D2 (catalog —
-volume fills in ~10–12 days) and D3/D4, each an owner decision.
+1. **Catalog disk (urgent, ~2–3 days at 40 GB):** owner merges the diagnostic PR. Live Ops reads
+   `objects_bytes` from the first `catalog_storage` log after deploy and names the growing table.
+   WS-023 fixes its writer; any deletion is an owner decision.
+2. **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
+   then D4 (cap step-down) are the owner's calls. Raising the cap is not on the table, since RAM
+   is billed on use.
+3. Checks 1 and 3 are done (live-dash and website `SLEEPING`). Check 5 (Railway usage alert) is
+   still to give the owner as dashboard steps.

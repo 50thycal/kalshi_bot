@@ -735,3 +735,17 @@ def test_release_memory_is_safe_anywhere():
     from kalshi_bot.catalog.service import release_memory
 
     release_memory()
+
+
+def test_full_storage_report_sizes_every_table_and_index(store):
+    store.evidence_page("paper", [trade(1)], {"after": 1})
+    full = store.storage()
+    sizes = full["objects_bytes"]
+    if sizes is None:
+        pytest.skip("SQLite built without DBSTAT_VTAB")
+    # Tables outside DOCUMENT_TABLES are reported too, and so are their indexes.
+    assert {"evidence", "live_economics", "contract_blobs", "state"} <= set(sizes)
+    assert "evidence_series" in sizes
+    assert sum(sizes.values()) == full["allocated_bytes"]
+    cheap = store.storage(detail=False, previous=full)
+    assert cheap["objects_bytes"] == sizes
