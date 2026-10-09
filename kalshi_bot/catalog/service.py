@@ -218,6 +218,17 @@ def make_server(store, token, address=("::", 8080)):
                 series = query.get("series", [None])[0]
                 if path == "/v1/status":
                     result = store.status()
+                elif path in ("/v1/review-packets", "/v1/calibration-inputs"):
+                    from .readiness import calibration_inputs, review_packets
+
+                    action = review_packets if path == "/v1/review-packets" else calibration_inputs
+                    result = action(
+                        store,
+                        strategy=query.get("strategy", ["mmsell"])[0],
+                        series=series,
+                        limit=min(50, limit),
+                        offset=offset,
+                    )
                 elif path in ("/v1/review-migrations", "/v1/live-economics"):
                     result = store.pipeline_items(path.split("/")[-1], limit, offset, series)
                 elif path == "/v1/scoring-requirements":

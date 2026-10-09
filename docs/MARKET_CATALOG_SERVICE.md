@@ -52,6 +52,8 @@ Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 | `GET /v1/review-queue?kind=market` | Missing/currently invalid reviews |
 | `POST /v1/import` | Bounded authenticated import of existing read-only exports; IDs/provenance required, does not skip the direct-source cursor |
 | `POST /v1/reviews` | Explicit human review tied to current rules hash |
+| `GET /v1/review-packets?strategy=mmsell` | Current rules, unknown semantics, legacy provenance and isolated live contexts |
+| `GET /v1/calibration-inputs?strategy=mmsell` | Traceable live inputs including blocked outcomes; no assigned partitions or scores |
 | `GET /v1/assessments?strategy=mmsell&series=KX...` | Current context-specific assessments |
 | `GET /v1/assessments/{assessment_id}` | Immutable exact assessment for future decision attribution |
 | `GET /v1/select?strategy=mmsell&qualified=true&min_edge=1` | Advisory selection; initially empty because confidence is not calibrated |
@@ -80,6 +82,12 @@ Operational follow-up [PR #542](https://github.com/50thycal/kalshi_bot/pull/542)
 Final continuation deployment `949a9124-86cc-4729-85c7-ed5d4b18fe4a` SUCCESS on executable commit `118b14b9cdfa2a4842375fec9e4807d274e0b410`: coverage verification, serialized compression/import and persisted provider backoff deployed. Startup reused the existing checked backup. Public event/update requests returned 200 and resumed their cursors; evidence/assessment seed remained intact. 33 catalog tests plus session-system checks passed. Initial source import is still refused by the privilege guard; positive full-import verification requires the actual scoped credential. Ops was returned to noop after the three read-only source audits.
 
 ## Operator dashboard
+
+The review-preparation continuation adds a dashboard queue and strategy-specific
+providers. See [review and calibration preparation](MARKET_CATALOG_SCORING_READINESS.md)
+for completion, rule binding, extension contracts and the calibration sequence.
+No new Railway variables are needed. These current views do not freeze a study,
+verify independence or turn historical fills into prospective validation.
 
 The catalog service serves a responsive, read-only dashboard at `/` and
 `/dashboard`. It is included by the existing `deploy/catalog/Dockerfile`; no

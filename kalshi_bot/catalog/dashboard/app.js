@@ -72,14 +72,27 @@ function renderAssessments(data) {
   $('assessment-detail').textContent='Showing '+number(data.items?.length)+' of '+number(data.total)+' contexts. Limited to 100 per view; these are not unique market counts.';
   for(const a of data.items || []) if(!Array.from($('strategy').options).some(o=>o.value===a.strategy_id)) { const option=node('option',a.strategy_id); option.value=a.strategy_id; $('strategy').append(option); }
 }
+function renderReadiness(data) {
+  $('review-packets').replaceChildren();
+  for(const packet of data.items || []) {
+    const facts=packet.series_review, details=node('details','');
+    details.append(node('summary','Open packet'));
+    const content=node('pre',JSON.stringify(packet,null,2));
+    content.className='review-packet';
+    details.append(content);
+    row($('review-packets'),[packet.series_ticker,number(packet.live_markets),number(packet.attributed_markets)+' / '+number(packet.blocked_markets),facts.review_status.replaceAll('_',' '),facts.missing_fields.join(', ').replaceAll('_',' '),details]);
+  }
+  if(!data.items?.length) row($('review-packets'),['No series in this review queue.','—','—','—','—','—']);
+  $('readiness-detail').textContent='Showing '+number(data.items?.length)+' of '+number(data.total)+' series. Field completion, approved review, and strategy confidence are separate. These packets are current views, not frozen calibration datasets.';
+}
 async function refresh() {
   if(!token || busy) return;
   busy=true; $('refresh').disabled=true; $('connect').querySelector('button').disabled=true;
   const g=generation, currentToken=token;
   try {
-    const [status,assessments]=await Promise.all([api('/v1/status',currentToken),api('/v1/assessments?limit=100&strategy='+encodeURIComponent($('strategy').value),currentToken)]);
+    const [status,assessments,readiness]=await Promise.all([api('/v1/status',currentToken),api('/v1/assessments?limit=100&strategy='+encodeURIComponent($('strategy').value),currentToken),api('/v1/review-packets?strategy=mmsell&limit=10',currentToken)]);
     if(g!==generation) return;
-    renderStatus(status); renderAssessments(assessments); notice('');
+    renderStatus(status); renderAssessments(assessments); renderReadiness(readiness); notice('');
     $('content').hidden=false; $('login').hidden=true; $('refresh').hidden=false; $('disconnect').hidden=false;
   } catch(error) { if(g===generation) { notice(error.message); $('connection').textContent='Refresh failed · displayed data may be stale'; } }
   finally { busy=false; $('refresh').disabled=false; $('connect').querySelector('button').disabled=false; }

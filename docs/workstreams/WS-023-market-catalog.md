@@ -12,9 +12,9 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: owner accepts the execution-clock repair described in
-[MARKET_CATALOG_EVIDENCE.md](../MARKET_CATALOG_EVIDENCE.md); verify deployed v4 economics,
-then complete structured semantics, independent-outcome verification and calibration.
+Next step: review the scoring-readiness continuation described in
+[MARKET_CATALOG_SCORING_READINESS.md](../MARKET_CATALOG_SCORING_READINESS.md), then verify
+its catalog-only deployment and begin bounded structured review/calibration preparation.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -214,3 +214,37 @@ Executable validation head: `80fba0ea676e482f65943f000792d6c1f223f588`.
 Documentation-only merge-finalization pushed; WS-023 remains REVIEW / Active on merge.
 Review State: solo, pending owner acceptance; no independent review claimed.
 Production v4 restoration counts and the diagnosed timestamp exception remain release checks.
+
+## Review and calibration preparation — 2026-10-08
+
+Calvin authorized the next scoring-readiness step after #563 release verification.
+Mission: exact-rule review packets, strategy-specific calibration inputs, authenticated
+APIs and an operator dashboard queue. Acceptance checks, non-goals, material interrupts
+and finish condition are in the linked readiness specification. This continues WS-023;
+no source writes, shared metric changes, consumer activation or expanded live exposure.
+
+#563 merged/deployed on `1f8dd034f27cc825ab84f6f9546d6ac0ca700960`, Railway
+`9ca59b12-474d-465b-a9f5-1e5773bb30e2` SUCCESS. At 22:12 UTC v4 diagnostics attributed
+2,098 / 2,780 recorded live markets and blocked 682; all 85 fractional restorations
+persisted, 2,841 execution times restored, no quantity/fee/time/order-identity exceptions.
+Residual settlement and 39 ownership exceptions stay blocked. Source ID count/hash
+matched; payload parity and exchange fill coverage were not certified. These are dated
+catalog diagnostics, not experiment verdicts. No acceptance is inferred from merge.
+Receipt: #563 post-release PR verification.
+
+Packets combine legacy provenance with current exact rule/review bindings. Known fields,
+accepted review and confidence stay separate. Priority is recorded live volume, not
+profit. Contexts preserve operational tag/arm/side; unresolved identity stays per-market.
+Calibration includes blocked inputs, unverified event hints and unassigned forward
+partitions. Future strategies register their own provider/check contract. GETs do not
+approve reviews or freeze data. WS-023 remains REVIEW / Active; owner review and
+catalog-only rollout pending.
+
+Readiness PR: [#564](https://github.com/50thycal/kalshi_bot/pull/564).
+Executable validation head: `5f3ec4fd210d03498a4bd435ed46c4c16646ab67`.
+167 catalog/readiness/economics/session checks passed; Ruff, JavaScript syntax,
+whitespace and readiness DOM smoke checks passed. Production rollout and browser
+visual rendering remain release checks. Numerical confidence remains null.
+Merge-finalization is documentation-only; WS-023 stays REVIEW / Active on merge.
+Review State: solo, pending owner acceptance; no independent party reviewed this change.
+Next: owner reviews/merges after finalized-head CI, then verify market-catalog only.

@@ -10,6 +10,11 @@ Approved choices: separate completion/maturity/confidence/edge; separate paper/l
 Important rules: no inherited profitability, no paper-to-live promotion, unknown stays unknown, immutable assessment snapshots, exact rules hash review, no writes to source database or trading permissions. Numeric qualification floors remain uncalibrated, so confidence and established-live qualification are initially withheld.
 Done: persistent catalog, resumable idempotent import, bounded discovery and reconciliation, strategy evaluator interface, query/review API, tests and Railway deployment with verified backfill progress.
 
+2026-10-08 continuation: [review packets and calibration preparation](MARKET_CATALOG_SCORING_READINESS.md)
+implements R2/R3/R5/R6/R8 review triage and strategy-specific readiness inputs. Numerical
+confidence, verified independence, prospective validation and consumer cutover remain
+subsequent stages. This read-only addition changes no shared scientific contract or metric.
+
 ## Impact plan — before implementation
 This release adds an isolated evidence/documentation service. It does not replace a declared XOS platform component, change any existing metric definition, taxonomy, risk, strategy universe, scientific contract or pinned snapshot. Source values are labeled legacy observations, not adopted semantics. No active experiment consumes the new API. Accordingly no Platform Revision is activated or substituted in this release. The source connection uses read-only transactions; the new service writes only its own volume.
 Consumer cutover is a separate Platform Change Review: register a pending revision through the canonical worker transport, discover affected experiments from pinned snapshots, classify and accept impacts, and activate at a measured boundary only with explicit operator approval. Do not represent this import as that cutover.
