@@ -152,6 +152,9 @@ historical only and does not pool.
 
 ## 5c. Tennis paused on real money (2026-10-09, operator decision)
 
+Experiment OS issue: **XOS-000039** (owner Research Lab, for the lift/keep read). The
+cross-tag stacking found in the same review is **XOS-000040** (Live Ops).
+
 Calvin, 2026-10-09: "bar tennis — it has never gone well for me." Implemented as the existing
 live-only exposure pause (`mmsell_live_skip_series`), adding the prefixes `KXATP`, `KXWTA`,
 `KXITF` beside `KXNFLSPREAD`. Every tennis series is covered (ATP/WTA/ITF match winners,

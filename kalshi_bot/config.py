@@ -319,8 +319,8 @@ class Settings(BaseSettings):
     # real-money exposure in the safe direction only. Set to "" to restore the
     # pre-2026-09-06 behaviour; that is also the intended lift path if the gate REFUTES.
     #
-    # TENNIS: KXATP, KXWTA, KXITF (operator decision 2026-10-09, docs/MMSELL_SIZE_SPLIT_CANARY.md
-    # §5c). Prefixes, so every tennis series is covered: ATP/WTA/ITF match winners, Challengers,
+    # TENNIS: KXATP, KXWTA, KXITF (XOS-000039, operator decision 2026-10-09,
+    # docs/MMSELL_SIZE_SPLIT_CANARY.md §5c). Prefixes, so every tennis series is covered: ATP/WTA/ITF match winners, Challengers,
     # set winners, exact match, game spread/total and doubles. With MLB over, tennis was ~43% of
     # `Jmmsell10`'s settled markets, and ITF singles lost 6 of 45 for -$7.97 of the canary's
     # -$12.98 in its first five days, mostly as in-play fills that turned within two hours. The
