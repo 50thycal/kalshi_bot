@@ -12,10 +12,11 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: review the bounded archive in
-[MARKET_CATALOG_CONTRACT_CAPTURE.md](../MARKET_CATALOG_CONTRACT_CAPTURE.md), then verify
-its catalog-only deployment. Establish authoritative document/version binding before
-approving semantics; independence and calibration remain subsequent stages.
+Next step: review the storage guard in
+[MARKET_CATALOG_STORAGE_GUARD.md](../MARKET_CATALOG_STORAGE_GUARD.md), then verify
+its catalog-only deployment and headroom recovery. Document capture is verified on #566;
+authoritative historical document/version binding remains necessary before approving
+semantics. Independence and calibration remain subsequent stages.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -310,3 +311,31 @@ Review State: solo, pending owner acceptance; no independent review claimed.
 Next: owner reviews/merges after CI, then verify catalog-only archive growth and
 authenticated capture metadata. Historical effective versions/full-document review
 binding remain unresolved; current archive bytes do not satisfy those requirements.
+
+## Storage headroom interrupt — 2026-10-09 UTC
+
+Calvin reported #566 merged. Deployment/CI/health, archive capture and source-ID coverage
+were verified; full dated findings are in [storage guard](../MARKET_CATALOG_STORAGE_GUARD.md)
+and merged #566's release receipt. Authenticated production contents remain unverified.
+At 11:54 UTC only 3.679 GB free remained on the catalog volume while bulk history loaded;
+the PDF archive was about 9 MB. FIX NOW under the existing mission: preserve catalog data
+before continuing full-document review binding. No volume resize or deletion is performed.
+
+The collector checks real free bytes with persisted bulk/critical hysteresis. Bulk discovery
+can pause while imports and bounded collection continue; critical headroom also defers growing
+jobs and review/import API writes. Reads/metrics remain available, paused cursors and requests
+stay intact, and recovery resumes automatically. The dashboard distinguishes storage pauses.
+No source, trading, score/semantic or consumer changes; no Platform Revision activated.
+WS-023 remains REVIEW / Active. Owner review/merge and catalog-only verification pending;
+additional capacity or an explicitly approved retention/scope policy remains an owner action.
+
+Storage guard PR: [#568](https://github.com/50thycal/kalshi_bot/pull/568).
+Executable validation head: `6bd625d3072da59c9686d368060bfb34bd051176`.
+199 headroom/document/catalog/readiness/economics/session checks passed; Ruff, whitespace,
+JavaScript syntax and dashboard DOM smoke passed. Remote implementation tree matched
+all local files. Finalized-head GitHub CI pending. This finalization changes only this
+workstream record and its ACTIVE board row.
+Review State: solo, pending owner acceptance; no independent review claimed.
+Next: owner reviews/merges after CI, then verifies bulk pause, essential progress and
+readable authenticated metadata on the catalog only. Capacity recovery is required to
+resume bulk history; no automatic resize, deletion or new variables are introduced.
