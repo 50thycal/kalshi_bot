@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "5eae25a7e1cc9b01b05f4dcc4838444573d77368",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-09T15:14:30Z",
+  "id": "tennis-verify-db-1009",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/tennis-verify-db-1009.receipt.json",
+  "result_file": "ops/results/tennis-verify-db-1009.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37950217413",
+  "service": null,
+  "started_at": "2026-10-09T15:14:30Z",
+  "targets": [],
+  "type": "db"
+}
