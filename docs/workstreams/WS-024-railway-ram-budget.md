@@ -227,9 +227,25 @@ Every step records a before and an after here. Windows end at the stated time.
 - **Volume resized 20 → 40 GB** (D2-B "more disk", owner-approved) on 10-09 ~11:58Z through
   Railway's agent. Committing it redeployed market-catalog (`885b2a96`, same commit, healthy).
   At the current rate 40 GB buys only ~2–3 days.
-- **Diagnostic PR:** the full storage pass now reports `objects_bytes`, the bytes per table and
-  index from SQLite `dbstat`, and it runs once on the first boot after deploy. That names the
-  growing table. Fixing it is WS-023's code, plus any deletion, which is the owner's call.
+- **Diagnosed 2026-10-09 15:27Z** (#567's first full pass; file 16.27 GB, volume 40 GB with
+  21.8 GB free):
+
+  | Object | Size | Rows, 10-08 14:55Z → 10-09 15:27Z |
+  |---|---|---|
+  | `revisions` | 9.52 GB, plus 0.80 GB index | 3.08M → **6.14M** |
+  | `objects` | 4.80 GB, plus 0.19 GB index | 2.26M → **3.15M** (+890k markets in 24.5h) |
+  | `assessments` | 0.63 GB | 359k → 511k |
+  | `live_economics` | 0.02 GB | |
+  | `state` | 0.02 GB | |
+  | contract PDFs | 0.01 GB | |
+
+  - The growth is **market discovery**: ~890k new markets/day, each with several revisions.
+  - It is not #552's evaluation tables; that guess was wrong.
+  - Discovery code is unchanged since 10-08, so this comes from what Kalshi is listing.
+  - What to keep (market classes, revision retention) is WS-023's design. Deleting history is
+    the owner's call.
+- The first full pass took **26 min inline and stalled collection**. A follow-up PR moves it to
+  its own thread and uses `dbstat` aggregate mode.
 
 
 **Diagnosis from the code (2026-10-08):**

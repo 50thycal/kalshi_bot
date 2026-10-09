@@ -93,6 +93,16 @@ def release_memory():
         pass
 
 
+def report_storage_detail(store):
+    """One full storage pass (document sums + bytes per table and index), off the loop."""
+    try:
+        detail = store.storage(detail=True)
+        store.set_state("storage:detail", detail)
+        LOG.info("catalog_storage_detail=%s", json.dumps(detail))
+    except Exception:  # noqa: BLE001 — a failed measurement must not stop collection
+        LOG.exception("catalog_storage_detail status=error")
+
+
 def collect(store, stopped, source_url, interval):
     discovery = Discovery(store)
     contracts = ContractCapture(store)
@@ -102,6 +112,7 @@ def collect(store, stopped, source_url, interval):
     storage_detail_every = max(
         300, int(os.environ.get("CATALOG_STORAGE_DETAIL_SECONDS", "86400"))
     )
+    detail_thread = None
     last_reconciliation = store.state("last_reconciliation", 0)
     while not stopped.is_set():
         stamp = time.time()
@@ -139,18 +150,30 @@ def collect(store, stopped, source_url, interval):
         if stamp - last_storage_check >= 300:
 
             def report_storage():
-                previous = store.state("storage:metrics")
-                taken = (previous or {}).get("tables_captured_at")
-                detail = (
+                nonlocal detail_thread
+                # The full pass reads the whole file and can take many minutes on a large
+                # volume, so it runs on its own thread and connection: collection never waits
+                # on it. Its result lives under its own key, so a cheap report cannot
+                # overwrite it.
+                last = store.state("storage:detail") or {}
+                taken = last.get("tables_captured_at")
+                due = (
                     not taken
-                    # One full pass on the first report that predates per-object sizes.
-                    or "objects_bytes" not in (previous or {})
+                    or "objects_bytes" not in last
                     or (
                         datetime.now(timezone.utc) - datetime.fromisoformat(taken)
                     ).total_seconds()
                     >= storage_detail_every
                 )
-                storage = store.storage(detail=detail, previous=previous)
+                if due and (detail_thread is None or not detail_thread.is_alive()):
+                    detail_thread = threading.Thread(
+                        target=report_storage_detail, args=(store,),
+                        name="catalog-storage-detail", daemon=True,
+                    )
+                    detail_thread.start()
+                storage = store.storage(
+                    detail=False, previous=last or store.state("storage:metrics")
+                )
                 store.set_state("storage:metrics", storage)
                 LOG.info("catalog_storage=%s", json.dumps(storage))
                 return 0
