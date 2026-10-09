@@ -206,9 +206,23 @@ def test_the_refusal_is_reported_under_its_own_twin_code(settings):
 
 
 def test_the_shipped_default_pauses_kxnflspread(settings):
-    """The operator-approved decision itself. If this flips to empty by accident, real money
-    silently resumes on the cell — the exact failure this shipped to prevent."""
-    assert settings.mmsell_live_skip_series_list == [PAUSED_SERIES]
+    """The operator-approved decisions themselves. If this flips to empty by accident, real
+    money silently resumes on the cell — the exact failure this shipped to prevent."""
+    assert settings.mmsell_live_skip_series_list == [PAUSED_SERIES, "KXATP", "KXWTA", "KXITF"]
+
+
+def test_the_shipped_default_pauses_every_tennis_series_and_nothing_else(settings):
+    """Operator decision 2026-10-09: no real money on tennis. The prefixes must reach every
+    tennis series the taxonomy knows, and must not reach a neighbouring non-tennis series."""
+    paused = settings.mmsell_live_skip_series_list
+    for series in ("KXATPMATCH", "KXATPCHALLENGERMATCH", "KXATPSETWINNER", "KXATPEXACTMATCH",
+                   "KXATPGSPREAD", "KXATPGTOTAL", "KXATPDOUBLES", "KXWTAMATCH",
+                   "KXWTACHALLENGERMATCH", "KXWTASETWINNER", "KXITFMATCH", "KXITFWMATCH",
+                   "KXITFDOUBLES", "KXITFWDOUBLES"):
+        assert exposure_paused(f"{series}-26OCT09AAABBB-AAA", paused), series
+    for series in ("KXWNBATOTAL", "KXNFLTOTAL", "KXMLBTOTAL", "KXBRASILEIROGAME", "KXBTCD",
+                   "KXWTI", "KXTESTMATCH"):
+        assert not exposure_paused(f"{series}-26OCT09AAABBB-AAA", paused), series
 
 
 def test_the_setting_parses_a_list(settings):

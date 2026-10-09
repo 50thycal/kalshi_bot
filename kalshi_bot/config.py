@@ -318,7 +318,16 @@ class Settings(BaseSettings):
     # Like the tier bar it can only ever REFUSE a live entry, never add one, so it moves
     # real-money exposure in the safe direction only. Set to "" to restore the
     # pre-2026-09-06 behaviour; that is also the intended lift path if the gate REFUTES.
-    mmsell_live_skip_series: str = "KXNFLSPREAD"
+    #
+    # TENNIS: KXATP, KXWTA, KXITF (operator decision 2026-10-09, docs/MMSELL_SIZE_SPLIT_CANARY.md
+    # §5c). Prefixes, so every tennis series is covered: ATP/WTA/ITF match winners, Challengers,
+    # set winners, exact match, game spread/total and doubles. With MLB over, tennis was ~43% of
+    # `Jmmsell10`'s settled markets, and ITF singles lost 6 of 45 for -$7.97 of the canary's
+    # -$12.98 in its first five days, mostly as in-play fills that turned within two hours. The
+    # operator's own reason is broader than that week: tennis has never gone well on this book.
+    # Same instrument and same caveat as KXNFLSPREAD: an exposure pause, not a measured
+    # selection rule (in-sample, small n); paper keeps trading tennis so it can be re-read.
+    mmsell_live_skip_series: str = "KXNFLSPREAD,KXATP,KXWTA,KXITF"
     #: Apply the two live-only bars above (`mmsell_live_min_tier`, `mmsell_live_skip_series`)
     #: to the PAPER TWIN as well as to the live mirror.
     #:

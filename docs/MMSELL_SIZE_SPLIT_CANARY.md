@@ -150,6 +150,40 @@ the live candidate population, so it goes on with a new epoch on fresh tags — 
 envelope and keep gate. The §5 readout counts from the epoch-3 boundary; `Hmmsell10`'s evidence is
 historical only and does not pool.
 
+## 5c. Tennis paused on real money (2026-10-09, operator decision)
+
+Calvin, 2026-10-09: "bar tennis — it has never gone well for me." Implemented as the existing
+live-only exposure pause (`mmsell_live_skip_series`), adding the prefixes `KXATP`, `KXWTA`,
+`KXITF` beside `KXNFLSPREAD`. Every tennis series is covered (ATP/WTA/ITF match winners,
+Challengers, set winners, exact match, game spread/total, doubles).
+
+**Evidence at the decision** (read-only Live Ops read, ops `jcanary-truth-1009` /
+`jcanary-fills-1009`, 2026-10-09 12:03Z). `Jmmsell10` real money −$12.98 after five days
+(−$13.39 realized over 162 settled, of which about −$2.79 belongs to `Hmmsell10`; see the
+cross-tag stacking issue). With MLB over, tennis was ~43% of settled markets. ITF singles
+(`KXITFWMATCH` + `KXITFMATCH`) lost 6 of 45 for −$7.97. The losses were mostly in-play fills
+within 1–3 min of posting that settled against the book within two hours. This is in-sample and
+small, so it is an **exposure pause, not a measured selection rule**, the same standing as
+`KXNFLSPREAD`.
+
+**What it changes, and what it does not**
+
+- Live `Jmmsell10` stops taking new tennis entries. Open tennis positions settle as usual.
+- **The twin stops too**, because production runs `MMSELL_TWIN_APPLIES_LIVE_BARS=true`. Live
+  and twin stay on one universe, so the keep gate's twin comparisons stay like for like.
+- Paper `mmsell10` keeps trading tennis. That is the evidence that would lift the pause.
+- The pause applies to both hash arms equally, so the §5 1-vs-3 readout stays a within-book
+  randomized comparison. Its universe is narrower from the activation instant. The readout
+  reports the pre/post split and does not hide it.
+- Nothing about the version, the risk envelope or the keep gate changes. The bar can only
+  refuse an entry.
+- **Not fingerprinted by the drift check.** `runtime_config_check` compares
+  `LIVE_STRATEGIES`, twin pairs and `MMSELL_VARIANTS` only, so this edit raises no integrity
+  event. That is exactly why it is recorded here and in an Experiment OS issue instead.
+
+**Lift path:** remove the three prefixes. Re-read paper tennis after a full month of fills
+before anyone proposes that.
+
 ## 6. Rollback
 
 - **Stop new entries:** remove `Hmmsell10` from `LIVE_STRATEGIES` (or `KILL_SWITCH=true` for the
