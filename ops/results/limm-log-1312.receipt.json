@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "925664b31710f956e4a9e07c36f7c72e2824a9a3",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-09T13:13:01Z",
+  "id": "limm-log-1312",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-log-1312.receipt.json",
+  "result_file": "ops/results/limm-log-1312.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37935238471",
+  "service": "main",
+  "started_at": "2026-10-09T13:12:59Z",
+  "targets": [],
+  "type": "logs"
+}
