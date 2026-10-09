@@ -299,3 +299,14 @@ adds dashboard collection progress. Current captures do not prove historical ver
 approve semantics or clear confidence requirements. No source/shared metric/consumer
 changes or Platform Revision activation. Existing listing/review identities stay intact.
 WS-023 remains REVIEW / Active; owner review and catalog-only rollout remain pending.
+
+Archive PR: [#566](https://github.com/50thycal/kalshi_bot/pull/566).
+Executable validation head: `9cd731d6ea195c871cd76ccbd9887a5148485294`.
+192 document/catalog/readiness/economics/session checks passed; Ruff, whitespace,
+JavaScript syntax, dashboard DOM and three-public-document local capture smoke passed.
+Remote implementation tree matched all local files. Finalized-head GitHub CI pending.
+Merge-finalization changes only this workstream record and its ACTIVE board row.
+Review State: solo, pending owner acceptance; no independent review claimed.
+Next: owner reviews/merges after CI, then verify catalog-only archive growth and
+authenticated capture metadata. Historical effective versions/full-document review
+binding remain unresolved; current archive bytes do not satisfy those requirements.
