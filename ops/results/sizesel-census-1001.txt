@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=sizesel-census-1001
-# code 57ed7b7ff34c2f0f11e1f26204be4c67dbc38a93 · started 2026-10-01T03:32:51Z
-fill_events  matched_to_trade  print_ge3  print_lt3  first_day   last_day    median_print
------------  ----------------  ---------  ---------  ----------  ----------  ------------
-378          301               0          301        2026-09-16  2026-10-01  1.00        
-
-(1 row)
