@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=sizesel-census-1001b
-# code 57ed7b7ff34c2f0f11e1f26204be4c67dbc38a93 · started 2026-10-01T03:33:32Z
-fills  ge3  ge10  lt3  p25    p50    p75     p90     avg_matches
------  ---  ----  ---  -----  -----  ------  ------  -----------
-301    240  228   61   10.44  58.77  232.49  904.29  4.77       
-
-(1 row)

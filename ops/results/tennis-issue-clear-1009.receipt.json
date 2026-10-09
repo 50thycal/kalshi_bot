@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "925664b31710f956e4a9e07c36f7c72e2824a9a3",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-09T13:55:09Z",
+  "id": "tennis-issue-clear-1009",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 3345 bytes, sha256:e6e905210df1a8b3>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 2 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/tennis-issue-clear-1009.receipt.json",
+  "result_file": "ops/results/tennis-issue-clear-1009.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37940272895",
+  "service": "main",
+  "started_at": "2026-10-09T13:55:03Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
