@@ -1,6 +1,0 @@
-# ops request [READ]
-# type=xos  id=jcanary-xostag-1009
-# code 6064538101d81c6131aaa63f2163b49922236d9b · started 2026-10-09T12:05:35Z
-experiment                       state        ver  arm       role       epoch  deployment               stage        kind
--------------------------------  -----------  ---  --------  ---------  -----  -----------------------  -----------  ----
-mmsell-price-ceiling-size-split  LIVE_CANARY  1    mmsell10  treatment  3      mmsell-sizesplit-live-2  LIVE_CANARY  live
