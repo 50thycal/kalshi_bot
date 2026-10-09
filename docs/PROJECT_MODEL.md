@@ -467,6 +467,14 @@ Backfill completion requires matching counts and ordered source-ID fingerprints 
 
 Public discovery persists shared provider backoff for rate limits/server failures. Retry-After and exponential fallback preserve REST cursors across restart while independent database import and storage work continue; deferred jobs retain their last-success timestamp.
 
+The catalog archives opaque official contract PDFs in content-addressed blobs with
+immutable dated fetch observations. A bounded series-reference scan and one-request
+collector reuse shared URLs, schedule refreshes and preserve failures without discarding
+previous captures. Authenticated objects, review packets and observation-history reads
+expose metadata; the dashboard shows collection progress. Current bytes and response
+dates do not establish historically effective terms, approve semantics or qualify scores.
+The capture service never parses PDFs. Details: [contract capture](MARKET_CATALOG_CONTRACT_CAPTURE.md).
+
 ### Catalog operator view
 
 The standalone market-catalog service includes a responsive dashboard at its

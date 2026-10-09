@@ -1372,3 +1372,16 @@ catalog write privileges, though this UI uses GET only. Clearly distinguish
 collected listings, reviewed series, verified import coverage, and strategy
 qualification. Unknown scores remain unknown; live trading state stays with its
 source systems. No deployment or trading activation follows from this decision.
+
+## DEC-031 — Contract capture stays distinct from applicable-rule proof
+
+**Date:** 2026-10-09 UTC. **Implementation discretion:** WS-023 continuation under
+DEC-029's approved evidence pipeline; no new owner product decision or trading approval.
+
+Preserve official linked PDF bytes by content hash and retain immutable dated fetch
+observations, with URL/size/storage restrictions and metadata-only authenticated reads.
+Schedule bounded refreshes rather than retrieving documents during an API read. Keep
+captured bytes, listing hashes, approved semantic reviews and verified historical terms
+as separate facts. Neither HTTP/PDF metadata nor a current-byte match proves which
+version governed an older execution. Historical binding remains explicitly unverified;
+no catalog requirement is relaxed and existing consumers remain disconnected.

@@ -119,6 +119,16 @@ class Store:
               id TEXT PRIMARY KEY, ticker TEXT, document BLOB);
             CREATE TABLE IF NOT EXISTS current_live_economics (
               ticker TEXT PRIMARY KEY, economics_id TEXT);
+            CREATE TABLE IF NOT EXISTS contract_blobs (
+              sha256 TEXT PRIMARY KEY, content BLOB NOT NULL);
+            CREATE TABLE IF NOT EXISTS contract_observations (
+              id TEXT PRIMARY KEY, url TEXT, sha256 TEXT, retrieved_at TEXT, document BLOB);
+            CREATE INDEX IF NOT EXISTS contract_observations_url
+              ON contract_observations(url,retrieved_at);
+            CREATE TABLE IF NOT EXISTS contract_targets (
+              url TEXT PRIMARY KEY, next_check REAL NOT NULL, status TEXT NOT NULL,
+              capture_id TEXT, attempted_at TEXT, error TEXT);
+            CREATE INDEX IF NOT EXISTS contract_targets_due ON contract_targets(next_check,url);
             """)
 
     @contextmanager
@@ -271,6 +281,9 @@ class Store:
         doc["settlement_type"] = doc["semantics"].get("resolution_mechanism")
         doc["parent_rules_changed"] = parent_changed
         doc["risk_score"] = None
+        from .documents import references
+
+        doc["contract_documents"] = references(self, doc)
         return doc
 
     def list_objects(self, kind, limit=100, offset=0, series=None, needs_review=False):
@@ -708,6 +721,21 @@ class Store:
                 "(SELECT 1 FROM reviews r WHERE r.kind=o.kind AND r.ticker=o.ticker "
                 "AND r.rules_hash=o.rules_hash)"
             ).fetchone()[0]
+            archive = {
+                "blobs": db.execute("SELECT count(*) FROM contract_blobs").fetchone()[0],
+                "bytes": db.execute(
+                    "SELECT coalesce(sum(length(content)),0) FROM contract_blobs"
+                ).fetchone()[0],
+                "observations": db.execute("SELECT count(*) FROM contract_observations").fetchone()[
+                    0
+                ],
+                "targets_by_status": dict(
+                    db.execute(
+                        "SELECT status,count(*) FROM contract_targets GROUP BY status"
+                    ).fetchall()
+                ),
+                "historical_versions_verified": False,
+            }
             series_reviews = {
                 "reviewed": reviewed,
                 "needs_review": counts.get("series", 0) - reviewed,
@@ -718,6 +746,7 @@ class Store:
             "series_reviews": series_reviews,
             "evidence": evidence,
             "assessment_contexts": assessments,
+            "contract_archive": archive,
             "jobs": states,
             "backfill": {
                 source: {

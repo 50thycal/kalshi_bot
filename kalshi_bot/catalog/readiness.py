@@ -12,7 +12,7 @@ from pathlib import Path
 from .economics import SCORING_REQUIREMENTS
 from .store import RULE_FIELDS, SEMANTIC_FIELDS, digest, now, rule_hash
 
-METHOD = "review-calibration-inputs-v2"
+METHOD = "review-calibration-inputs-v3"
 REVIEW_DRAFTS = {
     item["market_ticker"]: item
     for item in json.loads(Path(__file__).with_name("review_drafts.json").read_text())["items"]
@@ -98,7 +98,8 @@ def review_facts(document):
         "review_status": (document or {}).get("review_status", "listing_missing"),
         "review_id": review.get("id"),
         "contract_document_binding_verified": False,
-        "referenced_contract_documents": [
+        "referenced_contract_documents": (document or {}).get("contract_documents")
+        or [
             {"url": raw[key], "content_sha256": None, "version_at_execution_verified": False}
             for key in ("contract_url", "contract_terms_url")
             if raw.get(key)
@@ -303,6 +304,14 @@ def calibration_inputs(store, strategy="mmsell", series=None, limit=20, offset=0
                     "market_review": market_review["review_id"],
                     "series_hash": series_review["rules_hash"],
                     "series_review": series_review["review_id"],
+                    "captured_document_inputs": [
+                        {
+                            key: reference.get(key)
+                            for key in ("field", "url", "content_sha256", "status")
+                        }
+                        for facts in (market_review, series_review)
+                        for reference in facts["referenced_contract_documents"]
+                    ],
                     "market_parent_rules_changed": market_review["parent_rules_changed"],
                     "series_parent_rules_changed": series_review["parent_rules_changed"],
                     "candidate_event_group": candidate,
