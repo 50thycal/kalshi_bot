@@ -12,9 +12,10 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: review the scoring-readiness continuation described in
-[MARKET_CATALOG_SCORING_READINESS.md](../MARKET_CATALOG_SCORING_READINESS.md), then verify
-its catalog-only deployment and begin bounded structured review/calibration preparation.
+Next step: review the proposed classifications and document-proof requirement in
+[MARKET_CATALOG_REVIEW_PILOT.md](../MARKET_CATALOG_REVIEW_PILOT.md), then verify
+its catalog-only deployment. Establish authoritative document/version binding before
+approving semantics; independence and calibration remain subsequent stages.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -273,3 +274,11 @@ Bar v2 explicitly withholds that proof; stale/matching proposed fields never sub
 for approval. Current strict binary ledgers and ownership guards remain unchanged.
 Owner review, catalog-only release, authenticated packet check, full-document binding
 and subsequent semantic/independence/calibration work remain. WS-023 stays REVIEW / Active.
+
+Pilot PR: [#565](https://github.com/50thycal/kalshi_bot/pull/565).
+Executable validation head: `c808a00313516be9448ca782dfde70266edb38bd`.
+170 catalog/readiness/economics/session checks passed; Ruff, whitespace and public-source
+snapshot smoke checks passed. Remote implementation tree matched the local files.
+GitHub CI is pending; owner review/merge and catalog-only rollout remain release gates.
+Merge-finalization changes only this workstream record and its ACTIVE board row.
+Review State: solo, pending owner acceptance; no independent review claimed.
