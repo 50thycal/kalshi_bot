@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-chk-1926","sql":"select market_ticker, side, action, limit_price, quantity, status, cancel_reason, created_at::text from live_orders where strategy='Alimm1' and (created_at > '2026-10-09 17:15' or status in ('resting','partial','pending','submitted','unknown')) order by created_at desc limit 20"}
