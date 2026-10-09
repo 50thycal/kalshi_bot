@@ -1,6 +1,0 @@
-# latest deployment fe36cfb0-6b3c-4bcf-9dba-56fec53e3424 (status=SUCCESS, created=2026-10-09T01:33:41.096Z)
-# ops request [READ]
-# type=logs  service=main  id=limm-log-0246
-# code 72c7ebe50b8710e6ee6f6d714f3898eade581db5 · started 2026-10-09T02:47:13Z
-# target service: main
-2026-10-09T02:09:57.151645695Z INFO  incentive book: re-priced KXTRUMPUFC-26NOV-DJT yes 5c -> 6c (placed)
