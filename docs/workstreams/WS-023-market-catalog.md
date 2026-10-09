@@ -248,3 +248,28 @@ visual rendering remain release checks. Numerical confidence remains null.
 Merge-finalization is documentation-only; WS-023 stays REVIEW / Active on merge.
 Review State: solo, pending owner acceptance; no independent party reviewed this change.
 Next: owner reviews/merges after finalized-head CI, then verify market-catalog only.
+
+## Bounded classification pilot — 2026-10-09 UTC
+
+Calvin confirmed #564 merged and authorized continuation. Mission/acceptance,
+non-goals, interrupt conditions and finish are in
+[the pilot](../MARKET_CATALOG_REVIEW_PILOT.md). #564 deployed SUCCESS on merge
+`72c7ebe50b8710e6ee6f6d714f3898eade581db5`, deployment
+`f6993ead-5525-4e71-9374-bae5af5eafee`; final CI passed. Health, public queue and
+401 guards verified. Authenticated production contents remain unverified because
+OAuth withholds variable values; no token was exported or requested publicly.
+
+At 02:05:51 UTC diagnostics attributed 2,731 / 2,791 recorded markets, with 60
+blocked; source-ID coverage matched at 01:56 UTC (2,853 live / 133,174 paper).
+This is a dated catalog observation, not an experiment verdict. Full verification
+is on merged #564. A SELECT-only priority query exported only public ticker/count
+aggregates and returned ops to noop.
+
+Three official listing/term proposals cover player stats, index averages and mention
+phrases. Drafts include all ten semantic keys, explicit unknowns, source fingerprints,
+PDF hashes and qualitative risks; they do not approve semantics or supply scores.
+The review found listing hashes bind URLs, not linked PDF bytes or historical versions.
+Bar v2 explicitly withholds that proof; stale/matching proposed fields never substitute
+for approval. Current strict binary ledgers and ownership guards remain unchanged.
+Owner review, catalog-only release, authenticated packet check, full-document binding
+and subsequent semantic/independence/calibration work remain. WS-023 stays REVIEW / Active.

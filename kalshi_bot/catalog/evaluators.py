@@ -175,6 +175,10 @@ def refresh(store, as_of=None):
                     reasons.remove("semantic_review_not_bound")
                 # A reviewed series is not proof that every traded market's rules match it.
                 reasons.append("market_semantic_review_not_bound")
+                if "verified_contract_document_binding" in SCORING_REQUIREMENTS.get(
+                    result["strategy_id"], {}
+                ).get("required", []):
+                    reasons.append("contract_document_binding_unverified")
                 if not coverage.get(result["evidence_source"], {}).get("ids_match"):
                     reasons.append("source_id_coverage_unverified")
                 if (
@@ -185,6 +189,7 @@ def refresh(store, as_of=None):
                 result["evidence_bar"] = {
                     "current_series_semantic_review": reviewed,
                     "current_market_semantic_review": False,
+                    "contract_document_binding_verified": False,
                     "source_ids_verified": bool(
                         coverage.get(result["evidence_source"], {}).get("ids_match")
                     ),

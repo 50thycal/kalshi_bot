@@ -87,6 +87,11 @@ the sole built-in readiness provider; the dashboard queue currently uses it.
 
 ## Evidence limits
 
+The [bounded classification pilot](MARKET_CATALOG_REVIEW_PILOT.md) adds proposed-only
+market interpretations and an explicit MMSELL document-binding requirement in bar v2.
+Current listing fingerprints include contract URLs, not PDF bytes. Field-matched
+drafts do not approve current semantics or establish historical document versions.
+
 Recorded fills omit assigned-but-unfilled, rejected and never-placed opportunities.
 Source-ID agreement proves scoped database ID coverage, not exchange-account fill
 coverage or complete payload parity. The ledger describes exclusive-owner source

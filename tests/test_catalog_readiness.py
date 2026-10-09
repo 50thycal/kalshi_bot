@@ -8,12 +8,14 @@ from kalshi_bot.catalog.ingest import seed
 from kalshi_bot.catalog.readiness import (
     CHECK_PROVIDERS,
     PROVIDERS,
+    REVIEW_DRAFTS,
     calibration_inputs,
     register_readiness,
+    review_facts,
     review_packets,
 )
 from kalshi_bot.catalog.service import make_server
-from kalshi_bot.catalog.store import SEMANTIC_FIELDS, Store
+from kalshi_bot.catalog.store import RULE_FIELDS, SEMANTIC_FIELDS, Store
 
 
 @pytest.fixture
@@ -276,3 +278,68 @@ def test_api_auth_filters_bounds_and_empty_page(store):
 def test_library_bounds(store, limit, offset):
     with pytest.raises(ValueError):
         review_packets(store, limit=limit, offset=offset)
+
+
+def test_contract_links_and_draft_never_claim_document_binding_or_semantic_approval(
+    store, monkeypatch
+):
+    doc = listing(store)
+    draft = {
+        "market_ticker": doc["ticker"],
+        "public_rules_fingerprint": "old",
+        "human_review_approved": False,
+    }
+    monkeypatch.setitem(REVIEW_DRAFTS, doc["ticker"], draft)
+    store.save_live_economics([ledger()])
+    approve(store, "series", "KXTEST")
+    approve(store, "market", doc["ticker"])
+    packet = review_packets(store)["items"][0]
+    assert (
+        packet["series_review"]["referenced_contract_documents"][0]["url"]
+        == "https://example.test/rules"
+    )
+    assert not packet["series_review"]["contract_document_binding_verified"]
+    sample = packet["sample_markets"][0]["review"]
+    assert sample["draft_binding_status"] == "listing_fields_changed"
+    assert sample["proposed_review"]["human_review_approved"] is False
+    item = calibration_inputs(store)["items"][0]
+    assert item["requirements_met"]["current_semantic_review"]
+    assert not item["requirements_met"]["verified_contract_document_binding"]
+    assert "verified_contract_document_binding" in item["missing_requirements"]
+    assert not item["qualified"]
+
+
+def test_matching_draft_fields_are_separate_and_cannot_silently_fill_semantics(store, monkeypatch):
+    from kalshi_bot.catalog.store import rule_hash
+
+    doc = listing(store)
+    draft = {
+        "market_ticker": doc["ticker"],
+        "public_rules_fingerprint": rule_hash(doc["raw"]),
+        "semantics": {"resolution_mechanism": "proposed"},
+        "human_review_approved": False,
+    }
+    monkeypatch.setitem(REVIEW_DRAFTS, doc["ticker"], draft)
+    facts = review_facts(store.get("market", doc["ticker"]))
+    assert facts["draft_binding_status"] == "listing_fields_match"
+    assert facts["review_status"] == "needs_review" and facts["known_field_count"] == 0
+    assert facts["semantics"]["resolution_mechanism"] is None
+    assert not facts["contract_document_binding_verified"]
+    # URLs remain hash inputs; changing bytes behind a URL cannot be inferred
+    # from these fields, so the separate document proof must remain unverified.
+    assert "contract_terms_url" in RULE_FIELDS
+    assert "contract_terms_content_sha256" not in RULE_FIELDS
+
+
+def test_pilot_bundle_is_market_scoped_proposed_only_with_explicit_unknowns():
+    assert len(REVIEW_DRAFTS) == 3
+    for ticker, draft in REVIEW_DRAFTS.items():
+        assert draft["market_ticker"] == ticker
+        assert draft["status"] == "proposed_not_approved"
+        assert not draft["human_review_approved"] and not draft["qualified"]
+        assert draft["catalog_rules_hash"] is None and draft["confidence_score"] is None
+        assert set(draft["semantics"]) == set(SEMANTIC_FIELDS)
+        assert len(draft["public_rules_fingerprint"]) == 64
+        assert len(draft["contract_document"]["content_sha256"]) == 64
+        assert not draft["contract_document"]["version_at_execution_verified"]
+        assert not draft["candidate_exposure_verified_independent"]

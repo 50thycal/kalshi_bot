@@ -1,0 +1,408 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded rule-review pilot; never an approval or trading universe",
+  "automatic_application": false,
+  "items": [
+    {
+      "schema_version": 1,
+      "draft_id": "KXMLBHR-pilot-20261009",
+      "market_ticker": "KXMLBHR-26AUG021920BOSLAD-BOSCDURBIN17-1",
+      "series_ticker": "KXMLBHR",
+      "status": "proposed_not_approved",
+      "actor": "Codex",
+      "human_review_approved": false,
+      "catalog_rules_hash": null,
+      "public_rules_fingerprint": "188013edeb6588574aad39c6471477c2c4de5bb239c51166d391b163f7965e5b",
+      "public_payload_fingerprints": {
+        "series": "565c4d94d4fe275c2b778bf1604e144369fd4e1822b53c0173761adbb377f32a",
+        "market": "4d0b61406be3201b0fac7276794a2d1b73a95dff3195a98301a88221e118778a",
+        "event": "36ae581d5bedac970f0a5ce3d76b2c94d84394b30f92cae9aa7cc79877dcd15f"
+      },
+      "source_urls": {
+        "series": "https://external-api.kalshi.com/trade-api/v2/series/KXMLBHR",
+        "market": "https://external-api.kalshi.com/trade-api/v2/markets/KXMLBHR-26AUG021920BOSLAD-BOSCDURBIN17-1",
+        "event": "https://external-api.kalshi.com/trade-api/v2/events/KXMLBHR-26AUG021920BOSLAD",
+        "contract_terms": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+        "archived_market_recovery": "https://external-api.kalshi.com/trade-api/v2/historical/markets/KXMLBHR-26AUG021920BOSLAD-BOSCDURBIN17-1"
+      },
+      "contract_document": {
+        "content_sha256": "21f93c5dd4c2b25fb2663473a58146c7643700ae45e97881af8c3fbde3809d82",
+        "byte_count": 50698,
+        "pdf_creation_metadata": "Tue Sep  8 16:22:48 2026 EDT",
+        "version_at_execution_verified": false,
+        "metadata_is_not_effective_date_proof": true
+      },
+      "sample_priority_evidence": {
+        "live_markets": 462,
+        "source_fill_count": 467,
+        "as_of": "2026-10-09T01:59:25Z",
+        "receipt": "ops/results/catalog-review-priority-20261009-0201.txt",
+        "counts_are_not_confidence": true
+      },
+      "semantics": {
+        "resolution_mechanism": "player_game_stat_with_participation_and_fair_price_fallback",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_stat_threshold",
+        "exclusions": [
+          "Nonstarter or scratched player does not settle from the home-run count.",
+          "A starter without a plate appearance uses the participation fallback.",
+          "Pinch-hit appearances do not make the displayed player prop eligible."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes when the eligible player records at least one home run; otherwise No.",
+          "exception_case": "Exchange-determined fair-price settlement for participation and specified game/data contingencies; payout need not be 0 or 1.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Different players can each win; thresholds on one player can overlap."
+        },
+        "shared_exposure_key": "candidate-event:KXMLBHR-26AUG021920BOSLAD",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Fox Sports",
+              "url": "https://www.foxsports.com"
+            },
+            {
+              "name": "the Governing League",
+              "url": "https://www.mlb.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "lineup_and_plate_appearance_eligibility",
+            "fair_price_fallback",
+            "postponement_or_incomplete_game",
+            "shared_game_exposure",
+            "official_data_finality"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "source_timing": {
+        "open_time": "2026-08-02T19:50:00Z",
+        "close_time": "2026-08-03T02:34:55Z",
+        "expected_expiration_time": "2026-08-03T05:20:00Z",
+        "settlement_ts": "2026-08-03T02:41:00.956135Z"
+      },
+      "expected_cash_payout_at": null,
+      "candidate_exposure_verified_independent": false,
+      "evidence_references": [
+        "Contract terms pp. 1-3: statistics, source hierarchy, player/game contingencies.",
+        "Market secondary rules: lineup, plate appearance and pinch-hit conditions."
+      ],
+      "review_questions": [
+        "Verify the historically effective terms and any superseding market clarification.",
+        "Obtain actual first-pitch/end timestamps before filling observation boundaries.",
+        "Map cross-series player/game exposure; event ID alone does not establish independence.",
+        "Keep fair-price outcomes outside the current strict binary ledger method until supported separately."
+      ],
+      "confidence_score": null,
+      "qualified": false,
+      "assembled_at": "2026-10-09T02:05:20.712147+00:00",
+      "source_retrieved_at": {
+        "series": "2026-10-09T02:00:49.560043+00:00",
+        "market": "2026-10-09T02:00:49.382177+00:00",
+        "event": "2026-10-09T02:02:31.475165+00:00",
+        "contract_terms": "2026-10-09T02:01:30.208095+00:00"
+      }
+    },
+    {
+      "schema_version": 1,
+      "draft_id": "KXBTCD-pilot-20261009",
+      "market_ticker": "KXBTCD-26AUG0117-T63749.99",
+      "series_ticker": "KXBTCD",
+      "status": "proposed_not_approved",
+      "actor": "Codex",
+      "human_review_approved": false,
+      "catalog_rules_hash": null,
+      "public_rules_fingerprint": "02b1facfc50e3b770d38fed865de72e9d8288c8358e1e27033a80a9e1f9bcc6c",
+      "public_payload_fingerprints": {
+        "series": "e96794f904dc074845687c84231fea988ba4a36dcd509b179b07580fd176a625",
+        "market": "a555865e20506a64f7d85834e3d2b10ef58c748b6343abc69ba2416f16997910",
+        "event": "71bf3af48e172b161f0ac5a0053ff95214c7fb155aea10252cbe95b288572aea"
+      },
+      "source_urls": {
+        "series": "https://external-api.kalshi.com/trade-api/v2/series/KXBTCD",
+        "market": "https://external-api.kalshi.com/trade-api/v2/markets/KXBTCD-26AUG0117-T63749.99",
+        "event": "https://external-api.kalshi.com/trade-api/v2/events/KXBTCD-26AUG0117",
+        "contract_terms": "https://assets.kalshi.com/contract_terms/BTC.pdf",
+        "archived_market_recovery": "https://external-api.kalshi.com/trade-api/v2/historical/markets/KXBTCD-26AUG0117-T63749.99"
+      },
+      "contract_document": {
+        "content_sha256": "7bba1b819bd027e69755c76ed082e1004eb9466e170c1ae38996cf7d52e322a6",
+        "byte_count": 38090,
+        "pdf_creation_metadata": "Tue Sep 29 15:57:48 2026 EDT",
+        "version_at_execution_verified": false,
+        "metadata_is_not_effective_date_proof": true
+      },
+      "sample_priority_evidence": {
+        "live_markets": 102,
+        "source_fill_count": 110,
+        "as_of": "2026-10-09T01:59:25Z",
+        "receipt": "ops/results/catalog-review-priority-20261009-0201.txt",
+        "counts_are_not_confidence": true
+      },
+      "semantics": {
+        "resolution_mechanism": "sixty_second_index_average_threshold",
+        "observation_start": "2026-08-01T20:59:00+00:00",
+        "observation_end": "2026-08-01T21:00:00+00:00",
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Spot quotes from other exchanges are not the settlement index.",
+          "A single instantaneous tick is not the sixty-observation average.",
+          "Post-expiration revisions do not update the determination."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the stated BRTI average exceeds 63749.99; otherwise No.",
+          "comparison_operator": ">",
+          "threshold_dollars": "63749.99",
+          "data_missing_contingency_in_current_terms": "No at the contract-defined expiry when no determination data is available; historical applicability unverified.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Same-time threshold strikes are nested and share one index determination."
+        },
+        "shared_exposure_key": "candidate-event:KXBTCD-26AUG0117",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "CF Benchmarks",
+              "url": "https://www.cfbenchmarks.com/data/indices/BRTI?ref=blog.cfbenchmarks.com"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BTC.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "index_vs_spot_basis",
+            "averaging_window",
+            "threshold_display_precision",
+            "shared_time_threshold_ladder",
+            "missing_data_or_outcome_review"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "source_timing": {
+        "open_time": "2026-07-31T20:00:00Z",
+        "close_time": "2026-08-01T21:00:00Z",
+        "expected_expiration_time": "2026-08-01T21:05:00Z",
+        "settlement_ts": "2026-08-01T21:02:20.985681Z"
+      },
+      "expected_cash_payout_at": null,
+      "candidate_exposure_verified_independent": false,
+      "evidence_references": [
+        "Contract terms p. 1: underlying average, source, comparison/data contingency; p. 2: expiration and settlement.",
+        "Market primary/secondary rules: exact threshold and sixty index observations."
+      ],
+      "review_questions": [
+        "Verify the historically effective terms before applying current PDF contingencies to this August execution.",
+        "Confirm raw threshold precision rather than substituting the rounded UI subtitle.",
+        "Map all same-time BTC strikes and related series to shared exposure.",
+        "Expected determination is not a verified cash-payout time."
+      ],
+      "confidence_score": null,
+      "qualified": false,
+      "assembled_at": "2026-10-09T02:05:20.712147+00:00",
+      "source_retrieved_at": {
+        "series": "2026-10-09T02:00:52.113934+00:00",
+        "market": "2026-10-09T02:00:54.900079+00:00",
+        "event": "2026-10-09T02:02:33.994648+00:00",
+        "contract_terms": "2026-10-09T02:01:30.120554+00:00"
+      }
+    },
+    {
+      "schema_version": 1,
+      "draft_id": "KXTRUMPSAY-pilot-20261009",
+      "market_ticker": "KXTRUMPSAY-26AUG03-AMER",
+      "series_ticker": "KXTRUMPSAY",
+      "status": "proposed_not_approved",
+      "actor": "Codex",
+      "human_review_approved": false,
+      "catalog_rules_hash": null,
+      "public_rules_fingerprint": "010a5b77f0f82076cefdca48ef269e2a4933084051c22fb6334c19170be3706f",
+      "public_payload_fingerprints": {
+        "series": "449e0eeb30ace97acbeec167c118cdbaa9060787993eafe01b199d9fbd0511a8",
+        "market": "0a78af95d7fb6035fb0294a8890483187d3e8753dafe5106b2aea234fd75d4db",
+        "event": "1adce81c9d8d38469ca7f2bf51fb776adce6744ba59b01ccdd08af3d91b126c7"
+      },
+      "source_urls": {
+        "series": "https://external-api.kalshi.com/trade-api/v2/series/KXTRUMPSAY",
+        "market": "https://external-api.kalshi.com/trade-api/v2/markets/KXTRUMPSAY-26AUG03-AMER",
+        "event": "https://external-api.kalshi.com/trade-api/v2/events/KXTRUMPSAY-26AUG03",
+        "contract_terms": "https://assets.kalshi.com/contract_terms/TRUMPSAY.pdf",
+        "archived_market_recovery": "https://external-api.kalshi.com/trade-api/v2/historical/markets/KXTRUMPSAY-26AUG03-AMER"
+      },
+      "contract_document": {
+        "content_sha256": "0b600846f18db43c6d3cff487c29f911cb3f049956d66c8c57af505245d5b4dc",
+        "byte_count": 44493,
+        "pdf_creation_metadata": "Thu Jul  2 13:53:38 2026 EDT",
+        "version_at_execution_verified": false,
+        "metadata_is_not_effective_date_proof": true
+      },
+      "sample_priority_evidence": {
+        "live_markets": 35,
+        "source_fill_count": 38,
+        "as_of": "2026-10-09T01:59:25Z",
+        "receipt": "ops/results/catalog-review-priority-20261009-0201.txt",
+        "counts_are_not_confidence": true
+      },
+      "semantics": {
+        "resolution_mechanism": "bounded_public_statement_phrase_match",
+        "observation_start": "2026-07-27T12:00:00+00:00",
+        "observation_end": "2026-08-03T04:00:00+00:00",
+        "alternatives": [
+          "American Flag Blue",
+          "Plural form of the specified phrase",
+          "Possessive form of the specified phrase"
+        ],
+        "alternative_operator": "OR",
+        "exclusions": [
+          "Official acts alone do not count as public statements.",
+          "Synonyms or other grammatical transformations are not automatically qualifying.",
+          "Spoken/broadcast captions without a qualifying utterance are excluded; qualifying personal written posts are a separate included channel."
+        ],
+        "payout_relationship": {
+          "normal_case": "Any qualifying phrase form in an allowed channel during the observation window makes Yes; otherwise No.",
+          "exception_case": "Current terms permit a discretionary last/fair-price outcome for death before expiry; historical applicability unverified.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Several phrase markets can win together; multiple windows and phrase aliases may overlap."
+        },
+        "shared_exposure_key": "candidate-event:KXTRUMPSAY-26AUG03",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ABC",
+              "url": "https://abcnews.go.com/"
+            },
+            {
+              "name": "Fox News",
+              "url": "https://www.foxnews.com/"
+            },
+            {
+              "name": "MSNBC",
+              "url": "https://www.msnbc.com/"
+            },
+            {
+              "name": "The Wall Street Journal",
+              "url": "https://www.wsj.com/"
+            },
+            {
+              "name": "Semafor",
+              "url": "https://www.semafor.com/"
+            },
+            {
+              "name": "The Information",
+              "url": "https://www.theinformation.com/"
+            },
+            {
+              "name": "PBS",
+              "url": "https://www.pbs.org"
+            },
+            {
+              "name": "the President of the United States",
+              "url": "https://www.whitehouse.gov/"
+            },
+            {
+              "name": "CBS",
+              "url": "https://www.cbsnews.com/"
+            },
+            {
+              "name": "NBC",
+              "url": "https://www.nbcnews.com/"
+            },
+            {
+              "name": "Bloomberg",
+              "url": "https://www.bloomberg.com"
+            },
+            {
+              "name": "Axios",
+              "url": "https://www.axios.com/"
+            },
+            {
+              "name": "CNN",
+              "url": "https://www.cnn.com/"
+            },
+            {
+              "name": "Reuters",
+              "url": "https://www.reuters.com/"
+            },
+            {
+              "name": "The Washington Post",
+              "url": "https://www.washingtonpost.com/"
+            },
+            {
+              "name": "the Associated Press",
+              "url": "https://apnews.com/"
+            },
+            {
+              "name": "Politico",
+              "url": "https://www.politico.com/"
+            },
+            {
+              "name": "The New York Times",
+              "url": "https://www.nytimes.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/TRUMPSAY.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "phrase_and_variant_interpretation",
+            "spoken_vs_written_channel",
+            "source_first_publication_time",
+            "observation_vs_close_gap",
+            "overlapping_phrase_windows",
+            "discretionary_person_event_fallback"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "source_timing": {
+        "open_time": "2026-07-27T12:00:00Z",
+        "close_time": "2026-08-03T14:00:00Z",
+        "expected_expiration_time": "2026-08-03T14:00:00Z",
+        "settlement_ts": "2026-08-03T16:59:10.948478Z"
+      },
+      "expected_cash_payout_at": null,
+      "candidate_exposure_verified_independent": false,
+      "evidence_references": [
+        "Contract terms pp. 1-4: word variants, publication timing, included channels and technical exceptions.",
+        "Market primary rules: after 08:00 ET July 27 and before 00:00 ET August 3."
+      ],
+      "review_questions": [
+        "Verify the historically effective full terms and phrase-specific matching interpretation.",
+        "Observation ends ten hours before the displayed trading close; do not use close_time as observation_end.",
+        "A slash alias in another listing would create OR alternatives, but this sample has no slash alias.",
+        "Group shared statements and overlapping windows across series before counting independent outcomes."
+      ],
+      "confidence_score": null,
+      "qualified": false,
+      "assembled_at": "2026-10-09T02:05:20.712147+00:00",
+      "source_retrieved_at": {
+        "series": "2026-10-09T02:00:54.854151+00:00",
+        "market": "2026-10-09T02:00:57.578482+00:00",
+        "event": "2026-10-09T02:02:36.842901+00:00",
+        "contract_terms": "2026-10-09T02:01:32.754487+00:00"
+      }
+    }
+  ]
+}

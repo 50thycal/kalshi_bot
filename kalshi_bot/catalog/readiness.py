@@ -4,13 +4,19 @@ Inputs are source-recorded live fills, including blocked outcomes. They are not
 the assigned opportunity population, independent samples, or a frozen study.
 """
 
+import json
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
 from .economics import SCORING_REQUIREMENTS
-from .store import RULE_FIELDS, SEMANTIC_FIELDS, digest, now
+from .store import RULE_FIELDS, SEMANTIC_FIELDS, digest, now, rule_hash
 
-METHOD = "review-calibration-inputs-v1"
+METHOD = "review-calibration-inputs-v2"
+REVIEW_DRAFTS = {
+    item["market_ticker"]: item
+    for item in json.loads(Path(__file__).with_name("review_drafts.json").read_text())["items"]
+}
 PROVIDERS = {}
 CHECK_PROVIDERS = {}
 
@@ -33,6 +39,7 @@ def register_readiness(strategy_id, provider, check_provider=None):
 def mmsell_checks(store, record, market_review, series_review):
     return {
         "current_semantic_review": bool(market_review["review_id"] and series_review["review_id"]),
+        "verified_contract_document_binding": False,
         "verified_source_ids": store.state("source_coverage:live", {}).get("ids_match") is True,
         "verified_exchange_fill_coverage": False,
         "attributable_live_net_economics": record.get("status") == "attributed_source_ledger",
@@ -79,6 +86,8 @@ def review_facts(document):
     semantics = (document or {}).get("semantics") or dict.fromkeys(SEMANTIC_FIELDS)
     missing = [field for field in SEMANTIC_FIELDS if semantics.get(field) is None]
     review = (document or {}).get("review") or {}
+    raw = (document or {}).get("raw", {})
+    draft = REVIEW_DRAFTS.get((document or {}).get("ticker"))
     return {
         "kind": (document or {}).get("kind"),
         "ticker": (document or {}).get("ticker"),
@@ -88,6 +97,20 @@ def review_facts(document):
         "listing_available": document is not None,
         "review_status": (document or {}).get("review_status", "listing_missing"),
         "review_id": review.get("id"),
+        "contract_document_binding_verified": False,
+        "referenced_contract_documents": [
+            {"url": raw[key], "content_sha256": None, "version_at_execution_verified": False}
+            for key in ("contract_url", "contract_terms_url")
+            if raw.get(key)
+        ],
+        "proposed_review": deepcopy(draft) if draft else None,
+        "draft_binding_status": (
+            "listing_fields_match"
+            if draft["public_rules_fingerprint"] == rule_hash(raw)
+            else "listing_fields_changed"
+        )
+        if draft
+        else None,
         "semantics": semantics,
         "missing_fields": missing,
         "known_field_count": len(SEMANTIC_FIELDS) - len(missing),
