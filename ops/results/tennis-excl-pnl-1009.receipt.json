@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c45739169f58318bdfb2bb0ab3695220c66e9ec6",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-09T19:55:46Z",
+  "id": "tennis-excl-pnl-1009",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/tennis-excl-pnl-1009.receipt.json",
+  "result_file": "ops/results/tennis-excl-pnl-1009.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/37983500638",
+  "service": null,
+  "started_at": "2026-10-09T19:55:28Z",
+  "targets": [],
+  "type": "db"
+}
