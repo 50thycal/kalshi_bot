@@ -1,9 +1,1 @@
-{
-  "type": "db",
-  "id": "catalog-review-priority-20261009-0201",
-  "actor": "Codex",
-  "workstream": "WS-023",
-  "purpose": "SELECT-only public ticker/count priority for bounded draft semantics; no source writes or live activation",
-  "max_rows": 15,
-  "sql": "WITH scoped AS (SELECT f.market_ticker FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id AND o.id=(SELECT min(x.id) FROM live_orders x WHERE x.kalshi_order_id=f.kalshi_order_id) WHERE o.strategy ILIKE '%mmsell%') SELECT split_part(market_ticker,'-',1) AS series_ticker,count(DISTINCT market_ticker) AS live_markets,count(*) AS source_fill_count,(array_agg(DISTINCT market_ticker ORDER BY market_ticker))[1:3] AS sample_market_tickers FROM scoped GROUP BY 1 ORDER BY live_markets DESC,series_ticker LIMIT 15"
-}
+{"type":"noop"}
