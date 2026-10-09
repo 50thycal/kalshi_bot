@@ -18,14 +18,17 @@ import httpx
 
 from .documents import ContractCapture
 from .evaluators import refresh
+from .headroom import StorageDeferred, measure, require_space
 from .ingest import Discovery, DiscoveryDeferred, reset_source_reconciliation, seed, source_page
 from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
 
 
-def run_job(store, key, action):
+def run_job(store, key, action, *, bulk=False, guard=True):
     try:
+        if guard:
+            require_space(store, bulk=bulk)
         count = action()
         store.set_state(
             "job:" + key,
@@ -36,10 +39,23 @@ def run_job(store, key, action):
                 "error": None,
                 "http_status": None,
                 "retry_at_unix": None,
+                "storage_deferral": None,
             },
         )
         LOG.info("job=%s records=%s status=ok", key, count)
         return count
+    except StorageDeferred as error:
+        store.set_state(
+            "job:" + key,
+            {
+                **store.state("job:" + key, {}), "error": "StorageDeferred",
+                "http_status": None, "retry_at_unix": None,
+                "storage_deferral": error.tier,
+                "last_deferred_at": now(),
+            },
+        )
+        LOG.info("job=%s status=deferred storage_tier=%s", key, error.tier)
+        return None
     except DiscoveryDeferred as error:
         store.set_state(
             "job:" + key,
@@ -89,14 +105,15 @@ def collect(store, stopped, source_url, interval):
     last_reconciliation = store.state("last_reconciliation", 0)
     while not stopped.is_set():
         stamp = time.time()
-        if stamp - last_reconciliation >= 86400:
+        storage_guard = measure(store)
+        if not storage_guard["bulk_paused"] and stamp - last_reconciliation >= 86400:
             discovery.reset()
             reset_source_reconciliation(store)
             last_reconciliation = stamp
             store.set_state("last_reconciliation", stamp)
         for job in ("series", "events"):
-            run_job(store, "discovery:" + job, lambda job=job: discovery.page(job))
-        run_job(store, "discovery:updates", discovery.updates)
+            run_job(store, "discovery:" + job, lambda job=job: discovery.page(job), bulk=True)
+        run_job(store, "discovery:updates", discovery.updates, bulk=True)
         run_job(store, "documents:capture", contracts.step)
         changed = False
         if source_url:
@@ -117,7 +134,8 @@ def collect(store, stopped, source_url, interval):
             release_memory()
             if result is not None and store.state("evaluation_requested") == requested:
                 store.set_state("evaluation_requested", None)
-            last_evaluation = stamp
+            if result is not None:
+                last_evaluation = stamp
         if stamp - last_storage_check >= 300:
 
             def report_storage():
@@ -135,7 +153,7 @@ def collect(store, stopped, source_url, interval):
                 LOG.info("catalog_storage=%s", json.dumps(storage))
                 return 0
 
-            run_job(store, "storage:metrics", report_storage)
+            run_job(store, "storage:metrics", report_storage, guard=False)
             last_storage_check = stamp
         # Limit maintenance time and commit each page so interruption is safe.
         maintenance_deadline = time.monotonic() + 3
@@ -313,6 +331,7 @@ def make_server(store, token, address=("::", 8080)):
                 payload = json.loads(self.rfile.read(size))
                 if not isinstance(payload, dict):
                     raise ValueError("Review must be an object")
+                require_space(store)
                 if self.path == "/v1/import":
                     source = payload.get("source")
                     records = payload.get("records")
@@ -354,6 +373,8 @@ def make_server(store, token, address=("::", 8080)):
                     self.respond(201, {"imported": len(records), "source": source})
                 else:
                     self.respond(201, store.review(payload))
+            except StorageDeferred:
+                self.respond(503, {"error": "Catalog writes paused for storage headroom"})
             except LookupError as error:
                 self.respond(409, {"error": str(error)})
             except (ValueError, TypeError) as error:

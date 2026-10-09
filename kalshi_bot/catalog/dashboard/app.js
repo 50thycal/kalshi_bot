@@ -17,12 +17,13 @@ async function api(path, currentToken) {
 }
 function renderStatus(s) {
   const jobs = s.jobs || {}, reviews = s.series_reviews || {}, reviewed = reviews.reviewed || 0;
+  const guard=jobs['storage:guard'] || {};
   $('series').textContent = number(s.objects?.series); $('markets').textContent = number(s.objects?.market);
   $('reviews').textContent = number(reviewed); $('review-detail').textContent = number(Math.max(0,(s.objects?.series || 0)-reviewed)) + ' series awaiting a current structured review';
   $('contexts').textContent = number(s.assessment_contexts); $('pipeline').replaceChildren();
   const discovery = ['series','events'].every(k => jobs['discovery:' + k]?.complete);
   const discoveryErrors = Object.entries(jobs).some(([k,v])=>k.startsWith('job:discovery:') && v?.error);
-  stage('1. Discovery', discoveryErrors ? 'Needs attention' : discovery ? 'Pass complete' : 'Collecting', 'Public series, events, and market updates. Historical listings included.', discoveryErrors ? 'warn' : 'good');
+  stage('1. Discovery', guard.bulk_paused ? 'Paused for storage' : discoveryErrors ? 'Needs attention' : discovery ? 'Pass complete' : 'Collecting', 'Public series, events, and market updates. Historical listings included.', guard.bulk_paused || discoveryErrors ? 'warn' : 'good');
   const migration = jobs.registry_seed || {}, economics = jobs.live_economics_summary || {};
   const archive=s.contract_archive || {}, targets=archive.targets_by_status || {}, failures=targets.refresh_failed || 0;
   stage('2. Contract documents', failures ? 'Needs attention' : archive.blobs ? 'Capturing' : 'Awaiting capture', number(archive.blobs)+' distinct documents saved; '+number(targets.not_captured)+' links awaiting capture; '+number(failures)+' failed refreshes. Saved documents do not prove which terms governed an older trade.', failures?'warn':'neutral');
@@ -35,6 +36,9 @@ function renderStatus(s) {
   stage('7. Strategy connection', s.consumer_cutover ? 'Connected' : 'Not connected', 'Catalog selections are advisory. This page does not authorize or activate trades.', 'neutral');
   $('attention').replaceChildren();
   const add = text => $('attention').append(node('li',text));
+  if(guard.measurement_error) add('Storage measurement failed; catalog writes are paused until space can be verified. Existing data remains readable.');
+  else if(guard.writes_paused) add('Catalog writes are paused to preserve remaining space. Existing data remains readable; increase the catalog volume to resume collection.');
+  else if(guard.bulk_paused) add('Bulk market discovery is paused to preserve free space. Evidence imports and bounded document/outcome collection can continue. Increase the catalog volume to resume bulk collection.');
   if(failures) add(number(failures)+' contract document refreshes failed. Previous captures remain available; inspect the review packets before using the terms.');
   if(permissions?.accepted === false) add('Historical import blocked: configure CATALOG_SOURCE_DATABASE_URL with the genuine bot_readonly account and its own password, then redeploy. An administrator URL is refused.');
   else if(!imported) add('Finish and verify the historical paper and live imports. Missing coverage means incomplete, even if a seed is present.');
@@ -56,9 +60,9 @@ function renderStatus(s) {
   for(const source of ['paper','live']) { const b=s.backfill?.[source] || {}; row($('imports'),[source,number(b.local_records),pill(b.initial_complete ? 'Verified' : 'Incomplete',b.initial_complete?'good':'warn'),pill(b.reconciliation_complete?'Verified':'Incomplete',b.reconciliation_complete?'good':'neutral'),date(b.coverage?.checked_at)]); }
   $('jobs').replaceChildren();
   for(const [key,value] of Object.entries(jobs).filter(([k])=>k.startsWith('job:')).sort()) {
-    const v=value || {}, deferred=v.error==='DiscoveryDeferred', stale=v.last_success_at && Date.now()-Date.parse(v.last_success_at)>15*60*1000;
-    const state=deferred?'Waiting to retry':v.error?'Error':!v.last_success_at?'Not run':stale?'Stale':'Last run OK';
-    const detail=v.error?(deferred?'Retry after '+date(v.retry_at_unix*1000):v.error+(v.http_status?' · HTTP '+v.http_status:'')):'Records in last run: '+number(v.records);
+    const v=value || {}, deferred=v.error==='DiscoveryDeferred', storageDeferred=v.error==='StorageDeferred', stale=v.last_success_at && Date.now()-Date.parse(v.last_success_at)>15*60*1000;
+    const state=storageDeferred?'Paused for storage':deferred?'Waiting to retry':v.error?'Error':!v.last_success_at?'Not run':stale?'Stale':'Last run OK';
+    const detail=storageDeferred?'Resumes automatically when free space recovers':v.error?(deferred?'Retry after '+date(v.retry_at_unix*1000):v.error+(v.http_status?' · HTTP '+v.http_status:'')):'Records in last run: '+number(v.records);
     row($('jobs'),[key.slice(4),pill(state,v.error||stale?'warn':'neutral'),date(v.last_success_at),detail]);
   }
   $('connection').textContent='Snapshot received ' + date(s.captured_at) + ' · refreshes every 60 seconds';

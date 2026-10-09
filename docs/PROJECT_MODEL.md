@@ -475,6 +475,13 @@ expose metadata; the dashboard shows collection progress. Current bytes and resp
 dates do not establish historically effective terms, approve semantics or qualify scores.
 The capture service never parses PDFs. Details: [contract capture](MARKET_CATALOG_CONTRACT_CAPTURE.md).
 
+Collector writes check actual catalog-volume headroom. Persisted hysteresis pauses bulk
+public discovery first while essential imports/outcomes/document capture can continue;
+a critical reserve pauses all growing collection and returns 503 for authenticated
+review/import writes. Metrics and existing authenticated reads remain available. Recovery
+automatically resumes work without deleting history, advancing deferred cursors or changing
+source/trading workers. Details: [storage guard](MARKET_CATALOG_STORAGE_GUARD.md).
+
 ### Catalog operator view
 
 The standalone market-catalog service includes a responsive dashboard at its
