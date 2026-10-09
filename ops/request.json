@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-xtag-stack-open-20261009"],"id":"tennis-issue-rcpt-1009c"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"tennis-issue-clear-1009"}
