@@ -749,3 +749,16 @@ def test_full_storage_report_sizes_every_table_and_index(store):
     assert sum(sizes.values()) == full["allocated_bytes"]
     cheap = store.storage(detail=False, previous=full)
     assert cheap["objects_bytes"] == sizes
+
+
+def test_storage_detail_runs_off_the_collect_loop_and_keeps_its_own_key(store):
+    from kalshi_bot.catalog.service import report_storage_detail
+
+    store.evidence_page("paper", [trade(1)], {"after": 1})
+    report_storage_detail(store)
+    detail = store.state("storage:detail")
+    assert detail["tables_captured_at"] == detail["captured_at"]
+    assert "objects_bytes" in detail
+    cheap = store.storage(detail=False, previous=detail)
+    assert cheap["objects_bytes"] == detail["objects_bytes"]
+    assert cheap["tables"] == detail["tables"]

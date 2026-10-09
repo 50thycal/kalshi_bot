@@ -685,7 +685,10 @@ class Store:
                     objects_bytes = {
                         row[0]: row[1]
                         for row in db.execute(
-                            "SELECT name,sum(pgsize) FROM dbstat GROUP BY name ORDER BY 2 DESC"
+                            # aggregate=TRUE: one row per b-tree, without per-page cell
+                            # parsing. The per-page form stalled for 30+ minutes on 15 GB.
+                            "SELECT name,sum(pgsize) FROM dbstat WHERE aggregate=TRUE "
+                            "GROUP BY name ORDER BY 2 DESC"
                         )
                     }
                 except sqlite3.OperationalError:  # SQLite built without DBSTAT_VTAB
