@@ -676,6 +676,20 @@ class Store:
                     }
             else:
                 tables = dict((previous or {}).get("tables") or {})
+            # Bytes on disk per table AND index, from SQLite's own page accounting. The per-table
+            # document sums above cover five tables; the file is larger than they are, and this
+            # is what says where the rest is. Same full pass, so only in `detail`.
+            objects_bytes = (previous or {}).get("objects_bytes")
+            if detail:
+                try:
+                    objects_bytes = {
+                        row[0]: row[1]
+                        for row in db.execute(
+                            "SELECT name,sum(pgsize) FROM dbstat GROUP BY name ORDER BY 2 DESC"
+                        )
+                    }
+                except sqlite3.OperationalError:  # SQLite built without DBSTAT_VTAB
+                    objects_bytes = None
             page_size = db.execute("PRAGMA page_size").fetchone()[0]
             pages = db.execute("PRAGMA page_count").fetchone()[0]
             free_pages = db.execute("PRAGMA freelist_count").fetchone()[0]
@@ -694,6 +708,7 @@ class Store:
                 "tables_captured_at", (previous or {}).get("captured_at")
             ),
             "tables": tables,
+            "objects_bytes": objects_bytes,
             "file_bytes": files,
             "allocated_bytes": pages * page_size,
             "reusable_bytes": free_pages * page_size,

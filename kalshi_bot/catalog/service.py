@@ -125,6 +125,8 @@ def collect(store, stopped, source_url, interval):
                 taken = (previous or {}).get("tables_captured_at")
                 detail = (
                     not taken
+                    # One full pass on the first report that predates per-object sizes.
+                    or "objects_bytes" not in (previous or {})
                     or (
                         datetime.now(timezone.utc) - datetime.fromisoformat(taken)
                     ).total_seconds()
