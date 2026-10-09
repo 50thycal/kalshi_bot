@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-1009f
-# code c45739169f58318bdfb2bb0ab3695220c66e9ec6 · started 2026-10-09T18:24:40Z
-market_ticker  legs  n  entered  closed
--------------  ----  -  -------  ------
-
-(0 rows)
