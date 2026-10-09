@@ -1,6 +1,0 @@
-# latest deployment ba9044cb-d72e-45a2-bcb4-f9e61fd4712f (status=SUCCESS, created=2026-10-09T16:31:08.470Z)
-# ops request [READ]
-# type=logs  service=main  id=limm-log-2336
-# code c45739169f58318bdfb2bb0ab3695220c66e9ec6 · started 2026-10-09T23:37:25Z
-# target service: main
-2026-10-09T19:02:06.927580256Z INFO  incentive book: re-priced KXMSFTPERM-26OCT-26DEC01 yes 7c -> 8c (placed)
