@@ -12,10 +12,11 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: review the bounded archive in
-[MARKET_CATALOG_CONTRACT_CAPTURE.md](../MARKET_CATALOG_CONTRACT_CAPTURE.md), then verify
-its catalog-only deployment. Establish authoritative document/version binding before
-approving semantics; independence and calibration remain subsequent stages.
+Next step: review the storage guard in
+[MARKET_CATALOG_STORAGE_GUARD.md](../MARKET_CATALOG_STORAGE_GUARD.md), then verify
+its catalog-only deployment and headroom recovery. Document capture is verified on #566;
+authoritative historical document/version binding remains necessary before approving
+semantics. Independence and calibration remain subsequent stages.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -327,3 +328,14 @@ stay intact, and recovery resumes automatically. The dashboard distinguishes sto
 No source, trading, score/semantic or consumer changes; no Platform Revision activated.
 WS-023 remains REVIEW / Active. Owner review/merge and catalog-only verification pending;
 additional capacity or an explicitly approved retention/scope policy remains an owner action.
+
+Storage guard PR: [#568](https://github.com/50thycal/kalshi_bot/pull/568).
+Executable validation head: `6bd625d3072da59c9686d368060bfb34bd051176`.
+199 headroom/document/catalog/readiness/economics/session checks passed; Ruff, whitespace,
+JavaScript syntax and dashboard DOM smoke passed. Remote implementation tree matched
+all local files. Finalized-head GitHub CI pending. This finalization changes only this
+workstream record and its ACTIVE board row.
+Review State: solo, pending owner acceptance; no independent review claimed.
+Next: owner reviews/merges after CI, then verifies bulk pause, essential progress and
+readable authenticated metadata on the catalog only. Capacity recovery is required to
+resume bulk history; no automatic resize, deletion or new variables are introduced.
