@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-chk-0246
-# code 72c7ebe50b8710e6ee6f6d714f3898eade581db5 · started 2026-10-09T02:46:53Z
-market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                     last_discovery               
----------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------
-KXTRUMPUFC-26NOV-DJT         yes   buy     6            166       resting                 2026-10-09 02:09:51.183442+00  2026-10-09 02:41:29.217257+00
-KXYTVIEWSHIGH-TAT26NOV-3.0M  no    buy     2            500       resting                 2026-10-08 20:19:05.97186+00   2026-10-09 02:41:29.217257+00
-
-(2 rows)
