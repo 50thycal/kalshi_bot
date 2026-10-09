@@ -1,1 +1,1 @@
-{"type": "db", "id": "cc-rmm-1009f", "sql": "SELECT t.market_ticker, string_agg(t.strategy || ':' || t.status || ':' || coalesce(round(t.pnl::numeric,2)::text,'-'), ' ' ORDER BY t.strategy) AS legs, count(*) AS n, min(t.created_at) AS entered, max(t.closed_at) AS closed FROM paper_trades t WHERE t.strategy IN ('Rmmsell1','Rmmsell2') AND (t.created_at >= '2026-10-09 07:00' OR (t.pnl < 0 AND t.closed_at >= '2026-10-09 10:20')) GROUP BY t.market_ticker HAVING count(*) = 1 OR bool_or(t.pnl < 0) ORDER BY 4"}
+{"type":"noop"}
