@@ -720,7 +720,7 @@ def test_additional_strategy_has_separate_bar_and_cannot_inherit_confidence(stor
         result = store.assessments(strategy="future")[0]
         assert result["scoring_requirements_version"] == "future-bar-v1"
         assert result["confidence_score"] is None and not result["qualified"]
-        assert SCORING_REQUIREMENTS["mmsell"]["version"] == "evidence-bar-v1"
+        assert SCORING_REQUIREMENTS["mmsell"]["version"] == "evidence-bar-v2"
         assert store.assessments(strategy="mmsell") == []
     finally:
         EVALUATORS.pop("future")

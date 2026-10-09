@@ -9,11 +9,12 @@ from .store import digest
 # Strategy-specific and versioned. Numeric floors require a calibration study, not defaults.
 SCORING_REQUIREMENTS = {
     "mmsell": {
-        "version": "evidence-bar-v1",
+        "version": "evidence-bar-v2",
         "confidence_score": None,
         "calibration_status": "pending",
         "required": [
             "current_semantic_review",
+            "verified_contract_document_binding",
             "verified_source_ids",
             "verified_exchange_fill_coverage",
             "attributable_live_net_economics",
