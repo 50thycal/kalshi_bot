@@ -1,6 +1,0 @@
-# latest deployment 1417c63f-70d9-4ae7-9c4e-62b0ade6bfdc (status=SUCCESS, created=2026-10-09T14:59:37.001Z)
-# ops request [READ]
-# type=logs  service=main  id=limm-log-1516
-# code 5eae25a7e1cc9b01b05f4dcc4838444573d77368 · started 2026-10-09T15:17:42Z
-# target service: main
-2026-10-09T15:02:12.312734356Z INFO  incentive book: re-priced KXMSFTPERM-26OCT-26DEC01 yes 5c -> 6c (placed)
