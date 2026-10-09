@@ -1,1 +1,1 @@
-{"type": "xos", "command": "tag", "args": ["Jmmsell10"], "id": "jcanary-xostag-1009"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"jcanary-xosshow-1009"}
