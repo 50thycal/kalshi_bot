@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-rew-1010k","sql":"select at::text, balance_cents, delta_cents, buy_cost_cents, sell_proceeds_cents, fees_cents, settlement_cents, residual_cents, presumed_transfer from incentive_balance_observations where at > '2026-10-05' and (coalesce(residual_cents,0)<>0 or coalesce(delta_cents,0)<>0) order by at desc limit 40"}
