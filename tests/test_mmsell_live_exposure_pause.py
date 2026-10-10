@@ -208,7 +208,18 @@ def test_the_refusal_is_reported_under_its_own_twin_code(settings):
 def test_the_shipped_default_pauses_kxnflspread(settings):
     """The operator-approved decisions themselves. If this flips to empty by accident, real
     money silently resumes on the cell — the exact failure this shipped to prevent."""
-    assert settings.mmsell_live_skip_series_list == [PAUSED_SERIES, "KXATP", "KXWTA", "KXITF"]
+    assert settings.mmsell_live_skip_series_list == [
+        PAUSED_SERIES, "KXATP", "KXWTA", "KXITF", "KXBTCD"]
+
+
+def test_the_shipped_default_pauses_btc_daily_but_not_the_other_btc_series(settings):
+    """Operator decision 2026-10-10: no real money on BTC daily price (`KXBTCD`). The hourly
+    range series `KXBTC` and the monthly max `KXBTCMAXMON` were not part of that decision."""
+    paused = settings.mmsell_live_skip_series_list
+    assert exposure_paused("KXBTCD-26OCT0417-T85749.99", paused)
+    assert not exposure_paused("KXBTC-26OCT0917-B81250", paused)
+    assert not exposure_paused("KXBTCMAXMON-26OCT-T130000", paused)
+    assert not exposure_paused("KXETHD-26OCT0917-T4599.99", paused)
 
 
 def test_the_shipped_default_pauses_every_tennis_series_and_nothing_else(settings):
@@ -220,7 +231,7 @@ def test_the_shipped_default_pauses_every_tennis_series_and_nothing_else(setting
                    "KXWTACHALLENGERMATCH", "KXWTASETWINNER", "KXITFMATCH", "KXITFWMATCH",
                    "KXITFDOUBLES", "KXITFWDOUBLES"):
         assert exposure_paused(f"{series}-26OCT09AAABBB-AAA", paused), series
-    for series in ("KXWNBATOTAL", "KXNFLTOTAL", "KXMLBTOTAL", "KXBRASILEIROGAME", "KXBTCD",
+    for series in ("KXWNBATOTAL", "KXNFLTOTAL", "KXMLBTOTAL", "KXBRASILEIROGAME", "KXETHD",
                    "KXWTI", "KXTESTMATCH"):
         assert not exposure_paused(f"{series}-26OCT09AAABBB-AAA", paused), series
 

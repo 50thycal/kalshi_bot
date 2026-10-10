@@ -187,6 +187,24 @@ small, so it is an **exposure pause, not a measured selection rule**, the same s
 **Lift path:** remove the three prefixes. Re-read paper tennis after a full month of fills
 before anyone proposes that.
 
+## 5d. BTC daily price paused on real money (2026-10-10, operator decision)
+
+Calvin, 2026-10-10, after a top-losers read of the three canary tags (ops
+`canary-toplosers-1010`): "remove the BTC daily price too". Same instrument as §5c:
+`KXBTCD` is added to `mmsell_live_skip_series`. Live and twin stop taking new BTC daily
+entries, paper `mmsell10` keeps trading them, and open positions settle as usual.
+
+**Evidence at the decision.** `KXBTCD` was the canaries' second-worst series: −$5.87 over 27
+markets, 4 losers. Most of that is one market that `Hmmsell10` and `Jmmsell10` stacked 3+3
+contracts on (−$5.58, XOS-000040). The other 26 net about −$0.29. So this bar is mostly a
+response to one stacked loss, plus the BTC daily book's general tail risk at 3 contracts. It
+is not evidence that BTC daily loses on its own.
+
+**Scope.** Exactly `KXBTCD`. The hourly range series `KXBTC` and the monthly `KXBTCMAXMON`
+are not covered; widening it is a separate operator call.
+
+**Lift path:** remove `KXBTCD`, after a paper re-read.
+
 ## 6. Rollback
 
 - **Stop new entries:** remove `Hmmsell10` from `LIVE_STRATEGIES` (or `KILL_SWITCH=true` for the
