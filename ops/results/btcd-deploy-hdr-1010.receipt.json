@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "150a0d7c539a111b16bb689063b3fac7633103cd",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-10T15:37:05Z",
+  "id": "btcd-deploy-hdr-1010",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/btcd-deploy-hdr-1010.receipt.json",
+  "result_file": "ops/results/btcd-deploy-hdr-1010.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38064317625",
+  "service": "main",
+  "started_at": "2026-10-10T15:37:04Z",
+  "targets": [],
+  "type": "logs"
+}
