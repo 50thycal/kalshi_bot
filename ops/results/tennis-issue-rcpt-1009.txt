@@ -1,4 +1,0 @@
-no issue command 'lo-tennis-pause-open-20261009'
-# ops request [READ]
-# type=xos  id=tennis-issue-rcpt-1009
-# code 925664b31710f956e4a9e07c36f7c72e2824a9a3 · started 2026-10-09T13:51:20Z
