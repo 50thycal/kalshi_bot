@@ -527,9 +527,38 @@ class DeskStore:
                     row.first_fill_day = _day(report.observed_at)
                 row.filled_quantity, row.cost_cents, row.fee_cents = cumulative
                 row.exchange_order_id = report.order_id or row.exchange_order_id
+                was_unknown = row.state == "unknown"
                 row.state = report.status
                 if report.status == "unknown":
-                    book.paused, book.pause_reason = True, "unknown_order_status"
+                    # Never relabel an existing pause: an operator, error or
+                    # reconciliation pause must not become auto-clearable below.
+                    if not book.paused:
+                        book.paused, book.pause_reason = True, "unknown_order_status"
+                elif (
+                    was_unknown
+                    and book.paused
+                    and book.pause_reason == "unknown_order_status"
+                    and not s.scalar(
+                        select(DeskExecution).where(
+                            DeskExecution.book_key == book.key,
+                            DeskExecution.decision_id != row.decision_id,
+                            DeskExecution.state.in_(["unknown", "submitting"]),
+                        )
+                    )
+                ):
+                    # The uncertainty that caused this pause is gone: the order
+                    # reconciled with consistent accounting (checked above) and
+                    # nothing in the book is still unreconciled. This is the only
+                    # pause the system clears itself; every other reason stays
+                    # until an operator resume.
+                    book.paused, book.pause_reason = False, None
+                    self._audit(
+                        s,
+                        book.key,
+                        "auto_resumed",
+                        {"reason": "unknown_order_status_reconciled", "decision_id": decision_id},
+                        now,
+                    )
             row.updated_at = _utc(now)
             self._audit(
                 s,

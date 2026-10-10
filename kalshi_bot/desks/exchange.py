@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote as urlquote
@@ -20,6 +21,10 @@ from .contracts import DeskError, OrderReport, Quote, Settlement, utcnow
 
 D = Decimal
 API_PREFIX = "/trade-api/v2"
+# Read-after-write backoff (seconds) for the GETs that follow the single order
+# POST. Kalshi's order and fill lists can briefly lag an accepted IOC; only
+# these reads repeat, never the write.
+RECONCILE_RETRY_DELAYS = (0.5, 1.0, 1.5)
 
 
 class ExchangeWriteHTTPError(DeskError):
@@ -245,9 +250,16 @@ class KalshiDeskExchange:
         if result.get("client_order_id", client_order_id) != client_order_id or not result.get("order_id"):
             raise DeskError("order_identity_mismatch")
         # POST average fields do not replace authoritative cumulative accounting.
-        # Reconcile GET immediately; if delayed, retain the full reservation.
+        # Reconcile GET immediately, re-reading a few times while the order or
+        # its fills are not yet visible; if still delayed, the caller retains the
+        # full reservation and pauses. The POST above is never repeated.
         try:
             report = self.reconcile(client_order_id, ticker)
+            for delay in RECONCILE_RETRY_DELAYS:
+                if report.status != "unknown":
+                    break
+                time.sleep(delay)
+                report = self.reconcile(client_order_id, ticker)
         except httpx.HTTPStatusError as exc:
             raise ExchangeWriteHTTPError("reconcile", exc) from exc
         if report.order_id is None:

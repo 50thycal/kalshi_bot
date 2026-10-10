@@ -537,3 +537,94 @@ def test_claimed_unknown_cannot_be_released_as_abandoned(desk_case):
     desk = store.snapshot(now)["desks"][0]
     assert desk["paused"] and D(desk["committed"]) == D(".45")
     assert store.get_decision(decision.decision_id)["status"] == "unknown"
+
+
+def lagging_exchange(rsa_keypair, monkeypatch, quote, *, order_lag=0, fill_lag=0):
+    """A real adapter whose order and fill lists stay empty for the first N GETs."""
+    import json
+
+    from kalshi_bot.desks import exchange as exchange_module
+
+    seen = {"POST": 0, "orders": 0, "fills": 0, "client_id": None}
+    sleeps = []
+    monkeypatch.setattr(exchange_module.time, "sleep", sleeps.append)
+
+    def handler(request):
+        if request.method == "POST":
+            seen["POST"] += 1
+            seen["client_id"] = json.loads(request.content)["client_order_id"]
+            return httpx.Response(201, json={"order_id": "one", "client_order_id": seen["client_id"]})
+        if request.url.path.endswith("/fills"):
+            seen["fills"] += 1
+            fills = [] if seen["fills"] <= fill_lag else [{
+                "fill_id": "f1", "order_id": "one", "ticker": quote.ticker,
+                "outcome_side": "yes", "subaccount_number": 1, "count_fp": "1.00",
+                "yes_price_dollars": ".40", "no_price_dollars": ".60", "fee_cost": ".02",
+            }]
+            return httpx.Response(200, json={"fills": fills, "cursor": ""})
+        seen["orders"] += 1
+        orders = [] if seen["orders"] <= order_lag else [{
+            "order_id": "one", "client_order_id": seen["client_id"], "subaccount_number": 1,
+            "outcome_side": "yes", "ticker": quote.ticker, "status": "executed",
+            "fill_count_fp": "1.00", "remaining_count_fp": "0.00",
+        }]
+        return httpx.Response(200, json={"orders": orders, "cursor": ""})
+
+    exchange = adapter(rsa_keypair, handler)
+    exchange.quote = lambda *args: quote
+    return exchange, seen, sleeps
+
+
+@pytest.mark.parametrize("lag", [{"order_lag": 1}, {"fill_lag": 1}])
+def test_read_after_write_lag_ends_terminal_without_pause(desk_case, rsa_keypair, monkeypatch, lag):
+    store, decision, quote, _, executor, now = desk_case
+    executor.exchange, seen, sleeps = lagging_exchange(rsa_keypair, monkeypatch, quote, **lag)
+    result = executor.submit(decision, now)
+    assert result["status"] == "terminal" and D(result["filled_quantity"]) == 1
+    assert D(result["fees"]) == D(".02")
+    assert seen["POST"] == 1 and len(sleeps) == 1
+    desk = store.snapshot(now)["desks"][0]
+    assert not desk["paused"] and desk["pause_reason"] is None
+
+
+def test_persistent_unknown_still_pauses_keeps_reservation_and_never_reposts(
+    desk_case, rsa_keypair, monkeypatch
+):
+    store, decision, quote, _, executor, now = desk_case
+    executor.exchange, seen, sleeps = lagging_exchange(
+        rsa_keypair, monkeypatch, quote, order_lag=100
+    )
+    result = executor.submit(decision, now)
+    assert result["status"] == "unknown"
+    assert seen["POST"] == 1
+    assert seen["orders"] == 1 + len(execution_retry_delays())
+    assert sleeps == list(execution_retry_delays()) and sum(sleeps) <= 3
+    desk = store.snapshot(now)["desks"][0]
+    assert desk["paused"] and desk["pause_reason"] == "unknown_order_status"
+    assert D(desk["committed"]) == D(result["reserved_cost"]) > 0
+    executor.submit(decision, now)
+    assert seen["POST"] == 1
+
+
+def execution_retry_delays():
+    from kalshi_bot.desks.exchange import RECONCILE_RETRY_DELAYS
+
+    return RECONCILE_RETRY_DELAYS
+
+
+def test_worker_reconcile_of_unknown_to_terminal_clears_only_that_pause(desk_case):
+    store, decision, quote, exchange, executor, now = desk_case
+    exchange.submit_ioc = lambda client_id, *args: OrderReport(
+        client_order_id=client_id, order_id="order-1", status="unknown", observed_at=now
+    )
+    assert executor.submit(decision, now)["status"] == "unknown"
+    assert store.snapshot(now)["desks"][0]["pause_reason"] == "unknown_order_status"
+    executor.reconcile(now=now)
+    assert store.snapshot(now)["desks"][0]["paused"]
+    exchange.reconcile = lambda client_id, *args: OrderReport(
+        client_order_id=client_id, order_id="order-1", status="terminal",
+        filled_quantity="1", fill_cost="0.40", fees="0.02", observed_at=now,
+    )
+    assert executor.reconcile(now=now)[0]["status"] == "terminal"
+    desk = store.snapshot(now)["desks"][0]
+    assert not desk["paused"] and D(desk["committed"]) == D(".42")

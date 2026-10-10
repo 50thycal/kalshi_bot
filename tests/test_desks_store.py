@@ -5,10 +5,11 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import DBAPIError
 
 from kalshi_bot.desks.contracts import Decision, DeskError, Evidence, OrderReport, Settlement
+from kalshi_bot.desks.models import DeskAudit
 from kalshi_bot.desks.store import DeskStore
 
 D = Decimal
@@ -162,6 +163,85 @@ def test_unknown_keeps_reservation_and_does_not_enable_resubmit(store):
     report(store, row, quantity="0", cost="0", fees="0")
     store.resume("chatgpt")
     assert not store.snapshot(NOW)["desks"][0]["paused"]
+
+
+def audits(store, kind):
+    with store._tx() as s:
+        return [row.payload for row in s.scalars(select(DeskAudit).where(DeskAudit.kind == kind))]
+
+
+def claimed(store, n=1):
+    row = reserve(store, n)
+    assert store.claim_submission(row["decision_id"], NOW)
+    return row
+
+
+def test_reconciled_unknown_clears_only_its_own_pause_with_audit(store):
+    row = claimed(store)
+    report(store, row, quantity="0", cost="0", fees="0", status="unknown")
+    desk = store.snapshot(NOW)["desks"][0]
+    assert desk["paused"] and desk["pause_reason"] == "unknown_order_status"
+    assert audits(store, "auto_resumed") == []
+    report(store, row)
+    desk = store.snapshot(NOW)["desks"][0]
+    assert not desk["paused"] and desk["pause_reason"] is None
+    assert D(desk["committed"]) == D("0.84")
+    assert audits(store, "auto_resumed") == [
+        {"reason": "unknown_order_status_reconciled", "decision_id": row["decision_id"]}
+    ]
+
+
+def test_auto_resume_waits_for_every_unknown_in_the_book(store):
+    first, second = claimed(store, 1), claimed(store, 2)
+    report(store, first, quantity="0", cost="0", fees="0", status="unknown")
+    report(store, second, quantity="0", cost="0", fees="0", status="unknown")
+    report(store, first)
+    assert store.snapshot(NOW)["desks"][0]["paused"]
+    report(store, second, quantity="0", cost="0", fees="0")
+    assert not store.snapshot(NOW)["desks"][0]["paused"]
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "reconciliation_failed",
+        "order_reconciliation_failed",
+        "shared_account_check_failed",
+        "capital_exhausted",
+        "operator hold",
+    ],
+)
+@pytest.mark.parametrize("paused_first", [True, False])
+def test_other_pause_reasons_survive_a_clean_reconcile(store, reason, paused_first):
+    row = claimed(store)
+    if paused_first:
+        store.pause("chatgpt", reason)
+    report(store, row, quantity="0", cost="0", fees="0", status="unknown")
+    if not paused_first:
+        store.pause("chatgpt", reason)
+    assert store.snapshot(NOW)["desks"][0]["pause_reason"] == reason
+    report(store, row)
+    desk = store.snapshot(NOW)["desks"][0]
+    assert desk["paused"] and desk["pause_reason"] == reason
+    assert audits(store, "auto_resumed") == []
+
+
+@pytest.mark.parametrize(
+    "bad,code",
+    [
+        ({"cost": "0.80", "fees": "0.20"}, "order_budget_breach"),
+        ({"cost": "0.81", "fees": "0.03"}, "price_cap_breach"),
+    ],
+)
+def test_recorded_money_error_is_never_auto_resumed(store, bad, code):
+    row = claimed(store)
+    report(store, row, quantity="0", cost="0", fees="0", status="unknown")
+    with pytest.raises(DeskError, match=code):
+        report(store, row, **bad)
+    report(store, row)
+    desk = store.snapshot(NOW)["desks"][0]
+    assert desk["paused"] and desk["pause_reason"] == code
+    assert audits(store, "auto_resumed") == []
 
 
 def test_reconciliation_idempotent_settlement_and_calibration(store):

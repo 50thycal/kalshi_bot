@@ -151,7 +151,12 @@ model learned correctly still requires reviewing its evidence.
 
 Recoverable errors get bounded recovery and a durable note. Unknown orders, accounting
 problems, exhausted resources, and persistent blockers require attention. Pausing new
-trades does not discard open positions or stop reconciliation. An operator HTTPS alert webhook must be configured and successfully tested through
+trades does not discard open positions or stop reconciliation. Right after its single POST,
+the executor re-reads the order and its fills a few times (about 3 s, reads only) before
+calling a submission `unknown`. An `unknown_order_status` pause is the one pause the
+service clears itself, and only when a later reconcile settles that order with consistent
+accounting, nothing in the book is still unknown or submitting, and no other pause reason
+was set (audit `auto_resumed`). Every other pause needs an operator resume. An operator HTTPS alert webhook must be configured and successfully tested through
 operator-only `POST /api/alerts/test` before live readiness. Delivery state is durable;
 material conditions are deduplicated and failures receive bounded retries. The public
 HTTPS destination is validated and no secret URL appears in persisted error strings.
