@@ -329,10 +329,10 @@ class Settings(BaseSettings):
     # Same instrument and same caveat as KXNFLSPREAD: an exposure pause, not a measured
     # selection rule (in-sample, small n); paper keeps trading tennis so it can be re-read.
     #
-    # BTC DAILY PRICE: KXBTCD (operator decision 2026-10-10, docs/MMSELL_SIZE_SPLIT_CANARY.md
-    # §5d). The canaries' second-worst series: -$5.87 over 27 markets, 4 losers. Most of that is
-    # one market that two tags stacked 3+3 contracts on (-$5.58, XOS-000040); the other 26 net
-    # about -$0.29. Exactly `KXBTCD`: the hourly range series `KXBTC` is NOT covered (a
+    # BTC DAILY PRICE: KXBTCD (XOS-000041, operator decision 2026-10-10,
+    # docs/MMSELL_SIZE_SPLIT_CANARY.md §5d). The canaries' second-worst series: -$5.87 over 27
+    # markets, 4 losers. Most of that is one market that two tags stacked 3+3 contracts on
+    # (-$5.58, XOS-000040); the other 26 net about -$0.29. Exactly `KXBTCD`: the hourly range series `KXBTC` is NOT covered (a
     # `KXBTCD` prefix cannot match `KXBTC-...`), and neither is `KXBTCMAXMON`.
     mmsell_live_skip_series: str = "KXNFLSPREAD,KXATP,KXWTA,KXITF,KXBTCD"
     #: Apply the two live-only bars above (`mmsell_live_min_tier`, `mmsell_live_skip_series`)

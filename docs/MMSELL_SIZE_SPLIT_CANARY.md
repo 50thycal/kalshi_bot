@@ -189,6 +189,8 @@ before anyone proposes that.
 
 ## 5d. BTC daily price paused on real money (2026-10-10, operator decision)
 
+Experiment OS issue: **XOS-000041** (owner Research Lab, for the lift/keep read).
+
 Calvin, 2026-10-10, after a top-losers read of the three canary tags (ops
 `canary-toplosers-1010`): "remove the BTC daily price too". Same instrument as §5c:
 `KXBTCD` is added to `mmsell_live_skip_series`. Live and twin stop taking new BTC daily
