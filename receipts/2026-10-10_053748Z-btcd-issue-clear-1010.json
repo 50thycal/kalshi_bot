@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "4a3ccca0d35e7d27ec305494770c408264302186",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-10T05:37:46Z",
+  "id": "btcd-issue-clear-1010",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 1612 bytes, sha256:c5fa2154e7196567>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/btcd-issue-clear-1010.receipt.json",
+  "result_file": "ops/results/btcd-issue-clear-1010.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38028120375",
+  "service": "main",
+  "started_at": "2026-10-10T05:37:32Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
