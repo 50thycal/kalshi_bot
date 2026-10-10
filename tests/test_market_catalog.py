@@ -762,3 +762,129 @@ def test_storage_detail_runs_off_the_collect_loop_and_keeps_its_own_key(store):
     cheap = store.storage(detail=False, previous=detail)
     assert cheap["objects_bytes"] == detail["objects_bytes"]
     assert cheap["tables"] == detail["tables"]
+
+
+# A real public market payload (GET /markets/KXBTCD-26AUG0717-T65999.99, 2026-10-10).
+BTC_MARKET = {
+    "can_close_early": True,
+    "close_time": "2026-08-07T21:00:00Z",
+    "created_time": "2026-07-31T09:00:31.855033Z",
+    "event_ticker": "KXBTCD-26AUG0717",
+    "exchange_index": 0,
+    "expected_expiration_time": "2026-08-07T21:05:00Z",
+    "expiration_time": "2026-08-14T21:00:00Z",
+    "expiration_value": "64937.47",
+    "floor_strike": 65999.99,
+    "last_price_dollars": "0.0100",
+    "latest_expiration_time": "2026-08-14T21:00:00Z",
+    "market_type": "binary",
+    "no_ask_dollars": "1.0000",
+    "no_bid_dollars": "0.0000",
+    "no_sub_title": "$66,000 or above",
+    "notional_value_dollars": "1.0000",
+    "occurrence_datetime": "2026-08-07T21:05:00Z",
+    "open_interest_fp": "93320.36",
+    "open_time": "2026-07-31T20:00:00Z",
+    "previous_price_dollars": "0.0100",
+    "previous_yes_ask_dollars": "1.0000",
+    "previous_yes_bid_dollars": "0.0000",
+    "price_level_structure": "linear_cent",
+    "price_ranges": [{"end": "1.0000", "start": "0.0000", "step": "0.0100"}],
+    "result": "no",
+    "rules_primary": (
+        "If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index "
+        "(BRTI) before 5 PM EDT is above 65999.99 at 5 PM EDT on Aug 7, 2026, then the market "
+        "resolves to Yes."
+    ),
+    "rules_secondary": (
+        "Not all cryptocurrency price data is the same. While checking a source like Google or "
+        "Coinbase may help guide your decision, the price used to determine this market is based "
+        "on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before "
+        "expiration, 60 RTI prices are collected. The official and final value is the average "
+        "of these prices."
+    ),
+    "settlement_bounds_type": "default",
+    "settlement_timer_seconds": 60,
+    "settlement_ts": "2026-08-07T21:02:25.580899Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "strike_type": "greater",
+    "subtitle": "$66,000 or above",
+    "ticker": "KXBTCD-26AUG0717-T65999.99",
+    "title": "Bitcoin price on Aug 7, 2026?",
+    "updated_time": "2026-08-07T21:02:25.669613Z",
+    "volume_24h_fp": "0.00",
+    "volume_fp": "202956.36",
+    "yes_ask_dollars": "1.0000",
+    "yes_ask_size_fp": "0.00",
+    "yes_bid_dollars": "0.0000",
+    "yes_bid_size_fp": "0.00",
+    "yes_sub_title": "$66,000 or above",
+}
+
+
+@pytest.fixture
+def dictionary_writes():
+    with patch("kalshi_bot.catalog.store.DICTIONARY_WRITES", True):
+        yield
+
+
+def test_preset_dictionary_bytes_are_frozen():
+    from kalshi_bot.catalog import dictionary
+
+    # Stored v2 rows decode only with these exact bytes. A failure here means the dictionary
+    # changed: restore it and add a new version with its own prefix instead.
+    assert hashlib.sha256(dictionary.DICTIONARY).hexdigest() == (
+        "b7435102099ab6ee472706f2f067776d4c98d2814ff640d3308a6a5ddb8607fe"
+    )
+    assert dictionary.PREFIX == b"catalog:zdict:1\x00"
+
+
+def test_dictionary_encoding_is_off_until_enabled(store):
+    from kalshi_bot.catalog import dictionary
+
+    document = store.upsert("market", BTC_MARKET["ticker"], BTC_MARKET, "KXBTCD")
+    stored = pack(document)
+    assert stored.startswith(b"catalog:zlib:1\x00")
+    assert not stored.startswith(dictionary.PREFIX)
+
+
+def test_dictionary_encoding_round_trips_a_real_market_smaller(store, dictionary_writes):
+    from kalshi_bot.catalog import dictionary
+
+    document = store.upsert("market", BTC_MARKET["ticker"], BTC_MARKET, "KXBTCD")
+    with patch("kalshi_bot.catalog.store.DICTIONARY_WRITES", False):
+        v1 = pack(document)
+    v2 = pack(document)
+    assert v2.startswith(dictionary.PREFIX)
+    assert unpack(v2) == unpack(v1) == json.loads(encode(document))
+    assert len(v2) < len(v1) * 0.7
+    with store.connect() as db:
+        for table in ("objects", "revisions"):
+            row = db.execute(f"SELECT document FROM {table}").fetchone()[0]
+            assert row.startswith(dictionary.PREFIX)
+
+
+def test_v1_and_v2_rows_read_side_by_side(store):
+    first = store.upsert("market", BTC_MARKET["ticker"], BTC_MARKET, "KXBTCD")
+    with patch("kalshi_bot.catalog.store.DICTIONARY_WRITES", True):
+        settled = {**BTC_MARKET, "status": "settled"}
+        second = store.upsert("market", BTC_MARKET["ticker"], settled, "KXBTCD")
+    reopened = Store(store.path)
+    # History holds one v1 row and one v2 row; both decode to exactly what was written.
+    assert reopened.history("revisions", "market", BTC_MARKET["ticker"]) == [second, first]
+    assert reopened.get("market", BTC_MARKET["ticker"])["raw"] == settled
+    # Change detection still compares decoded content, whichever encoding holds the row.
+    record = trade(1, notes="historical context " * 200)
+    store.evidence_page("paper", [record], {"after": 1})
+    with patch("kalshi_bot.catalog.store.DICTIONARY_WRITES", True):
+        store.evidence_page("paper", [record], {"after": 1})
+    assert store.state("evidence:changes") == 1
+
+
+def test_dictionary_encoding_never_grows_an_unlike_document(dictionary_writes):
+    unlike = {"notes": "".join(chr(0x4E00 + (i * 7919) % 20000) for i in range(2000))}
+    with patch("kalshi_bot.catalog.store.DICTIONARY_WRITES", False):
+        v1 = pack(unlike)
+    assert len(pack(unlike)) <= len(v1)
+    assert unpack(pack(unlike)) == unlike

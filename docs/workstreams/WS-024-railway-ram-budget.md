@@ -248,6 +248,26 @@ Every step records a before and an after here. Windows end at the stated time.
   its own thread and uses `dbstat` aggregate mode.
 
 
+**2026-10-10 — growth slowed; storage encoding v2 (owner chose "B without deletion").**
+
+- **Not paused.** The #568 storage guard has not tripped: free space was 19.87 GB against its
+  bulk-pause floor of ~7.9 GB (20% of 39.4 GB), and no job logged `status=deferred`.
+- **Why it slowed:** the market count is flat at ~3.43M. The 10-08→10-09 surge was the first
+  pass over Kalshi's market history. Overnight growth is ~0.4 GB/day (file 18.22 → 18.23 GB in
+  35 min); the daytime rate is not yet measured.
+- **Correction:** every catalog write uses source `kalshi_rest`, so there are no duplicate
+  revisions from different collection paths, as first suggested. Revision rows reflect real
+  rules, parent, status and settlement changes; the lever is bytes per row, not row count.
+- **Change (storage encoding only; nothing deleted, nothing recorded differently):** a frozen
+  preset zlib dictionary built from real Kalshi payload layouts (ops `ws024-keys-1`/`-2`). On
+  two real markets: 1,513 → 1,085 and 1,073 → 616 bytes (28–43%). It applies to new
+  `revisions` rows and to `objects` rows as they are rewritten. Writing is behind
+  `CATALOG_DICTIONARY_COMPRESSION=1`, set only after the reader is deployed and healthy.
+  Rollback then needs a build with the reader.
+- **Parked finding (WS-023):** the events sweep pages 200 events per ~1.5-min cycle. With
+  ~205k events that is ~26h, longer than the 24h reconciliation reset, so the sweep's oldest
+  ~7% may never be re-read. This is about freshness, not resources.
+
 **Diagnosis from the code (2026-10-08):**
 
 - `report_storage` ran `Store.storage()` every 300 s, and `storage()` sums
@@ -344,9 +364,10 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
 
 ## Next Step
 
-1. **Catalog disk (urgent, ~2–3 days at 40 GB):** owner merges the diagnostic PR. Live Ops reads
-   `objects_bytes` from the first `catalog_storage` log after deploy and names the growing table.
-   WS-023 fixes its writer; any deletion is an owner decision.
+1. **Catalog disk (~12 GB of runway before the guard pauses bulk discovery):** owner merges the
+   storage-encoding v2 PR. Live Ops verifies the deploy, sets `CATALOG_DICTIONARY_COMPRESSION=1`
+   on market-catalog, then compares daily file growth before and after. Retention (deleting old
+   revisions) stays an owner decision and needs free space for a `VACUUM`.
 2. **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
    then D4 (cap step-down) are the owner's calls. Raising the cap is not on the table, since RAM
    is billed on use.
