@@ -65,6 +65,7 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
+- Market-catalog events sweep: 200 events per ~1.5-min cycle over ~205k events is ~26h, longer than the 24h reconciliation reset, so the oldest ~7% may never be re-read; freshness only, WS-023's design (WS-024, 2026-10-10).
 - `docs/PROJECT_MODEL.md` incentive section says nothing in the trading path reads `incentive_*`; stale — `Alimm1` and the executor close-time slot rule read `incentive_programs` (PR #547, 2026-10-07).
 - `Hmmsell10` readout script: compute S0–S3 (size arms recomputed by `ticker_size`) and the contest-key report from `docs/MMSELL_SIZE_SPLIT_CANARY.md` §5, ops-allowlisted; needed before the first readout, ~2–3 weeks after arming (WS-007, PR #518, 2026-10-03).
 - Desk PDF evidence capture through an isolated, time-limited parser; refused today so untrusted PDFs are never parsed inside the real-money desk service (WS-022, 2026-10-01).
