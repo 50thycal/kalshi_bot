@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-btcd-pause-open-20261010"],"id":"btcd-issue-rcpt-1010y"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"btcd-issue-clear-1010"}
