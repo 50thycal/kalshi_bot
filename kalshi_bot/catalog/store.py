@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import shutil
 import sqlite3
 import zlib
@@ -9,8 +10,13 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import dictionary
+
 DOCUMENT_TABLES = ("objects", "revisions", "reviews", "evidence", "assessments")
 COMPRESSED_PREFIX = b"catalog:zlib:1\x00"
+# Reading v2 is always on. Writing it is opt-in until a deploy with this reader is live:
+# an image older than the reader cannot open v2 rows, so the writer must not outrun it.
+DICTIONARY_WRITES = os.environ.get("CATALOG_DICTIONARY_COMPRESSION") == "1"
 
 SEMANTIC_FIELDS = (
     "resolution_mechanism",
@@ -68,15 +74,24 @@ def pack(value):
     raw = text.encode()
     if len(raw) >= 1024:
         compressed = COMPRESSED_PREFIX + zlib.compress(raw)
+        if DICTIONARY_WRITES:
+            # Keep whichever is smaller, so a document unlike the dictionary never grows.
+            encoder = zlib.compressobj(zdict=dictionary.DICTIONARY)
+            preset = dictionary.PREFIX + encoder.compress(raw) + encoder.flush()
+            compressed = min(compressed, preset, key=len)
         if len(compressed) + 32 < len(raw):
             return compressed
     return text
 
 
 def unpack(document):
-    """Read both the original JSON TEXT and the versioned compressed BLOB."""
-    if isinstance(document, bytes) and document.startswith(COMPRESSED_PREFIX):
-        document = zlib.decompress(document[len(COMPRESSED_PREFIX) :])
+    """Read the original JSON TEXT and every versioned compressed BLOB."""
+    if isinstance(document, bytes):
+        if document.startswith(COMPRESSED_PREFIX):
+            document = zlib.decompress(document[len(COMPRESSED_PREFIX) :])
+        elif document.startswith(dictionary.PREFIX):
+            decoder = zlib.decompressobj(zdict=dictionary.DICTIONARY)
+            document = decoder.decompress(document[len(dictionary.PREFIX) :]) + decoder.flush()
     return json.loads(document)
 
 
