@@ -76,6 +76,9 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
   would under-count. Recorded in PR #547.
 - **D2 = option B: keep market-catalog continuous; fix its memory and disk use.** Owner,
   2026-10-08. D3 and D4 stay open.
+- **D3 = archive, then empty the two tapes.** Owner, 2026-10-10: "let's do D3 and archive".
+  The archive is fully automated and restore-tested; emptying the tables is the exact
+  statement brought back for approval once both `COMPLETE.json` files exist.
 - **`incentive_programs.last_seen_at` bump semantics stay.** The XOS metric
   `incentive_programs_observed` reads it; changing it is Platform Change Review.
 
@@ -267,6 +270,19 @@ Every step records a before and an after here. Windows end at the stated time.
 - **Parked finding (WS-023):** the events sweep pages 200 events per ~1.5-min cycle. With
   ~205k events that is ~26h, longer than the 24h reconciliation reset, so the sweep's oldest
   ~7% may never be re-read. This is about freshness, not resources.
+
+### D3 — retire the incentive tapes (2026-10-10)
+
+- **Measured** (ops `ws024-d3-size-1`): `incentive_book_events` 14.16M rows, 8.95 GB;
+  `incentive_shadow_events` 2.67M rows, 0.65 GB. Their newest rows are from 2026-10-07 02:49Z,
+  so both writers are off. The database is 34.1 GB.
+- **RAM effect is likely small** (ops `ws024-d3-io-1`). Neither tape is read: book events had
+  1 sequential scan and was last vacuumed on 10-06. D3 frees ~9.6 GB of disk and backups.
+- **The hot table is `incentive_programs`:** 568 MB, 6,609 sequential scans, ~919M heap
+  blocks read from disk (~7 TB) since stats began. It is the likelier driver of Postgres
+  memory and the next RAM item. Not yet diagnosed.
+- **Archive job:** `scripts/archive_telemetry.py archive-tables`, run as a temporary Railway
+  service with a temporary restore Postgres (`docs/TELEMETRY_ARCHIVE_RUNBOOK.md`).
 
 **Diagnosis from the code (2026-10-08):**
 

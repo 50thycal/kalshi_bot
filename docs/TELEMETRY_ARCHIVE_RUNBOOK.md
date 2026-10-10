@@ -74,6 +74,34 @@ counts, id range, and selected rows, including JSON and quoted/newline fields.
 Verify a replay consumer can read its time range from the archive. A successful
 Railway volume backup is not evidence that this export can be restored.
 
+## Whole-table archive of frozen tapes (WS-024 D3, owner-approved 2026-10-10)
+
+`archive-tables` archives a table whose writer is off, in primary-key id ranges (an index
+range scan, not one full-table scan per UTC day). It is limited to `incentive_book_events`
+and `incentive_shadow_events`, both off since 2026-10-07, and refuses a table whose newest
+row is younger than `--frozen-hours` (default 72).
+
+For each range it exports, verifies against the same snapshot's count, uploads, reads the
+bytes back, and with `--restore-test` downloads the bucket copy, loads it with
+`COPY FROM STDIN` into an isolated database (`RESTORE_DATABASE_URL`) and compares count, id
+bounds and sampled rows, with every column compared as text, against production. The restore
+database must differ from production and must not hold the bot's schema; each range's table is
+dropped after its check. `telemetry/v1/<table>/ids/COMPLETE.json` is written last, only when
+the archived rows equal the snapshot count. A rerun resumes and re-checks stored ranges, and
+does nothing once `COMPLETE.json` exists.
+
+It runs as a temporary Railway service using `railway.archive.json`. The config file path must
+be set before the source is connected, or the service would start `main`. Its variables are only:
+
+- `DATABASE_URL_RO`, which references Postgres `DATABASE_URL`. No SELECT-only role exists yet,
+  so read-only is enforced by the session (`default_transaction_read_only`, read-only
+  repeatable-read transactions).
+- `RESTORE_DATABASE_URL`, pointing at a temporary Postgres service.
+- The `ARCHIVE_S3_*` bucket references.
+
+Both temporary services are deleted afterwards. Emptying the source tables is a separate
+operator-approved statement, issued only after `COMPLETE.json` exists for both tables.
+
 ## Retention and disk reclamation remain separate decisions
 
 After archive readback and restore evidence, propose explicit table/date batches
