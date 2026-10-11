@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-twin-1011g","sql":"select count(*) n, min(created_at)::text first, max(created_at)::text last, sum(case when status='open' then 1 else 0 end) open_n from paper_trades where tag='Alimm1_pt3'"}
+{"type":"noop"}
