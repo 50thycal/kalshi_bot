@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-resid-1011d","sql":"select at::text, residual_cents, presumed_transfer, notes_json->>'residual_untrustworthy' untrust from incentive_balance_observations where residual_cents <> 0 order by at"}
