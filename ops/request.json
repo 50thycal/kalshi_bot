@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["mmsell-cell-size-canary"],"id":"kmm-pp-1011"}
