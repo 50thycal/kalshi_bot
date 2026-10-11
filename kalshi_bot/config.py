@@ -378,6 +378,20 @@ class Settings(BaseSettings):
     #: which is a real-money change and an operator decision — merging this changes nothing
     #: that runs.
     mmsell_live_caps_count_live_eligible_only: bool = False
+    #: Refuse an mmsell live entry when the ACCOUNT already holds the market, whichever tag
+    #: bought it (XOS-000040, `LiveExecutor.mirror_mmsell_entry` -> `gate:held`).
+    #:
+    #: WHY THIS EXISTS. Live entry dedup is per strategy, and a predecessor's FILLED position
+    #: leaves no in-flight order, so at the 2026-10-04 cutovers the successor stacked a second
+    #: clip on four markets its predecessor still held. On one KXBTCD market `Hmmsell10` and
+    #: `Jmmsell10` each held a 3-lot, and it settled at -$5.58 against a registered $3.00
+    #: per-market bound. Every successor cutover recreates the condition.
+    #:
+    #: WHY IT DEFAULTS ON. It can only ever REFUSE an entry, so it moves real-money exposure in
+    #: the safe direction only. It also refuses a book re-entering a market it holds after a
+    #: partially filled order was cancelled, which is the same overrun of the per-market clip.
+    #: Set to false to restore the pre-2026-10-11 behaviour.
+    mmsell_live_refuse_account_held: bool = True
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
