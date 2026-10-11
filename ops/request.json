@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select c.id, c.started_at, c.errors, c.programs_listed, c.new_terms, c.changed_terms, c.disappeared,\n c.notes_json->>'ended_paid_out_unstamped' as unstamped,\n (select count(*) from incentive_programs p where p.superseded_at is null and p.last_seen_at = c.started_at) as stamped_at_cycle\nfrom incentive_discovery_cycles c order by c.started_at desc limit 12\n", "max_rows": 20, "id": "pcr-xos44-after-1"}
