@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=alimm-shape-1
-# code 0f58544ac06d5db2bed8f24f06e93e0e82938bf7 · started 2026-10-11T20:54:55Z
-heap    toast   idx    dead  hot_upd    total   cur    cur_liq  live_needed  cur_paid_out  not_superseded  stats_reset
-------  ------  -----  ----  ---------  ------  -----  -------  -----------  ------------  --------------  -----------
-287 MB  243 MB  49 MB  0     101697776  189485  34829  34829    4829         103248        116206                     
-
-(1 row)
