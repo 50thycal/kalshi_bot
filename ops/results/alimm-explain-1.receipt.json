@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "abe9d4c9bf7a5c4e577ed45fc675230fd81da90d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-11T22:07:25Z",
+  "id": "alimm-explain-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/alimm-explain-1.receipt.json",
+  "result_file": "ops/results/alimm-explain-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38179133865",
+  "service": null,
+  "started_at": "2026-10-11T22:07:24Z",
+  "targets": [],
+  "type": "db"
+}
