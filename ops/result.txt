@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=db  id=ws024-d3-verify-1
-# code bae19515696b09e53466f50fa561cc80adde9730 · started 2026-10-11T20:18:54Z
-t                        rows_now  seq_last  bytes_now  
------------------------  --------  --------  -----------
-incentive_book_events    0         14163179  24576      
-incentive_shadow_events  0         2668870   24576      
-DATABASE                                     24925820607
-
-(3 rows)
+# type=noop
+# code bae19515696b09e53466f50fa561cc80adde9730 · started 2026-10-11T20:19:27Z
+(noop — nothing to do)
