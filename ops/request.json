@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-df-1011e","sql":"select discount_factor_bps, count(*) from incentive_programs where incentive_type='liquidity' group by 1 order by 2 desc limit 10"}
+{"type":"db","id":"limm-db-1011f","sql":"select market_ticker, side, action, limit_price, quantity, status, cancel_reason, created_at::text, (select max(started_at)::text from incentive_discovery_cycles) disc from live_orders where strategy='Alimm1' and (created_at > '2026-10-11 02:35' or status in ('resting','partial','pending','submitted','unknown')) order by created_at desc limit 20"}
