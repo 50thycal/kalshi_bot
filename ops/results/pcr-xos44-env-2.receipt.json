@@ -1,24 +1,24 @@
 {
   "audit_worthy": true,
   "class": "MUTATING",
-  "code_sha": "0f58544ac06d5db2bed8f24f06e93e0e82938bf7",
+  "code_sha": "a4c61bad3d1c4c053e2908dda0be79e62e1510cd",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-10-11T21:46:39Z",
-  "id": "pcr-xos44-env-1",
+  "finished_at": "2026-10-11T22:32:45Z",
+  "id": "pcr-xos44-env-2",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
-        "after": "<redacted 5303 bytes, sha256:a465a8d075bc1e72>",
-        "before": "<redacted 1552 bytes, sha256:8206af8a5135361e>",
-        "requested": "<redacted 5303 bytes, sha256:a465a8d075bc1e72>"
+        "after": "<redacted 1855 bytes, sha256:36bf8680fdce07a3>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 1855 bytes, sha256:36bf8680fdce07a3>"
       }
     },
     "command_guard": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
         "blocked": false,
         "conclusive": true,
-        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
         "unconsumed_command_ids": []
       }
     },
@@ -37,11 +37,11 @@
   },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/pcr-xos44-env-1.receipt.json",
-  "result_file": "ops/results/pcr-xos44-env-1.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38177738837",
+  "receipt_file": "ops/results/pcr-xos44-env-2.receipt.json",
+  "result_file": "ops/results/pcr-xos44-env-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38180825514",
   "service": "main",
-  "started_at": "2026-10-11T21:46:31Z",
+  "started_at": "2026-10-11T22:32:39Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],
