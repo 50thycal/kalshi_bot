@@ -180,3 +180,26 @@ conservative net per market-day wins. Otherwise the live rule stays. L0 still ap
 model reads far above realised payouts (now $4.30 confirmed, §9.51), so this run ranks rules; it
 does not certify dollars. An ADOPT is a recommendation to the operator; the live change is a
 separate decision.
+
+## Result — run 3 (2026-10-11, ops `limmplace-20261011-3`)
+
+7 days to the tape stop (2026-09-30 → 10-07), 400 markets. Conservative fill model, optimistic in brackets:
+
+| policy | market-days | reward/md | net/md | fill losses | worst fill | vs P1B | verdict |
+|---|---|---|---|---|---|---|---|
+| **P1B** live rule | 478.9 | $4.73 | **$4.20** [$2.26] | −$221.80 | −$9.94 | — | reference |
+| P1BD deeper | 478.9 | $4.73 | $4.20 [$2.26] | −$221.80 | −$9.94 | 100% | keep P1B |
+| P2IB both sides, own size | 990.4 | $3.19 | $2.78 [$1.72] | −$395.98 | −$9.94 | 66% | keep P1B |
+
+**Run-3 choice: none. The live rule stays.**
+
+- **Deeper changes nothing here.** P1BD never left the reference. On these programmes the
+  discount factor is almost always 0.50 (182,838 of 184,423 programme rows; 0.05 on 1,358).
+  So each tick below the reference halves the score, and the extra contracts a cheaper price
+  buys cannot make that up. The "rest a bit deeper" advice holds at a factor near 0.9, as in the
+  outside worked example. Kalshi's programmes here are far steeper.
+- **Both sides loses again,** even with each leg sized on its own price. Reward is spread over
+  twice the capital, and the dear leg adds fills: losses are 1.8× P1B's for 66% of its net per
+  market-day.
+- L0 still fails (B0 simulated $24.83/md against about $0.10/md realised), so these are rankings,
+  not dollars. P1B again passes the run-2 protection test (62% loss cut, 82% of P1's net).

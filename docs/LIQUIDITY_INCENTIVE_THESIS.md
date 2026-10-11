@@ -2850,3 +2850,8 @@ two-sided candidate sizes each leg on its own. Pre-registered in
 [LIMM_PLACEMENT_THESIS.md](LIMM_PLACEMENT_THESIS.md) "Run 3" before the run; decided against
 P1B (the live rule) on the recorded tape up to 2026-10-07. Nothing live changes from the run
 itself: an ADOPT returns to the operator as a separate live decision.
+
+**Run 3 result (2026-10-11, `limmplace-20261011-3`): neither idea is adopted; the live rule stays.**
+"Deeper" never moved off the reference, because nearly every programme here uses a 0.50 discount
+factor: one tick deeper halves the score. "Both sides" kept 66% of the live rule's net per
+market-day for 1.8× its fill losses. Detail: LIMM_PLACEMENT_THESIS.md "Result — run 3".
