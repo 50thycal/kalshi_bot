@@ -298,6 +298,21 @@ Every step records a before and an after here. Windows end at the stated time.
   - **Left for the owner to delete in the dashboard** (the MCP delete times out):
     `Postgres-VOV8` with volume `postgres-volume-HurY`, and `telemetry-archive`.
 
+### Postgres write churn — `incentive_programs` (2026-10-11)
+
+- **Measured** (ops `ws024-ip-1` to `-4`):
+  - 190k rows, but 159.8M row updates and 6,844 full scans since stats reset.
+  - Discovery runs ~240 passes a day. Each pass loads ~116k not-superseded rows and
+    re-stamps `last_seen_at` on ~35k listed rows, about 8.7M row rewrites a day.
+  - **86% of the re-stamped rows (~30k a pass) are ended `paid_out` programmes.**
+- **B, done in this PR, no semantic change:** the re-stamp is a few chunked bulk UPDATEs
+  (5,000 rows each) instead of one statement per row. It cuts per-pass statements and time in
+  `main`'s cycle. It does not reduce row versions.
+- **A, routed:** stop re-stamping ended paid-out programmes, ~86% fewer row rewrites. This changes
+  the shared metric `incentive_programs_observed`, so it went to Platform Change Review as
+  **XOS-000044** (OPEN, PLATFORM, LOW/P2). Live Ops changes the writer only after that decision.
+- **Then D4:** the Postgres cap 2 → 1 GB is the billing lever. Ask the owner first.
+
 **Diagnosis from the code (2026-10-08):**
 
 - `report_storage` ran `Store.storage()` every 300 s, and `storage()` sums

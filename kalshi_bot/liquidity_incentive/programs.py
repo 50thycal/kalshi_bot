@@ -21,8 +21,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import defer
+from sqlalchemy.orm.attributes import set_committed_value
 
 from .. import models as m
 from ..execution.parse import fp_to_float, int_or_none
@@ -105,6 +106,27 @@ class DiscoveryResult:
 # table's life, against a 520 MB table. Deferred, not dropped: an attribute access still loads it.
 _HEAVY_COLUMNS = (m.IncentiveProgram.raw_json, m.IncentiveProgram.market_raw_json,
                   m.IncentiveProgram.extra_params_json)
+
+
+# Unchanged programmes are re-stamped in bulk: ~36k rows a pass at ~240 passes a day was one
+# UPDATE statement per row (WS-024). Chunked to stay far below any driver's bind-parameter cap.
+_BUMP_CHUNK = 5000
+
+
+def _bump_last_seen(session, rows: list, now: datetime) -> None:
+    """Set `last_seen_at = now` on `rows` with a few bulk UPDATEs, not one per row.
+
+    The loaded objects get the same value without being marked dirty, so a later read in this
+    session sees `now` and the flush does not write each row a second time."""
+    for start in range(0, len(rows), _BUMP_CHUNK):
+        chunk = rows[start:start + _BUMP_CHUNK]
+        session.execute(
+            update(m.IncentiveProgram)
+            .where(m.IncentiveProgram.id.in_([r.id for r in chunk]))
+            .values(last_seen_at=now)
+            .execution_options(synchronize_session=False))
+        for row in chunk:
+            set_committed_value(row, "last_seen_at", now)
 
 
 def _light(stmt):
@@ -203,6 +225,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
     for (pid, _h), r in existing.items():
         by_program[pid] = r
     seen_ids: set[str] = set()
+    unchanged: list[m.IncentiveProgram] = []
     result = DiscoveryResult(cycle_id=cycle.id, current=[])
     total_usd = 0.0
     for prog, observed_status in listed:
@@ -223,7 +246,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
             total_usd += usd
         row = existing.get((pid, h))
         if row is not None:
-            row.last_seen_at = now
+            unchanged.append(row)
             if row.disappeared_at is not None:
                 row.disappeared_at = None
                 notes.setdefault("reappeared", []).append(pid)
@@ -271,6 +294,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
         session.add(new)
         session.flush()
         by_program[pid] = new
+    _bump_last_seen(session, unchanged, now)
     for pid, row in by_program.items():
         if pid not in seen_ids and row.disappeared_at is None and row.superseded_at is None:
             row.disappeared_at = now
