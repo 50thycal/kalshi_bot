@@ -1,37 +1,4 @@
 # ops request [READ]
-# type=xos  id=desk-issue-recv1
-# code 3509cc877b38f7491bf8b53ee2fe75d57d29971a · started 2026-10-11T16:40:47Z
-{
-  "command_id": "desk-scanbug-20261011",
-  "action": "OPEN_MANUAL",
-  "actor": "calvin",
-  "actor_role": "OPERATOR",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000043",
-  "schema_version": 1,
-  "payload_hash": "35a05796449b368f0af7bfa3116e973966b44b66a40c52f14ff5c0de34ef3e75",
-  "payload_fields": [
-    "classification",
-    "owner_role",
-    "priority",
-    "problem_statement",
-    "reason",
-    "severity",
-    "title"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-10-11 16:40:43.377934+00:00",
-  "started_at": "2026-10-11 16:40:43.377934+00:00",
-  "completed_at": "2026-10-11 16:40:43.484588+00:00",
-  "result": {
-    "kind": "issue",
-    "status": "OPEN",
-    "priority": "P3",
-    "severity": "LOW",
-    "issue_key": "XOS-000043",
-    "owner_role": "TASK_SPECIFIC",
-    "disposition": null,
-    "classification": "OPS"
-  },
-  "error": null
-}
+# type=noop
+# code 3509cc877b38f7491bf8b53ee2fe75d57d29971a · started 2026-10-11T16:41:28Z
+(noop — nothing to do)
