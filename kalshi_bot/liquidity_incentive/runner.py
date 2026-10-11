@@ -214,6 +214,11 @@ class IncentiveLiveRunner:
         #: pass is retried on the discovery cadence, never every cycle.
         self._discovery_client = None
         self._discovery_attempted_at: datetime | None = None
+        #: (session id, now, rows): the running liquidity programmes, read once per cycle. Up to
+        #: four steps of a cycle read the same list, and each read was a full scan of
+        #: `incentive_programs` (WS-024). Cleared at the start of a cycle and after discovery,
+        #: the only writer of the table inside a cycle.
+        self._programs_memo: tuple[int, datetime, list] | None = None
 
     # --- arming ---------------------------------------------------------------
 
@@ -238,6 +243,7 @@ class IncentiveLiveRunner:
         per-cycle summary; never raises for a bad book or a refused order — both are recorded
         outcomes, not exceptions."""
         now = now or datetime.now(timezone.utc)
+        self._programs_memo = None
         summary: dict = {"armed": False, "considered": 0, "fetched": 0, "placed": 0,
                          "twin_opened": 0, "outcomes": {}, "managed": {}}
 
@@ -258,6 +264,7 @@ class IncentiveLiveRunner:
         # Then refresh the programme list, before anything below reads it (retire, reprice,
         # candidates). Runs before every early return, so a full book still keeps it fresh.
         discovery = self._refresh_programs(session, now)
+        self._programs_memo = None
         if discovery is not None:
             summary["discovery"] = discovery
         retired = self._retire_unpaid_pairs(session, executor, now)
@@ -390,6 +397,16 @@ class IncentiveLiveRunner:
                     summary["twin_opened"] += 1
         return summary
 
+    def _running_programs(self, session, now: datetime) -> list:
+        """`progs.current_programs(now=now, liquidity_only=True)`, read once per session and
+        `now`. Callers only read the list; nothing in a cycle but discovery writes the table."""
+        memo = self._programs_memo
+        if memo is None or memo[0] != id(session) or memo[1] != now:
+            memo = (id(session), now, progs.current_programs(session, now=now,
+                                                             liquidity_only=True))
+            self._programs_memo = memo
+        return memo[2]
+
     # --- programme discovery (WS-024 D1) ---------------------------------------
 
     def _refresh_programs(self, session, now: datetime) -> dict | None:
@@ -469,8 +486,7 @@ class IncentiveLiveRunner:
         resting = self._stale_held_pairs(session, now, min_age_seconds=0.0)
         if not resting:
             return 0
-        running = {p.market_ticker for p in progs.current_programs(
-            session, now=now, liquidity_only=True)
+        running = {p.market_ticker for p in self._running_programs(session, now)
             if p.end_date is not None and _aware(p.end_date) > now}
         n = 0
         for ticker in resting:
@@ -491,8 +507,7 @@ class IncentiveLiveRunner:
         held = self._stale_held_pairs(session, now)
         if not held:
             return 0
-        programs = {p.market_ticker: p for p in progs.current_programs(
-            session, now=now, liquidity_only=True)}
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
         n = 0
         for ticker, working in held.items():
             if len(working) != 1 or ticker not in programs:
@@ -566,8 +581,7 @@ class IncentiveLiveRunner:
         best_rate = rate(best)
         if best_rate <= 0:
             return None
-        programs = {p.market_ticker: p for p in progs.current_programs(
-            session, now=now, liquidity_only=True)}
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
         held: list[tuple[float, str]] = []
         for ticker, working in stale.items():
             r = self._held_reward_per_hour(ticker, working, programs, now)
@@ -824,7 +838,7 @@ class IncentiveLiveRunner:
         the decision layer spent the whole bounded fetch budget on markets that could never be
         quoted: on 2026-09-25 the eight soonest-closing programmes were all in excluded series,
         so every cycle fetched the same eight, refused all eight, and placed nothing (§9.39)."""
-        rows = progs.current_programs(session, now=now, liquidity_only=True)
+        rows = self._running_programs(session, now)
         out = []
         for row in rows:
             if row.market_status and row.market_status not in ("active", "open"):

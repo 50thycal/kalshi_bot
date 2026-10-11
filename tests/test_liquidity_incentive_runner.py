@@ -1017,6 +1017,37 @@ def test_a_dead_quote_is_replaced(live_db, settings):
     assert statuses["KXHELD-2"] == "resting"
 
 
+def test_the_programme_list_is_read_once_a_cycle(live_db, settings, monkeypatch):
+    """Retire, reprice, candidates and replace all read the running programmes; each read was a
+    full scan of `incentive_programs` (WS-024). One read a cycle, same decisions."""
+    from kalshi_bot.liquidity_incentive import programs as progs
+
+    reads = []
+    real = progs.current_programs
+
+    def counted(*a, **k):
+        reads.append(k.get("now"))
+        return real(*a, **k)
+
+    monkeypatch.setattr(progs, "current_programs", counted)
+    books = _replace_books(500)
+    books["KXHELD-1"] = _book([(3, 40000)], [(4, 40000)])
+    client = FakeClient(books)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        _program(s, "KXTEST-N")
+        out = r.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
+    assert out["outcomes"].get("replaced") == 1 and out["placed"] == 1
+    assert reads == [NOW]
+    # A new cycle reads again rather than reusing last cycle's list.
+    with db.session_scope() as s:
+        r.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
+                now=NOW + timedelta(seconds=60))
+    assert reads == [NOW, NOW + timedelta(seconds=60)]
+
+
 def test_a_stale_pair_is_kept_when_nothing_is_better(live_db, settings):
     client = FakeClient(_replace_books(1900))
     with db.session_scope() as s:
