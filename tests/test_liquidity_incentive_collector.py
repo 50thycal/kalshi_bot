@@ -322,6 +322,50 @@ def test_unchanged_programmes_are_restamped_in_bulk_not_one_update_per_row(setti
         assert all(row.disappeared_at is None for row in rows)
 
 
+def test_discovery_loads_gone_rows_only_for_programmes_listed_again(settings):
+    """A pass reads every current row, but a disappeared row only when its programme is listed
+    again (WS-024): the ~80k long-gone rows were most of what each pass loaded."""
+    _db(settings)
+    a, b, c_ = (_program(pid=p, ticker=f"KXT-{p}") for p in ("pa", "pb", "pc"))
+    client = _ReadClient(programs=[a, b, c_])
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    client.programs = [a]
+    with db.session_scope() as s:
+        assert pg.run_discovery(client, s, now=T0 + timedelta(minutes=5)).disappeared == 2
+    # pb comes back with new terms; pc stays gone.
+    b2 = dict(b, period_reward=3_000_000)
+    with db.session_scope() as s:
+        loaded = pg._not_superseded_for(s, [(a, "active"), (b2, "active")])
+        assert sorted(pid for pid, _h in loaded) == ["pa", "pb"]
+    client.programs = [a, b2]
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=10))
+        assert (r.new_terms, r.changed_terms, r.disappeared) == (0, 1, 0)
+        pb = s.scalars(select(m.IncentiveProgram).where(m.IncentiveProgram.program_id == "pb")
+                       .order_by(m.IncentiveProgram.id)).all()
+        assert len(pb) == 2 and pb[0].superseded_at is not None
+        assert pb[1].disappeared_at is None and pb[1].period_reward_usd == 300
+        pc = s.scalars(select(m.IncentiveProgram).where(m.IncentiveProgram.program_id == "pc")).one()
+        assert pc.disappeared_at is not None and pc.superseded_at is None
+    # pc comes back unchanged: the gone row itself reappears, no new row.
+    client.programs = [a, b2, c_]
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=15))
+        assert (r.new_terms, r.changed_terms) == (0, 0)
+        pc = s.scalars(select(m.IncentiveProgram).where(m.IncentiveProgram.program_id == "pc")).one()
+        assert pc.disappeared_at is None
+
+
+def test_the_live_programme_read_has_a_partial_index():
+    ix = next(i for i in m.IncentiveProgram.__table__.indexes
+              if i.name == "ix_incentive_programs_live_end")
+    assert [c.name for c in ix.columns] == ["end_date"]
+    where = str(ix.dialect_options["postgresql"]["where"])
+    assert "superseded_at IS NULL" in where and "disappeared_at IS NULL" in where
+    assert "incentive_type = 'liquidity'" in where
+
+
 def run_aware(value):
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
