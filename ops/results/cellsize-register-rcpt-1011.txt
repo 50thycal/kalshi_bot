@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=xos  id=cellsize-register-rcpt-1011
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T10:20:07Z
+{
+  "command_id": "cellsize-register-20261011",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "REJECTED",
+  "payload_hash": "ebaa900134b5bd87b1eba816abeb87802b29f4262aeb477abbe24935203c9235",
+  "completed_at": "2026-10-11 10:18:26.926622+00:00",
+  "result": null,
+  "error": "ExperimentCommandRejected: REGISTER_PACKAGE: 2 unrecognised payload field(s) \u2014 names not echoed because they are author-supplied. Legal fields: ['package', 'promotion_sample_floor']",
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
