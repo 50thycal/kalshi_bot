@@ -1,1 +1,1 @@
-{"type":"xos","command":"evaluate-gates","args":["mmsell-price-ceiling-size-split"],"id":"rv1011-gates"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"rv1011-show"}
