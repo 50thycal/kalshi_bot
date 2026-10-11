@@ -223,6 +223,13 @@ class MmSellTracker:
             idx, qty = ticker_size(ticker, sizes,
                                    salt=self.settings.mmsell_live_partition_salt)
             return idx, qty
+        # A TYPE-sized book (`bigtypes=...,bigsize=N`): arm 1 is the sized-up market types,
+        # arm 0 everything else at the book's `size`. Recomputable from the ticker alone, like
+        # the hash split, so the readout needs no new column.
+        if book.get("bigtypes") and book.get("bigsize"):
+            if classify(ticker.split("-", 1)[0])[0] in book["bigtypes"]:
+                return 1, book["bigsize"]
+            return 0, book.get("size")
         return None, book.get("size")
 
     def _book_admits_ticker(self, book: dict, ticker: str) -> bool:
@@ -816,6 +823,12 @@ class MmSellTracker:
         if book.get("sizes"):
             params["sizes"] = list(book["sizes"])
             params["live_size_salt"] = s.mmsell_live_partition_salt
+        # Same rule for a TYPE-sized book: which types get the bigger clip, and how big, decide
+        # the treatment. Conditional, so every other book keeps a byte-identical snapshot.
+        if book.get("bigtypes"):
+            params["bigtypes"] = sorted(book["bigtypes"])
+            params["bigsize"] = book["bigsize"]
+            params["size"] = book.get("size")
         # The contest KEY, only when a book names one (no running book does). The key decides
         # which entries the contest cap refuses, so it shapes the twin's candidate set.
         if book.get("contestkey"):

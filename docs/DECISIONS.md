@@ -1402,3 +1402,25 @@ fill into a manual resume, so the desk could never trade two cycles in a row una
 order has reconciled, the pause protects nothing. Accepted cost: a genuinely ambiguous POST that
 reconciles on the very next worker tick unpauses before the alert notifier looks, so it leaves
 an audit row but no webhook alert. Limits, caps, reservations and IOC-only rules are unchanged.
+
+## DEC-033 — Size MMSELL by market type: 3 contracts on the slow-information cell, 1 elsewhere
+
+**Date:** 2026-10-11 UTC. **Owner decision:** Calvin approved the successor canary and the
+XOS-000040 fix ("go ahead and do that fix, and then yes I approve of the new strategy live
+canary setup").
+
+The size-split canary (`Jmmsell10`, DEC-026/027) is succeeded by `Kmmsell10`
+(`mmsell-price-ceiling-cell-size`, `docs/MMSELL_CELL_SIZE_CANARY.md`). A ticker whose series
+classifies into the slow-information cell (event_stat, mention, exact_score, outright,
+game_prop) rests 3 contracts; every other market rests 1. This is DEC-026's "size by edge"
+step, taken on purpose before P-SLOW's 100-fill floor: the random split showed 3-lots are
+executable (104/104 filled completely) and that entry price alone carries no edge, while the
+slow cell was +7.05¢/contract on 25 settled markets with no loss against −2.80¢ on 239 for the
+rest. 25 is a quarter of the floor, so this is not a P-SLOW pass and is not recorded as one.
+It is the lower-risk shape: most of the book drops to one contract (expected footprint ~$45 vs
+~$75), the cell keeps accruing its evidence at size, and going larger than 3 still needs P-SLOW
+to pass. The random split's S2 read ends early at ~95 of 150 settled per arm and is recorded as
+stopped, not as a result. Promotion gate, keep gate and every dollar bound are the
+predecessor's. Prerequisite: the XOS-000040 held-market gate (PR #583) is live before cutover.
+
+Extends DEC-026.

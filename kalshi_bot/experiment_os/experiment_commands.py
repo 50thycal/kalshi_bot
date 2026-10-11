@@ -266,6 +266,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         restore_mmsell9_epoch,
         reviewed_universe,
         successor_mmsell10_capacity,
+        successor_mmsell10_cell_size,
         successor_mmsell10_contest_cap,
         successor_mmsell10_size_split,
     )
@@ -557,6 +558,29 @@ def _packages() -> dict[str, ExperimentPackage]:
                            recut_mmsell10_size_split.TWIN_TAG),
             retires_tags=(recut_mmsell10_size_split.PRIOR_LIVE_TAG,
                           recut_mmsell10_size_split.PRIOR_TWIN_TAG),
+        ),
+        "mmsell-cell-size-canary": ExperimentPackage(
+            name="mmsell-cell-size-canary",
+            experiment_key=successor_mmsell10_cell_size.SUCCESSOR_KEY,
+            description=(
+                "The size-split canary (Jmmsell10) succeeded by Kmmsell10: the random 1-vs-3 "
+                "clip replaced by a clip chosen by MARKET TYPE — 3 contracts on the "
+                "slow-information cell (event_stat, mention, exact_score, outright, game_prop), "
+                "1 elsewhere (`size=1,bigtypes=...,bigsize=3`). Operator decision 2026-10-11 "
+                "(DEC-033): size by edge, not at random. The promotion bar and the keep gate are "
+                "the predecessor's own frozen objects, unchanged; every dollar bound in the "
+                "envelope is unchanged. Registering ends only the predecessor's PAPER deployment "
+                "to hand mmsell10 over; Jmmsell10's live and twin deployments stay open so it "
+                "drains with every settlement recorded. Arming places no order: MMSELL_VARIANTS "
+                "+ LIVE_STRATEGIES (Jmmsell10 -> Kmmsell10, Alimm1 kept) are a separate, "
+                "operator-confirmed env act, after the XOS-000040 held-market gate is live. "
+                "Plan: docs/MMSELL_CELL_SIZE_CANARY.md."
+            ),
+            register=successor_mmsell10_cell_size.register,
+            arm=successor_mmsell10_cell_size.arm,
+            activation_vars=successor_mmsell10_cell_size.ACTIVATION_VARS,
+            strategy_tags=(successor_mmsell10_cell_size.LIVE_TAG,
+                           successor_mmsell10_cell_size.TWIN_TAG),
         ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",

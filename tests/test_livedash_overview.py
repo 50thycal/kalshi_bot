@@ -261,6 +261,42 @@ def test_scorecard_counts_the_slow_cell_and_wide_spread_reads(session):
     assert (prog["P-SPREAD"]["value"], prog["P-SPREAD"]["floor"]) == (1, 80)
 
 
+def test_a_type_sized_book_gets_a_slow_vs_rest_scorecard(session):
+    """The Kmmsell10 canary (docs/MMSELL_CELL_SIZE_CANARY.md): groups come from the market's
+    TYPE, losses are shown per group, and the progress bars are the canary's own reads."""
+    _pair(session, started=NOW - timedelta(days=2),
+          params={"lo": 5, "hi": 10, "size": 1, "bigsize": 3,
+                  "bigtypes": sorted(ov.SLOW_CELL_TYPES), "contestkey": "split"})
+    _order(session, "KXTRUMPSAY-26OCT03-WORD", qty=3, filled=3)          # mention -> slow
+    _settle(session, "KXTRUMPSAY-26OCT03-WORD", 0.21, at=NOW - timedelta(hours=1))
+    _order(session, "KXMLBGAME-26OCT03NYYBOS-NYY", qty=1, filled=1)      # h2h -> rest
+    _settle(session, "KXMLBGAME-26OCT03NYYBOS-NYY", -0.93, at=NOW - timedelta(hours=1))
+    _order(session, "KXMLBTOTAL-26OCT03NYYBOS-9", qty=3, status="canceled")  # MIS-SIZED rest
+
+    card = ov.build_overview(session, now=NOW)["scorecards"][0]
+    assert card["kind"] == "cell_size"
+    assert card["title"] == "slow-information vs everything else"
+    rest, slow = card["arms"]
+    assert "Slow-information" in slow["label"] and "Everything else" in rest["label"]
+    assert (rest["contracts"], slow["contracts"]) == (1, 3)
+    assert slow["settled_markets"] == 1 and slow["losses"] == 0
+    assert slow["net_cents_per_contract"] == pytest.approx(7.0)
+    assert rest["losses"] == 1 and rest["net_cents_per_contract"] == pytest.approx(-93.0)
+    assert rest["orders"] == 2 and rest["progress_pct"] is None
+    c0 = next(c for c in card["checks"] if c["id"] == "C0")
+    assert c0["value_pct"] == pytest.approx(66.7, abs=0.1)
+    prog = {p["id"]: p for p in card["progress"]}
+    assert (prog["C3"]["value"], prog["C3"]["floor"]) == (1, 50)
+    assert (prog["P-SLOW"]["value"], prog["P-SLOW"]["floor"]) == (1, 100)
+
+
+def test_a_size_split_card_keeps_its_shape(session):
+    _split_pair(session)
+    card = ov.build_overview(session, now=NOW)["scorecards"][0]
+    assert card["kind"] == "size_split"
+    assert [p["id"] for p in card["progress"]] == ["S2", "P-SLOW", "P-SPREAD"]
+
+
 # --- cache + read-only ------------------------------------------------------------------
 
 

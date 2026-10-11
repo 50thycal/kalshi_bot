@@ -513,11 +513,49 @@ def _size_split(pair: pairs_mod.Pair) -> tuple[tuple[int, ...], str] | None:
         return None
 
 
+def _type_rule(pair: pairs_mod.Pair) -> tuple[frozenset[str], int, int] | None:
+    """(big types, big clip, rest clip) for a TYPE-sized book (`bigtypes=...,bigsize=N`,
+    docs/MMSELL_CELL_SIZE_CANARY.md), read from the twin's params snapshot like `_size_split`."""
+    params = pair.params or {}
+    types, big = params.get("bigtypes"), params.get("bigsize")
+    if not isinstance(types, (list, tuple)) or not types or not big:
+        return None
+    try:
+        return frozenset(str(t) for t in types), int(big), int(params.get("size") or 1)
+    except (TypeError, ValueError):
+        return None
+
+
+#: The cell-size canary's own early read on the sized-up group (docs/MMSELL_CELL_SIZE_CANARY.md
+#: C3): the slow cell's per-contract result is first read at this many settled markets.
+CELL_SIZE_EARLY_FLOOR = 50
+
+
 def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | None:
     split = _size_split(pair)
-    if split is None:
+    rule = _type_rule(pair) if split is None else None
+    if split is None and rule is None:
         return None
-    sizes, salt = split
+    if split is not None:
+        sizes, salt = split
+        kind = "size_split"
+
+        def assign(ticker: str) -> tuple[int, int]:
+            return ticker_size(ticker, sizes, salt=salt)
+
+        labels = [f"{c}-contract orders" for c in sizes]
+    else:
+        big_types, big, rest = rule
+        sizes = (rest, big)
+        kind = "cell_size"
+
+        def assign(ticker: str) -> tuple[int, int]:
+            if classify_series(ticker.split("-", 1)[0])[0] in big_types:
+                return 1, big
+            return 0, rest
+
+        labels = [f"Everything else · {rest}-contract orders",
+                  f"Slow-information markets · {big}-contract orders"]
     started = _aware(pair.started_at)
     mine = [o for o in orders if o.strategy == pair.live_tag and _aware(o.created_at) >= started]
 
@@ -532,12 +570,12 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
 
     arms = {i: {"contracts": c, "orders": 0, "orders_on_size": 0, "with_fill": 0,
                 "fully_filled": 0, "decided": 0, "contracts_filled": 0.0, "settled": 0,
-                "settled_contracts": 0.0, "realized_usd": 0.0, "wins": 0}
+                "settled_contracts": 0.0, "realized_usd": 0.0, "wins": 0, "losses": 0}
             for i, c in enumerate(sizes)}
     slow_settled = wide_settled = 0
     seen_settled: set[str] = set()
     for o in mine:
-        idx, contracts = ticker_size(o.market_ticker, sizes, salt=salt)
+        idx, contracts = assign(o.market_ticker)
         a = arms[idx]
         a["orders"] += 1
         a["orders_on_size"] += int((o.quantity or 0) == contracts)
@@ -560,6 +598,7 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
             a["settled_contracts"] += book_qty
             a["realized_usd"] += pnl
             a["wins"] += pnl > 0
+            a["losses"] += pnl < 0
             mtype, _ = classify_series(o.market_ticker.split("-", 1)[0])
             slow_settled += mtype in SLOW_CELL_TYPES
             spread = spreads.get(o.kalshi_order_id)
@@ -570,6 +609,7 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
         a = arms[idx]
         out_arms.append({
             "arm": idx,
+            "label": labels[idx],
             "contracts": a["contracts"],
             "orders": a["orders"],
             "fill_rate_pct": _r(a["with_fill"] / a["decided"] * 100, 1) if a["decided"] else None,
@@ -579,31 +619,19 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
             "contracts_filled": a["contracts_filled"],
             "settled_markets": a["settled"],
             "wins": a["wins"],
+            "losses": a["losses"],
             "realized_usd": _r(a["realized_usd"]),
             "net_cents_per_contract": _r(a["realized_usd"] / a["settled_contracts"] * 100)
             if a["settled_contracts"] else None,
-            "progress_pct": _r(min(100.0, a["settled"] / S2_SETTLED_PER_ARM * 100), 1),
+            "progress_pct": _r(min(100.0, a["settled"] / S2_SETTLED_PER_ARM * 100), 1)
+            if kind == "size_split" else None,
         })
     total_orders = sum(a["orders"] for a in arms.values())
     on_size = sum(a["orders_on_size"] for a in arms.values())
     big = max(arms, key=lambda i: arms[i]["contracts"])
     big_fill = arms[big]["with_fill"]
-    return {
-        "live_tag": pair.live_tag,
-        "twin_tag": pair.twin_tag,
-        "started_at": _iso(started),
-        "days_running": _r((now - started).total_seconds() / 86400, 1),
-        "sizes": list(sizes),
-        "arms": out_arms,
-        "checks": [
-            {"id": "S0", "label": "orders went out at their assigned size",
-             "value_pct": _r(on_size / total_orders * 100, 1) if total_orders else None,
-             "pass_pct": S0_INSTRUMENT_PASS * 100, "n": total_orders},
-            {"id": "S1", "label": f"{arms[big]['contracts']}-lot orders that filled completely",
-             "value_pct": _r(arms[big]["fully_filled"] / big_fill * 100, 1) if big_fill else None,
-             "pass_pct": S1_FULL_FILL_PASS * 100, "n": big_fill},
-        ],
-        "progress": [
+    if kind == "size_split":
+        progress = [
             {"id": "S2", "label": "settled markets per arm (smaller arm)",
              "value": min(a["settled"] for a in arms.values()), "floor": S2_SETTLED_PER_ARM},
             {"id": "P-SLOW", "label": "slow-information cell, settled fills (this book)",
@@ -611,7 +639,36 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
             {"id": "P-SPREAD", "label": f"spread ≥ {WIDE_SPREAD_CENTS}¢ at entry, settled fills "
                                         "(this book)",
              "value": wide_settled, "floor": WIDE_SPREAD_FLOOR},
+        ]
+    else:
+        progress = [
+            {"id": "C3", "label": "slow-information markets settled (first read of this book)",
+             "value": arms[1]["settled"], "floor": CELL_SIZE_EARLY_FLOOR},
+            {"id": "P-SLOW", "label": "slow-information markets settled (this book's share of "
+                                      "the 100 that decide a bigger clip)",
+             "value": arms[1]["settled"], "floor": SLOW_CELL_FLOOR},
+        ]
+    return {
+        "kind": kind,
+        "title": "size split" if kind == "size_split"
+        else "slow-information vs everything else",
+        "live_tag": pair.live_tag,
+        "twin_tag": pair.twin_tag,
+        "started_at": _iso(started),
+        "days_running": _r((now - started).total_seconds() / 86400, 1),
+        "sizes": list(sizes),
+        "arms": out_arms,
+        "checks": [
+            {"id": "S0" if kind == "size_split" else "C0",
+             "label": "orders went out at their assigned size",
+             "value_pct": _r(on_size / total_orders * 100, 1) if total_orders else None,
+             "pass_pct": S0_INSTRUMENT_PASS * 100, "n": total_orders},
+            {"id": "S1" if kind == "size_split" else "C1",
+             "label": f"{arms[big]['contracts']}-lot orders that filled completely",
+             "value_pct": _r(arms[big]["fully_filled"] / big_fill * 100, 1) if big_fill else None,
+             "pass_pct": S1_FULL_FILL_PASS * 100, "n": big_fill},
         ],
+        "progress": progress,
     }
 
 

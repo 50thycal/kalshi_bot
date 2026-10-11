@@ -340,13 +340,13 @@ function progRow(label, value, floor, hint){
 function renderScorecards(){
   $("#scorecards").innerHTML = S.d.scorecards.map(c => {
     const arms = c.arms.map(a => `<div class="panel pad arm">
-      <h3>${a.contracts}-contract orders</h3>
+      <h3>${esc(a.label || (a.contracts + "-contract orders"))}</h3>
       <dl class="kv">
         <dt>Orders placed</dt><dd>${a.orders}</dd>
         <dt>Fill rate</dt><dd>${pct(a.fill_rate_pct)}</dd>
         <dt>Filled completely</dt><dd>${pct(a.full_fill_pct)}</dd>
         <dt>Contracts filled</dt><dd>${a.contracts_filled}</dd>
-        <dt>Markets settled</dt><dd>${a.settled_markets} (${a.wins} won)</dd>
+        <dt>Markets settled</dt><dd>${a.settled_markets} (${a.wins} won${has(a.losses) ? `, ${a.losses} lost` : ""})</dd>
         <dt>Per contract, after fees</dt><dd class="${sgn(a.net_cents_per_contract)}">${has(a.net_cents_per_contract) ? a.net_cents_per_contract.toFixed(2) + "¢" : "—"}</dd>
         <dt>Realized</dt><dd class="${sgn(a.realized_usd)}">${usd(a.realized_usd)}</dd>
       </dl></div>`).join("");
@@ -356,13 +356,15 @@ function renderScorecards(){
         ${esc(k.id)} · ${esc(k.label)}: <b>${pct(k.value_pct)}</b> <span class="dim">(bar ${k.pass_pct}%, n=${k.n})</span></div>`;
     }).join("");
     const prog = c.progress.map(p => progRow(`${p.id} · ${p.label}`, p.value, p.floor)).join("");
-    return `<h2>Experiment scorecard — <span class="tag">${esc(c.live_tag)}</span> size split
+    return `<h2>Experiment scorecard — <span class="tag">${esc(c.live_tag)}</span> ${esc(c.title || "size split")}
         <span class="dim" style="text-transform:none;letter-spacing:0">day ${Math.floor(c.days_running) + 1}</span></h2>
       <div class="arms">${arms}</div>
       <div class="panel pad" style="margin-top:12px">
         <div class="dim" style="font-size:12px;margin-bottom:4px">Readout checks (pre-registered)</div>${checks}
         <div class="dim" style="font-size:12px;margin:14px 0 0">Progress to the sample each read needs</div>${prog}
-        <div class="note">Arms come from each market's fixed random assignment, not from the order, so a mis-sized order shows up in S0 instead of moving between arms.
+        <div class="note">${c.kind === "cell_size"
+          ? "Groups come from each market's type (its series), not from the order, so a mis-sized order shows up in S0 instead of moving between groups."
+          : "Arms come from each market's fixed random assignment, not from the order, so a mis-sized order shows up in S0 instead of moving between arms."}
           Nothing here is a verdict: the readout is recorded in Experiment OS once each sample is reached.</div>
       </div>`;
   }).join("");
