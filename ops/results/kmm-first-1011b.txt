@@ -1,0 +1,14 @@
+# ops request [READ]
+# type=db  id=kmm-first-1011b
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:44:39Z
+strategy   market_ticker                event_ticker              quantity  limit_price  status   cancel_reason  created_at                      
+---------  ---------------------------  ------------------------  --------  -----------  -------  -------------  --------------------------------
+Kmmsell10  KXNFLTOTAL-26OCT11PHIJAC-57  KXNFLTOTAL-26OCT11PHIJAC  1         90           resting                 2026-10-11 15:31:59.796593+00:00
+Kmmsell10  KXRT-SOC-55                  KXRT-SOC                  1         93           resting                 2026-10-11 15:32:07.868995+00:00
+Kmmsell10  KXTRUMPSAY-26OCT12-ANTI      KXTRUMPSAY-26OCT12        3         93           resting                 2026-10-11 15:32:36.330292+00:00
+Kmmsell10  KXTRUMPSAY-26OCT12-CYBE      KXTRUMPSAY-26OCT12        3         93           resting                 2026-10-11 15:32:37.378808+00:00
+Kmmsell10  KXNFLTOTAL-26OCT11HOUTEN-61  KXNFLTOTAL-26OCT11HOUTEN  1         94           resting                 2026-10-11 15:32:41.122902+00:00
+Kmmsell10  KXNFLTOTAL-26OCT11MINNO-63   KXNFLTOTAL-26OCT11MINNO   1         93           resting                 2026-10-11 15:32:47.411978+00:00
+Kmmsell10  KXNFLTOTAL-26OCT11SFSEA-68   KXNFLTOTAL-26OCT11SFSEA   1         93           resting                 2026-10-11 15:32:59.119090+00:00
+
+(7 rows)
