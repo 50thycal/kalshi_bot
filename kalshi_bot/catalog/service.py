@@ -103,12 +103,29 @@ def report_storage_detail(store):
         LOG.exception("catalog_storage_detail status=error")
 
 
+def evaluation_due(since_last, *, changed, requested, every, min_gap):
+    """Whether to re-run the full evaluation (every evidence row and assessment context).
+
+    An operator request runs it now. Otherwise new evidence runs it once `min_gap` seconds have
+    passed since the last one, and it runs every `every` seconds regardless. Nothing reads the
+    assessments in real time, and new MMSELL paper rows arrive almost every cycle, so without the
+    gap the ~150k-context pass ran every ~75 s (WS-024)."""
+    if requested:
+        return True
+    return since_last >= every or (changed and since_last >= min_gap)
+
+
 def collect(store, stopped, source_url, interval):
     discovery = Discovery(store)
     contracts = ContractCapture(store)
     last_evaluation = 0
     last_storage_check = 0
-    evaluation_every = max(60, int(os.environ.get("CATALOG_EVALUATION_SECONDS", "300")))
+    evaluation_every = max(60, int(os.environ.get("CATALOG_EVALUATION_SECONDS", "3600")))
+    evaluation_min_gap = max(
+        60, int(os.environ.get("CATALOG_EVALUATION_MIN_SECONDS", "1800"))
+    )
+    # Evidence changes seen since the last evaluation; carried until one runs.
+    pending_change = False
     storage_detail_every = max(
         300, int(os.environ.get("CATALOG_STORAGE_DETAIL_SECONDS", "86400"))
     )
@@ -139,14 +156,18 @@ def collect(store, stopped, source_url, interval):
             changed = store.state("evidence:changes", 0) != evidence_changes
         outcomes = run_job(store, "discovery:live_outcomes", discovery.live_outcomes)
         changed = changed or bool(outcomes)
+        pending_change = pending_change or changed
         requested = store.state("evaluation_requested")
-        if changed or requested or stamp - last_evaluation >= evaluation_every:
+        if evaluation_due(stamp - last_evaluation, changed=pending_change,
+                          requested=requested, every=evaluation_every,
+                          min_gap=evaluation_min_gap):
             result = run_job(store, "evaluation", lambda: refresh(store))
             release_memory()
             if result is not None and store.state("evaluation_requested") == requested:
                 store.set_state("evaluation_requested", None)
             if result is not None:
                 last_evaluation = stamp
+                pending_change = False
         if stamp - last_storage_check >= 300:
 
             def report_storage():
