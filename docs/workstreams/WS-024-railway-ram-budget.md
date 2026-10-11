@@ -283,6 +283,20 @@ Every step records a before and an after here. Windows end at the stated time.
   memory and the next RAM item. Not yet diagnosed.
 - **Archive job:** `scripts/archive_telemetry.py archive-tables`, run as a temporary Railway
   service with a temporary restore Postgres (`docs/TELEMETRY_ARCHIVE_RUNBOOK.md`).
+- **Done 2026-10-11.**
+  - **Archived** (2026-10-11 00:38–00:48Z, `telemetry-archive` job at 4a61bac):
+    - `incentive_shadow_events`: 2,668,452 rows, 6 ranges, 20 MB.
+    - `incentive_book_events`: 14,160,108 rows, 29 ranges, 590 MB.
+    - Every range was read back and restore-tested from the bucket. Both `COMPLETE.json`
+      files were written. `main` cycled normally throughout.
+  - **Emptied:** the owner ran the approved `TRUNCATE` in the Railway dashboard at ~20:18Z.
+  - **Verified** (ops `ws024-d3-verify-1`):
+    - Both tables have 0 rows.
+    - Each id sequence's last value equals the archived max id (14,163,179 / 2,668,870),
+      so no row existed beyond the archive.
+    - Database size 34.12 → 24.93 GB.
+  - **Left for the owner to delete in the dashboard** (the MCP delete times out):
+    `Postgres-VOV8` with volume `postgres-volume-HurY`, and `telemetry-archive`.
 
 **Diagnosis from the code (2026-10-08):**
 
@@ -384,7 +398,7 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
    storage-encoding v2 PR. Live Ops verifies the deploy, sets `CATALOG_DICTIONARY_COMPRESSION=1`
    on market-catalog, then compares daily file growth before and after. Retention (deleting old
    revisions) stays an owner decision and needs free space for a `VACUUM`.
-2. **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
+2. **Postgres RAM:** D3 is done (disk −9.2 GB). Next, diagnose the `incentive_programs` read churn (6,609 full scans), the likelier memory driver, then D4. Was: **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
    then D4 (cap step-down) are the owner's calls. Raising the cap is not on the table, since RAM
    is billed on use.
 3. Checks 1 and 3 are done (live-dash and website `SLEEPING`). Check 5 (Railway usage alert) is
