@@ -1,1 +1,1 @@
-{"type":"db","id":"ws024-d3-verify-1","max_rows":10,"sql":"select 'incentive_book_events' t, (select count(*) from incentive_book_events) rows_now, (select last_value from incentive_book_events_id_seq) seq_last, pg_total_relation_size('incentive_book_events') bytes_now union all select 'incentive_shadow_events', (select count(*) from incentive_shadow_events), (select last_value from incentive_shadow_events_id_seq), pg_total_relation_size('incentive_shadow_events') union all select 'DATABASE', null, null, pg_database_size(current_database())"}
+{"type":"noop"}
