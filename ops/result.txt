@@ -1,6 +1,4 @@
 # ops request [READ]
-# type=xos  id=cellsize-tag-Jmmsell10-1011
-# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T10:24:45Z
-experiment                       state        ver  arm       role       epoch  deployment               stage        kind
--------------------------------  -----------  ---  --------  ---------  -----  -----------------------  -----------  ----
-mmsell-price-ceiling-size-split  LIVE_CANARY  1    mmsell10  treatment  3      mmsell-sizesplit-live-2  LIVE_CANARY  live
+# type=noop
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T10:25:23Z
+(noop — nothing to do)
