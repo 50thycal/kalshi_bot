@@ -1,4 +1,11 @@
 # ops request [READ]
-# type=noop
-# code 09a4c21a8c3eb93c5fc24411fec833d1ad510aaa · started 2026-10-11T05:09:12Z
-(noop — nothing to do)
+# type=db  id=limm-db-1011k
+# code 585554934d236198b834cc78db4e6e9da8f3d2af · started 2026-10-11T06:51:29Z
+market_ticker                 side  action  limit_price  quantity  status    cancel_reason  created_at                     disc                         
+----------------------------  ----  ------  -----------  --------  --------  -------------  -----------------------------  -----------------------------
+KXYTVIEWSHIGH-YE26NOV-5.0M    no    buy     1            500       resting                  2026-10-11 06:25:46.0029+00    2026-10-11 06:46:36.384848+00
+KXYTVIEWSHIGH-BAD26NOV-29.0M  no    buy     7            142       canceled  replaced       2026-10-11 05:07:44.559968+00  2026-10-11 06:46:36.384848+00
+KXYTVIEWSHIGH-BAD26NOV-29.0M  no    buy     2            500       canceled  repriced       2026-10-11 04:00:54.511151+00  2026-10-11 06:46:36.384848+00
+KXYTVIEWSHIGH-TAT26NOV-3.0M   no    buy     4            250       resting                  2026-10-09 15:48:25.060095+00  2026-10-11 06:46:36.384848+00
+
+(4 rows)
