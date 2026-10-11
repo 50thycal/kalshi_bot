@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-twin-1011h","sql":"select count(*) n, min(created_at)::text first, max(created_at)::text last, sum(case when closed_at is null then 1 else 0 end) open_n, sum(pnl) pnl from paper_trades where strategy='Alimm1_pt3'"}
