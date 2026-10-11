@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=ws024-ip-1
+# code a7e9e4b35f7bb665836199fba4ab2e2610270b3e · started 2026-10-11T20:37:43Z
+total_rows  current_rows  not_superseded  n_live_tup  n_dead_tup  n_tup_ins  n_tup_upd  n_tup_hot_upd  seq_scan  seq_tup_read  idx_scan   last_autovacuum                   has_pgss  stats_reset  heap    idx  
+----------  ------------  --------------  ----------  ----------  ---------  ---------  -------------  --------  ------------  ---------  --------------------------------  --------  -----------  ------  -----
+189480      34868         116201          189650      34796       92355      159807522  101671465      6844      905157060     159939773  2026-10-11 20:29:44.831110+00:00  0                      287 MB  49 MB
+
+(1 row)
