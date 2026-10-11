@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "0dcc75082cdc5f875815b764e2665e6d741e0632",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-11T22:15:58Z",
+  "id": "pcr-xos44-after-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-xos44-after-1.receipt.json",
+  "result_file": "ops/results/pcr-xos44-after-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38179713742",
+  "service": null,
+  "started_at": "2026-10-11T22:15:55Z",
+  "targets": [],
+  "type": "db"
+}
