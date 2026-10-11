@@ -323,8 +323,12 @@ Every step records a before and an after here. Windows end at the stated time.
     count no longer depends on how often the writer stamps.
   - **Before** (ops `pcr-xos44-db-1`, last clean pass 2026-10-11 21:08:59Z): 34,808 rows
     stamped; 29,949 of them (86%) ended paid-out; **4,859 would remain under A**.
-  - **After:** to be measured after deploy (rows stamped per pass, expect ~5k) and recorded
-    here.
+  - **After** (ops `pcr-xos44-after-2`, `-3`; PR #591 merged 22:15Z, first pass on the new code
+    2026-10-11 22:23:28Z): **4,742 rows stamped** (was 34,736 on the last old-code pass at
+    22:13Z), **−86%**; `ended_paid_out_unstamped` = 30,000. No paid-out row marked disappeared
+    since the deploy; the pass's `disappeared` = 9, inside the pre-deploy range (0–105).
+    `incentive_programs_observed` (`limm_v2`) over the last 24h = 8,771. That is roughly 7.2M
+    fewer row rewrites a day at ~240 passes. XOS-000044 validated and resolved.
 - **Then D4:** the Postgres cap 2 → 1 GB is the billing lever. Ask the owner first.
 
 **Diagnosis from the code (2026-10-08):**
