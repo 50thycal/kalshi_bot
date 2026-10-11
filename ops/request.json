@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000044"],"id":"pcr-xos44-issue-4"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"redeploy":false,"id":"pcr-xos44-env-clear-2"}
