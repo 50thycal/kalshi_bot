@@ -277,3 +277,53 @@ def test_hosted_runner_cannot_invoke_model_in_app_session_mode(tmp_path):
     assert work.once() == {'status': 'needs_operator', 'reason': 'app_session_mode_requires_active_app'}
     assert service.actions == ['claim']
     assert work.once()['status'] == 'needs_operator'
+
+
+class WakeService(FakeService):
+    def __init__(self, wake):
+        super().__init__()
+        self.wake = wake
+        self.claim_value["context"]["research_mode"] = "session"
+        self.refuse_claim = False
+
+    def __call__(self, request):
+        if request.method == "GET":
+            assert request.url.path == "/api/desks/chatgpt/wake"
+            self.actions.append("wake")
+            if isinstance(self.wake, int):
+                return httpx.Response(self.wake, json={"error": "x"})
+            return httpx.Response(200, json={"desk_id": "chatgpt", **self.wake})
+        if self.refuse_claim and request.url.path.endswith("/claim"):
+            self.actions.append("claim")
+            return httpx.Response(400, json={"error": "cycle_budget_exhausted"})
+        return super().__call__(request)
+
+
+def gated(tmp_path, service, command=None):
+    return SessionRunner(config(tmp_path, wake_gated=True), transport=httpx.MockTransport(service),
+                         command_runner=command or (lambda *a, **k: json.dumps(OUTPUT)), clock=lambda: NOW)
+
+
+def test_wake_gated_runner_claims_only_when_due_and_may_run_session_jobs(tmp_path):
+    waiting = WakeService({"due": False, "reason": "idle", "next_wake_at": "2026-09-20T13:00:00+00:00"})
+    result = gated(tmp_path / "a", waiting).once()
+    assert result == {"status": "idle", "reason": "idle", "next_wake_at": "2026-09-20T13:00:00+00:00"}
+    assert waiting.actions == ["wake"]
+    prompts = []
+    def command(argv, payload, **kwargs):
+        prompts.append(payload["system"])
+        return json.dumps(OUTPUT)
+    due = WakeService({"due": True, "reason": "base_window"})
+    assert gated(tmp_path / "b", due, command).once()["status"] == "completed"
+    assert due.actions == ["wake", "claim", "complete"] and "next_check_at" in prompts[0]
+
+
+def test_wake_gated_runner_waits_on_refusals_and_outages_but_stops_on_auth(tmp_path):
+    refused = WakeService({"due": True, "reason": "base_window"})
+    refused.refuse_claim = True
+    assert gated(tmp_path / "a", refused).once() == {"status": "idle", "reason": "claim_refused"}
+    assert gated(tmp_path / "b", WakeService(503)).once() == {"status": "idle", "reason": "wake_unavailable"}
+    assert gated(tmp_path / "c", WakeService(401)).once() == {
+        "status": "needs_operator", "reason": "service_authentication_failed"}
+    with pytest.raises(RunnerError, match="command_timeout_out_of_bounds"):
+        config(tmp_path, command_timeout=1801)

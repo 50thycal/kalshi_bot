@@ -236,7 +236,9 @@ and changes nothing until its settings are turned on.
   - Make the CLI timeout configurable, up to just under the lease.
   - Let Codex use web search for discovery. Evidence stays server-captured: the runner, not
     the model, holds the token and calls `source`.
-  - Allow up to 3 capture rounds within the 50-source job limit.
+  - ~~Allow up to 3 capture rounds within the 50-source job limit.~~ Not built in PR B: one
+    round of up to 8 captured sources covers at most three decisions, and changing the
+    runner's durable state machine costs more than it buys now.
   - Codex still gets no shell.
 - **Claude routines:**
   - The `/claude-desk-continue` skill reads `/wake` and exits quietly when nothing is due.

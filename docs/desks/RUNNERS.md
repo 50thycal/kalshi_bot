@@ -18,6 +18,35 @@ session ready, or start a round. Existing model access and an always-running hos
 real setup requirements. No live model calls or hosted deployment are implied by local
 regression tests.
 
+## Desk service 3.0: the unattended ChatGPT runner (WS-025)
+
+3.0 keeps the service in **session mode** and runs the ChatGPT desk from this runner, gated by
+the service's wake signal. The Claude desk uses Claude Code routines instead (see the
+`claude-desk-continue` skill, "Unattended runs"), so no Claude runner is needed.
+
+```text
+python -m kalshi_bot.desks.runner serve --desk chatgpt --worker-id chatgpt-runner \
+  --model-id <codex-model> --state-dir /data/runner-state --research-home /data/model-home \
+  --wake-gated --command-timeout 1200 --poll-seconds 120 \
+  --command-json '["/opt/desk-venv/bin/python","/opt/kalshi_bot/kalshi_bot/desks/cli_adapter.py","codex","--timeout","1140","--web-search"]'
+```
+
+- `--wake-gated`: before each claim the runner asks `GET /api/desks/chatgpt/wake` and only
+  claims when a cycle is due. A refused claim (cycle budget or gap) and a wake outage are
+  `idle`, not a stop; an authentication failure still stops for the operator. Wake gating is
+  also what allows the runner to research session-mode jobs.
+- `--command-timeout 1200` with adapter `--timeout 1140`: each of the (at most two) model
+  calls gets up to 19 minutes and the runner's lease checks still fit the 60-minute lease.
+- `--web-search`: Codex may search the web for discovery. Codex still has no shell, and
+  evidence for any decision is captured by the runner through `source_requests` (one round of
+  up to 8), never fetched by the model.
+- Service settings: `DESKS_CHATGPT_WAKE_WINDOWS`, `DESKS_MAX_CYCLES_PER_DAY`,
+  `DESKS_MIN_CYCLE_GAP_MINUTES`, and `DESKS_SHADOW_DESKS=chatgpt` for the dry-run week
+  (`docs/AUTONOMOUS_DESKS.md`, "Unattended agents"). Keep `DESKS_RESEARCH_MODE=session`.
+- Before the first run, confirm the Codex version accepts `web_search="live"` and that
+  OpenAI's terms cover automated runs on the operator's own plan (WS-025 "Verification still
+  open").
+
 ## Exact local research windows
 
 Scheduled mode defaults to the legacy interval cadence. A deployment can instead configure
