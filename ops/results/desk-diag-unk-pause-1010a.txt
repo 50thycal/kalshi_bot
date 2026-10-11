@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=desks  id=desk-diag-unk-pause-1010a
-# code b7096431bfd97dfdfd1f2959e904bf89ba139cdb · started 2026-10-10T21:38:59Z
-DESK SERVICE DIAGNOSTIC (read-only)
-========================================================================
-DIAGNOSTIC : FAILED — not_configured
-VERDICT    : UNKNOWN — this is NOT a health result; the desk was not assessed
-DETAIL     : The DESKS_DIAGNOSTIC_TOKEN secret is not available to the ops runner. Provisioning steps: docs/desks/DIAGNOSTICS.md.
-elapsed 0 ms · one attempt, no retry

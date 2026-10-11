@@ -1,0 +1,65 @@
+# ops request [READ]
+# type=script  id=limmplace-20261011-3
+# code 3dc09142765de3bf3ec2dad3a69f69c4d2e50d90 · started 2026-10-11T04:40:28Z
+LIMM-PLACEMENT probe — last 7 days of shadow books + tape (read-only)
+
+markets simulated: 400   skipped (no terms / <2 snapshots): 0
+
+policy model         mkts mkt-days   reward$  fillP&L$   fees$      net$ fills pairs  rew/md  net/md top-mkt%    loss$  worst$
+------------------------------------------------------------------------------------------------------------------------------
+B0     optimistic      78    21.22    137.77    508.46    1.34    644.89    16     1   6.493  30.393     76.4   -36.54   -9.94
+B0     conservative    78     8.89    220.79     -9.94    0.30    210.55     2     0  24.833  23.681     12.3    -9.94   -9.94
+P1     optimistic     323   431.44   1130.66    214.90   16.36   1329.20   106     0   2.621   3.081     38.2  -633.60  -10.00
+P1     conservative   323   478.88   2263.26    196.30   12.43   2447.13    81     0   4.726   5.110     22.5  -587.96  -10.00
+P2     optimistic     400   940.82    519.40    383.03   11.53    890.90   326   101   0.552   0.947     55.3  -202.39   -9.90
+P2     conservative   400   990.37    819.02   -117.83    5.96    695.23   181    56   0.827   0.702      4.0  -142.93   -9.84
+P1F    optimistic     224   396.87    127.99    -28.97    5.76     93.26    35     0   0.322   0.235     34.8  -107.47  -10.00
+P1F    conservative   224   434.31    145.78     -0.08    1.21    144.49     8     0   0.336   0.333     19.0   -24.08  -10.00
+P2F    optimistic     334   890.42    158.26   -108.01    8.08     42.17   217    62   0.178   0.047     37.0  -141.59   -9.90
+P2F    conservative   334   932.62    172.96    -52.89    1.54    118.53    43     7   0.185   0.127      2.9   -54.21   -9.79
+P1A    optimistic     323   431.44    546.53     45.23    5.81    585.95   106     0   1.267   1.358     26.9  -212.32   -3.00
+P1A    conservative   323   478.88   1027.59     39.75    4.39   1062.95    81     0   2.146   2.220     16.7  -195.55   -3.00
+P1B    optimistic     323   431.44   1130.66   -123.62   34.19    972.85   106     0   2.621   2.255     10.4  -123.62   -9.94
+P1B    conservative   323   478.88   2263.26   -221.80   28.61   2012.85    81     0   4.726   4.203      5.6  -221.80   -9.94
+P1C    optimistic     293   296.73   1107.89    293.94   13.27   1388.56    88     0   3.734   4.680     36.5  -540.06  -10.00
+P1C    conservative   293   332.94   2308.84    266.59    9.84   2565.59    63     0   6.935   7.706     21.4  -485.91  -10.00
+P1ABC  optimistic     293   296.73    497.36    -16.90   10.38    470.08    88     0   1.676   1.584     13.5   -16.90   -2.40
+P1ABC  conservative   293   332.94   1100.03    -68.95    8.21   1022.87    63     0   3.304   3.072      9.6   -68.95   -3.00
+P1BD   optimistic     323   431.44   1130.66   -123.62   34.19    972.85   106     0   2.621   2.255     10.4  -123.62   -9.94
+P1BD   conservative   323   478.88   2263.26   -221.80   28.61   2012.85    81     0   4.726   4.203      5.6  -221.80   -9.94
+P2IB   optimistic     400   940.82   1437.53    237.43   52.70   1622.26   326   101   1.528   1.724     30.4  -281.94   -9.94
+P2IB   conservative   400   990.37   3161.09   -371.49   35.66   2753.94   181    56   3.192   2.781      5.8  -395.98   -9.94
+
+(640 fills marked at the last snapshot: less than 24 h of book after the fill)
+
+VERDICT (docs/LIMM_PLACEMENT_THESIS.md)
+L0  live realised ≈ $0.095/market-day (139 pairs x 4 h); B0 simulated $24.833/market-day
+    B0 sim > 5x realised -> reward model flagged OPTIMISTIC; no PROMOTE this run
+L1  P1 reward/md 4.726 vs 3 x B0 74.498 -> FAIL
+L1  P2 reward/md 0.827 vs 3 x B0 74.498 -> FAIL
+L2  P1   conservative net/md +5.110 over 478.9 md, optimistic net +1329.20, top market 23% -> HOLD
+L2  P2   conservative net/md +0.702 over 990.4 md, optimistic net +890.90, top market 4% -> HOLD
+L2  P1F  conservative net/md +0.333 over 434.3 md, optimistic net +93.26, top market 19% -> HOLD
+L2  P2F  conservative net/md +0.127 over 932.6 md, optimistic net +42.17, top market 3% -> HOLD
+L2  P1A  conservative net/md +2.220 over 478.9 md, optimistic net +585.95, top market 17% -> HOLD
+L2  P1B  conservative net/md +4.203 over 478.9 md, optimistic net +972.85, top market 6% -> HOLD
+L2  P1C  conservative net/md +7.706 over 332.9 md, optimistic net +1388.56, top market 21% -> HOLD
+L2  P1ABC conservative net/md +3.072 over 332.9 md, optimistic net +470.08, top market 10% -> HOLD
+L2  P1BD conservative net/md +4.203 over 478.9 md, optimistic net +972.85, top market 6% -> HOLD
+L2  P2IB conservative net/md +2.781 over 990.4 md, optimistic net +1622.26, top market 6% -> HOLD
+F   P1F does not beat P1 on conservative net/md
+F   P2F does not beat P2 on conservative net/md
+
+PROTECTIONS vs P1 (conservative): pass = loss cut >= 40% AND net/md >= 70% of P1
+  P1A    loss $ -195.55 (cut    67%)  worst fill $ -3.00  net/md +2.220 (  43% of P1) over 478.9 md -> fail
+  P1B    loss $ -221.80 (cut    62%)  worst fill $ -9.94  net/md +4.203 (  82% of P1) over 478.9 md -> PASS
+  P1C    loss $ -485.91 (cut    17%)  worst fill $-10.00  net/md +7.706 ( 151% of P1) over 332.9 md -> fail
+  P1ABC  loss $  -68.95 (cut    88%)  worst fill $ -3.00  net/md +3.072 (  60% of P1) over 332.9 md -> fail
+  PROTECTION CHOICE: P1B
+
+RUN 3 vs P1B (live rule): adopt = conservative net/md >= 110% of P1B's AND optimistic net/md >= P1B's AND top market <= 50%
+  P1BD  cons net/md +4.203 ( 100% of P1B +4.203)  opt net/md +2.255 vs +2.255  reward/md 4.726  loss $-221.80 vs $-221.80  worst $-9.94  top 6%  md 478.9 -> keep P1B
+  P2IB  cons net/md +2.781 (  66% of P1B +4.203)  opt net/md +1.724 vs +2.255  reward/md 3.192  loss $-395.98 vs $-221.80  worst $-9.94  top 6%  md 990.4 -> keep P1B
+  RUN 3 CHOICE: none — the live rule (P1B) stays
+
+CHOICE: none yet — HOLD (see L2 lines)
