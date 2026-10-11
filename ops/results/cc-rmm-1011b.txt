@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1011b
+# code b7096431bfd97dfdfd1f2959e904bf89ba139cdb · started 2026-10-11T02:35:27Z
+market_ticker                legs                                           n  entered                           closed                          
+---------------------------  ---------------------------------------------  -  --------------------------------  --------------------------------
+KXMLSGAME-26OCT10TORMTL-TOR  Rmmsell1:settled:-0.94 Rmmsell2:settled:-0.94  2  2026-10-10 18:51:42.341090+00:00  2026-10-10 19:18:51.008582+00:00
+
+(1 row)
