@@ -168,6 +168,12 @@ def handler_for(service):
             try:
                 if path in ("/api/status", "/api/context"):
                     return self.send(200, service.status())
+                parts = path.strip("/").split("/")
+                if len(parts) == 4 and parts[:2] == ["api", "desks"] and parts[3] == "wake":
+                    # WS-025: an unattended host asks whether its desk should start a cycle.
+                    if parts[2] not in ("chatgpt", "claude") or role not in (parts[2], "operator"):
+                        return self.send(403, {"error": "role_forbidden"})
+                    return self.send(200, service.supervisor.wake(parts[2], utcnow()))
                 if path == "/api/research/schema":
                     from .research import ResearchOutput
                     return self.send(200, ResearchOutput.model_json_schema())

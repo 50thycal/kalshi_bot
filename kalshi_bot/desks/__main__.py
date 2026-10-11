@@ -71,8 +71,13 @@ def build_service(settings):
                             external_runners_verified=settings.external_runners_verified,
                             research_mode=settings.research_mode,
                             max_sources_per_job=settings.max_sources_per_job,
-                            lease_minutes=settings.research_lease_minutes)
-    notifier = AlertNotifier(store, settings.alert_webhook_url.get_secret_value())
+                            lease_minutes=settings.research_lease_minutes,
+                            wake_windows=settings.wake_windows(),
+                            max_cycles_per_day=settings.max_cycles_per_day,
+                            min_cycle_gap_minutes=settings.min_cycle_gap_minutes,
+                            wake_grace_minutes=settings.wake_grace_minutes)
+    notifier = AlertNotifier(store, settings.alert_webhook_url.get_secret_value(),
+                             fmt=settings.alert_format)
     service = DeskService(settings, store, supervisor, executors, notifier=notifier,
                           browser=MarketBrowser(), market_probe=MarketProbe())
     supervisor.submit_decision = service.submit

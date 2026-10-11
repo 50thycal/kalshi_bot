@@ -47,6 +47,7 @@ BLOCKERS = {
     'repeated_research_failures': ('runtime', 'Investigate repeated research failures.'),
     'provider_bill_requires_reconciliation': ('runtime', 'Reconcile the uncertain model bill before further spending.'),
     'no_completed_cycle_24h': ('runtime', 'Restore the research runner; no cycle has completed in 24 hours.'),
+    'agent_wake_missed': ('runtime', 'A due wake was not claimed; check the desk agent host and its login.'),
 }
 FAILURES = {
     'invalid_configuration': 'Set DESK_SERVICE_URL to HTTPS or loopback HTTP and provide a valid DESK_SESSION_TOKEN.',

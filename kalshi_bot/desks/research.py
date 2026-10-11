@@ -67,6 +67,9 @@ class ResearchOutput(Contract):
     decisions: list[ResearchedDecision] = Field(default_factory=list, max_length=3)
     source_requests: list[str] = Field(default_factory=list, max_length=8)
     next_action: str = Field(min_length=5, max_length=4000)
+    # WS-025: when the desk wants its next check. Advisory: the service clamps it and
+    # its cycle budget still decides; it can never authorize a trade.
+    next_check_at: datetime | None = None
 
 
 def parse_output(text: str) -> ResearchOutput:

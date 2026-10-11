@@ -44,8 +44,14 @@ class Supervisor:
                  market_reader=None, source_fetcher=None, submit_decision=None,
                  interval_seconds=3600, monthly_budget_usd="0", external_runners_verified=False,
                  research_mode="scheduled", research_timezone="UTC", research_schedules=None,
-                 max_sources_per_job=50, lease_minutes=60):
+                 max_sources_per_job=50, lease_minutes=60, wake_windows=None,
+                 max_cycles_per_day=0, min_cycle_gap_minutes=0, wake_grace_minutes=90):
         self.store = store
+        # WS-025: unattended wakes and the per-desk cycle budget (0 = unlimited / no gap).
+        self.wake_windows = {desk: list(windows) for desk, windows in (wake_windows or {}).items()}
+        self.max_cycles = int(max_cycles_per_day)
+        self.min_gap = timedelta(minutes=int(min_cycle_gap_minutes))
+        self.wake_grace = timedelta(minutes=int(wake_grace_minutes))
         # DEC-024: capture and lease limits protect the service, not research volume.
         if not 1 <= int(max_sources_per_job) <= 500 or not 15 <= int(lease_minutes) <= 240:
             raise ValueError("research source/lease limits out of range")
@@ -213,13 +219,117 @@ class Supervisor:
             job.context = context
         return context
 
+    @staticmethod
+    def _claimed_at(job):
+        value = (job.context or {}).get("claimed_at")
+        return _utc(datetime.fromisoformat(value)) if value else _utc(job.created_at)
+
+    def _day_start(self, now):
+        local = _utc(now).astimezone(self.research_timezone)
+        return _utc(datetime(local.year, local.month, local.day, tzinfo=self.research_timezone))
+
+    def _cycle_block(self, claims, now):
+        """The hard per-desk cycle budget: (reason, until) or None. Applies to every host."""
+        now = _utc(now)
+        start = self._day_start(now)
+        if self.max_cycles and sum(claimed >= start for claimed in claims) >= self.max_cycles:
+            local = start.astimezone(self.research_timezone) + timedelta(days=1, hours=2)
+            return "cycle_budget_exhausted", self._day_start(local)
+        last = max(claims, default=None)
+        if self.min_gap and last is not None and now < last + self.min_gap:
+            return "cycle_gap_not_elapsed", last + self.min_gap
+        return None
+
+    def _claims(self, session, desk_id):
+        return [self._claimed_at(job) for job in session.scalars(select(ResearchJob).where(
+            ResearchJob.round_id == self._round_id(), ResearchJob.desk_id == desk_id,
+            ResearchJob.worker_id.is_not(None)))]
+
+    def _windows(self, desk_id, now):
+        """Previous and next base-window instants around now, in the research time zone."""
+        windows = self.wake_windows.get(desk_id) or []
+        local = _utc(now).astimezone(self.research_timezone)
+        instants = []
+        for offset in (-1, 0, 1):
+            day = (local + timedelta(days=offset)).date()
+            for window in windows:
+                hour, minute = (int(part) for part in window.split(":"))
+                instants.append(_utc(datetime(day.year, day.month, day.day, hour, minute,
+                                              tzinfo=self.research_timezone)))
+        now = _utc(now)
+        return (max((t for t in instants if t <= now), default=None),
+                min((t for t in instants if t > now), default=None))
+
+    def wake(self, desk_id, now):
+        """Whether an unattended host should start a cycle for this desk now.
+
+        Advisory for hosts; the claim-time cycle budget is the enforced limit. Due when a
+        base window passed, the desk's requested check-in arrived, one of its decisions
+        settled, or an operator Continue is queued, each since the desk's last claim.
+        """
+        if desk_id not in {"chatgpt", "claude"}:
+            raise DeskError("invalid_desk")
+        now = _utc(now)
+        if self.research_mode != "session":
+            return {"desk_id": desk_id, "due": False, "reason": "scheduled_mode",
+                    "due_since": None, "next_wake_at": None}
+        settled = [_utc(datetime.fromisoformat(str(row["settlement"]["settled_at"])))
+                   for row in self.store.snapshot(now).get("decisions", [])
+                   if row.get("desk_id") == desk_id and row.get("settled")
+                   and (row.get("settlement") or {}).get("settled_at")]
+        with self.store._tx() as session:
+            jobs = list(session.scalars(select(ResearchJob).where(
+                ResearchJob.round_id == self._round_id(), ResearchJob.desk_id == desk_id)))
+            claims = [self._claimed_at(job) for job in jobs if job.worker_id]
+            active = any(job.state in {"claimed", "running", "publishing", "retry"} for job in jobs)
+            queued = [_utc(job.created_at) for job in jobs if job.state == "queued"]
+            requested = [_utc(datetime.fromisoformat(job.context["next_check_at"])) for job in jobs
+                         if job.state == "completed" and (job.context or {}).get("next_check_at")]
+        last = max(claims, default=None)
+        today = sum(claimed >= self._day_start(now) for claimed in claims)
+        previous, upcoming = self._windows(desk_id, now)
+        result = {"desk_id": desk_id, "due": False, "reason": "idle", "due_since": None,
+                  "next_wake_at": None, "last_claim_at": last.isoformat() if last else None,
+                  "cycles_today": today, "max_cycles_per_day": self.max_cycles}
+        if active:
+            result["reason"] = "job_active"
+            return result
+        request = max(requested, default=None)
+        reasons = []
+        if queued:
+            reasons.append(("continue_requested", min(queued)))
+        if previous and (last is None or last < previous):
+            reasons.append(("base_window", previous))
+        if request and request <= now and (last is None or last < request):
+            reasons.append(("agent_check_in", request))
+        own = [t for t in settled if last is None or t > last]
+        if own:
+            reasons.append(("own_settlement", min(own)))
+        block = self._cycle_block(claims, now)
+        if reasons and block:
+            result.update(reason=block[0], next_wake_at=block[1].isoformat())
+            return result
+        if reasons:
+            reason, since = min(reasons, key=lambda item: item[1])
+            result.update(due=True, reason=reason, due_since=since.isoformat())
+            return result
+        future = [t for t in (upcoming, request if request and request > now else None) if t]
+        if future:
+            result["next_wake_at"] = min(future).isoformat()
+        return result
+
     def claim_external(self, desk_id, worker_id, now):
+        with self.store._tx() as session:
+            block = self._cycle_block(self._claims(session, desk_id), now)
+        if block:
+            raise DeskError(block[0])
         job_id = self.enqueue(desk_id, now)
         with self.store._tx() as session:
             job = self._job(session, job_id)
             if job.state not in {"queued", "retry"}:
                 return None
-            job.context = {**(job.context or {}), "research_mode": self.research_mode}
+            job.context = {**(job.context or {}), "research_mode": self.research_mode,
+                           "claimed_at": _utc(now).isoformat()}
             job.state, job.worker_id, job.claim_token = "claimed", worker_id[:200], uuid.uuid4().hex
             job.lease_until, job.updated_at = now + self.lease, now
             token = job.claim_token
@@ -343,8 +453,19 @@ class Supervisor:
                 raise DeskError("research_sources_not_captured")
         self._verify(output, job_id, desk_id, model_id, "session")
         self._publish(job_id, output, desk_id, model_id, now)
+        if output.next_check_at is not None:
+            with self.store._tx() as session:
+                job = self._job(session, job_id)
+                job.context = {**job.context,
+                               "next_check_at": self._clamp_check(output.next_check_at, now).isoformat()}
         self._finish(job_id, now, 0)
         return {"job_id": job_id, "state": "completed"}
+
+    def _clamp_check(self, requested, now):
+        """A requested check-in lands between the cycle gap (at least 10 min) and 24 h out."""
+        now = _utc(now)
+        earliest = now + max(self.min_gap, timedelta(minutes=10))
+        return min(max(_utc(requested), earliest), now + timedelta(hours=24))
 
     def _publish(self, job_id, output, desk_id, model_id, now):
         with self.store._tx() as session:
@@ -367,8 +488,11 @@ class Supervisor:
                 payload.update({"job_id": job_id, "author_model": model_id})
                 key = hashlib.sha256(f"{job_id}:{kind}:{i}".encode()).hexdigest()
                 self.store.publish(desk_id, kind, payload, now, record_id=key)
-        self.store.publish(desk_id, "research_cycle", {"job_id": job_id, "author_model": model_id,
-                           "summary": output.summary, "next_action": output.next_action}, now,
+        cycle = {"job_id": job_id, "author_model": model_id,
+                 "summary": output.summary, "next_action": output.next_action}
+        if output.next_check_at is not None:
+            cycle["requested_next_check_at"] = _utc(output.next_check_at).isoformat()
+        self.store.publish(desk_id, "research_cycle", cycle, now,
                            record_id=hashlib.sha256(f"{job_id}:summary".encode()).hexdigest())
         for item in output.decisions:
             outcome_key = hashlib.sha256(f"{job_id}:{item.decision.decision_id}:refused".encode()).hexdigest()
@@ -574,6 +698,9 @@ class Supervisor:
         result = {}
         jobs_result = []
         costs = {}
+        # Unattended wakes are computed before the status transaction (no nested locks).
+        wakes = {desk: self.wake(desk, now) for desk in ("chatgpt", "claude")
+                 if self.research_mode == "session" and self.wake_windows.get(desk)}
         snapshot = self.store.snapshot(now)
         with self.store._tx() as session:
             for desk_id in ("chatgpt", "claude"):
@@ -612,8 +739,13 @@ class Supervisor:
                 last = max((_utc(job.updated_at) for job in completed), default=None)
                 stale = (last and _utc(now) - last > timedelta(hours=24)) or (
                     not last and jobs and _utc(now) - min(_utc(j.created_at) for j in jobs) > timedelta(hours=24))
-                if stale and self.research_mode != "session":
+                unattended = desk_id in wakes
+                if stale and (self.research_mode != "session" or unattended):
                     reasons.append("no_completed_cycle_24h")
+                wake = wakes.get(desk_id)
+                if (wake and wake["due"] and wake["due_since"]
+                        and _utc(now) - _utc(datetime.fromisoformat(wake["due_since"])) > self.wake_grace):
+                    reasons.append("agent_wake_missed")
                 state = "needs_operator" if reasons else ("recovering" if failures else "healthy" if completed else "starting")
                 activity = "researching" if any(j.state in {"claimed", "running", "publishing"} for j in jobs) else "waiting_for_continue"
                 result[desk_id] = {"status": state, "state": state, "reasons": reasons,
@@ -624,7 +756,8 @@ class Supervisor:
                     "pending_jobs": sum(j.state in {"queued", "claimed", "running", "retry"} for j in jobs),
                     "recent_failures": len(failures),
                     "monthly_budget_usd": str(Decimal(self.limit) / 1000000),
-                    "latest_job_id": jobs[0].job_id if jobs else None}
+                    "latest_job_id": jobs[0].job_id if jobs else None,
+                    "wake": wakes.get(desk_id)}
                 jobs_result.extend({"job_id": j.job_id, "desk_id": desk_id, "state": j.state,
                                     "error": j.error, "created_at": _utc(j.created_at).isoformat(),
                                     "updated_at": _utc(j.updated_at).isoformat()} for j in jobs[:10])

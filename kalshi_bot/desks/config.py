@@ -9,6 +9,20 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _valid_windows(value: str) -> bool:
+    windows = value.split(",")
+    if not windows or len(set(windows)) != len(windows):
+        return False
+    for window in windows:
+        try:
+            hour, minute = window.split(":")
+            if not (len(hour) == 2 and len(minute) == 2 and 0 <= int(hour) <= 23 and 0 <= int(minute) <= 59):
+                return False
+        except (ValueError, AttributeError):
+            return False
+    return True
+
+
 class DeskSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DESKS_", extra="ignore", env_file=None)
 
@@ -34,6 +48,8 @@ class DeskSettings(BaseSettings):
     research_mode: Literal["scheduled", "session"] = "scheduled"
     alert_webhook_url: SecretStr = SecretStr("")
     alert_mode: Literal["webhook", "session"] = "webhook"
+    # WS-025: "ntfy" sends a plain-text body with Title/Priority/Tags headers (ntfy topic URL).
+    alert_format: Literal["json", "ntfy"] = "json"
     kalshi_base_url: str = "https://external-api.kalshi.com/trade-api/v2"
     chatgpt_subaccount: int = Field(default=0, ge=0, le=63)
     claude_subaccount: int = Field(default=0, ge=0, le=63)
@@ -46,6 +62,15 @@ class DeskSettings(BaseSettings):
     chatgpt_research_schedule: str = "interval"
     claude_research_schedule: str = "interval"
     tick_seconds: int = Field(default=15, ge=1, le=60)
+    # WS-025 unattended agents (session mode). Every default keeps today's behaviour:
+    # no wake windows, no cycle cap, no shadow desks.
+    chatgpt_wake_windows: str = ""
+    claude_wake_windows: str = ""
+    max_cycles_per_day: int = Field(default=0, ge=0, le=48)
+    min_cycle_gap_minutes: int = Field(default=0, ge=0, le=1440)
+    wake_grace_minutes: int = Field(default=90, ge=15, le=720)
+    # Desks whose accepted decisions are recorded and graded but never sent (dry run).
+    shadow_desks: str = ""
     # DEC-024: generous, configurable research limits that protect the service, not usage.
     max_sources_per_job: int = Field(default=50, ge=1, le=500)
     research_lease_minutes: int = Field(default=60, ge=15, le=240)
@@ -71,17 +96,14 @@ class DeskSettings(BaseSettings):
             value = getattr(self, f"{desk}_research_schedule")
             if value in {"interval", "disabled"}:
                 continue
-            windows = value.split(",")
-            if not windows or len(set(windows)) != len(windows):
-                raise ValueError(f"{desk} research schedule must contain unique HH:MM windows")
-            for window in windows:
-                try:
-                    hour, minute = window.split(":")
-                    valid = len(hour) == 2 and len(minute) == 2 and 0 <= int(hour) <= 23 and 0 <= int(minute) <= 59
-                except (ValueError, AttributeError):
-                    valid = False
-                if not valid:
-                    raise ValueError(f"{desk} research schedule must be interval, disabled, or comma-separated HH:MM windows")
+            if not _valid_windows(value):
+                raise ValueError(f"{desk} research schedule must be interval, disabled, or comma-separated HH:MM windows")
+        for desk in ("chatgpt", "claude"):
+            wake = getattr(self, f"{desk}_wake_windows")
+            if wake and not _valid_windows(wake):
+                raise ValueError(f"{desk} wake windows must be unique comma-separated HH:MM windows")
+        if set(self.shadow_desk_set()) - {"chatgpt", "claude"}:
+            raise ValueError("shadow desks must be chatgpt and/or claude")
         if self.alert_mode == "session" and self.research_mode != "session":
             raise ValueError("session-only alerts require app-session research")
         tokens = [getattr(self, f"{role}_token").get_secret_value()
@@ -117,6 +139,13 @@ class DeskSettings(BaseSettings):
                        for d in ("chatgpt", "claude")):
                 raise ValueError("live desks require dedicated signing credentials")
         return self
+
+    def shadow_desk_set(self) -> frozenset[str]:
+        return frozenset(part.strip() for part in self.shadow_desks.split(",") if part.strip())
+
+    def wake_windows(self) -> dict[str, list[str]]:
+        return {desk: [w for w in getattr(self, f"{desk}_wake_windows").split(",") if w]
+                for desk in ("chatgpt", "claude")}
 
     def static_blockers(self) -> list[str]:
         blockers = []

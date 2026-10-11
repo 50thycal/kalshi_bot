@@ -641,6 +641,22 @@ class DeskStore:
             )
             return record_id
 
+    def publications(self, desk_id: str, kind: str) -> list[dict]:
+        """One desk's records of one kind in the current round, oldest first."""
+        with self._tx() as s:
+            book = self._book(s, desk_id)
+            return [{"record_id": row.publication_id, "kind": row.kind,
+                     "created_at": _utc(row.recorded_at).isoformat(), "payload": row.payload}
+                    for row in s.scalars(select(DeskPublication).where(
+                        DeskPublication.book_key == book.key, DeskPublication.kind == kind)
+                        .order_by(DeskPublication.recorded_at))]
+
+    def publication(self, record_id: str) -> dict | None:
+        with self._tx() as s:
+            row = s.get(DeskPublication, record_id)
+            return None if row is None else {"record_id": row.publication_id, "kind": row.kind,
+                                             "payload": row.payload}
+
     def _order_dict(self, s, row):
         if row is None:
             raise DeskError("missing_execution")
