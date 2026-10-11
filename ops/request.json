@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"ws024-ip-5","max_rows":12,"sql":"select id, started_at, round(extract(epoch from finished_at-started_at)::numeric,1) secs, programs_listed, new_terms, changed_terms, disappeared, errors from incentive_discovery_cycles where started_at > now() - interval '40 minutes' order by id"}
