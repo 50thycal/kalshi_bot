@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "85580aaa8512ff72f3df08cc3cfe618aa14900b7",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-11T22:43:47Z",
+  "id": "mmr-arms-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mmr-arms-1.receipt.json",
+  "result_file": "ops/results/mmr-arms-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38181556614",
+  "service": null,
+  "started_at": "2026-10-11T22:43:46Z",
+  "targets": [],
+  "type": "db"
+}

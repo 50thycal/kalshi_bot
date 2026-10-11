@@ -1,4 +1,38 @@
 # ops request [READ]
-# type=noop
-# code a4c61bad3d1c4c053e2908dda0be79e62e1510cd · started 2026-10-11T22:35:54Z
-(noop — nothing to do)
+# type=db  id=mmr-arms-1
+# code 85580aaa8512ff72f3df08cc3cfe618aa14900b7 · started 2026-10-11T22:43:46Z
+exp                               state        ve     ep_open  dep                             stage        kind        dep_open  twin_of                   arm_key            role       tag          
+--------------------------------  -----------  -----  -------  ------------------------------  -----------  ----------  --------  ------------------------  -----------------  ---------  -------------
+liquidity-incentive-mm            LIVE_CANARY  v1/e2  True     limm-smoke-live-1               LIVE_CANARY  live        True                                limm1side          treatment  Alimm1       
+liquidity-incentive-mm            LIVE_CANARY  v1/e2  True     limm-smoke-twin-1               LIVE_CANARY  paper_twin  True      limm-smoke-live-1         limm1side          treatment  Alimm1_pt3   
+mmsell-correlation-cap            PAPER        v1/e1  True     mmsell-corrcap-paper-1          PAPER        paper       True                                uncapped           control    Gmmsell0     
+mmsell-correlation-cap            PAPER        v1/e1  True     mmsell-corrcap-paper-1          PAPER        paper       True                                contest_capped     treatment  Gmmsell1     
+mmsell-correlation-cap            PAPER        v1/e1  True     mmsell-corrcap-probe-1          PROBE        probe       True                                uncapped           control                 
+mmsell-correlation-cap            PAPER        v1/e1  True     mmsell-corrcap-probe-1          PROBE        probe       True                                contest_capped     treatment               
+mmsell-price-ceiling              LIVE_CANARY  v2/e2  True     mmsell-ceiling-live-1           LIVE_CANARY  live        True                                mmsell10           treatment  Cmmsell10    
+mmsell-price-ceiling              LIVE_CANARY  v1/e2  True     mmsell-ceiling-paper-mmsell9-2  PAPER        paper       True                                mmsell9            secondary  mmsell9      
+mmsell-price-ceiling              LIVE_CANARY  v2/e2  True     mmsell-ceiling-twin-1           LIVE_CANARY  paper_twin  True      mmsell-ceiling-live-1     mmsell10           treatment  Cmmsell10_pt3
+mmsell-price-ceiling-capacity     LIVE_CANARY  v3/e2  True     mmsell-capacity-live-1          LIVE_CANARY  live        True                                mmsell10           treatment  Dmmsell10    
+mmsell-price-ceiling-capacity     LIVE_CANARY  v3/e2  True     mmsell-capacity-twin-1          LIVE_CANARY  paper_twin  True      mmsell-capacity-live-1    mmsell10           treatment  Dmmsell10_pt4
+mmsell-price-ceiling-cell-size    LIVE_CANARY  v1/e2  True     mmsell-cellsize-live-1          LIVE_CANARY  live        True                                mmsell10           treatment  Kmmsell10    
+mmsell-price-ceiling-cell-size    LIVE_CANARY  v1/e2  True     mmsell-cellsize-paper-1-e2      PAPER        paper       True                                mmsell10           treatment  mmsell10     
+mmsell-price-ceiling-cell-size    LIVE_CANARY  v1/e2  True     mmsell-cellsize-twin-1          LIVE_CANARY  paper_twin  True      mmsell-cellsize-live-1    mmsell10           treatment  Kmmsell10_pt4
+mmsell-price-ceiling-contest-cap  LIVE_CANARY  v1/e3  True     mmsell-contestcap-live-2        LIVE_CANARY  live        True                                mmsell10           treatment  Fmmsell10    
+mmsell-price-ceiling-contest-cap  LIVE_CANARY  v1/e3  True     mmsell-contestcap-twin-2        LIVE_CANARY  paper_twin  True      mmsell-contestcap-live-2  mmsell10           treatment  Fmmsell10_pt4
+mmsell-price-ceiling-size-split   LIVE_CANARY  v1/e3  True     mmsell-sizesplit-live-2         LIVE_CANARY  live        True                                mmsell10           treatment  Jmmsell10    
+mmsell-price-ceiling-size-split   LIVE_CANARY  v1/e3  True     mmsell-sizesplit-twin-2         LIVE_CANARY  paper_twin  True      mmsell-sizesplit-live-2   mmsell10           treatment  Jmmsell10_pt4
+mmsell-reviewed-universe          PAPER        v1/e1  True     mmsell-reviewed-paper-1         PAPER        paper       True                                reviewed_uncapped  control    Rmmsell1     
+mmsell-reviewed-universe          PAPER        v1/e1  True     mmsell-reviewed-paper-1         PAPER        paper       True                                reviewed_capped    treatment  Rmmsell2     
+mmsell-reviewed-universe          PAPER        v1/e1  True     mmsell-reviewed-probe-1         PROBE        probe       True                                reviewed_uncapped  control                 
+mmsell-reviewed-universe          PAPER        v1/e1  True     mmsell-reviewed-probe-1         PROBE        probe       True                                reviewed_capped    treatment               
+mmsell-type-tight                 PAPER        v1/e2  True     tmmsell-paper-legacy-1-e2       PAPER        paper       True                                Tmmsell1           secondary  Tmmsell1     
+mmsell-type-tight                 PAPER        v1/e2  True     tmmsell-paper-legacy-1-e2       PAPER        paper       True                                Tmmsell2           secondary  Tmmsell2     
+mmsell-type-tight                 PAPER        v1/e2  True     tmmsell-paper-legacy-1-e2       PAPER        paper       True                                Tmmsell5           secondary  Tmmsell5     
+mmsell-type-tight                 PAPER        v1/e2  True     tmmsell-paper-legacy-1-e2       PAPER        paper       True                                Tmmsell6           secondary  Tmmsell6     
+mmsell-variants-2026-07           PAPER        v1/e1  True     mmsell-variants-paper-legacy-1  PAPER        paper       True                                mmsell5            secondary  mmsell5      
+mmsell-variants-2026-07           PAPER        v1/e1  True     mmsell-variants-paper-legacy-1  PAPER        paper       True                                mmsell6            secondary  mmsell6      
+mmsell-variants-2026-07           PAPER        v1/e1  True     mmsell-variants-paper-legacy-1  PAPER        paper       True                                mmsell7            secondary  mmsell7      
+mmsell-variants-2026-07           PAPER        v1/e1  True     mmsell-variants-paper-legacy-1  PAPER        paper       True                                mmsell8            secondary  mmsell8      
+mmsell-wide-control               PAPER        v1/e1  True     mmsell-control-paper-legacy-1   PAPER        paper       True                                mmsell             control    mmsell       
+
+(31 rows)
