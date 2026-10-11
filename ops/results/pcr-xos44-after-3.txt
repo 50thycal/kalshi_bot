@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=pcr-xos44-after-3
+# code a4c61bad3d1c4c053e2908dda0be79e62e1510cd · started 2026-10-11T22:31:28Z
+id    started_at                        disappeared  unstamped  stamped_at_cycle  limm_v2_24h  paidout_disappeared_since_deploy
+----  --------------------------------  -----------  ---------  ----------------  -----------  --------------------------------
+8008  2026-10-11 22:23:28.686522+00:00  9            30000      4742              8771         0                               
+
+(1 row)
