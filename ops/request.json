@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-twin-1011j","sql":"select status, count(*), sum(pnl), sum(case when pnl>0 then pnl else 0 end) pos, sum(case when pnl<0 then pnl else 0 end) neg from paper_trades where strategy='Alimm1_pt3' group by 1"}
+{"type":"noop"}
