@@ -34,7 +34,8 @@ TODAY (v2, session mode)
 3.0
   desk-service --(wake policy: base windows | own settlement | agent-requested check-in)-->
       queued job (desk, reason)
-  runner-<desk> (Railway, always on, own desk token only)
+  agent host per desk, own desk token only
+      (ChatGPT: Railway runner + Codex; Claude: Claude Code routine, or runner per D5)
       claims job -> starts a full agent session (Claude Code headless / Codex exec,
       web + desk tools, subscription login) -> same Continue workflow -> complete
       (+ optional next_check_at, bounded)
@@ -65,16 +66,37 @@ TODAY (v2, session mode)
   desks, with a cap of 6 cycles per desk per day and at least 60 minutes between cycles.
 - **D3. Models.** Which model each subscription runs (e.g. Opus vs Sonnet for Claude) against
   plan limits. Recommendation: decide after the dry-run week shows real usage.
+- **D5. Where the Claude agent runs.** (a) Claude Code routines: recurring routines at the base
+  windows, with event and agent-requested wakes booked as one-shot routines, on Anthropic's own
+  scheduled-session feature. Trade-off: the service cannot push a wake into a routine, so a
+  settlement wake becomes a check-in the agent books for the known settlement time.
+  (b) A self-hosted runner on Railway with a `setup-token`
+  subscription token: symmetric with ChatGPT and service-driven, but in a policy grey zone.
+  Recommendation: (a). The ChatGPT desk uses the Railway runner with Codex either way, since
+  OpenAI has no equivalent scheduled-session feature that can hold the desk's private token.
 - **D4. Active-work limit.** The board is already over its limit of four Active rows. Adding
   WS-025 needs the owner to say which row pauses (DEC-011).
 
 ## Assumptions
 
-- Claude Code and Codex can run headless on a Railway container with a subscription login,
-  web search and a restricted shell, within plan limits. **To verify in the build's first step.**
+- **Claude on a self-hosted runner is a policy question, not just a technical one.** Headless
+  `claude -p` works with a subscription via `claude setup-token` / `CLAUDE_CODE_OAUTH_TOKEN`
+  (a one-year token, renewed only by generating a new one; it is ignored if `ANTHROPIC_API_KEY`
+  is set or under `--bare`). It supports `--allowedTools` (WebSearch, WebFetch, scoped Bash),
+  `--max-turns`, `--permission-mode dontAsk`, and `--output-format json --json-schema`; there is
+  no whole-run timeout flag, so the runner must wrap it with an OS timeout. But Anthropic's
+  terms say advertised Pro/Max limits assume "ordinary, individual usage", and products should
+  use API keys; whether one operator's own scheduled bot qualifies is not documented, and
+  enforcement can be without notice. Sources: code.claude.com/docs/en/authentication,
+  /headless, /legal-and-compliance. The Agent SDK documents API-key auth only.
+- **Claude Code routines are the sanctioned subscription route for Claude.** They are
+  Anthropic's own scheduled cloud sessions, already running the Claude desk today.
+- Codex can run headless (`codex exec`) on a Railway container with a ChatGPT login, web search
+  and a restricted shell, within plan limits. **OpenAI's position on automated personal use is
+  to be verified in the build's first step.**
 - A 45-minute agent session fits inside the existing 60-minute research lease.
-- Subscription rate limits are shared with the operator's interactive use; six cycles per desk
-  per day is affordable. The dry-run week measures this.
+- Subscription limits are shared with the operator's interactive use; six cycles per desk per
+  day is affordable. The dry-run week measures this.
 
 ## Non-Goals
 
@@ -100,9 +122,10 @@ handles money, orders and settlement on its own but cannot think or wake an agen
 
 ### New behavior
 
-- Each desk gets an always-on agent host (the existing Railway runner services, rebuilt). When
-  the service says a check is due, the host starts a full agent session with web search and
-  the desk's own tools, logged in with the operator's existing Claude or ChatGPT subscription.
+- Each desk gets an unattended agent: ChatGPT on the rebuilt Railway runner (Codex, ChatGPT
+  login); Claude on Claude Code routines (recommended, D5) or the same kind of runner. When a
+  check is due, a full agent session starts with web search and the desk's own tools, on the
+  operator's existing subscription.
 - The service decides when a check is due: three daily base windows, the desk's own position
   settling, or a check-in the agent asked for at the end of its last cycle. There is a daily cap.
 - First week is a **dry run**: picks are recorded and graded at settlement but not traded.
