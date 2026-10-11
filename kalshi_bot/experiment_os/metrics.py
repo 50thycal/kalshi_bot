@@ -36,7 +36,7 @@ import statistics
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from ..models import PaperTrade
 
@@ -448,9 +448,15 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
     ),
     MetricDefinition(
         key="incentive_programs_observed", direction="neutral", unit="programs", kind="count",
-        source="incentive_programs", revision="limm_v1",
-        description="distinct incentive programs whose observed terms overlap the window. A "
-        "count of what Kalshi advertised, never a count of what is worth quoting",
+        source="incentive_programs",
+        #: v2 (XOS-000044): v1 counted any programme whose row was stamped in the window. The
+        #: paid_out listing re-stamped every programme Kalshi ever paid, so v1 read ~35k where
+        #: ~5k were live. v2 also requires the programme's own end_date to reach the window, so
+        #: a programme that ended before the window is never counted, whatever stamped it.
+        revision="limm_v2",
+        description="distinct incentive programs observed in the window whose terms had not "
+        "ended before it (end_date unset or at/after the window start). A count of what "
+        "Kalshi advertised as live, never a count of what is worth quoting",
     ),
     MetricDefinition(
         key="incentive_shadow_quotes", direction="neutral", unit="quotes", kind="count",
@@ -2155,8 +2161,10 @@ def _incentive_metric(session, key: str, scope: MetricScope) -> MetricValue:
         P = IncentiveProgram
         n = session.scalar(
             select(func.count(func.distinct(P.program_id)))
-            .where(P.first_seen_at <= end, P.last_seen_at >= start)) or 0
-        return MetricValue(key, float(n), int(n), definition.unit, provenance=prov)
+            .where(P.first_seen_at <= end, P.last_seen_at >= start,
+                   or_(P.end_date.is_(None), P.end_date >= start))) or 0
+        return MetricValue(key, float(n), int(n), definition.unit,
+                           provenance=prov | {"live_basis": "end_date >= window_start"})
 
     if key == "incentive_shadow_quotes":
         Q = IncentiveShadowQuote

@@ -5,6 +5,8 @@ TERMS (everything Kalshi can change: reward, Target Size, Discount Factor, dates
 description, paid_out, per-account cap) are hashed; a program whose hash matches its current
 row only gets `last_seen_at` bumped, a program whose hash changed gets its current row
 `superseded_at` and a NEW row, and a current row no longer listed gets `disappeared_at`.
+An ended programme listed only as paid out is the exception: it is seen (so never marked
+disappeared) but not re-stamped, so `last_seen_at` stays at its last stamp (XOS-000044).
 Nothing is overwritten, so "did the pool change on day 3" is a query, not a guess.
 
 The market's title/status/close_time and its SERIES fee rule are resolved once per new terms
@@ -98,6 +100,9 @@ class DiscoveryResult:
     errors: int = 0
     #: New/changed terms skipped because `max_new_terms` was reached; picked up next poll.
     deferred: int = 0
+    #: Unchanged rows NOT re-stamped because the programme had ended and was listed only as
+    #: paid out (XOS-000044). Still seen, so never marked disappeared.
+    ended_paid_out_unstamped: int = 0
 
 
 # Verbatim payloads no caller of `current_programs` or the discovery pass reads. They are about
@@ -127,6 +132,21 @@ def _bump_last_seen(session, rows: list, now: datetime) -> None:
             .execution_options(synchronize_session=False))
         for row in chunk:
             set_committed_value(row, "last_seen_at", now)
+
+
+def _ended_payout_only(row: m.IncentiveProgram, observed_status: str, in_active: bool,
+                       now: datetime) -> bool:
+    """True for a programme seen ONLY in the `paid_out` listing whose `end_date` has passed.
+
+    Kalshi's paid_out listing returns every programme it ever paid, so re-stamping these made
+    ~86% of each pass's row rewrites (WS-024) and made `incentive_programs_observed` count every
+    programme ever paid as observed in every window. Owner decision on XOS-000044 (option A):
+    such a row keeps the `last_seen_at` of its last stamp. A programme also in the active
+    listing, or with no end date, or not yet ended, is still re-stamped."""
+    if observed_status != "paid_out" or in_active:
+        return False
+    end = _aware(row.end_date)
+    return end is not None and end <= now
 
 
 def _light(stmt):
@@ -212,6 +232,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
 
     # Deduplicate by program id, last write winning, so the `paid_out` view supersedes the
     # `active` one for a programme caught in both.
+    active_ids = {str(prog.get("id") or "") for prog, observed in listed if observed == "active"}
     by_id: dict[str, tuple[dict, str]] = {}
     for prog, observed in listed:
         pid_key = str(prog.get("id") or "")
@@ -246,7 +267,10 @@ def run_discovery(client, session, *, now: datetime | None = None,
             total_usd += usd
         row = existing.get((pid, h))
         if row is not None:
-            unchanged.append(row)
+            if _ended_payout_only(row, observed_status, pid in active_ids, now):
+                result.ended_paid_out_unstamped += 1
+            else:
+                unchanged.append(row)
             if row.disappeared_at is not None:
                 row.disappeared_at = None
                 notes.setdefault("reappeared", []).append(pid)
@@ -306,6 +330,8 @@ def run_discovery(client, session, *, now: datetime | None = None,
     cycle.pages = pages
     if result.deferred:
         notes["deferred_new_terms"] = result.deferred
+    if result.ended_paid_out_unstamped:
+        notes["ended_paid_out_unstamped"] = result.ended_paid_out_unstamped
     cycle.finished_at = datetime.now(timezone.utc)
     cycle.notes_json = notes or None
     session.flush()
