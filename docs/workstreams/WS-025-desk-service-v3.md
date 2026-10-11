@@ -35,47 +35,39 @@ TODAY (v2, session mode)
   desk-service --(wake policy: base windows | own settlement | agent-requested check-in)-->
       queued job (desk, reason)
   agent host per desk, own desk token only
-      (ChatGPT: Railway runner + Codex; Claude: Claude Code routine, or runner per D5)
+      (ChatGPT: Railway runner + Codex; Claude: Claude Code routines)
       claims job -> starts a full agent session (Claude Code headless / Codex exec,
       web + desk tools, subscription login) -> same Continue workflow -> complete
       (+ optional next_check_at, bounded)
   desk-service: validates completion
       dry-run  -> picks recorded as shadow decisions, graded at settlement, no order
       live     -> existing executor, unchanged limits
-  watchdog: missed wake / 2 failed cycles / expired login -> alert operator
+  watchdog: missed wake / 2 failed cycles / expired login -> ntfy push to operator
 ```
 
 ## Decisions Made
 
-- **Billing → subscriptions.** Claude Code and Codex log in on the runner hosts with the
+- **Billing → subscriptions.** Codex logs in on the ChatGPT runner and Claude runs as Claude Code routines, both on the
   operator's existing plans; no paid API allowance and no API fallback. The desks earn at most
   a few dollars a month, so metered research would cost more than it could return.
 - **Cadence → base windows + events.** Three fixed daily windows, plus wakes on the desk's own
   settlements and on a check-in the agent asks for, capped per desk per day.
 - **Rollout → dry-run week first.** Automated cycles run for about seven days with picks
   recorded but not traded; the operator reviews and then flips to live (a hard stop).
+- **Alert channel (D1) → ntfy.** The desk service posts to a private ntfy topic through the
+  existing webhook alert mode; it is free and pushes to the operator's phone.
+- **Claude host (D5) → Claude Code routines.** Anthropic's own scheduled sessions keep the
+  Claude desk clearly within subscription use; settlement wakes become check-ins the agent books.
+- **Make room (D4) → WS-009 paused** (one browser load-time check left).
 - **Unknown-order pause → narrow self-clear** (`DEC-032`, already live): a prerequisite for
   unattended trading.
 
 ## Open Decisions
 
-- **D1. Alert channel.** Production runs `DESKS_ALERT_MODE=session` (no push). Unattended
-  agents need push alerts. Options: an HTTPS webhook to a phone push service (ntfy, Pushover)
-  or Slack. Recommendation: ntfy or Pushover, using the existing webhook mode.
 - **D2. Base windows.** Recommendation: 08:00, 12:00, 16:00 America/Chicago, the same for both
   desks, with a cap of 6 cycles per desk per day and at least 60 minutes between cycles.
 - **D3. Models.** Which model each subscription runs (e.g. Opus vs Sonnet for Claude) against
   plan limits. Recommendation: decide after the dry-run week shows real usage.
-- **D5. Where the Claude agent runs.** (a) Claude Code routines: recurring routines at the base
-  windows, with event and agent-requested wakes booked as one-shot routines, on Anthropic's own
-  scheduled-session feature. Trade-off: the service cannot push a wake into a routine, so a
-  settlement wake becomes a check-in the agent books for the known settlement time.
-  (b) A self-hosted runner on Railway with a `setup-token`
-  subscription token: symmetric with ChatGPT and service-driven, but in a policy grey zone.
-  Recommendation: (a). The ChatGPT desk uses the Railway runner with Codex either way, since
-  OpenAI has no equivalent scheduled-session feature that can hold the desk's private token.
-- **D4. Active-work limit.** The board is already over its limit of four Active rows. Adding
-  WS-025 needs the owner to say which row pauses (DEC-011).
 
 ## Assumptions
 
@@ -123,7 +115,7 @@ handles money, orders and settlement on its own but cannot think or wake an agen
 ### New behavior
 
 - Each desk gets an unattended agent: ChatGPT on the rebuilt Railway runner (Codex, ChatGPT
-  login); Claude on Claude Code routines (recommended, D5) or the same kind of runner. When a
+  login); Claude on Claude Code routines. When a
   check is due, a full agent session starts with web search and the desk's own tools, on the
   operator's existing subscription.
 - The service decides when a check is due: three daily base windows, the desk's own position
