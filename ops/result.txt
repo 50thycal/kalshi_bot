@@ -1,24 +1,39 @@
 # ops request [READ]
-# type=db  id=mmr-ceildeps-1
-# code 85580aaa8512ff72f3df08cc3cfe618aa14900b7 · started 2026-10-11T22:47:58Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 638, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 634, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 451, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 495, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 119, in main
-    with psycopg.connect(url, options=options, connect_timeout=15) as conn:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/connection.py", line 126, in connect
-    raise last_ex.with_traceback(None)
-psycopg.OperationalError: connection failed: connection to server at "66.33.22.226", port 40181 failed: server closed the connection unexpectedly
-	This probably means the server terminated abnormally
-	before or while processing the request.
+# type=db  id=mmr-ceildeps-2
+# code 85580aaa8512ff72f3df08cc3cfe618aa14900b7 · started 2026-10-11T22:48:26Z
+exp                               ve     ep_start  ep_end  dep                               kind        dstart       dend         arm_key   tag          
+--------------------------------  -----  --------  ------  --------------------------------  ----------  -----------  -----------  --------  -------------
+mmsell-price-ceiling              v1/e1  08-16     09-02   mmsell-ceiling-paper-legacy-1     paper       07-18 00:00  08-28 04:11  mmsell10  mmsell10     
+mmsell-price-ceiling              v1/e1  08-16     09-02   mmsell-ceiling-paper-legacy-1     paper       07-18 00:00  08-28 04:11  mmsell9   mmsell9      
+mmsell-price-ceiling              v1/e1  08-16     09-02   mmsell-ceiling-paper-mmsell9-1    paper       08-28 04:11  09-02 00:57  mmsell9   mmsell9      
+mmsell-price-ceiling              v1/e2  09-11             mmsell-ceiling-paper-mmsell9-2    paper       09-11 22:42               mmsell9   mmsell9      
+mmsell-price-ceiling              v2/e1  08-28     08-28   mmsell-ceiling-paper-2            paper       08-28 04:11  08-28 14:20  mmsell10  mmsell10     
+mmsell-price-ceiling              v2/e2  08-28             mmsell-ceiling-paper-2-e2         paper       08-28 14:20  09-02 00:57  mmsell10  mmsell10     
+mmsell-price-ceiling              v2/e2  08-28             mmsell-ceiling-live-1             live        08-28 14:20               mmsell10  Cmmsell10    
+mmsell-price-ceiling              v2/e2  08-28             mmsell-ceiling-twin-1             paper_twin  08-28 14:20               mmsell10  Cmmsell10_pt3
+mmsell-price-ceiling-capacity     v1/e1  09-02     09-02   mmsell-capacity-paper-1           paper       09-02 00:57  09-02 01:28  mmsell10  mmsell10     
+mmsell-price-ceiling-capacity     v2/e1  09-02     09-02   mmsell-capacity-paper-1-e1        paper       09-02 01:28  09-02 08:25  mmsell10  mmsell10     
+mmsell-price-ceiling-capacity     v3/e1  09-02     09-02   mmsell-capacity-paper-1-e1-e1     paper       09-02 08:25  09-02 11:36  mmsell10  mmsell10     
+mmsell-price-ceiling-capacity     v3/e2  09-02             mmsell-capacity-twin-1            paper_twin  09-02 11:36               mmsell10  Dmmsell10_pt4
+mmsell-price-ceiling-capacity     v3/e2  09-02             mmsell-capacity-paper-1-e1-e1-e2  paper       09-02 11:36  09-06 11:41  mmsell10  mmsell10     
+mmsell-price-ceiling-capacity     v3/e2  09-02             mmsell-capacity-live-1            live        09-02 11:36               mmsell10  Dmmsell10    
+mmsell-price-ceiling-cell-size    v1/e1  10-11     10-11   mmsell-cellsize-paper-1           paper       10-11 10:21  10-11 15:29  mmsell10  mmsell10     
+mmsell-price-ceiling-cell-size    v1/e2  10-11             mmsell-cellsize-live-1            live        10-11 15:29               mmsell10  Kmmsell10    
+mmsell-price-ceiling-cell-size    v1/e2  10-11             mmsell-cellsize-twin-1            paper_twin  10-11 15:29               mmsell10  Kmmsell10_pt4
+mmsell-price-ceiling-cell-size    v1/e2  10-11             mmsell-cellsize-paper-1-e2        paper       10-11 15:29               mmsell10  mmsell10     
+mmsell-price-ceiling-contest-cap  v1/e1  09-06     09-06   mmsell-contestcap-paper-1         paper       09-06 11:41  09-06 17:03  mmsell10  mmsell10     
+mmsell-price-ceiling-contest-cap  v1/e2  09-06     09-07   mmsell-contestcap-twin-1          paper_twin  09-06 17:03  09-07 02:01  mmsell10  Emmsell10_pt4
+mmsell-price-ceiling-contest-cap  v1/e2  09-06     09-07   mmsell-contestcap-live-1          live        09-06 17:03  09-07 02:01  mmsell10  Emmsell10    
+mmsell-price-ceiling-contest-cap  v1/e2  09-06     09-07   mmsell-contestcap-paper-1-e2      paper       09-06 17:03  09-07 02:01  mmsell10  mmsell10     
+mmsell-price-ceiling-contest-cap  v1/e3  09-07             mmsell-contestcap-twin-2          paper_twin  09-07 02:01               mmsell10  Fmmsell10_pt4
+mmsell-price-ceiling-contest-cap  v1/e3  09-07             mmsell-contestcap-paper-1-e2-e3   paper       09-07 02:01  10-03 22:45  mmsell10  mmsell10     
+mmsell-price-ceiling-contest-cap  v1/e3  09-07             mmsell-contestcap-live-2          live        09-07 02:01               mmsell10  Fmmsell10    
+mmsell-price-ceiling-size-split   v1/e1  10-03     10-04   mmsell-sizesplit-paper-1          paper       10-03 22:45  10-04 02:18  mmsell10  mmsell10     
+mmsell-price-ceiling-size-split   v1/e2  10-04     10-04   mmsell-sizesplit-twin-1           paper_twin  10-04 02:18  10-04 17:52  mmsell10  Hmmsell10_pt4
+mmsell-price-ceiling-size-split   v1/e2  10-04     10-04   mmsell-sizesplit-live-1           live        10-04 02:18  10-04 17:52  mmsell10  Hmmsell10    
+mmsell-price-ceiling-size-split   v1/e2  10-04     10-04   mmsell-sizesplit-paper-1-e2       paper       10-04 02:18  10-04 17:52  mmsell10  mmsell10     
+mmsell-price-ceiling-size-split   v1/e3  10-04             mmsell-sizesplit-paper-1-e2-e3    paper       10-04 17:52  10-11 10:21  mmsell10  mmsell10     
+mmsell-price-ceiling-size-split   v1/e3  10-04             mmsell-sizesplit-live-2           live        10-04 17:52               mmsell10  Jmmsell10    
+mmsell-price-ceiling-size-split   v1/e3  10-04             mmsell-sizesplit-twin-2           paper_twin  10-04 17:52               mmsell10  Jmmsell10_pt4
+
+(32 rows)
