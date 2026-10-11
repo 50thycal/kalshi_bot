@@ -1,11 +1,4 @@
 # ops request [READ]
-# type=db  id=kmm-twin-1011
-# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:45:59Z
-k                   n
-------------------  -
-twin_row            1
-twin_paper_trades   9
-k_orders            7
-j_orders_since_arm  0
-
-(4 rows)
+# type=noop
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:46:20Z
+(noop — nothing to do)
