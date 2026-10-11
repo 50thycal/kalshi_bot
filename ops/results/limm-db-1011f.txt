@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=limm-db-1011f
+# code 3dc09142765de3bf3ec2dad3a69f69c4d2e50d90 · started 2026-10-11T04:46:55Z
+market_ticker                 side  action  limit_price  quantity  status   cancel_reason  created_at                     disc                         
+----------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------
+KXYTVIEWSHIGH-BAD26NOV-29.0M  no    buy     2            500       resting                 2026-10-11 04:00:54.511151+00  2026-10-11 04:37:43.500463+00
+KXYTVIEWSHIGH-TAT26NOV-3.0M   no    buy     4            250       resting                 2026-10-09 15:48:25.060095+00  2026-10-11 04:37:43.500463+00
+
+(2 rows)
