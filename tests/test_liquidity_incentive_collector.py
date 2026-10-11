@@ -281,6 +281,51 @@ def test_a_bounded_poll_defers_a_changed_programme_with_its_old_row_intact(setti
         assert p2.last_seen_at.replace(tzinfo=None) == T0.replace(tzinfo=None)
 
 
+def test_unchanged_programmes_are_restamped_in_bulk_not_one_update_per_row(settings, monkeypatch):
+    from sqlalchemy import event
+
+    _db(settings)
+    programmes = [_program(pid=f"p{i}", ticker=f"KXT-{i}") for i in range(12)]
+    client = _ReadClient(programs=programmes)
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    # p3 vanishes for a pass, then comes back unchanged: it must reappear AND be re-stamped.
+    client.programs = [p for p in programmes if p["id"] != "p3"]
+    with db.session_scope() as s:
+        assert pg.run_discovery(client, s, now=T0 + timedelta(minutes=5)).disappeared == 1
+    client.programs = programmes
+    monkeypatch.setattr(pg, "_BUMP_CHUNK", 5)
+    updates: list[str] = []
+
+    def count(conn, cursor, statement, params, context, executemany):
+        if statement.lstrip().upper().startswith("UPDATE INCENTIVE_PROGRAMS"):
+            updates.append(statement)
+
+    later = T0 + timedelta(minutes=10)
+    engine = db.get_engine()
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        with db.session_scope() as s:
+            r = pg.run_discovery(client, s, now=later)
+            assert (r.new_terms, r.changed_terms, r.disappeared) == (0, 0, 0)
+            rows = s.scalars(select(m.IncentiveProgram)).all()
+            # The loaded objects carry the new stamp without a second write.
+            assert {run_aware(row.last_seen_at) for row in rows} == {later}
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+    bumps = [u for u in updates if "last_seen_at" in u]
+    assert len(bumps) == 3  # 12 rows in chunks of 5, not 12 statements
+    assert len(updates) == len(bumps) + 1  # plus p3's disappeared_at reset
+    with db.session_scope() as s:
+        rows = s.scalars(select(m.IncentiveProgram)).all()
+        assert {run_aware(row.last_seen_at) for row in rows} == {later}
+        assert all(row.disappeared_at is None for row in rows)
+
+
+def run_aware(value):
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
 def test_fee_rule_from_series_variants():
     assert pg.fee_rule_from_series({"fee_type": "quadratic_with_maker_fees", "fee_multiplier": 2.0}).maker_rate == 0.035
     assert pg.fee_rule_from_series({"fee_type": "quadratic", "fee_multiplier": 1.0}).maker_rate == 0.0
