@@ -1,11 +1,18 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1011e
-# code bae19515696b09e53466f50fa561cc80adde9730 · started 2026-10-11T18:40:35Z
-strategy  status   n    pnl    losses  last_entry                      
---------  -------  ---  -----  ------  --------------------------------
-Rmmsell1  open     20   0.00   0       2026-10-11 18:22:14.928873+00:00
-Rmmsell1  settled  845  14.49  40      2026-10-11 15:31:59.085318+00:00
-Rmmsell2  open     13   0.00   0       2026-10-11 18:22:14.945564+00:00
-Rmmsell2  settled  558  5.89   30      2026-10-11 12:29:46.108438+00:00
+# type=db  id=cc-rmm-1011f
+# code bae19515696b09e53466f50fa561cc80adde9730 · started 2026-10-11T18:40:56Z
+market_ticker                legs                                           n  entered                           closed                          
+---------------------------  ---------------------------------------------  -  --------------------------------  --------------------------------
+KXTRUMPSAY-26OCT12-MARI      Rmmsell1:settled:-0.94 Rmmsell2:settled:-0.94  2  2026-10-06 03:51:50.683827+00:00  2026-10-11 17:07:01.500707+00:00
+KXRAIN-26OCT10-SEA           Rmmsell1:settled:-0.94 Rmmsell2:settled:-0.94  2  2026-10-10 20:55:01.797040+00:00  2026-10-11 16:41:50.932197+00:00
+KXNFLTOTAL-26OCT11MINNO-63   Rmmsell1:open:-                                1  2026-10-11 13:00:11.843051+00:00                                  
+KXNFLTOTAL-26OCT11PHIJAC-60  Rmmsell1:settled:0.06                          1  2026-10-11 14:35:27.209836+00:00  2026-10-11 17:18:51.898596+00:00
+KXNFLTOTAL-26OCT11PHIJAC-57  Rmmsell1:settled:0.07                          1  2026-10-11 15:31:59.085318+00:00  2026-10-11 17:18:52.197820+00:00
+KXNFLTOTAL-26OCT11HOUTEN-58  Rmmsell1:open:-                                1  2026-10-11 17:14:35.356790+00:00                                  
+KXNFLTOTAL-26OCT11HOUTEN-55  Rmmsell1:open:-                                1  2026-10-11 17:44:24.154826+00:00                                  
+KXNFLTOTAL-26OCT11CHIGB-67   Rmmsell1:open:-                                1  2026-10-11 17:44:25.626555+00:00                                  
+KXNFLTOTAL-26OCT11MINNO-54   Rmmsell1:open:-                                1  2026-10-11 17:44:31.495419+00:00                                  
+KXNFLTOTAL-26OCT11CLENYJ-59  Rmmsell1:open:-                                1  2026-10-11 17:44:56.408659+00:00                                  
+KXNFLTOTAL-26OCT11CHIGB-61   Rmmsell1:open:-                                1  2026-10-11 18:22:03.695873+00:00                                  
 
-(4 rows)
+(11 rows)
