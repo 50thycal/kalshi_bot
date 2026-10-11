@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=db  id=rv1011-drain
-# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:06:25Z
-strategy   open_orders  total  last_order                      
----------  -----------  -----  --------------------------------
-Fmmsell10  4            1153   2026-10-04 02:15:04.867204+00:00
-Jmmsell10  4            326    2026-10-11 14:35:52.204333+00:00
-Hmmsell10  0            39     2026-10-04 17:15:54.353332+00:00
-
-(3 rows)
+# type=noop
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:06:43Z
+(noop — nothing to do)
