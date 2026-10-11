@@ -84,6 +84,10 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
   (re-stamp once a day) was not chosen. Platform Change Review recorded the impact on
   XOS-000044; the writer change and the metric's `limm_v2` ship in one PR.
 
+- **MMSELL paper fleet trimmed to arms that answer an open question.** Owner, 2026-10-11.
+  Research Lab review and per-tag decisions: `docs/MMSELL_PAPER_FLEET_REVIEW_20261011.md`
+  (Experiment OS is canonical for the lifecycle moves it records).
+
 ## Open Decisions
 
 - **D1. Restore discovery inside `main`.** Recommend **yes**. The armed runner calls

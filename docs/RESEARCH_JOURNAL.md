@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## MMSELL paper fleet review 2026-10-11 — mmsell5–8 retired; C/D/F/J to retire via Live Ops
+
+Research Lab review for WS-024 ([review](MMSELL_PAPER_FLEET_REVIEW_20261011.md)): which MMSELL
+paper tags still feed a gate, twin or control. `mmsell-variants-2026-07` (mmsell5–8) is RETIRED
+(`rl-retire-variants-20261011b`). Its frozen gate has no fail clause, and its recorded HOLD on
+mmsell6/7 realizable ≤ 0 cannot move with more paper. Its four books are out of
+`MMSELL_VARIANTS`. The stood-down canary live tags `Cmmsell10/Dmmsell10/Fmmsell10/Jmmsell10`
+feed nothing. Removing them first needs a Live Ops package to end their live deployments, or
+the drift check fires. Their C/D/F "held" exposure is phantom: XOS-000045. Every control
+(`mmsell10`, `Gmmsell0`, `Rmmsell1`, `mmsell`) is kept.
+
 ## MMSELL TYPE-RANK run 2 2026-10-08 — still HOLD; forward flow has slowed sharply
 
 Weekly re-run of [TYPE-RANK](MMSELL_TYPE_RANK_THESIS.md) (ops `typerank-20261008-1`). The
