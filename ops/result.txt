@@ -1,25 +1,992 @@
 # ops request [READ]
-# type=xos  id=kmm-pp-1011
-# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:25:38Z
-PACKAGE PREFLIGHT — mmsell-cell-size-canary  (2026-10-11T15:25:39.824524+00:00)
-
-  [ok  ] package_known: The size-split canary (Jmmsell10) succeeded by Kmmsell10: the random 1-vs-3 clip replaced by a clip chosen by MARKET TYPE — 3 contracts on the slow-information 
-  [ok  ] package_registers: has a `register` verb
-  [info] enforcement_mode: NEW_ONLY
-         a tag trades only under an active deployment arm
-  [ok  ] platform_snapshot_complete: active snapshot 4f9adf15daa6
-  [info] experiment: mmsell-price-ceiling-cell-size state=PAPER latest v1 frozen=yes open_epoch=1 — already registered: the package must register a SUCCESSOR version (a second REGISTER_PACKAGE at the same version raises, it is not a quiet no-op)
-  [ok  ] tag_collisions: no declared tag is carried by another experiment
-  [ok  ] transport_idle: no experiment command is mid-execution
-
-VERDICT: GO
-
-envelope (ops request, one line):
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-cell-size-canary-register-202610111525\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-cell-size-canary\", \"approved_by\": \"<operator>\", \"reason\": \"<one line: the request that authorized this>\"}, \"schema_version\": 1}"}, "id": "mmsell-cell-size-canary-register-202610111525-send"}
-
-then:
-  1. send env_request (approved_by = the operator's name, verbatim)
-  2. read the receipt: xos experiment-command-show mmsell-cell-size-canary-register-202610111525
-  3. xos show mmsell-price-ceiling-cell-size — every declared tag on an ACTIVE arm
-  4. runtime step (separate `env` request, read the live value FIRST and append, never retype): ['LIVE_KILL_ON_DAILY_LOSS', 'LIVE_MAX_ORDER_DOLLARS', 'LIVE_ORDER_TIMEOUT_SECONDS', 'LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS', 'LIVE_PAPER_TWIN_SUFFIX', 'LIVE_STRATEGIES', 'MAX_TOTAL_EXPOSURE', 'MMSELL_EVENT_RUNG_CAP', 'MMSELL_EVENT_RUNG_CAP_ENABLED', 'MMSELL_LIVE_MAX_OPEN_POSITIONS', 'MMSELL_LIVE_PRICE_OFFSET_CENTS', 'MMSELL_PREFILTER_ENABLED', 'MMSELL_SETTLEMENT_CAP_ENABLED', 'MMSELL_SETTLEMENT_CAP_PCT', 'MMSELL_SETTLEMENT_EVENT_CAP', 'MMSELL_VARIANTS']
-  5. xos control-tower after SILENT_ARM_HOURS — no silent arm
+# type=xos  id=kmm-show-1011
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:26:21Z
+{
+  "key": "mmsell-price-ceiling-cell-size",
+  "title": "mmsell10 \u2014 3-lot on the slow-information cell, 1 contract elsewhere",
+  "state": "PAPER",
+  "paused_from_state": null,
+  "origin": "operator",
+  "family": "maker",
+  "hypothesis": "The cheap-cell price-ceiling edge (lo=5, hi=10, maxyes=7) is concentrated in the slow-information market types (event_stat, mention, exact_score, outright, game_prop); sizing those at 3 contracts and every other type at 1 earns more per settled market than a type-blind clip, without the cell's per-contract edge eroding at the larger size.",
+  "legacy_class": null,
+  "migration_integrity": null,
+  "platform_snapshot_id": 2,
+  "predecessor_experiment_id": 40,
+  "retired_at": null,
+  "docs": {
+    "canary": "docs/MMSELL_CELL_SIZE_CANARY.md",
+    "evidence": "docs/MMSELL_REPLAY_PROBES_20261003.md",
+    "predecessor_plan": "docs/MMSELL_SIZE_SPLIT_CANARY.md"
+  },
+  "versions": [
+    {
+      "version": 1,
+      "frozen_at": "2026-10-11 10:21:52.997717+00:00",
+      "fingerprint": "fb42a2ccb064c55f5fcf3b2a2c24016ff23573932b903936defcb7b3e8e80797",
+      "pre_registration_hash": "ae4ddc834e3c94e969d80c63ad303743fe01eab979b7f10310742f9103f468a3",
+      "independent_variable": "contracts per order by market type (slow-information cell 3, rest 1)",
+      "held_constant": [
+        "arm parameters (lo=5, hi=10, maxyes=7)",
+        "market universe, the tier bar and the live exposure pauses",
+        "entry timing and the 0c price offset",
+        "the 4h order timeout",
+        "hold-to-settlement exits (no TP/SL)",
+        "the fee model",
+        "contestcap=1, contestkey=split and max_event_rungs=3",
+        "the open-position cap (40) and the twin cap (250)",
+        "the promotion bar and the keep gate, both the predecessor's own frozen objects",
+        "every dollar bound in the risk envelope"
+      ],
+      "change_reason": "Replaces the random sizes=1+3 split with a type rule: 3 contracts on the slow-information cell, 1 elsewhere. Operator decision 2026-10-11 (DEC-033).",
+      "arms": [
+        {
+          "arm_key": "mmsell10",
+          "role": "treatment",
+          "strategy_tag": "mmsell10",
+          "params": {
+            "hi": 10,
+            "lo": 5,
+            "size": 1,
+            "maxyes": 7,
+            "bigsize": 3,
+            "bigtypes": [
+              "event_stat",
+              "mention",
+              "exact_score",
+              "outright",
+              "game_prop"
+            ]
+          }
+        }
+      ],
+      "gates": [
+        {
+          "gate_key": "live_canary_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "mmsell10": {
+                "op": ">=",
+                "value": 150,
+                "metric": "live_settled_contracts",
+                "deployment_kind": "live"
+              }
+            },
+            "hold_if": [
+              {
+                "op": "<",
+                "arm": "mmsell10",
+                "value": 50.0,
+                "metric": "twin_mirror_coverage_pct",
+                "deployment_kind": "live"
+              },
+              {
+                "op": "<",
+                "arm": "mmsell10",
+                "value": 25.0,
+                "metric": "live_fill_rate_pct",
+                "deployment_kind": "live"
+              }
+            ],
+            "fail_any": [
+              {
+                "op": "<=",
+                "arm": "mmsell10",
+                "value": -30.0,
+                "metric": "live_realized_pnl_usd",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 20,
+                  "metric": "live_settled_contracts"
+                },
+                "deployment_kind": "live"
+              },
+              {
+                "op": ">",
+                "arm": "mmsell10",
+                "value": 0.5,
+                "metric": "twin_live_paired_gap_cents",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 30,
+                  "metric": "live_settled_contracts"
+                },
+                "deployment_kind": "live"
+              },
+              {
+                "op": "<",
+                "arm": "mmsell10",
+                "value": -0.5,
+                "metric": "twin_live_paired_gap_cents",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 30,
+                  "metric": "live_settled_contracts"
+                },
+                "deployment_kind": "live"
+              },
+              {
+                "op": ">",
+                "arm": "mmsell10",
+                "value": 3.0,
+                "metric": "live_max_realized_loss_usd",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 1,
+                  "metric": "live_settled_contracts"
+                },
+                "deployment_kind": "live"
+              },
+              {
+                "op": ">",
+                "arm": "mmsell10",
+                "value": 5.0,
+                "metric": "twin_live_winrate_gap_pp",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 50,
+                  "metric": "live_settled_contracts"
+                },
+                "deployment_kind": "live"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">",
+                "arm": "mmsell10",
+                "value": 0.0,
+                "metric": "live_cents_per_contract",
+                "deployment_kind": "live"
+              },
+              {
+                "op": "<=",
+                "arm": "mmsell10",
+                "value": 1.0,
+                "metric": "twin_live_winrate_gap_pp",
+                "deployment_kind": "live"
+              }
+            ],
+            "description": "Keep/stop for the mmsell10 cell-size canary (Kmmsell10): the size-split canary's contract unchanged \u2014 loss budget -$30, per-market loss bound $3.00 (one 3-lot clip). Every clause addresses deployment_kind='live'; twin comparisons resolve through the registered twin_of link.",
+            "max_evidence_horizon": {
+              "arms": [
+                "mmsell10"
+              ],
+              "value": 600,
+              "metric": "live_settled_contracts",
+              "deployment_kind": "live"
+            }
+          },
+          "spec_hash": "29f491dcadebf37ff432fb56e9c23696884745493bfc595d204d7dbc6d7932bd",
+          "evidence_started_at": "2026-10-11 10:21:52.997717+00:00",
+          "results": [
+            {
+              "verdict": "BLOCKED_DATA",
+              "computed_at": "2026-10-11 10:21:57.299027+00:00",
+              "computed_by": "system",
+              "sample": {
+                "live_settled_contracts/mmsell-price-ceiling-cell-size/v1/e1/mmsell10": {
+                  "n": 0,
+                  "value": null
+                }
+              },
+              "metrics": {
+                "clauses": [
+                  {
+                    "n": 0,
+                    "list": "sample",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">=",
+                      "value": 150,
+                      "metric": "live_settled_contracts",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "horizon",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arms": [
+                        "mmsell10"
+                      ],
+                      "value": 600,
+                      "metric": "live_settled_contracts",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "pass_all",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arm": "mmsell10",
+                      "value": 0.0,
+                      "metric": "live_cents_per_contract",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "pass_all",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": "<=",
+                      "arm": "mmsell10",
+                      "value": 1.0,
+                      "metric": "twin_live_winrate_gap_pp",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "fail_any",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": "<=",
+                      "arm": "mmsell10",
+                      "value": -30.0,
+                      "metric": "live_realized_pnl_usd",
+                      "min_evidence": {
+                        "op": ">=",
+                        "value": 20,
+                        "metric": "live_settled_contracts"
+                      },
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": false,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "min_evidence": {
+                        "op": ">=",
+                        "met": false,
+                        "value": 20,
+                        "metric": "live_settled_contracts",
+                        "observed": null
+                      },
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "fail_any",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arm": "mmsell10",
+                      "value": 0.5,
+                      "metric": "twin_live_paired_gap_cents",
+                      "min_evidence": {
+                        "op": ">=",
+                        "value": 30,
+                        "metric": "live_settled_contracts"
+                      },
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": false,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "min_evidence": {
+                        "op": ">=",
+                        "met": false,
+                        "value": 30,
+                        "metric": "live_settled_contracts",
+                        "observed": null
+                      },
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "twin_gap_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "fail_any",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": "<",
+                      "arm": "mmsell10",
+                      "value": -0.5,
+                      "metric": "twin_live_paired_gap_cents",
+                      "min_evidence": {
+                        "op": ">=",
+                        "value": 30,
+                        "metric": "live_settled_contracts"
+                      },
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": false,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "min_evidence": {
+                        "op": ">=",
+                        "met": false,
+                        "value": 30,
+                        "metric": "live_settled_contracts",
+                        "observed": null
+                      },
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "twin_gap_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "fail_any",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arm": "mmsell10",
+                      "value": 3.0,
+                      "metric": "live_max_realized_loss_usd",
+                      "min_evidence": {
+                        "op": ">=",
+                        "value": 1,
+                        "metric": "live_settled_contracts"
+                      },
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": false,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "min_evidence": {
+                        "op": ">=",
+                        "met": false,
+                        "value": 1,
+                        "metric": "live_settled_contracts",
+                        "observed": null
+                      },
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "fail_any",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arm": "mmsell10",
+                      "value": 5.0,
+                      "metric": "twin_live_winrate_gap_pp",
+                      "min_evidence": {
+                        "op": ">=",
+                        "value": 50,
+                        "metric": "live_settled_contracts"
+                      },
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": false,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "min_evidence": {
+                        "op": ">=",
+                        "met": false,
+                        "value": 50,
+                        "metric": "live_settled_contracts",
+                        "observed": null
+                      },
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "hold_if",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": "<",
+                      "arm": "mmsell10",
+                      "value": 50.0,
+                      "metric": "twin_mirror_coverage_pct",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "twin_coverage_v1",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  },
+                  {
+                    "n": 0,
+                    "list": "hold_if",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": "<",
+                      "arm": "mmsell10",
+                      "value": 25.0,
+                      "metric": "live_fill_rate_pct",
+                      "deployment_kind": "live"
+                    },
+                    "passed": null,
+                    "reason": "no live deployment tags for this scope in this epoch",
+                    "missing": true,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "live_orders x fills x positions",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.268883+00:00"
+                      ],
+                      "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+                      "deployments": [],
+                      "window_basis": "live_orders.created_at (entry time)",
+                      "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+                      "strategy_tags": [],
+                      "deployment_kind": "live",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "live_exec_v2",
+                      "per_contract_basis": "total realized P&L / filled BUY contracts on settled markets \u2014 deliberately NOT scripts/mmsell_live.py's per-position average"
+                    },
+                    "bound_value": null
+                  }
+                ],
+                "fingerprint": "445c86521522014e94f60481cc333e6d219976ff0c3c6cdcd39683a901da8b6e",
+                "blocking_reasons": [
+                  "sample 'live_settled_contracts' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "horizon 'live_settled_contracts' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "pass_all 'live_cents_per_contract' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "fail_any 'live_realized_pnl_usd' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "fail_any 'live_max_realized_loss_usd' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "hold_if 'twin_mirror_coverage_pct' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
+                  "hold_if 'live_fill_rate_pct' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch"
+                ],
+                "provider_revisions": {
+                  "live_fill_rate_pct": "live_exec_v2",
+                  "live_realized_pnl_usd": "live_exec_v1",
+                  "live_settled_contracts": "live_exec_v1",
+                  "live_cents_per_contract": "live_exec_v1",
+                  "twin_live_winrate_gap_pp": "live_exec_v1",
+                  "twin_mirror_coverage_pct": "twin_coverage_v1",
+                  "live_max_realized_loss_usd": "live_exec_v1",
+                  "twin_live_paired_gap_cents": "twin_gap_v1"
+                }
+              },
+              "explanation": "required metrics cannot be computed (missing is not zero): sample 'live_settled_contracts' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | horizon 'live_settled_contracts' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | pass_all 'live_cents_per_contract' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'live_realized_pnl_usd' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'live_max_realized_loss_usd' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | hold_if 'twin_mirror_coverage_pct' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | hold_if 'live_fill_rate_pct' on mmsell-price-ceiling-cell-size/v1/e1/mmsell10: no live deployment tags for this scope in this epoch"
+            }
+          ]
+        },
+        {
+          "gate_key": "paper_to_live_canary",
+          "kind": "promotion",
+          "from_state": "PAPER",
+          "to_state": "LIVE_CANARY",
+          "spec": {
+            "pass_all": [
+              {
+                "op": ">",
+                "arm": "*",
+                "value": 0,
+                "metric": "realizable_cents_per_trade"
+              }
+            ],
+            "description": "v1's registered bar, unchanged and unfloored: the calibrated live-fill projection must be positive. This is NOT a claim that observed paper P&L is positive \u2014 on v1 it was +0.232c/trade against a +1.286c/trade projection."
+          },
+          "spec_hash": "f15ea2a7bfb93f24b9ac80f86cd135b39761b65afa6c8806b1e341e36c8d2bba",
+          "evidence_started_at": "2026-10-11 10:21:52.997717+00:00",
+          "results": [
+            {
+              "verdict": "HOLD",
+              "computed_at": "2026-10-11 10:21:57.364227+00:00",
+              "computed_by": "system",
+              "sample": null,
+              "metrics": {
+                "clauses": [
+                  {
+                    "n": 0,
+                    "list": "pass_all",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": null,
+                    "clause": {
+                      "op": ">",
+                      "arm": "*",
+                      "value": 0,
+                      "metric": "realizable_cents_per_trade"
+                    },
+                    "passed": null,
+                    "reason": "no settled trades in window",
+                    "missing": false,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "paper_trades",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 10:21:57.311234+00:00"
+                      ],
+                      "total_n": 0,
+                      "covered_n": 0,
+                      "fee_basis": "as-recorded (epoch-floored evidence is post-2026-08-11 maker-fee model)",
+                      "deployments": [
+                        "mmsell-cellsize-paper-1"
+                      ],
+                      "window_basis": "created_at (entry time)",
+                      "strategy_tags": [
+                        "mmsell10"
+                      ],
+                      "min_cell_fills": 8,
+                      "deployment_kind": "paper",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "fill_model_v1",
+                      "platform_component": "FILL_MODEL",
+                      "fill_calibration_source": "mmsell3 live_orders x settled paper_trades (scripts/mmsell_fill_model.py)",
+                      "fill_calibration_version": "2026-08-11",
+                      "optimistic_cents_per_trade": null
+                    },
+                    "bound_value": null
+                  }
+                ],
+                "fingerprint": "ac209c137607ce2cf0077b1690923e97f509863bd4b620d324d40b64e465e4bd",
+                "blocking_reasons": [],
+                "provider_revisions": {
+                  "realizable_cents_per_trade": "fill_model_v1"
+                }
+              },
+              "explanation": "holding: mmsell-price-ceiling-cell-size/v1/e1/mmsell10 realizable_cents_per_trade=undefined (needs > 0; no settled trades in window)"
+            },
+            {
+              "verdict": "PASS",
+              "computed_at": "2026-10-11 13:26:59.352742+00:00",
+              "computed_by": "system",
+              "sample": null,
+              "metrics": {
+                "clauses": [
+                  {
+                    "n": 2,
+                    "list": "pass_all",
+                    "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                    "value": 0.92,
+                    "clause": {
+                      "op": ">",
+                      "arm": "*",
+                      "value": 0,
+                      "metric": "realizable_cents_per_trade"
+                    },
+                    "passed": true,
+                    "reason": null,
+                    "missing": false,
+                    "eligible": true,
+                    "provenance": {
+                      "scope": "mmsell-price-ceiling-cell-size/v1/e1/mmsell10",
+                      "source": "paper_trades",
+                      "window": [
+                        "2026-10-11 10:21:52.997717+00:00",
+                        "2026-10-11 13:26:59.299278+00:00"
+                      ],
+                      "total_n": 2,
+                      "covered_n": 2,
+                      "fee_basis": "as-recorded (epoch-floored evidence is post-2026-08-11 maker-fee model)",
+                      "deployments": [
+                        "mmsell-cellsize-paper-1"
+                      ],
+                      "window_basis": "created_at (entry time)",
+                      "strategy_tags": [
+                        "mmsell10"
+                      ],
+                      "min_cell_fills": 8,
+                      "deployment_kind": "paper",
+                      "settled_statuses": [
+                        "settled",
+                        "closed_sl",
+                        "closed_tp",
+                        "closed_timeout"
+                      ],
+                      "platform_snapshot": "4f9adf15daa64035",
+                      "provider_revision": "fill_model_v1",
+                      "platform_component": "FILL_MODEL",
+                      "fill_calibration_source": "mmsell3 live_orders x settled paper_trades (scripts/mmsell_fill_model.py)",
+                      "fill_calibration_version": "2026-08-11",
+                      "optimistic_cents_per_trade": 6.89
+                    },
+                    "bound_value": null
+                  }
+                ],
+                "fingerprint": "3ad0dfba1b3ed805985e11165589de85c568c4140c25a1bf0eaded88747b2657",
+                "blocking_reasons": [],
+                "provider_revisions": {
+                  "realizable_cents_per_trade": "fill_model_v1"
+                }
+              },
+              "explanation": "all pass conditions met: mmsell-price-ceiling-cell-size/v1/e1/mmsell10 realizable_cents_per_trade=0.92"
+            }
+          ]
+        }
+      ],
+      "epochs": [
+        {
+          "epoch_number": 1,
+          "started_at": "2026-10-11 10:21:52.997717+00:00",
+          "ended_at": null,
+          "reason": "successor's first operating interval, pinned to the snapshot active at registration",
+          "impact_class": null,
+          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
+          "platform_snapshot": [
+            [
+              "DATA_PROVENANCE",
+              "live_vs_backfill_2026_08"
+            ],
+            [
+              "EXECUTION_ENGINE",
+              "live_executor_2026_08"
+            ],
+            [
+              "EXPERIMENT_ENGINE",
+              "foundation_pr1"
+            ],
+            [
+              "FEE_MODEL",
+              "maker_rate_2026_08_11"
+            ],
+            [
+              "FILL_MODEL",
+              "assumed_fill_plus_mmsell3_calibration"
+            ],
+            [
+              "KALSHI_API_SCHEMA",
+              "advanced_tier_2026_08_12"
+            ],
+            [
+              "MARKET_TAXONOMY",
+              "settlement_repair_2026_08_24"
+            ],
+            [
+              "METRICS_ENGINE",
+              "pnl_scripts_2026_08"
+            ],
+            [
+              "RISK_ENGINE",
+              "caps_2026_08"
+            ],
+            [
+              "SETTLEMENT_ENGINE",
+              "hold_to_settlement_2026_08"
+            ]
+          ],
+          "deployments": [
+            {
+              "deployment_key": "mmsell-cellsize-paper-1",
+              "stage": "PAPER",
+              "kind": "paper",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-10-11 10:21:52.997717+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "mmsell10",
+                  "strategy_tag": "mmsell10"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": null,
+      "to": "IDEA",
+      "occurred_at": "2026-10-11 10:21:52.997717+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "experiment created",
+      "gate_result_id": null
+    },
+    {
+      "from": "IDEA",
+      "to": "PROBE",
+      "occurred_at": "2026-10-11 10:21:52.997717+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "contract registered; the probe is the size split's live read and P-SLOW (docs/MMSELL_CELL_SIZE_CANARY.md)",
+      "gate_result_id": null
+    },
+    {
+      "from": "PROBE",
+      "to": "PAPER",
+      "occurred_at": "2026-10-11 10:21:52.997717+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "paper control continues on mmsell10",
+      "gate_result_id": null
+    }
+  ],
+  "integrity_events": [],
+  "legacy_evidence": []
+}
