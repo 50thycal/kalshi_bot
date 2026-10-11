@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=xos  id=mmr-rcpt-1
+# code 85580aaa8512ff72f3df08cc3cfe618aa14900b7 · started 2026-10-11T22:56:21Z
+{
+  "command_id": "rl-retire-variants-20261011",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "REJECTED",
+  "payload_hash": "007d4c9b8d834432d89f9efaac77a3d50fdeb134a1feb1b72cfbd27bc928fd7b",
+  "completed_at": "2026-10-11 22:55:16.145520+00:00",
+  "result": null,
+  "error": "ExperimentCommandRejected: STAND_DOWN: a payload string is 531 chars; the limit is 256",
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
