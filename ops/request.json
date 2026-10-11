@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-prog-1011s","sql":"select o.market_ticker, min(o.created_at)::text first_quoted, sum(case when o.status in ('filled','partial') then 1 else 0 end) fills, (select max(p.end_date)::text from incentive_programs p where p.market_ticker=o.market_ticker and p.incentive_type='liquidity') prog_end, (select max(p.period_reward_usd) from incentive_programs p where p.market_ticker=o.market_ticker) pool from live_orders o where o.strategy='Alimm1' and o.action='buy' and o.created_at > '2026-10-03' group by 1 order by 4"}
