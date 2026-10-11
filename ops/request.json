@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","command":"kalshi_desk_board","id":"desk-1011-board","args":["--hours","72","--min-volume","500","--top","80"]}
