@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"cellsize-register-20261011b\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"payload\": {\"package\": \"mmsell-cell-size-canary\"}, \"schema_version\": 1}"}, "id": "cellsize-register-send-1011b"}
+{"type":"xos","command":"experiment-command-show","args":["cellsize-register-20261011b"],"id":"cellsize-register-rcpt-1011b"}
