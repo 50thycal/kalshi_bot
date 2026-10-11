@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select strategy, market_ticker, event_ticker, quantity, limit_price, status, created_at from live_orders where created_at > '2026-10-11 15:29:00' order by created_at", "max_rows": 200, "id": "kmm-first-1011"}
+{"type": "db", "sql": "select strategy, market_ticker, event_ticker, quantity, limit_price, status, cancel_reason, created_at from live_orders where created_at > '2026-10-11 15:29:00' order by created_at", "max_rows": 200, "id": "kmm-first-1011b"}
