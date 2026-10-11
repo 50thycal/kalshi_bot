@@ -355,3 +355,7 @@ Design checkpoint only: code, tests and benchmark remain pending because the cod
 environment is disconnected. Continue on the same draft PR, not a new workstream.
 Framework compatibility checked against canonical v0.12 on 2026-10-11 UTC.
 Review State: solo, owner acceptance pending; no independent review claimed.
+
+Design handoff PR: [#586](https://github.com/50thycal/kalshi_bot/pull/586) (draft).
+Implementation and executable validation pending; resume on this PR when the coding
+environment is connected. No current implementation acceptance verdict is issued.
