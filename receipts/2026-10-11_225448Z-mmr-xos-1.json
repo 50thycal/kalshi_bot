@@ -1,0 +1,62 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "85580aaa8512ff72f3df08cc3cfe618aa14900b7",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-11T22:54:46Z",
+  "id": "mmr-xos-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 771 bytes, sha256:8951d8f0aa5035df>",
+        "before": "<redacted 192 bytes, sha256:162879e78dcc4cf9>",
+        "requested": "<redacted 771 bytes, sha256:8951d8f0aa5035df>"
+      },
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1524 bytes, sha256:e8fd8755288b2bd4>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 1524 bytes, sha256:e8fd8755288b2bd4>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      },
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 2,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mmr-xos-1.receipt.json",
+  "result_file": "ops/results/mmr-xos-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38182245812",
+  "service": "main",
+  "started_at": "2026-10-11T22:54:33Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
