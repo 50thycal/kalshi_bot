@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-cell-size"],"id":"kmm-show-1011"}
+{"type":"env","id":"kmm-envread-1011"}
