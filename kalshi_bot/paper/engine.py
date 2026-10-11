@@ -274,23 +274,33 @@ class PaperTradingEngine:
         # hold the same ticker). Records the intraday tape the mmsell books never captured, for
         # the offline exit-rule study — free, off the orderbook we already fetch below.
         mmsell_ticked: set[str] = set()
+        # One market + one orderbook fetch per TICKER per pass, shared by every book holding it.
+        # Many books hold the same markets (1,256 open positions on 351 tickers, 2026-10-11), and
+        # fetching per position made this pass ~2,500 GETs a cycle (WS-024). A failed fetch is not
+        # cached, so the next position on that ticker retries exactly as before.
+        markets: dict[str, dict] = {}
+        books: dict[str, dict] = {}
         for trade in repo.get_open_paper_trades(session):
             # XGAME positions are settled/exited by their own tracker on a seconds-scale
             # converge/timeout rule (the edge is a 20-90s window); the shared hold-to-
             # settlement / hours-scale management would fight it, so skip them here.
             if (trade.strategy or "").startswith("xgame"):
                 continue
-            try:
-                resp = self.client.get_market(trade.market_ticker)
-            except AuthError:
-                raise
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "paper: market fetch failed",
-                    extra={"extra_fields": {"ticker": trade.market_ticker, "error": str(exc)}},
-                )
-                continue
-            market = resp.get("market") if isinstance(resp, dict) and "market" in resp else resp
+            if trade.market_ticker not in markets:
+                try:
+                    resp = self.client.get_market(trade.market_ticker)
+                except AuthError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "paper: market fetch failed",
+                        extra={"extra_fields": {"ticker": trade.market_ticker,
+                                                "error": str(exc)}},
+                    )
+                    continue
+                markets[trade.market_ticker] = (
+                    resp.get("market") if isinstance(resp, dict) and "market" in resp else resp)
+            market = markets[trade.market_ticker]
             status = (market.get("status") or "").lower()
             result = (market.get("result") or "").lower()
 
@@ -298,14 +308,18 @@ class PaperTradingEngine:
                 self._settle(session, trade, result)
                 continue
 
-            try:
-                ob = self.client.get_orderbook(trade.market_ticker, depth=s.orderbook_depth)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "paper: orderbook fetch failed",
-                    extra={"extra_fields": {"ticker": trade.market_ticker, "error": str(exc)}},
-                )
-                continue
+            if trade.market_ticker not in books:
+                try:
+                    books[trade.market_ticker] = self.client.get_orderbook(
+                        trade.market_ticker, depth=s.orderbook_depth)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "paper: orderbook fetch failed",
+                        extra={"extra_fields": {"ticker": trade.market_ticker,
+                                                "error": str(exc)}},
+                    )
+                    continue
+            ob = books[trade.market_ticker]
             metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
             # Despite the name, this captures ticks for any maker-sell book holding the
             # position (originally mmsell-only; theta shares the identical maker convention and

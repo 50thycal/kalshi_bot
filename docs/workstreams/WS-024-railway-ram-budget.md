@@ -79,8 +79,14 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
 - **D3 = archive, then empty the two tapes.** Owner, 2026-10-10: "let's do D3 and archive".
   The archive is fully automated and restore-tested; emptying the tables is the exact
   statement brought back for approval once both `COMPLETE.json` files exist.
-- **`incentive_programs.last_seen_at` bump semantics stay.** The XOS metric
-  `incentive_programs_observed` reads it; changing it is Platform Change Review.
+- **Stop re-stamping ended paid-out programmes (XOS-000044, option A).** Owner, 2026-10-11:
+  "yes, A". The metric `incentive_programs_observed` counts only live programmes. Option B
+  (re-stamp once a day) was not chosen. Platform Change Review recorded the impact on
+  XOS-000044; the writer change and the metric's `limm_v2` ship in one PR.
+
+- **MMSELL paper fleet trimmed to arms that answer an open question.** Owner, 2026-10-11.
+  Research Lab review and per-tag decisions: `docs/MMSELL_PAPER_FLEET_REVIEW_20261011.md`
+  (Experiment OS is canonical for the lifecycle moves it records).
 
 ## Open Decisions
 
@@ -283,6 +289,51 @@ Every step records a before and an after here. Windows end at the stated time.
   memory and the next RAM item. Not yet diagnosed.
 - **Archive job:** `scripts/archive_telemetry.py archive-tables`, run as a temporary Railway
   service with a temporary restore Postgres (`docs/TELEMETRY_ARCHIVE_RUNBOOK.md`).
+- **Done 2026-10-11.**
+  - **Archived** (2026-10-11 00:38–00:48Z, `telemetry-archive` job at 4a61bac):
+    - `incentive_shadow_events`: 2,668,452 rows, 6 ranges, 20 MB.
+    - `incentive_book_events`: 14,160,108 rows, 29 ranges, 590 MB.
+    - Every range was read back and restore-tested from the bucket. Both `COMPLETE.json`
+      files were written. `main` cycled normally throughout.
+  - **Emptied:** the owner ran the approved `TRUNCATE` in the Railway dashboard at ~20:18Z.
+  - **Verified** (ops `ws024-d3-verify-1`):
+    - Both tables have 0 rows.
+    - Each id sequence's last value equals the archived max id (14,163,179 / 2,668,870),
+      so no row existed beyond the archive.
+    - Database size 34.12 → 24.93 GB.
+  - **Left for the owner to delete in the dashboard** (the MCP delete times out):
+    `Postgres-VOV8` with volume `postgres-volume-HurY`, and `telemetry-archive`.
+
+### Postgres write churn — `incentive_programs` (2026-10-11)
+
+- **Measured** (ops `ws024-ip-1` to `-4`):
+  - 190k rows, but 159.8M row updates and 6,844 full scans since stats reset.
+  - Discovery runs ~240 passes a day. Each pass loads ~116k not-superseded rows and
+    re-stamps `last_seen_at` on ~35k listed rows, about 8.7M row rewrites a day.
+  - **86% of the re-stamped rows (~30k a pass) are ended `paid_out` programmes.**
+- **B, done in this PR, no semantic change:** the re-stamp is a few chunked bulk UPDATEs
+  (5,000 rows each) instead of one statement per row. It cuts per-pass statements and time in
+  `main`'s cycle. It does not reduce row versions.
+- **A, decided 2026-10-11 (owner: "yes, A"):** stop re-stamping ended paid-out programmes.
+  It changes the shared metric `incentive_programs_observed`, so it went to Platform Change
+  Review as **XOS-000044**. Verdict: a provider revision of that one metric
+  (`limm_v1` → `limm_v2`), **not** a Platform Revision. Full reasoning:
+  `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`, "A shared metric that counted every programme ever
+  paid".
+  - Writer: `run_discovery` skips the stamp for a programme listed **only** as `paid_out`
+    whose `end_date` has passed. It is still seen, so it is never marked disappeared. Each
+    cycle records the skipped count in `notes_json.ended_paid_out_unstamped`.
+  - Metric `limm_v2`: also requires `end_date` unset or at/after the window start, so the
+    count no longer depends on how often the writer stamps.
+  - **Before** (ops `pcr-xos44-db-1`, last clean pass 2026-10-11 21:08:59Z): 34,808 rows
+    stamped; 29,949 of them (86%) ended paid-out; **4,859 would remain under A**.
+  - **After** (ops `pcr-xos44-after-2`, `-3`; PR #591 merged 22:15Z, first pass on the new code
+    2026-10-11 22:23:28Z): **4,742 rows stamped** (was 34,736 on the last old-code pass at
+    22:13Z), **−86%**; `ended_paid_out_unstamped` = 30,000. No paid-out row marked disappeared
+    since the deploy; the pass's `disappeared` = 9, inside the pre-deploy range (0–105).
+    `incentive_programs_observed` (`limm_v2`) over the last 24h = 8,771. That is roughly 7.2M
+    fewer row rewrites a day at ~240 passes. XOS-000044 validated and resolved.
+- **Then D4:** the Postgres cap 2 → 1 GB is the billing lever. Ask the owner first.
 
 **Diagnosis from the code (2026-10-08):**
 
@@ -384,7 +435,7 @@ Not started. Solo mode (`DEC-011`): no independent review exists; the owner acce
    storage-encoding v2 PR. Live Ops verifies the deploy, sets `CATALOG_DICTIONARY_COMPRESSION=1`
    on market-catalog, then compares daily file growth before and after. Retention (deleting old
    revisions) stays an owner decision and needs free space for a `VACUUM`.
-2. **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
+2. **Postgres RAM:** D3 is done (disk −9.2 GB). Next, diagnose the `incentive_programs` read churn (6,609 full scans), the likelier memory driver, then D4. Was: **Postgres** is now the largest lever and is pinned near 2 GB. D3 (retire the unread tapes)
    then D4 (cap step-down) are the owner's calls. Raising the cap is not on the table, since RAM
    is billed on use.
 3. Checks 1 and 3 are done (live-dash and website `SLEEPING`). Check 5 (Railway usage alert) is

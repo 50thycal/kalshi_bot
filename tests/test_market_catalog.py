@@ -16,7 +16,7 @@ from kalshi_bot.catalog.ingest import (
     seed,
     source_page,
 )
-from kalshi_bot.catalog.service import make_server, run_job
+from kalshi_bot.catalog.service import evaluation_due, make_server, run_job
 from kalshi_bot.catalog.store import (
     DOCUMENT_TABLES,
     SEMANTIC_FIELDS,
@@ -67,6 +67,33 @@ def trade(id=1, **changes):
         "experiment_deployment_arm_id": 1,
         **changes,
     }
+
+
+def test_upsert_revision_reports_only_semantic_changes(store):
+    raw = {"rules_primary": "rules", "status": "active", "yes_bid_dollars": "0.10"}
+    assert store.upsert_revision("market", "KXTEST-E-M", raw, "KXTEST")[1] is True
+    # A price tick is not a semantic change: the object is refreshed, no revision is written.
+    _doc, revised = store.upsert_revision(
+        "market", "KXTEST-E-M", {**raw, "yes_bid_dollars": "0.11"}, "KXTEST")
+    assert revised is False
+    assert store.get("market", "KXTEST-E-M")["raw"]["yes_bid_dollars"] == "0.11"
+    assert store.upsert_revision(
+        "market", "KXTEST-E-M", {**raw, "status": "settled"}, "KXTEST")[1] is True
+    # `upsert` keeps returning just the document.
+    assert store.upsert("market", "KXTEST-E-M", raw, "KXTEST")["ticker"] == "KXTEST-E-M"
+
+
+@pytest.mark.parametrize("since,changed,requested,due", [
+    (10, False, "2026-10-11T00:00:00Z", True),   # an operator request runs it now
+    (10, True, None, False),                      # new evidence waits for the minimum gap
+    (1799, True, None, False),
+    (1800, True, None, True),
+    (3599, False, None, False),                   # nothing new: only the hourly refresh
+    (3600, False, None, True),
+])
+def test_evaluation_runs_at_most_every_min_gap_unless_requested(since, changed, requested, due):
+    assert evaluation_due(since, changed=changed, requested=requested,
+                          every=3600, min_gap=1800) is due
 
 
 def test_registry_is_provenance_not_permission(store):

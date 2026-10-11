@@ -39,19 +39,42 @@ The repo's live path cannot place a discretionary order and is built so that it 
 So the division of labour is: **the desk researches and writes the pick; the operator reads it,
 decides, and taps buy.** The worker keeps running its own books untouched.
 
-## 3. Daily cadence
+## 3. Daily cadence (revised 2026-10-11)
 
-1. **Board read** (ops channel, public data): `kalshi_desk_board` — every open market closing
-   inside the horizon, ranked by 24h volume, with spread and the taker fee at the ask. Then
-   `--ticker` on each candidate for the rules text, the resting book and the last trades;
-   `desk_fetch` on the settlement source the rules name.
+**Why this changed:** 22 days of the original cadence (generic `--hours 72 --min-volume 500`
+sweep, every category, every day) produced 3 real picks, all 3 wins, all 3 in the same two
+families (diesel, mortgage) — and then 10 straight zero-pick days once those families went
+quiet, followed by a day the board itself had zero markets above the volume floor at all. The
+broad sweep's job was discovery; it has not surfaced a new tradeable family since the first
+week, and most of its daily cost was re-confirming that YouTube fan-vote and ActBlue
+fundraiser markets still fail R2. That's a diminishing-returns loop, not a dead thesis — the
+diesel/mortgage edge itself is undefeated (3-for-3). So the cadence below points the daily
+cycle at the known families first and demotes the broad sweep to an occasional discovery pass.
+
+1. **Targeted check first** — `kalshi_desk_board --search diesel` and `--search mortgage`
+   (and any other family promoted into §7's base-rate table) against the live board. If a
+   ladder in a known family is active and within its close window, `--ticker` it for rules
+   text/book/tape, `desk_fetch` the named source, and research per step 2 below.
 2. **Research** — web search on the underlying question (the rules-defined settlement source
    first, then the news flow), the repo's own settled history where the series has one
    (`backfill_regime_markets`, `paper_trades`, `weather_forecast_outcomes`), and the base
-   rates in `docs/MMSELL_MARKET_TYPES.md`.
+   rates in `docs/MMSELL_MARKET_TYPES.md` and §7 below.
 3. **Picks** — at most three, each written to the ledger **before** the operator acts, in the
-   format of §5. A day with zero picks is a valid day and is logged as one.
-4. **Settlement** — every pick is graded on its settlement, and every loss gets a postmortem
+   format of §5.
+4. **Broad discovery pass — periodic, not daily.** Run the old generic
+   `--hours 72 --min-volume 500` sweep (plus `--category` passes once `XOS-000043`, the
+   `kalshi_desk_board` category-filter sampling gap, is fixed) on a standing cadence (weekly,
+   or whenever a known family goes quiet and there is otherwise nothing to check) — looking
+   specifically for a *new* family with the same shape as diesel/mortgage: a single public
+   print, a named or inferable source, a regular cadence. A find gets promoted into §7 and the
+   targeted-check list in step 1; a day that finds nothing new is not logged on its own.
+5. **Logging discipline.** Write a ledger row only when there is something to say: a pick, a
+   grading, or a genuine new finding (a new family, a thesis update, a confirmed scanner/data
+   issue). A day where the known families are simply dormant and the periodic discovery pass
+   wasn't due is **not** a ledger/PR day — nothing happened, so nothing is committed. This
+   replaces the old rule that every day, including an identical no-pick day, got its own row;
+   ten near-identical "board was noise" rows in a row was overhead, not research.
+6. **Settlement** — every pick is graded on its settlement, and every loss gets a postmortem
    line in `docs/desk/POSTMORTEMS.md` tagged with the failure class from §4.
 
 ## 4. What the record already says — carried in as rules
@@ -163,55 +186,59 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-28 ~04:09 UTC (Mon).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-10-11 ~16:45 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**No open real-money positions.** `D-2026-09-26-001` (`KXTOKENUSE-26SEP28-T144`, YES @ 56¢, never
-placed) **graded WIN** — final week total **145.845T**, clearing the 144T strike. Kalshi's own
-`result` field wasn't posted yet at grading time, so this rests on a direct sum of the now-closed
-market-share bucket. **Calibration note, worth remembering**: the actual figure landed much closer
-to the strike than the two-read pace math projected (149.7–153.2T) — the Saturday-evening interval
-pace (0.981 T/h) did not hold through the rest of the week. The *directional* call was right; the
-*point estimate* ran hot. No money was ever at risk on this one (operator never placed it), so this
-is a judgment-call grade only, not a real dollar.
+**No open real-money positions.** `D-2026-10-01-001` (NO on `KXDIESELW-26OCT05-T6.40` @ 84¢)
+**graded WIN 2026-10-05**, pnl +$0.15. Nothing since is open; no diesel or mortgage ladder has
+been active 2026-10-07 through 2026-10-11.
 
-**Score so far: 3 correct calls out of 3 graded (2 with real money, +$1.65 realized; 1 judgment-call
-win, $0 at risk), 0 open, 6 no-picks logged.** Sample is still far too small to read as calibration
-(R6 — no claim before ~30 settled picks). The one real lesson from `D-2026-09-26-001`: a
-short-interval pace measured over ~5.6h can run hotter than the rest of the week actually delivers —
-worth padding the *low end* of a projection band a little more than this session's math did, without
-repeating the opposite (R14) mistake of padding it into meaninglessness. Next time this series is
-picked, treat the interval-pace projection as an upper bound, not a center.
+**Score so far: 3 real-money picks, 3 wins (+$1.80 realized: diesel +$0.32, mortgage +$1.33,
+diesel NO +$0.15), plus 1 judgment-call win with $0 at risk.** Sample is still far too small to
+read as calibration (R6 — no claim before ~30 settled picks), but the pattern across all four is
+identical: a single public print, a named/inferable source, and an edge that closes within
+hours of the desk's own read, not days.
 
-**Today's daily routine has not yet run** (last ran 2026-09-27 13:34 UTC). This session's work so
-far is only the grading above; the board scan is still to do if this session continues, or it
-happens naturally at the next 13:34 UTC firing.
+**2026-10-11 decision: the daily cadence changed (§3).** 22 days of the generic
+`--hours 72 --min-volume 500` sweep found exactly one new tradeable family in its first week
+and nothing since; 10 of the last 10 days were zero-pick, the last one with zero markets on the
+board above the volume floor at all. The sweep is demoted to a periodic discovery pass; the
+daily cycle now checks the known families (diesel, mortgage) directly first. Operator-approved
+2026-10-11, "go ahead as is." The old daily trigger (`trig_01YJzAWe7qvmEPmdTCU1D11m`, 13:30 UTC)
+was disabled same day and its prompt rewritten to match §3 before being re-enabled — see the
+session log, not this doc, for the exact wording.
+
+**`XOS-000043` opened 2026-10-11**: the `kalshi_desk_board` category-filter sampling gap
+(confirmed twice, 2026-09-29 and 2026-10-02, via direct `--ticker` reads proving a live
+Economics-category market existed that `--category Economics` returned zero for). OPS / LOW /
+P3, owner `TASK_SPECIFIC`. Re-enable the `--category` discovery pass in §3 step 4 once this is
+fixed — until then a category pass undercounts and should not be read as "nothing in Economics."
 
 **Standing windows:**
 
-- `KXTOKENUSE`: this week's grade is done. Next week's ladder opens Monday — repeat the two-read
-  Saturday plan, but treat the interval pace as an upper bound per the calibration note above.
-- `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
-  the week. Pass.
-- `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
-  live but only grades the day after — a same-day pick still needs a working forecast read, which
-  doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further otherwise.
-  Full detail in §6a.
-- `KXDIESELMON` / `KXDIESELMONAK`: same mechanism as the existing diesel series, checked and passed
-  Sunday. Re-check the live AAA print before any future pick on either.
+- `KXDIESELW` / `KXDIESELMON` family: no active ladder as of 2026-10-11. Check by `--search
+  diesel` on the targeted pass (§3 step 1); re-underwrite from the live AAA print, not last
+  week's numbers, whenever one reopens.
+- `KX30YMORTW` (Freddie Mac PMMS, Thursday close): no active ladder as of 2026-10-11. Check by
+  `--search mortgage`.
+- `KXTOKENUSE` / `KX*SHARE` (OpenRouter): no fresh read since late September; the request-share
+  settlement metric is still unreadable. Not in the targeted-check list — token-count proxy only,
+  and it diverges from the real settlement metric (§6a).
+- `KXTXERCOTPEAKD` (Texas ERCOT peak demand): grades next-day only, no same-day forecast read
+  found. Not in the targeted-check list; revisit only if a live forecast feed turns up.
 
-**Scheduled check-ins bound to this session:** none armed. The "Desk: daily board read and picks"
-routine (13:30 UTC daily) is the only standing trigger and needs no action; a new session re-creates
-anything else it needs (playbook Startup Routine step 3).
+**Scheduled check-ins bound to this session:** none armed. The "Desk: daily board read and
+picks" routine (13:30 UTC daily, `trig_01YJzAWe7qvmEPmdTCU1D11m`) is the only standing trigger;
+confirm its prompt matches §3 after any future revision to this section, since the trigger's
+stored prompt is a separate copy, not a live read of this file.
 
 **Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily,
-gridstatus.io and most data sites are blocked from the sandbox; `ercot.com` is now reachable
-(§6a). Use the ops runner (`kalshi_desk_board`, `desk_fetch`) and web search — but treat web
-search's AI-generated summaries as unreliable on anything numeric (two separate ERCOT queries
-Friday returned contradictory numbers); verify through a primary-source `desk_fetch` before trading
-on one. FRED timed out twice Thursday and hasn't been retried since. The operator approved widening
-the environment's own network allowlist (DEC-017); still not done as of this session.
+gridstatus.io and most data sites are blocked from the sandbox; `ercot.com` is reachable (§6a).
+Use the ops runner (`kalshi_desk_board`, `desk_fetch`) and web search — but treat web search's
+AI-generated summaries as unreliable on anything numeric; verify through a primary-source
+`desk_fetch` before trading on one. The operator's approval to widen the sandbox's own network
+allowlist (DEC-017) is still not done as of this session.
 
 **Lessons so far:** the operator paid 76¢ on D-001 against a 55¢ cap, so the report must carry the
 cap in the first line; a projection band built from actual measurements (not padded) predicted the

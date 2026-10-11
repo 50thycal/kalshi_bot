@@ -30,6 +30,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -1447,6 +1448,10 @@ class SeriesObservation(Base):
 # ---------------------------------------------------------------------------
 
 
+_LIVE_PROGRAMS_WHERE = (
+    "superseded_at IS NULL AND disappeared_at IS NULL AND incentive_type = 'liquidity'")
+
+
 class IncentiveProgram(Base):
     """One VERSION of one Kalshi liquidity/volume incentive program's terms.
 
@@ -1465,6 +1470,10 @@ class IncentiveProgram(Base):
         UniqueConstraint("program_id", "terms_hash", name="uq_incentive_program_terms"),
         Index("ix_incentive_programs_ticker", "market_ticker"),
         Index("ix_incentive_programs_current", "superseded_at", "disappeared_at"),
+        # The live book's read (`programs.current_programs(now=...)`): ~5k running liquidity rows
+        # in a ~190k-row table, which without this was a full scan several times a cycle (WS-024).
+        Index("ix_incentive_programs_live_end", "end_date",
+              postgresql_where=text(_LIVE_PROGRAMS_WHERE), sqlite_where=text(_LIVE_PROGRAMS_WHERE)),
     )
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
