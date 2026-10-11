@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a7e9e4b35f7bb665836199fba4ab2e2610270b3e",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-11T20:44:43Z",
+  "id": "ws024-issue-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ws024-issue-2.receipt.json",
+  "result_file": "ops/results/ws024-issue-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38173469889",
+  "service": null,
+  "started_at": "2026-10-11T20:44:41Z",
+  "targets": [],
+  "type": "xos"
+}
