@@ -39,6 +39,25 @@ It does not authorize a new round, configuration change, safeguard change, or a 
 4. Stop and report a sanitized blocker if any requirement fails. A doctor transport failure
    does not override a successful authenticated status, but report it as a diagnostic issue.
 
+## Unattended runs (WS-025)
+
+A scheduled Claude Code routine may invoke this skill with no operator present. Then:
+
+1. Before anything else, run `python scripts/desk_client.py --desk claude wake`. If `due` is
+   false, report `reason` and `next_wake_at` in one line and stop: no Continue, no claim.
+   A refused claim (`cycle_budget_exhausted`, `cycle_gap_not_elapsed`) is the service's
+   cycle budget working; stop the same way.
+2. `agent_wake_missed` and `no_completed_cycle_24h` in the health gate describe the very gap
+   this run closes. They do not block an unattended run. Every other gate item still does.
+3. In the completion, set `next_check_at` (ISO 8601 UTC) when a concrete later check matters,
+   such as a settlement, a data release or a second time-spaced read. Otherwise omit it.
+4. After a completion with `next_check_at`, book one one-shot check-in for that time that
+   invokes `/claude-desk-continue` as an unattended run, if the session can schedule one.
+   The service clamps the time and enforces the cycle budget whatever is booked.
+
+If `DESKS_SHADOW_DESKS` includes `claude`, decisions are recorded as `shadow_decision` and
+graded later; nothing is traded. Report them as dry-run picks, never as fills.
+
 ## Run exactly one cycle
 
 1. Send Continue once:
@@ -99,4 +118,5 @@ Before a round starts, the readiness cycle follows `CLAUDE_START.md`, not this s
 
 Never run `preflight`, `start`, `ready`, smoke tests, scheduled-runner setup, or operator
 commands. Never use the operator or ChatGPT token, touch ChatGPT records, change production,
-expand spending, create a PR, or promise background work after the session ends.
+expand spending, create a PR, or promise background work after the session ends (booking
+the one WS-025 check-in above is the only scheduling this skill does).

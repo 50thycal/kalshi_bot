@@ -117,7 +117,7 @@ def render_handoff(status: dict, desk: str, label: str) -> str:
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--desk", choices=("chatgpt", "claude"))
-    parser.add_argument("command", choices=("status", "schema", *WRITES, *BROWSE, "handoff-export"))
+    parser.add_argument("command", choices=("status", "schema", "wake", *WRITES, *BROWSE, "handoff-export"))
     parser.add_argument("--worker-id")
     parser.add_argument("--file", type=Path)
     parser.add_argument("--claim-file", type=Path, help="source: take job_id/claim_token from a saved claim")
@@ -141,8 +141,8 @@ def main(argv=None):
         parser.error("DESK_SERVICE_URL must use HTTPS (loopback HTTP allowed for development)")
     if parsed.username or parsed.password or parsed.query or parsed.fragment or not token:
         parser.error("use a plain service URL and DESK_SESSION_TOKEN environment value")
-    if (args.command in WRITES or args.command == "handoff-export") and not args.desk:
-        parser.error("--desk is required for a write or handoff export")
+    if (args.command in WRITES or args.command in {"handoff-export", "wake"}) and not args.desk:
+        parser.error("--desk is required for a write, wake or handoff export")
     try:
         body = json.loads(args.file.read_text()) if args.file else {}
         if args.worker_id:
@@ -159,6 +159,9 @@ def main(argv=None):
             if args.command in {"status", "schema", "handoff-export"}:
                 path = "/api/research/schema" if args.command == "schema" else "/api/status"
                 response = client.get(url + path, headers=headers)
+            elif args.command == "wake":
+                # WS-025: read-only; is a research cycle due for this desk now?
+                response = client.get(f"{url}/api/desks/{args.desk}/wake", headers=headers)
             elif args.command in BROWSE:
                 response = client.get(url + browse_path(args), headers=headers)
             else:

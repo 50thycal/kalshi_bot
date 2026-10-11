@@ -47,6 +47,9 @@ class RunnerConfig:
     state_dir: Path
     research_home: Path | None = None
     command_timeout: int = 300
+    # WS-025: an unattended 3.0 host asks the service's wake signal before every claim and
+    # may then research app-session (session-mode) jobs, whose orders stay lease-bound.
+    wake_gated: bool = False
 
     def __post_init__(self):
         self.service_url = self.service_url.rstrip("/")
@@ -61,7 +64,7 @@ class RunnerConfig:
             not isinstance(arg, str) or not arg or len(arg) > 4096 or "\0" in arg for arg in self.command
         ) or not Path(self.command[0]).is_absolute():
             raise RunnerError("command_requires_json_argv_absolute_executable")
-        if not 10 <= self.command_timeout <= 600:
+        if not 10 <= self.command_timeout <= 1800:
             raise RunnerError("command_timeout_out_of_bounds")
         self.state_dir = Path(self.state_dir).absolute()
         self.research_home = Path(self.research_home).absolute() if self.research_home else None
@@ -214,13 +217,27 @@ class SessionRunner:
                 raise RunnerError("service_request_unknown")
             return json.loads(data)
 
+    def _wake(self):
+        """Read-only: should this desk start a cycle now? Any doubt means wait."""
+        url = f"{self.config.service_url}/api/desks/{self.config.desk}/wake"
+        response = self.client.get(url, headers={"Authorization": "Bearer " + self.config.token,
+                                                 "Accept-Encoding": "identity"})
+        if response.status_code in (401, 403):
+            raise RunnerError("service_authentication_failed")
+        if response.status_code != 200 or len(response.content) > MAX_INPUT:
+            raise RunnerError("service_request_unknown")
+        value = response.json()
+        if not isinstance(value, dict) or value.get("desk_id") != self.config.desk:
+            raise RunnerError("invalid_wake_reply")
+        return value
+
     def _lease_valid(self, state, needed=0):
         lease = datetime.fromisoformat(state["claim"]["lease_until"].replace("Z", "+00:00"))
         if lease.tzinfo is None or lease <= self.clock() + timedelta(seconds=needed + 15):
             raise RunnerError("research_claim_expired_or_insufficient_time")
 
     def _invoke(self, state, phase):
-        if state["claim"].get("context", {}).get("research_mode") == "session":
+        if state["claim"].get("context", {}).get("research_mode") == "session" and not self.config.wake_gated:
             raise RunnerError("app_session_mode_requires_active_app")
         self._lease_valid(state, self.config.command_timeout)
         state["phase"] = "invoking_" + phase
@@ -230,7 +247,9 @@ class SessionRunner:
             context.update({"now": self.clock().isoformat(), "requested_sources": state["sources"]})
         prompt = {"protocol_version": 1, "desk_id": self.config.desk, "model_id": self.config.model_id,
                   "system": state["claim"]["system"] + " Return only ResearchOutput JSON; author_model must match model_id and origin must be session. "
-                            + ("No more source_requests allowed." if phase == "final" else "One bounded source followup is available."),
+                            + ("No more source_requests allowed." if phase == "final" else "One bounded source followup is available.")
+                            + (" Optionally set next_check_at (ISO 8601 UTC) to when this desk should next research;"
+                               " the service clamps it and enforces its own cycle budget." if self.config.wake_gated else ""),
                   "context": context, "output_schema": ResearchOutput.model_json_schema(), "phase": phase}
         raw = self.command_runner(self.config.command, prompt, home=self.home, timeout=self.config.command_timeout)
         state.update({"phase": "captured_" + phase, "raw": raw})
@@ -254,6 +273,18 @@ class SessionRunner:
                 if self.clock() < datetime.fromisoformat(state["retry_after"]):
                     return {"status": "recovering", "reason": "claim_status_unknown_waiting_for_lease"}
                 state = None  # Claim-only uncertainty cannot have invoked a model.
+            if state is None and self.config.wake_gated:
+                try:
+                    wake = self._wake()
+                except RunnerError as exc:
+                    if str(exc) == "service_authentication_failed":
+                        return {"status": "needs_operator", "reason": str(exc)}
+                    return {"status": "idle", "reason": "wake_unavailable"}
+                except Exception:
+                    return {"status": "idle", "reason": "wake_unavailable"}
+                if not wake.get("due"):
+                    return {"status": "idle", "reason": str(wake.get("reason", "idle"))[:64],
+                            "next_wake_at": wake.get("next_wake_at")}
             if state is None:
                 state = {"identity": self.identity, "phase": "claiming",
                          "retry_after": (self.clock() + timedelta(minutes=31)).isoformat()}
@@ -261,6 +292,12 @@ class SessionRunner:
                 try:
                     claim = self._post("claim", {"worker_id": self.config.worker_id})
                 except Exception as exc:
+                    if (self.config.wake_gated and isinstance(exc, RunnerError)
+                            and str(exc) == "service_rejected_request"):
+                        # The service's cycle budget or gap refused this claim: wait, do not stop.
+                        state["phase"] = "completed"
+                        self._save(state)
+                        return {"status": "idle", "reason": "claim_refused"}
                     if isinstance(exc, RunnerError) and str(exc) in {"service_authentication_failed", "service_rejected_request"}:
                         state["phase"] = "completed"
                         self._save(state)
@@ -356,6 +393,8 @@ def main(argv=None):
     parser.add_argument("--command-json", default=os.environ.get("DESK_RESEARCH_COMMAND_JSON", ""))
     parser.add_argument("--command-timeout", type=int, default=300)
     parser.add_argument("--poll-seconds", type=int, default=60)
+    parser.add_argument("--wake-gated", action="store_true",
+                        help="WS-025: claim only when the service's wake signal is due")
     args = parser.parse_args(argv)
     runner = None
     previous_sigterm = signal.signal(signal.SIGTERM, _stop_worker)
@@ -364,7 +403,7 @@ def main(argv=None):
             raise RunnerError("poll_interval_out_of_bounds")
         config = RunnerConfig(os.environ.get("DESK_SERVICE_URL", ""), os.environ.get("DESK_SESSION_TOKEN", ""),
             args.desk, args.worker_id, args.model_id, json.loads(args.command_json), args.state_dir,
-            args.research_home, args.command_timeout)
+            args.research_home, args.command_timeout, args.wake_gated)
         runner = SessionRunner(config)
         while True:
             result = runner.once()

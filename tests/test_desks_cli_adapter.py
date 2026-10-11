@@ -199,3 +199,31 @@ def test_claude_wire_subset_keeps_full_contract_locally():
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
         cli_adapter.parse_output(json.dumps({"summary": "x", "next_action": "Still invalid short summary"}))
+
+
+def test_codex_web_search_is_opt_in_and_keeps_evidence_captured(fake_cli):
+    install, home = fake_cli
+    install("codex", '''import pathlib, sys
+args = sys.argv[1:]
+prompt = sys.stdin.read()
+assert ('web search for discovery only' in prompt) == ('web_search="live"' in args)
+pathlib.Path(args[args.index('-o')+1]).write_text(''' + repr(json.dumps(OUTPUT)) + ''')
+''')
+    seen = {}
+    real = cli_adapter.subprocess.Popen
+    class Capture(real):
+        def __init__(self, command, *args, **kwargs):
+            seen["command"] = command
+            super().__init__(command, *args, **kwargs)
+    cli_adapter.subprocess.Popen = Capture
+    try:
+        cli_adapter.run("codex", envelope())
+        assert 'web_search="disabled"' in seen["command"]
+        cli_adapter.run("codex", envelope(), web_search=True, timeout=600)
+        assert 'web_search="live"' in seen["command"]
+        assert 'features.shell_tool=false' in seen["command"]  # Still no shell.
+    finally:
+        cli_adapter.subprocess.Popen = real
+    with pytest.raises(DeskError, match="web_search_unsupported_for_provider"):
+        cli_adapter.run("claude", envelope("claude"), web_search=True)
+    assert cli_adapter.main(["codex", "--timeout", "5"]) == 1
