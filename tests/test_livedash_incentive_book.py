@@ -1,7 +1,7 @@
 """The liquidity-incentive section of the landing page (`livedash.incentive_book`).
 
 What must hold: all-time realized P&L covers every market the book ever traded (not just this
-month); reward credits come only from trustworthy, non-transfer positive residuals; each resting
+month); reward credits are only payouts listed on Kalshi's Rewards page (§9.51); each resting
 order carries its market, size, committed dollars and an estimated reward from the scoring rules;
 and no other book gets the section.
 """
@@ -110,10 +110,10 @@ def test_only_the_incentive_book_gets_the_section(session):
     assert books["Fmmsell10"]["incentive"] is None
 
 
-def test_a_dollar_scale_credit_after_our_programme_ends_is_a_reward(session):
-    # §9.49: Kalshi pays >= $1 per programme, so every real credit crossed the old $1 "transfer"
-    # line. One landing within a day after a programme we quoted ended, not a whole dollar
-    # amount, counts; a whole-dollar one (a deposit) does not.
+def test_an_attributable_credit_is_unconfirmed_until_kalshi_lists_it(session):
+    # §9.49 found the credits behind the old $1 "transfer" line; §9.51: that test also counted
+    # $2.75 Kalshi never paid. An attributable credit is reported as unconfirmed and left out of
+    # rewards and net; a whole-dollar one (a deposit) is neither.
     _setup(session)
     session.add(m.IncentiveProgram(
         program_id="p-old", market_ticker="KXOLD-1", incentive_type="liquidity",
@@ -125,7 +125,20 @@ def test_a_dollar_scale_credit_after_our_programme_ends_is_a_reward(session):
                                                   residual_cents=cents, presumed_transfer=True))
     session.flush()
     x = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
-    assert x["reward_credits_usd"] == 4.96                   # 2.21 + 2.75; the $3.00 is not
+    assert x["reward_credits_usd"] == 2.21                   # only the Rewards-page payout
+    assert x["reward_unconfirmed_usd"] == 2.75               # the $3.00 deposit is neither
+    assert x["net_all_time_usd"] == -7.79
+
+
+def test_confirmed_reward_matches_the_rewards_page():
+    from kalshi_bot.liquidity_incentive.reward_ledger import confirmed_reward
+    oct10 = datetime(2026, 10, 10, 10, 26, tzinfo=timezone.utc)
+    assert confirmed_reward(209, oct10)
+    assert confirmed_reward(209, oct10 + timedelta(hours=20))              # local-date slack
+    assert not confirmed_reward(275, datetime(2026, 10, 6, 21, 32, tzinfo=timezone.utc))
+    assert not confirmed_reward(208, oct10)                                # cents must match
+    assert not confirmed_reward(209, oct10 + timedelta(days=3))            # wrong day
+    assert not confirmed_reward(None, oct10)
 
 
 def test_attributable_reward_rules():

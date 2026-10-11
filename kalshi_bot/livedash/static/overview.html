@@ -271,7 +271,7 @@ function renderIncentive(x){
       <div><div class="k">Realized (all time)</div><div class="v ${sgn(x.realized_all_time_usd)}">${usd(x.realized_all_time_usd)}</div>
         <div class="dim" style="font-size:11px">${x.settled_markets_all_time} settled of ${x.markets_traded_all_time} markets</div></div>
       <div><div class="k">Rewards received</div><div class="v ${sgn(x.reward_credits_usd)}">${usd(x.reward_credits_usd)}</div>
-        <div class="dim" style="font-size:11px">${x.last_reward_at ? "last " + shortDate(x.last_reward_at) : "none yet"}</div></div>
+        <div class="dim" style="font-size:11px">${x.last_reward_at ? "last " + shortDate(x.last_reward_at) : "none yet"}${x.reward_unconfirmed_usd ? " · " + usd(x.reward_unconfirmed_usd) + " unconfirmed" : ""}</div></div>
       <div><div class="k">Net (all time)</div><div class="v ${sgn(x.net_all_time_usd)}">${usd(x.net_all_time_usd)}</div>
         <div class="dim" style="font-size:11px">realized + rewards</div></div>
     </div>
@@ -281,7 +281,7 @@ function renderIncentive(x){
       <span>est. reward <b>${has(x.est_reward_per_day_usd) ? usd(x.est_reward_per_day_usd) : "—"}</b>/day</span>
     </div>
     ${x.resting.length ? rows : `<div class="dim" style="margin-top:8px">No bids resting.</div>`}
-    <div class="note" style="margin-top:8px">Rewards received are cash the reward ledger could not explain by any fill or settlement (deposits and flagged readings excluded): the best read of what Kalshi paid. Kalshi pays after a programme ends. Estimates use Kalshi's published scoring on the newest book and have run well above what was actually paid; treat them as a ceiling.</div>
+    <div class="note" style="margin-top:8px">Rewards received are payouts that match Kalshi's Rewards page; cash that only looks like a reward is shown as unconfirmed and left out of the net. Kalshi pays after a programme ends. Estimates use Kalshi's published scoring on the newest book and have run well above what was actually paid; treat them as a ceiling.</div>
   </div>`;
 }
 

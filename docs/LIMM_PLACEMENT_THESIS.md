@@ -155,3 +155,28 @@ Same 3-day window, 400 markets, conservative fill model:
   fills are as large as P1's because the price cap, not the filter, sets the size.
 - L0 still holds (B0 simulated $10.15/md vs ~$0.19 realised): the ranking is the result, not the
   dollar level. 321 fills had under 24 h of book after them and were marked at the last snapshot.
+
+## Run 3 pre-registration (2026-10-11, before run 3)
+
+Operator decision (2026-10-11): test the two ideas from the outside research — "quote both
+sides" and "rest a little deeper than the scoring price" — on paper before any live change.
+Both are checked against **P1B**, the live rule since §9.48. Run 1 already found the equal-size
+pair (P2) earns about 8× less than P1, because sizing both legs to the dearer leg leaves the
+cheap side with few contracts. So the two-sided candidate here sizes each leg on its own.
+
+| code | rule |
+|---|---|
+| P1B | live rule: cheap side at the reference, exit after a fill (reference) |
+| P1BD | **Deeper:** as P1B, but at the deepest price in [1¢, reference] whose reward share is at least 90% of the best share in that range, each price sized at $10 / price (≤ 500). A deeper bid buys more contracts for the same $10, so its share need not fall. |
+| P2IB | **Both sides, each its own size:** a bid on each side at its reference (yes + no ≤ 99¢), each leg `min(500, $10 / own price)`; exit after a fill on a lone leg. If both fill, the matched quantity locks `100 − y − n` and the larger leg's excess is marked like a lone leg. |
+
+Window: the 7 days before the shadow tape stopped (`--days 7 --until 2026-10-07T02:50:00Z`),
+400 markets, same fill models, marks and fees as runs 1–2.
+
+**Decision rule (relative to P1B in the same run):** a candidate is ADOPTED when its conservative
+net per market-day is at least **110%** of P1B's, its optimistic net per market-day is at least
+P1B's, and no single market supplies more than 50% of its net. If both pass, the higher
+conservative net per market-day wins. Otherwise the live rule stays. L0 still applies: the reward
+model reads far above realised payouts (now $4.30 confirmed, §9.51), so this run ranks rules; it
+does not certify dollars. An ADOPT is a recommendation to the operator; the live change is a
+separate decision.
