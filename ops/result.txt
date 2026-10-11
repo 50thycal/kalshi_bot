@@ -1,4 +1,37 @@
-no issue command 'limm-twin-invalid-20261011'
 # ops request [READ]
-# type=xos  id=limm-twin-iss-3
-# code 09a4c21a8c3eb93c5fc24411fec833d1ad510aaa · started 2026-10-11T05:05:45Z
+# type=xos  id=limm-twin-iss-4
+# code 09a4c21a8c3eb93c5fc24411fec833d1ad510aaa · started 2026-10-11T05:07:54Z
+{
+  "command_id": "limm-twin-invalid-20261011",
+  "action": "OPEN_MANUAL",
+  "actor": "cal",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000042",
+  "schema_version": 1,
+  "payload_hash": "f350a47cf9608340d31b733e02042c03342b5df944a56c9a6d50faa2942d2d0e",
+  "payload_fields": [
+    "classification",
+    "experiment",
+    "owner_role",
+    "problem_statement",
+    "reason",
+    "severity",
+    "title"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-10-11 05:05:50.587862+00:00",
+  "started_at": "2026-10-11 05:05:50.587862+00:00",
+  "completed_at": "2026-10-11 05:05:50.682242+00:00",
+  "result": {
+    "kind": "issue",
+    "status": "OPEN",
+    "priority": "P2",
+    "severity": "MEDIUM",
+    "issue_key": "XOS-000042",
+    "owner_role": "RESEARCH_LAB",
+    "disposition": null,
+    "classification": "INTEGRITY"
+  },
+  "error": null
+}
