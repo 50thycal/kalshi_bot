@@ -1,37 +1,138 @@
-# ops request [READ]
-# type=xos  id=limm-twin-iss-4
-# code 09a4c21a8c3eb93c5fc24411fec833d1ad510aaa · started 2026-10-11T05:07:54Z
-{
-  "command_id": "limm-twin-invalid-20261011",
-  "action": "OPEN_MANUAL",
-  "actor": "cal",
-  "actor_role": "RESEARCH_LAB",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000042",
-  "schema_version": 1,
-  "payload_hash": "f350a47cf9608340d31b733e02042c03342b5df944a56c9a6d50faa2942d2d0e",
-  "payload_fields": [
-    "classification",
-    "experiment",
-    "owner_role",
-    "problem_statement",
-    "reason",
-    "severity",
-    "title"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-10-11 05:05:50.587862+00:00",
-  "started_at": "2026-10-11 05:05:50.587862+00:00",
-  "completed_at": "2026-10-11 05:05:50.682242+00:00",
-  "result": {
-    "kind": "issue",
-    "status": "OPEN",
-    "priority": "P2",
-    "severity": "MEDIUM",
-    "issue_key": "XOS-000042",
-    "owner_role": "RESEARCH_LAB",
-    "disposition": null,
-    "classification": "INTEGRITY"
-  },
-  "error": null
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=limm-twin-iss-clear
+# code 09a4c21a8c3eb93c5fc24411fec833d1ad510aaa · started 2026-10-11T05:08:42Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1214 bytes, sha256:7aaab3ebe6609610>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 48,
+#       "grandfathered": 12,
+#       "native": 36
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-sizesplit-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-sizesplit-twin-2",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 6,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-10-11 05:08:53.388130+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "37 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10",
+#             "Jmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 48,
+#           "grandfathered": 12,
+#           "native": 36
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "4 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
