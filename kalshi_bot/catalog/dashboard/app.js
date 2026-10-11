@@ -60,7 +60,7 @@ function renderStatus(s) {
   for(const source of ['paper','live']) { const b=s.backfill?.[source] || {}; row($('imports'),[source,number(b.local_records),pill(b.initial_complete ? 'Verified' : 'Incomplete',b.initial_complete?'good':'warn'),pill(b.reconciliation_complete?'Verified':'Incomplete',b.reconciliation_complete?'good':'neutral'),date(b.coverage?.checked_at)]); }
   $('jobs').replaceChildren();
   for(const [key,value] of Object.entries(jobs).filter(([k])=>k.startsWith('job:')).sort()) {
-    const v=value || {}, deferred=v.error==='DiscoveryDeferred', storageDeferred=v.error==='StorageDeferred', stale=v.last_success_at && Date.now()-Date.parse(v.last_success_at)>15*60*1000;
+    const v=value || {}, deferred=v.error==='DiscoveryDeferred', storageDeferred=v.error==='StorageDeferred', stale=v.last_success_at && Date.now()-Date.parse(v.last_success_at)>(key==='job:evaluation'?75:15)*60*1000;
     const state=storageDeferred?'Paused for storage':deferred?'Waiting to retry':v.error?'Error':!v.last_success_at?'Not run':stale?'Stale':'Last run OK';
     const detail=storageDeferred?'Resumes automatically when free space recovers':v.error?(deferred?'Retry after '+date(v.retry_at_unix*1000):v.error+(v.http_status?' · HTTP '+v.http_status:'')):'Records in last run: '+number(v.records);
     row($('jobs'),[key.slice(4),pill(state,v.error||stale?'warn':'neutral'),date(v.last_success_at),detail]);

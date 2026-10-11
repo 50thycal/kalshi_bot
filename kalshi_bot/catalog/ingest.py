@@ -327,7 +327,11 @@ class Discovery:
         return len(data["markets"])
 
     def live_outcomes(self, batch_size=5):
-        """Revisit actual live-market outcomes, including archived markets, in bounded pages."""
+        """Revisit actual live-market outcomes, including archived markets, in bounded pages.
+
+        Returns how many markets came back with a new revision (status, result, settlement or
+        rules changed). The collect loop treats a non-zero count as a reason to re-evaluate, so
+        counting every market fetched made each cycle look like a change (WS-024)."""
         from urllib.parse import quote
 
         with self.store.connect() as db:
@@ -357,8 +361,9 @@ class Discovery:
                         raise
             if data:
                 market = data["market"]
-                self.store.upsert("market", ticker, market, ticker.split("-", 1)[0])
-                count += 1
+                _doc, revised = self.store.upsert_revision(
+                    "market", ticker, market, ticker.split("-", 1)[0])
+                count += int(revised)
             # A retry/deferred request leaves this ticker pending; 404 is revisited next sweep.
             self.store.set_state(
                 "discovery:live_outcomes",

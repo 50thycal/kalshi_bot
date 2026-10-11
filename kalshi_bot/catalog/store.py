@@ -175,6 +175,11 @@ class Store:
             self.put_state(db, key, value)
 
     def upsert(self, kind, ticker, raw, series=None, source="kalshi_rest"):
+        return self.upsert_revision(kind, ticker, raw, series, source)[0]
+
+    def upsert_revision(self, kind, ticker, raw, series=None, source="kalshi_rest"):
+        """`upsert`, plus whether it wrote a new semantic revision (rules, status, result or
+        settlement differ from every revision already stored)."""
         with self.connect() as db:
             previous = db.execute(
                 "SELECT document FROM objects WHERE kind=? AND ticker=?", (kind, ticker)
@@ -217,10 +222,10 @@ class Store:
                     "settlement_value_dollars": raw.get("settlement_value_dollars"),
                 }
             )
-            db.execute(
+            revised = db.execute(
                 "INSERT OR IGNORE INTO revisions VALUES (?,?,?,?,?)",
                 (kind, ticker, semantic, stamp, pack(document)),
-            )
+            ).rowcount == 1
             db.execute(
                 "INSERT OR REPLACE INTO objects VALUES (?,?,?,?,?,?)",
                 (
@@ -232,7 +237,7 @@ class Store:
                     pack(document),
                 ),
             )
-        return document
+        return document, revised
 
     def get(self, kind, ticker):
         with self.connect() as db:

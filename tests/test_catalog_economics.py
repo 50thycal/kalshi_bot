@@ -669,6 +669,27 @@ def test_targeted_archived_outcome_refresh_retries_without_skipping_cursor(store
     client.close()
 
 
+def test_live_outcomes_counts_only_markets_whose_outcome_changed(store):
+    """The collect loop re-evaluates on a non-zero count; re-fetching an unchanged market must
+    not read as a change, or the full evaluation runs every cycle (WS-024)."""
+    store.evidence_page("live", [fill()], {"after": 1})
+    market = {"status": "active", "result": ""}
+
+    def respond(request):
+        return httpx.Response(200, json={"market": dict(market)})
+
+    client = httpx.Client(base_url="https://example.test", transport=httpx.MockTransport(respond))
+    discovery = Discovery(store, client)
+    assert discovery.live_outcomes() == 1  # first sight is a new revision
+    discovery.live_outcomes()  # completed sweep resets the cursor
+    assert discovery.live_outcomes() == 0  # same outcome: fetched, not changed
+    discovery.live_outcomes()
+    market.update(status="settled", result="yes")
+    assert discovery.live_outcomes() == 1
+    assert store.get("market", "KXTEST-E-M")["raw"]["status"] == "settled"
+    client.close()
+
+
 def test_new_pipeline_endpoints_require_auth_and_status_omits_internal_fingerprints(store):
     seed(store)
     store.set_state("assessment_input:private", "fingerprint")
