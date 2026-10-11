@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"rv1011-show"}
+{"type": "db", "sql": "select strategy, count(*) filter (where status in ('resting','pending','submitted','partial')) open_orders, count(*) total, max(created_at) last_order from live_orders where strategy in ('Fmmsell10','Hmmsell10','Jmmsell10','Kmmsell10') group by 1 union all select 'arms:'||strategy_tag, 0, count(*), null from experiment_deployment_arms where strategy_tag like 'Kmmsell10%' group by 1", "max_rows": 20, "id": "rv1011-drain"}
