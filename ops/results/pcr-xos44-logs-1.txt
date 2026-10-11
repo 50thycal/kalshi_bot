@@ -1,0 +1,6 @@
+# latest deployment ee680d56-99f2-424d-bb6d-dcca9afdf8cd (status=SUCCESS, created=2026-10-11T22:32:40.824Z)
+# ops request [READ]
+# type=logs  service=main  id=pcr-xos44-logs-1
+# code a4c61bad3d1c4c053e2908dda0be79e62e1510cd · started 2026-10-11T22:34:22Z
+# target service: main
+2026-10-11T22:33:21.130491054Z INFO  experiment OS issue command
