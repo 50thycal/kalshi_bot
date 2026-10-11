@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["liquidity-incentive-mm"],"id":"pcr-xos44-show-1"}
