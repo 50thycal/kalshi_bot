@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"alimm-explain-1","max_rows":40,"sql":"explain (analyze, buffers, costs off, timing off) select id, program_id, market_ticker, end_date, close_time from incentive_programs where superseded_at is null and disappeared_at is null and incentive_type = 'liquidity' and (end_date is null or end_date > now())"}
