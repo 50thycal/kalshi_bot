@@ -1,5 +1,5 @@
 # WS-023 — Market catalog and strategy evidence service
-**Build OS:** v0.12 · **Phase:** REVIEW · **Status:** Active
+**Build OS:** v0.12 · **Phase:** BUILD_CARD · **Status:** Active
 **Implementation actor:** Codex · **Review:** solo, owner acceptance pending
 **PR:** [#541](https://github.com/50thycal/kalshi_bot/pull/541) merged; operational follow-up [#542](https://github.com/50thycal/kalshi_bot/pull/542).
 Mission: standalone Railway catalog service and additive existing-data import.
@@ -12,11 +12,11 @@ Current continuation: the owner corrected the SELECT-only bot_readonly URL and r
 The credential blocker is resolved. Verified runtime observations on 2026-10-08 showed
 130,492 paper rows and 2,823 live rows, with live source-ID count/hash matching through
 source ID 4,416. These are coverage observations, not scientific qualification.
-Next step: review the storage guard in
-[MARKET_CATALOG_STORAGE_GUARD.md](../MARKET_CATALOG_STORAGE_GUARD.md), then verify
-its catalog-only deployment and headroom recovery. Document capture is verified on #566;
-authoritative historical document/version binding remains necessary before approving
-semantics. Independence and calibration remain subsequent stages.
+Next step: implement the approved selective-history policy on the same draft PR
+linked below, once a coding environment is connected. Preserve broad discovery,
+existing history and evidence integrity. See
+[MARKET_CATALOG_SELECTIVE_HISTORY.md](../MARKET_CATALOG_SELECTIVE_HISTORY.md).
+Historical document binding, semantics and calibration remain subsequent stages.
 No consumer cutover or trading action is implied.
 
 Historical deployment notes below describe earlier blockers; they are not current status.
@@ -339,3 +339,19 @@ Review State: solo, pending owner acceptance; no independent review claimed.
 Next: owner reviews/merges after CI, then verifies bulk pause, essential progress and
 readable authenticated metadata on the catalog only. Capacity recovery is required to
 resume bulk history; no automatic resize, deletion or new variables are introduced.
+
+## Selective history direction — 2026-10-11 America/Chicago
+
+Calvin approved option 3: broad inventory with detailed history concentrated on
+traded, reviewed and explicitly research-selected contexts (DEC-034). Mission,
+acceptance, non-goals, representation/provenance boundaries and release plan are in
+[selective history](../MARKET_CATALOG_SELECTIVE_HISTORY.md). Existing history is retained;
+no resize, deletion, confidence approval, source write or consumer activation follows.
+
+The current store already deduplicates identical semantic revisions. The policy
+must preserve global observed rule changes while reducing future unrelated full
+snapshot writes; savings are unmeasured. Scope/historical gaps must stay explicit.
+Design checkpoint only: code, tests and benchmark remain pending because the coding
+environment is disconnected. Continue on the same draft PR, not a new workstream.
+Framework compatibility checked against canonical v0.12 on 2026-10-11 UTC.
+Review State: solo, owner acceptance pending; no independent review claimed.
