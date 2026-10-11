@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "09a4c21a8c3eb93c5fc24411fec833d1ad510aaa",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-10-11T05:05:04Z",
+  "id": "limm-twin-iss-2",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-twin-iss-2.receipt.json",
+  "result_file": "ops/results/limm-twin-iss-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38113627746",
+  "service": null,
+  "started_at": "2026-10-11T05:05:02Z",
+  "targets": [],
+  "type": "xos"
+}
