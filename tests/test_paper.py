@@ -245,3 +245,70 @@ def test_parallel_books_open_per_strategy_and_settle(settings):
     with db.session_scope() as session:
         engine2.manage_open_positions(session)
     assert engine2.summary.closed_settled == 2
+
+
+class _CountingClient(FakePaperClient):
+    """FakePaperClient that counts GETs; a ticker listed in `fail_once` raises on its first
+    market fetch only."""
+
+    def __init__(self, market_state, fail_once=()):
+        super().__init__(market_state)
+        self.market_calls: list[str] = []
+        self.book_calls: list[str] = []
+        self._fail_once = set(fail_once)
+
+    def get_market(self, ticker):
+        self.market_calls.append(ticker)
+        if ticker in self._fail_once:
+            self._fail_once.discard(ticker)
+            raise RuntimeError("transient")
+        return super().get_market(ticker)
+
+    def get_orderbook(self, ticker, depth=None):
+        self.book_calls.append(ticker)
+        return super().get_orderbook(ticker, depth)
+
+
+def _two_books_on_one_market(settings):
+    """Two books open on KXFED-1, as the parallel mmsell books are on shared markets."""
+    _client, risk = _open_one_paper_trade(settings)
+    with db.session_scope() as session:
+        first = session.scalar(select(m.PaperTrade))
+        session.add(m.PaperTrade(
+            market_ticker=first.market_ticker, strategy="mmsell6", side=first.side,
+            assumed_price=first.assumed_price, quantity=first.quantity, fees=first.fees,
+            status="open"))
+    with db.session_scope() as session:
+        n = session.scalar(select(func.count()).select_from(m.PaperTrade).where(
+            m.PaperTrade.status == "open"))
+    return risk, n
+
+
+def test_marking_fetches_each_market_once_however_many_books_hold_it(settings):
+    """WS-024: one market and one orderbook GET per ticker per pass, not per position."""
+    risk, n_open = _two_books_on_one_market(settings)
+    assert n_open >= 2
+    client = _CountingClient({"KXFED-1": {"status": "active"}})
+    engine = PaperTradingEngine(client, settings, risk)
+    with db.session_scope() as session:
+        engine.manage_open_positions(session)
+    assert client.market_calls == ["KXFED-1"] and client.book_calls == ["KXFED-1"]
+    # Settlement reaches every book from the one shared fetch.
+    client._market_state["KXFED-1"] = {"status": "settled", "result": "yes"}
+    engine2 = PaperTradingEngine(client, settings, risk)
+    with db.session_scope() as session:
+        engine2.manage_open_positions(session)
+    assert engine2.summary.closed_settled == n_open
+    assert client.market_calls == ["KXFED-1", "KXFED-1"]
+
+
+def test_a_failed_market_fetch_is_retried_for_the_next_position(settings):
+    risk, n_open = _two_books_on_one_market(settings)
+    client = _CountingClient({"KXFED-1": {"status": "settled", "result": "yes"}},
+                             fail_once={"KXFED-1"})
+    engine = PaperTradingEngine(client, settings, risk)
+    with db.session_scope() as session:
+        engine.manage_open_positions(session)
+    # The first position's fetch failed and it stays open; the second retried and settled.
+    assert client.market_calls == ["KXFED-1", "KXFED-1"]
+    assert engine.summary.closed_settled == n_open - 1
