@@ -2031,6 +2031,16 @@ class Settings(BaseSettings):
                 # The per-order dollar cap (LIVE_MAX_ORDER_DOLLARS) still binds on top: this key
                 # can never raise a book's dollars past the global ceiling.
                 "sizes": None,
+                # Per-TICKER contract count by MARKET TYPE, written
+                # `bigtypes=event_stat+mention,bigsize=3,size=1`: a ticker whose series
+                # classifies (mmsell/market_types.py) into one of `bigtypes` gets `bigsize`
+                # contracts, every other ticker gets `size`. This is the edge-sized successor of
+                # the random `sizes=` split (docs/MMSELL_CELL_SIZE_CANARY.md): size up only where
+                # the market type has earned it. An unclassified series is never "big". Both keys
+                # or neither; not combinable with `sizes`. The per-order dollar cap
+                # (LIVE_MAX_ORDER_DOLLARS) still binds on top.
+                "bigtypes": [],
+                "bigsize": None,
                 # How deep into the volume-ranked event list this book may look. None = the
                 # global `mmsell_top_events`, which is what every existing book uses.
                 #
@@ -2084,7 +2094,7 @@ class Settings(BaseSettings):
                     elif key in ("universe", "contestkey"):
                         v[key] = str(val).strip().lower()
                     elif key in ("stopk", "volw", "abarm", "size", "scanmax",
-                                 "contestcap"):
+                                 "contestcap", "bigsize"):
                         v[key] = int(val)
                     elif key == "part":
                         # "i/n" -> (i, n). Validated below; a malformed pair fails the spec
@@ -2106,7 +2116,7 @@ class Settings(BaseSettings):
                         # Series filter: '+'-joined substrings (can't use , ; : which the
                         # variant/spec grammar already claims). Matched against the series prefix.
                         v[key] = [t.strip().upper() for t in val.split("+") if t.strip()]
-                    elif key in ("mtype", "xmtype", "mode"):
+                    elif key in ("mtype", "xmtype", "mode", "bigtypes"):
                         # Market-type / settle-mode filter: '+'-joined names, lower-cased to
                         # match the taxonomy. Validated below — an unknown name is a typo that
                         # would silently produce a book trading nothing.
@@ -2118,7 +2128,7 @@ class Settings(BaseSettings):
             # A misspelled type/mode admits no market at all, so the book would run forever at
             # n=0 and look like selectivity rather than a typo. Reject the spec instead.
             for key, known in (("mtype", KNOWN_TYPES), ("xmtype", KNOWN_TYPES),
-                               ("mode", KNOWN_MODES)):
+                               ("mode", KNOWN_MODES), ("bigtypes", KNOWN_TYPES)):
                 if any(t not in known for t in v[key]):
                     ok = False
             # An unrecognised tier name would admit EVERYTHING (universe.admits fails open on
@@ -2165,6 +2175,17 @@ class Settings(BaseSettings):
                                               for q in v["sizes"]):
                     ok = False
                 if v["size"] is not None:
+                    ok = False
+            # A type-sized book needs both halves: types without a count would size nothing up,
+            # and a count without types would never apply — a book that reads as edge-sized and
+            # trades flat. It cannot also carry the random split, which would leave it ambiguous
+            # which rule the live executor obeys.
+            if v["bigtypes"] or v["bigsize"] is not None:
+                if not v["bigtypes"] or v["bigsize"] is None:
+                    ok = False
+                elif not (1 <= v["bigsize"] <= MAX_SPLIT_CONTRACTS):
+                    ok = False
+                if v["sizes"] is not None:
                     ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
