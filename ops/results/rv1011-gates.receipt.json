@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "2229cb00efccd2488e62c6c46a4aab35fc2ca5e4",
+  "code_source": "default-branch",
+  "exit_status": 2,
+  "finished_at": "2026-10-11T15:04:18Z",
+  "id": "rv1011-gates",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rv1011-gates.receipt.json",
+  "result_file": "ops/results/rv1011-gates.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38149729129",
+  "service": null,
+  "started_at": "2026-10-11T15:04:17Z",
+  "targets": [],
+  "type": "xos"
+}

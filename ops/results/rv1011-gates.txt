@@ -1,0 +1,7 @@
+usage: experiment_os [-h]
+                     {list,show,transitions,platform,experiment-command,tag,metric,control-tower,evaluate-gates,enforcement,package-preflight,readiness,scoreboard,issue}
+                     ...
+experiment_os: error: unrecognized arguments: mmsell-price-ceiling-size-split
+# ops request [READ]
+# type=xos  id=rv1011-gates
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T15:04:17Z
