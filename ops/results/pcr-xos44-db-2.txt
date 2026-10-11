@@ -1,0 +1,12 @@
+# ops request [READ]
+# type=db  id=pcr-xos44-db-2
+# code 0f58544ac06d5db2bed8f24f06e93e0e82938bf7 · started 2026-10-11T21:13:55Z
+kind    k                                        experiment              v1           v2   
+------  ---------------------------------------  ----------------------  -----------  -----
+gate    paper_to_live_smoke                      liquidity-incentive-mm  LIVE_CANARY       
+gate    shadow_instrument_ready                  liquidity-incentive-mm  LIVE_CANARY       
+window  last_pass_gate_window_2026-09-17..09-21                          42434        14644
+window  since_paper_2026-09-17..now                                      116184       88394
+window  last_1h                                                          34931        4931 
+
+(5 rows)
