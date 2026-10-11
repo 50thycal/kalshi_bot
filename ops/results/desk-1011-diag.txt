@@ -1,0 +1,97 @@
+# ops request [READ]
+# type=script  id=desk-1011-diag
+# code 2229cb00efccd2488e62c6c46a4aab35fc2ca5e4 · started 2026-10-11T13:38:52Z
+# desk board — 2026-10-11T13:38:52+00:00 — events scanned 8000, markets kept 139, shown 80
+# filters: hours<=168.0 min_volume>=0 category~'' series^'' search~'' max_spread=None
+# prices in cents; 'fee' = taker fee (cents) for ONE contract bought at the yes ask;
+# a maker order pays ~0. break-even win% = (ask + fee) for YES, (no_ask + fee) for NO.
+ticker                           close yes b/a   spr  fee    vol24        oi category       title
+KXGEMINI-GEM4-26OCT16              5d   45/ 47 sp  2 f  2 v  24482 oi  87723 Science and Te When will Google release Gemini 4? | Before Oct 16, 2026
+KXGPT-ASTRA61-26OCT16              5d    3/  4 sp  1 f  1 v    437 oi   8636 Science and Te When will OpenAI release Astra 6.1? | Before Oct 16, 2026
+KXACTBLUETOP-26OCT16-AELS          5d    4/  5 sp  1 f  1 v    374 oi   1590 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Abdul El-Say
+KXSERBIAELECTIONCALL-26NOV01-26O   86h   5/  8 sp  3 f  1 v    365 oi   3505 Elections      When will Serbia call its presidential election? | Before Oct 15, 2026
+KXACTBLUETOP-26OCT16-JTAL          5d   85/ 86 sp  1 f  1 v    283 oi   1047 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | James Talari
+KXFUNDRAISING-SMPQ326-A105000000   5d   81/ 98 sp 17 f  1 v    240 oi   1055 Politics       SMP Cash on Hand (End of Q3) | Above $105M
+KXACTBLUETOP-26OCT16-ANIX          5d    1/  2 sp  1 f  1 v     99 oi   1098 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Angie Nixon
+KXFUNDRAISING-SMPQ326-A115000000   5d    1/ 17 sp 16 f  1 v     90 oi    118 Politics       SMP Cash on Hand (End of Q3) | Above $115M
+KXNEXTHURDATE-26DEC01-26OCT15      86h  99/100 sp  1 f  0 v     25 oi  18056 Climate and We When will the next Atlantic hurricane form? | Before Oct 15, 2026
+KXALBUMRELEASEDATE-NEWDRA-26OCT1   6d    1/  5 sp  4 f  1 v     22 oi   2781 Entertainment  When will Drake release a new album? | Before Oct 17, 2026
+KXFUNDRAISING-JTALQ326-A65000000   5d   58/ 66 sp  8 f  2 v     16 oi     16 Politics       Talarico for Texas Total Receipts (Q3) | Above $65M
+KXFUNDRAISING-JTALQ326-A70000000   5d   50/ 58 sp  8 f  2 v     16 oi     16 Politics       Talarico for Texas Total Receipts (Q3) | Above $70M
+KXFUNDRAISING-JTALQ326-A75000000   5d   32/ 40 sp  8 f  2 v     16 oi     16 Politics       Talarico for Texas Total Receipts (Q3) | Above $75M
+KXFUNDRAISING-JTALQ326-A80000000   5d   26/ 34 sp  8 f  2 v     16 oi     16 Politics       Talarico for Texas Total Receipts (Q3) | Above $80M
+KXFUNDRAISING-SMPQ326-A125000000   5d    3/ 47 sp 44 f  2 v     11 oi     13 Politics       SMP Cash on Hand (End of Q3) | Above $125M
+KXFUNDRAISING-SMPQ326-A135000000   5d    3/ 30 sp 27 f  2 v      5 oi     38 Politics       SMP Cash on Hand (End of Q3) | Above $135M
+KXYTTOPVIDEOG2D-26OCT11-YES        14h  24/ 75 sp 51 f  2 v      4 oi      3 Entertainment  Runner-Up Daily Music Video Global on YouTube: Oct 11, 2026 | Yeshanag
+KXGEMINI-NEXTPRO-26OCT16           5d    6/  7 sp  1 f  1 v      1 oi  10488 Science and Te Next Gemini Pro model release | Before Oct 16, 2026
+KXHARVARDFEDREV-26JUN30-A8000000   4d   12/ 39 sp 27 f  2 v      1 oi   5713 Politics       Harvard federal sponsored revenue in FY2026? | Above 800 million
+KXFUNDRAISING-SMPQ326-A95000000    5d   83/ 97 sp 14 f  1 v      1 oi    205 Politics       SMP Cash on Hand (End of Q3) | Above $95M
+KXIPOANTHROPIC-DATE-26OCT17        6d    0/  1 sp  1 f  1 v      0 oi  42818 Companies      When will Anthropic officially announce an IPO? | Before Oct 17, 2026
+KXSPACEXSTARSHIP-15-26OCT16        5d    0/  1 sp  1 f  1 v      0 oi   7517 Science and Te SpaceX Starship 15th launch? | Before Oct 16, 2026
+KXCLAUDE-OPUS6-26OCT16             5d    0/  3 sp  3 f  1 v      0 oi   7899 Science and Te When will Anthropic release Opus 6? | Before Oct 16, 2026
+KXFUNDRAISING-JOSSQ326-A20000000   5d   99/100 sp  1 f  0 v      0 oi   5305 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $20M
+KXHARVARDFEDREV-26JUN30-A8500000   4d    0/ 13 sp 13 f  1 v      0 oi   3526 Politics       Harvard federal sponsored revenue in FY2026? | Above 850 million
+KXHARVARDFEDREV-26JUN30-A1000000   4d    4/  7 sp  3 f  1 v      0 oi   1419 Politics       Harvard federal sponsored revenue in FY2026? | Above 1 billion
+KXFUNDRAISING-JOSSQ326-A25000000   5d   97/ 99 sp  2 f  1 v      0 oi   4181 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $25M
+KXHARVARDFEDREV-26JUN30-A7500000   4d   77/ 85 sp  8 f  1 v      0 oi   2881 Politics       Harvard federal sponsored revenue in FY2026? | Above 750 million
+KXHARVARDFEDREV-26JUN30-A9000000   4d   11/ 15 sp  4 f  1 v      0 oi   1752 Politics       Harvard federal sponsored revenue in FY2026? | Above 900 million
+KXFUNDRAISING-CLFQ326-A145000000   5d   43/ 45 sp  2 f  2 v      0 oi    424 Politics       CLF Cash on Hand (End of Q3) | Above $145M
+KXFUNDRAISING-JOSSQ326-A30000000   5d   75/ 78 sp  3 f  2 v      0 oi   1389 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $30M
+KXFUNDRAISING-JTALQ326-A25000000   5d   96/ 99 sp  3 f  1 v      0 oi   2003 Politics       Talarico for Texas Total Receipts (Q3) | Above $25M
+KXFUNDRAISING-JTALQ326-A50000000   5d   90/ 96 sp  6 f  1 v      0 oi   1039 Politics       Talarico for Texas Total Receipts (Q3) | Above $50M
+KXHARVARDFEDREV-26JUN30-A6500000   4d   94/ 99 sp  5 f  1 v      0 oi   1207 Politics       Harvard federal sponsored revenue in FY2026? | Above 650 million
+KXFUNDRAISING-JOSSQ326-A35000000   5d   44/ 50 sp  6 f  2 v      0 oi   1869 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $35M
+KXHARVARDFEDREV-26JUN30-A9500000   4d    5/  6 sp  1 f  1 v      0 oi    951 Politics       Harvard federal sponsored revenue in FY2026? | Above 950 million
+KXFUNDRAISING-JTALQ326-A35000000   5d   96/ 99 sp  3 f  1 v      0 oi   1033 Politics       Talarico for Texas Total Receipts (Q3) | Above $35M
+KXHARVARDFEDREV-26JUN30-A6000000   4d   95/ 99 sp  4 f  1 v      0 oi    972 Politics       Harvard federal sponsored revenue in FY2026? | Above 600 million
+KXSPCXLAUNCH-CRS35-26OCT16         5d   86/ 97 sp 11 f  1 v      0 oi   1121 Science and Te When will SpaceX launch Dragon CRS-35? | Before Oct 16, 2026
+KXHARVARDFEDREV-26JUN30-A7000000   4d   87/ 95 sp  8 f  1 v      0 oi   1574 Politics       Harvard federal sponsored revenue in FY2026? | Above 700 million
+KXFUNDRAISING-CLFQ326-A155000000   5d   31/ 38 sp  7 f  2 v      0 oi    126 Politics       CLF Cash on Hand (End of Q3) | Above $155M
+KXACTBLUETOP-26OCT16-JOSS          5d    3/  5 sp  2 f  1 v      0 oi   1200 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Jon Ossoff
+KXFUNDRAISING-CLFQ326-A165000000   5d   25/ 32 sp  7 f  2 v      0 oi    144 Politics       CLF Cash on Hand (End of Q3) | Above $165M
+KXFUNDRAISING-JTALQ326-A45000000   5d   91/ 96 sp  5 f  1 v      0 oi    654 Politics       Talarico for Texas Total Receipts (Q3) | Above $45M
+KXFUNDRAISING-JTALQ326-A30000000   5d   96/ 99 sp  3 f  1 v      0 oi    373 Politics       Talarico for Texas Total Receipts (Q3) | Above $30M
+KXACTBLUETOP-26OCT16-MPEL          5d    1/  2 sp  1 f  1 v      0 oi    999 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Mary Peltola
+KXACTBLUETOP-26OCT16-SBRO          5d    1/  2 sp  1 f  1 v      0 oi    997 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Sherrod Brow
+KXACTBLUETOP-26OCT16-TJAC          5d    1/  2 sp  1 f  1 v      0 oi    997 Politics       Who will be the top ActBlue fundraiser on Oct 16, 2026? | Troy Jackson
+KXFUNDRAISING-JTALQ326-A40000000   5d   92/ 99 sp  7 f  1 v      0 oi    286 Politics       Talarico for Texas Total Receipts (Q3) | Above $40M
+KXNBACITYEXPAND-01JAN30-15OCT26    86h   0/ 99 sp 99 f  1 v      0 oi    684 Sports         When will Las Vegas receive a Pro Basketball expansion team? | Before 
+KXFUNDRAISING-JTALQ326-A60000000   5d   67/ 76 sp  9 f  2 v      0 oi    659 Politics       Talarico for Texas Total Receipts (Q3) | Above $60M
+KXFUNDRAISING-CLFQ326-A175000000   5d   21/ 27 sp  6 f  2 v      0 oi    133 Politics       CLF Cash on Hand (End of Q3) | Above $175M
+KXFUNDRAISING-JTALQ326-A55000000   5d   79/ 86 sp  7 f  1 v      0 oi    208 Politics       Talarico for Texas Total Receipts (Q3) | Above $55M
+KXFUNDRAISING-SMPQ326-A75000000    5d   93/ 98 sp  5 f  1 v      0 oi     12 Politics       SMP Cash on Hand (End of Q3) | Above $75M
+KXFUNDRAISING-SMPQ326-A85000000    5d   88/ 98 sp 10 f  1 v      0 oi      8 Politics       SMP Cash on Hand (End of Q3) | Above $85M
+KXFUNDRAISING-SLFQ326-A175000000   5d   65/ 74 sp  9 f  2 v      0 oi      7 Politics       SLF Cash on Hand (End of Q3) | Above $175M
+KXFUNDRAISING-CLFQ326-A185000000   5d   13/ 21 sp  8 f  2 v      0 oi      4 Politics       CLF Cash on Hand (End of Q3) | Above $185M
+KXFUNDRAISING-CLFQ326-A205000000   5d    2/ 10 sp  8 f  1 v      0 oi      2 Politics       CLF Cash on Hand (End of Q3) | Above $205M
+KXFUNDRAISING-SLFQ326-A200000000   5d   49/ 58 sp  9 f  2 v      0 oi      1 Politics       SLF Cash on Hand (End of Q3) | Above $200M
+KXFUNDRAISING-SLFQ326-A300000000   5d    4/ 13 sp  9 f  1 v      0 oi      1 Politics       SLF Cash on Hand (End of Q3) | Above $300M
+KXFUNDRAISING-CLFQ326-A125000000   5d   57/ 64 sp  7 f  2 v      0 oi      1 Politics       CLF Cash on Hand (End of Q3) | Above $125M
+KXFUNDRAISING-SMPQ326-A65000000    5d   94/ 99 sp  5 f  1 v      0 oi      0 Politics       SMP Cash on Hand (End of Q3) | Above $65M
+KXFUNDRAISING-SLFQ326-A125000000   5d   88/ 97 sp  9 f  1 v      0 oi      0 Politics       SLF Cash on Hand (End of Q3) | Above $125M
+KXFUNDRAISING-SLFQ326-A150000000   5d   80/ 89 sp  9 f  1 v      0 oi      0 Politics       SLF Cash on Hand (End of Q3) | Above $150M
+KXFUNDRAISING-SLFQ326-A225000000   5d   33/ 42 sp  9 f  2 v      0 oi      0 Politics       SLF Cash on Hand (End of Q3) | Above $225M
+KXFUNDRAISING-SLFQ326-A250000000   5d   18/ 27 sp  9 f  2 v      0 oi      0 Politics       SLF Cash on Hand (End of Q3) | Above $250M
+KXFUNDRAISING-SLFQ326-A275000000   5d   11/ 20 sp  9 f  2 v      0 oi      0 Politics       SLF Cash on Hand (End of Q3) | Above $275M
+KXFUNDRAISING-JTALQ326-A85000000   5d   20/ 29 sp  9 f  2 v      0 oi      0 Politics       Talarico for Texas Total Receipts (Q3) | Above $85M
+KXFUNDRAISING-JTALQ326-A90000000   5d   12/ 21 sp  9 f  2 v      0 oi      0 Politics       Talarico for Texas Total Receipts (Q3) | Above $90M
+KXFUNDRAISING-JTALQ326-A95000000   5d    4/ 13 sp  9 f  1 v      0 oi      0 Politics       Talarico for Texas Total Receipts (Q3) | Above $95M
+KXFUNDRAISING-JOSSQ326-A40000000   5d   31/ 39 sp  8 f  2 v      0 oi      0 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $40M
+KXFUNDRAISING-JOSSQ326-A45000000   5d   19/ 27 sp  8 f  2 v      0 oi      0 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $45M
+KXFUNDRAISING-JOSSQ326-A50000000   5d   14/ 22 sp  8 f  2 v      0 oi      0 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $50M
+KXFUNDRAISING-JOSSQ326-A55000000   5d    6/ 14 sp  8 f  1 v      0 oi      0 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $55M
+KXFUNDRAISING-JOSSQ326-A60000000   5d    2/  9 sp  7 f  1 v      0 oi      0 Politics       Jon Ossoff for Senate Total Receipts (Q3) | Above $60M
+KXFUNDRAISING-CLFQ326-A95000000    5d   87/ 95 sp  8 f  1 v      0 oi      0 Politics       CLF Cash on Hand (End of Q3) | Above $95M
+KXFUNDRAISING-CLFQ326-A105000000   5d   77/ 85 sp  8 f  1 v      0 oi      0 Politics       CLF Cash on Hand (End of Q3) | Above $105M
+KXFUNDRAISING-CLFQ326-A115000000   5d   67/ 75 sp  8 f  2 v      0 oi      0 Politics       CLF Cash on Hand (End of Q3) | Above $115M
+KXFUNDRAISING-CLFQ326-A135000000   5d   47/ 55 sp  8 f  2 v      0 oi      0 Politics       CLF Cash on Hand (End of Q3) | Above $135M
+KXFUNDRAISING-CLFQ326-A195000000   5d    8/ 16 sp  8 f  1 v      0 oi      0 Politics       CLF Cash on Hand (End of Q3) | Above $195M
+
+# by category (kept markets, 24h volume)
+  Science and Technology       n=6     vol24=24920
+  Politics                     n=68    vol24=1168
+  Elections                    n=1     vol24=365
+  Entertainment                n=61    vol24=26
+  Climate and Weather          n=1     vol24=25
+  Companies                    n=1     vol24=0
+  Sports                       n=1     vol24=0
