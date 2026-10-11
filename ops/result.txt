@@ -1,4 +1,10 @@
 # ops request [READ]
-# type=noop
-# code 3509cc877b38f7491bf8b53ee2fe75d57d29971a · started 2026-10-11T16:41:28Z
-(noop — nothing to do)
+# type=db  id=limm-db-1011p
+# code 3509cc877b38f7491bf8b53ee2fe75d57d29971a · started 2026-10-11T17:16:11Z
+market_ticker                side  action  limit_price  quantity  status    cancel_reason  created_at                     disc                         
+---------------------------  ----  ------  -----------  --------  --------  -------------  -----------------------------  -----------------------------
+KXCPI-26OCT-T0.6             yes   buy     6            166       resting                  2026-10-11 16:57:16.208744+00  2026-10-11 17:10:58.953193+00
+KXCPI-26OCT-T0.6             yes   buy     5            200       canceled  repriced       2026-10-11 15:54:58.399841+00  2026-10-11 17:10:58.953193+00
+KXYTVIEWSHIGH-TAT26NOV-3.0M  no    buy     4            250       resting                  2026-10-09 15:48:25.060095+00  2026-10-11 17:10:58.953193+00
+
+(3 rows)
