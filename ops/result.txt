@@ -1,37 +1,4 @@
 # ops request [READ]
-# type=xos  id=ws024-issue-2
-# code a7e9e4b35f7bb665836199fba4ab2e2610270b3e · started 2026-10-11T20:44:41Z
-{
-  "command_id": "lo-ws024-ip-bump-20261011",
-  "action": "OPEN_MANUAL",
-  "actor": "cal",
-  "actor_role": "LIVE_OPS",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000044",
-  "schema_version": 1,
-  "payload_hash": "186712aa1a22fa6256ba038aa161c992f5d2306ec1e2a4ac3d39a68fa93d9c08",
-  "payload_fields": [
-    "classification",
-    "owner_role",
-    "priority",
-    "problem_statement",
-    "reason",
-    "severity",
-    "title"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-10-11 20:44:35.036894+00:00",
-  "started_at": "2026-10-11 20:44:35.036894+00:00",
-  "completed_at": "2026-10-11 20:44:35.122706+00:00",
-  "result": {
-    "kind": "issue",
-    "status": "OPEN",
-    "priority": "P2",
-    "severity": "LOW",
-    "issue_key": "XOS-000044",
-    "owner_role": "PLATFORM_CHANGE_REVIEW",
-    "disposition": null,
-    "classification": "PLATFORM"
-  },
-  "error": null
-}
+# type=noop
+# code a7e9e4b35f7bb665836199fba4ab2e2610270b3e · started 2026-10-11T20:46:30Z
+(noop — nothing to do)
