@@ -419,3 +419,30 @@ submission claim remain unchanged. Tests cover processing delay, both quote time
 expiry, refreshed/stale isolation, and one-time submission. Owner action after PR acceptance:
 deploy only to desk-service, with no environment change; then check that the next ordinary
 Claude Continue does not produce this refusal. Do not retry the refused decision.
+
+## False `unknown_order_status` pause repair — 2026-10-10
+
+A clean IOC fill paused the Claude desk twice (2026-09-30 round 1; 2026-10-08 round 2,
+`KXTOKENUSE-26OCT12-T170` NO, 1 @ $0.77). `submit_ioc` reconciled once, right after its POST,
+and Kalshi's order or fill lists can briefly lag. `record_order` paused on that `unknown` and
+nothing cleared the pause after the next worker reconcile found the order terminal.
+
+Fixed in commit `082c4cd` (see `DEC-032`):
+- the post-POST reconcile re-reads up to 3 more times over about 3 s; the POST is never
+  repeated;
+- `record_order` clears only an `unknown_order_status` pause, only when that order reconciles
+  with consistent accounting and nothing in the book is still unknown or submitting, and
+  writes an `auto_resumed` audit row;
+- an `unknown` report no longer relabels an existing pause.
+
+Tests: lagging orders, lagging fills, persistent unknown (one POST, full reservation, still
+pauses), worker-reconcile auto-clear, other pause reasons and recorded money errors stay paused.
+
+**Process note.** The commit went straight onto the default branch, which here is
+`claude/confident-goldberg-83u3q`, and desk-service auto-deployed it at 2026-10-10T21:37Z
+(deployment `3e2d0dae`) without a PR or owner deploy step. desk-service started cleanly. The
+owner chose to keep it live on 2026-10-10. A session whose starting branch is the default
+branch must branch off before committing.
+
+Owner checks: resume the Claude desk once by operator token (the 10-08 pause predates the fix
+and is not auto-cleared); after the next fill, `status` should show it `terminal` and unpaused.

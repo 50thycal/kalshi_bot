@@ -1385,3 +1385,20 @@ captured bytes, listing hashes, approved semantic reviews and verified historica
 as separate facts. Neither HTTP/PDF metadata nor a current-byte match proves which
 version governed an older execution. Historical binding remains explicitly unverified;
 no catalog requirement is relaxed and existing consumers remain disconnected.
+
+## DEC-032 — The desk clears one pause reason itself
+
+**Date:** 2026-10-10 UTC. **Owner decision:** Calvin chose to keep the auto-resume live after
+it shipped (WS-021, commit `082c4cd`).
+
+An `unknown_order_status` pause is the only desk pause the service clears without an operator.
+It clears in the same transaction that records the reconcile, and only when that order moved
+from `unknown` to `terminal` or `pending` with every accounting check passing and no other
+execution in the book unknown or submitting. Each clear writes an `auto_resumed` audit row.
+Every other reason (operator, recorded money errors, reconciliation or shared-account failures,
+capital, round-carried pauses) still needs an operator resume, and an `unknown` report no longer
+overwrites an existing pause reason. Reason: read-after-write lag at Kalshi turned every clean
+fill into a manual resume, so the desk could never trade two cycles in a row unattended; once an
+order has reconciled, the pause protects nothing. Accepted cost: a genuinely ambiguous POST that
+reconciles on the very next worker tick unpauses before the alert notifier looks, so it leaves
+an audit row but no webhook alert. Limits, caps, reservations and IOC-only rules are unchanged.
