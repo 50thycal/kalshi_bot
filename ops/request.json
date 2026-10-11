@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","id":"desk-1011-board4","args":["--hours","72","--min-volume","500"]}
+{"type":"script","name":"kalshi_desk_board","id":"desk-1011-diag","args":["--hours","168","--min-volume","0"]}
