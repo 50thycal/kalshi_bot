@@ -3,10 +3,11 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-10-08 (WS-024 Railway RAM budget opened; WS-020 shadow stopped) · **Build OS v0.12**
+**Updated:** 2026-10-11 (WS-025 desk service 3.0 opened on owner request; WS-024 Railway RAM budget opened 10-08; WS-020 shadow stopped) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-025](WS-025-desk-service-v3.md) | Desk service 3.0: unattended desk agents (subscription runners, event wakes, dry-run week) | BUILD_CARD | Active | Owner approves the Build Card and answers D1 alert channel and D4 which Active row pauses; then the Build Spec | design PR (this branch) |
 | [WS-024](WS-024-railway-ram-budget.md) | Railway RAM budget: ≤ $15/month, $10 stretch | BUILDING | Active | Step 1 merged and live (programme discovery in `main`, 2026-10-08). Owner merges the step-3 PR (live-dash idle refresher); then sleep on live-dash, 24h check-1 + after-RAM, then D2 (catalog volume full in ~10–12 days) | [#547](https://github.com/50thycal/kalshi_bot/pull/547), [#553](https://github.com/50thycal/kalshi_bot/pull/553) merged; step-3 PR (this branch) |
 | [WS-023](WS-023-market-catalog.md) | Market catalog and strategy evidence service | REVIEW | Active | #566 deployed; document capture verified. Review/merge #568 after CI, then verify catalog-only storage deferral/recovery. Owner capacity action, historical document binding, approved semantics, independence/calibration and consumer cutover remain pending | #541/#542/#544/#552/#556/#561/#562/#563/#564/#565/#566 merged; [#568](https://github.com/50thycal/kalshi_bot/pull/568) |
 | [WS-022](WS-022-desk-research-v2.md) | Desk research v2: open market discovery, open web evidence, fresh round | REVIEW | Active | Owner merges/deploys to desk-service, then runs `docs/desks/ROUND_2_CUTOVER.md` (round switch and start are hard stops; balances carry, same DB) | v2 PR (this branch) |
