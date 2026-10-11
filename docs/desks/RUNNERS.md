@@ -164,8 +164,9 @@ Session-only alerts are invalid once scheduled research is selected. Configure
 `DESKS_ALERT_MODE=webhook`, set a private public-HTTPS destination in
 `DESKS_ALERT_WEBHOOK_URL`, and run the operator-only `test-alerts` command before activation.
 For a small phone-first setup, an ntfy topic with a long unguessable name is the simplest
-compatible option: the notifier posts a JSON object containing `message`, and the operator
-can subscribe to that topic in the ntfy mobile app. Treat the topic URL as a secret; self-host
+option: set `DESKS_ALERT_FORMAT=ntfy` so the notifier posts a short plain-text message with
+ntfy `Title`/`Priority`/`Tags` headers (the default `json` format would show up in ntfy as raw
+JSON), and subscribe to that topic in the ntfy mobile app. Treat the topic URL as a secret; self-host
 ntfy if public-topic confidentiality is unacceptable. A successful delivery test, not the
 vendor choice, satisfies the gate. Do not use session alert mode or clear the gate merely
 because a runner appears healthy.

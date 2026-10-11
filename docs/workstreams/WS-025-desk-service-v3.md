@@ -1,6 +1,6 @@
 # WS-025 — Desk service 3.0: unattended desk agents
 
-**Phase:** BUILD_CARD
+**Phase:** BUILDING
 **Status:** Active
 **Created:** 2026-10-11
 **Updated:** 2026-10-11
@@ -100,7 +100,7 @@ TODAY (v2, session mode)
 
 ## Build Card
 
-**Status:** Draft — awaiting owner approval · **Build Spec:** to follow once approved
+**Status:** Approved (owner merged PR #580, 2026-10-11) · **Build Spec:** below
 ### Goal
 
 The ChatGPT and Claude desks run themselves: they wake up, research, pick and learn without
@@ -177,3 +177,86 @@ service -> dry run: record + grade picks      live: same executor, same limits
 
 **After this change, the system should** research and trade both desks on its own schedule,
 inside today's limits, and only call the operator when something is actually wrong.
+
+## Build Spec
+
+Grounded in a code map of `kalshi_bot/desks/` taken 2026-10-11. Three PRs; each is off by default
+and changes nothing until its settings are turned on.
+
+### What the code map changed
+
+- **Stay in session mode.** In session mode an order can only come from an accepted completion
+  whose lease is still valid. That is the strongest existing guard, and both hosts (Claude
+  routines and the ChatGPT runner) already speak its claim, source and complete protocol.
+  Scheduled mode is not used: its runner claim ignores the HH:MM windows.
+- **There is no dry-run path today.** With live off, a decision is simply refused and never
+  graded. Dry run needs a real shadow path.
+- **No wake signal exists.** `next_action` is free text. In session mode every claim creates a
+  new job, so a polling runner would research nonstop without a service-side gate and cap.
+- **ntfy would show raw JSON.** The webhook posts a JSON body; ntfy displays that verbatim.
+- **Alert failure blocks trading.** In webhook mode one exhausted delivery un-verifies the
+  channel and blocks every submit until `POST /api/alerts/test` passes again. This existing
+  safeguard is kept. The runbook says so, and ntfy is the most reliable channel available.
+
+### PR A — service (this PR)
+
+1. **Cycle budget at claim.** New settings `DESKS_MAX_CYCLES_PER_DAY` (0 = unlimited, today's
+   behaviour) and `DESKS_MIN_CYCLE_GAP_MINUTES` (0 = none). A claim past either limit is
+   refused with `cycle_budget_exhausted` or `cycle_gap_not_elapsed`. A Chicago-day count over
+   the desk's claimed jobs is the hard guarantee that no host can run away.
+2. **Wake signal.** An optional `next_check_at` on the research output, clamped to
+   [last claim + min gap, now + 24 h] and stored on the job. New desk-token route
+   `GET /api/desks/<desk>/wake` returns `{due, reason, next_wake_at}`. It is due when:
+   - a base window (`DESKS_<DESK>_WAKE_WINDOWS`, HH:MM in `DESKS_RESEARCH_TIMEZONE`) has
+     passed since the last claim, or
+   - the agent's requested check-in has arrived, or
+   - one of the desk's decisions settled since the last claim.
+
+   It is never due while a job is active, the budget is spent or the gap has not elapsed.
+3. **Shadow (dry-run) execution.** `DESKS_SHADOW_DESKS=chatgpt,claude`. For a shadow desk, an
+   accepted decision runs the same quote, validation and sizing as a live order, but places
+   nothing and reserves nothing. It publishes `shadow_decision` with the would-be quantity,
+   cost and the outcome of every check. The worker's settle pass publishes `shadow_settlement`
+   with the hypothetical P&L once the market settles. Shadow is a reduction in exposure.
+4. **Watchdog.** In session mode with wake windows configured:
+   - `agent_wake_missed` when a wake has been due for more than
+     `DESKS_WAKE_GRACE_MINUTES` (default 90) without a claim;
+   - `no_completed_cycle_24h`, which today applies only to scheduled mode.
+
+   Both feed the existing alert path.
+5. **ntfy-friendly alerts.** `DESKS_ALERT_FORMAT=json|ntfy` (default `json`). `ntfy` sends a
+   plain-text body ("Claude desk: agent wake missed") with `Title`, `Priority` and `Tags`
+   headers. Destination validation, retries and idempotency are unchanged.
+
+### PR B — hosts
+
+- **ChatGPT runner:**
+  - Gate each claim on `/wake`.
+  - Allow session-mode jobs.
+  - Make the CLI timeout configurable, up to just under the lease.
+  - Let Codex use web search for discovery. Evidence stays server-captured: the runner, not
+    the model, holds the token and calls `source`.
+  - Allow up to 3 capture rounds within the 50-source job limit.
+  - Codex still gets no shell.
+- **Claude routines:**
+  - The `/claude-desk-continue` skill reads `/wake` and exits quietly when nothing is due.
+  - It sets `next_check_at`.
+  - One recurring routine fires at each base window. The skill books extra check-ins as
+    one-shot routines, and the service cap bounds them all.
+- Docs: RUNNERS.md, APP_SESSIONS.md, the ntfy setup steps.
+
+### PR C — activation runbook (operator, hard stops)
+
+1. Install ntfy, pick a private topic, set `DESKS_ALERT_WEBHOOK_URL`, `DESKS_ALERT_FORMAT=ntfy`
+   and `DESKS_ALERT_MODE=webhook`, then run the alert test.
+2. Set the wake windows, cycle budget and `DESKS_SHADOW_DESKS=chatgpt,claude`.
+3. Log Codex in on `chatgpt-runner` and start it. Create the Claude routines.
+4. Run the dry-run week, review the `shadow_decision`/`shadow_settlement` records, then remove a
+   desk from `DESKS_SHADOW_DESKS` to go live (**hard stop**, operator only).
+
+### Verification still open
+
+- OpenAI's position on automated Codex runs on a ChatGPT plan. The official docs could not be
+  fetched from this sandbox (network policy); a search summary says the non-interactive docs
+  call API keys the default for automation and describe running as your own Codex account
+  ("Maintain Codex account auth in CI/CD", advanced). To confirm before PR C step 3.

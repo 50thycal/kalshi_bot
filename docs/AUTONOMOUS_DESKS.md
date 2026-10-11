@@ -149,6 +149,29 @@ settlements. These are operational checks, not tests that a strategy is profitab
 Research output includes its next action so stagnation can be inspected; proving that a
 model learned correctly still requires reviewing its evidence.
 
+### Unattended agents (WS-025)
+
+Session mode can run without anyone saying Continue. Every setting below defaults to today's
+behaviour, and none of them changes a money limit.
+
+| Setting | Effect |
+|---|---|
+| `DESKS_<DESK>_WAKE_WINDOWS` | Base wake times (`HH:MM,...` in `DESKS_RESEARCH_TIMEZONE`). Empty = no unattended wakes. |
+| `DESKS_MAX_CYCLES_PER_DAY` | Hard per-desk cap on claims per local day, for every host and Continue (0 = none). |
+| `DESKS_MIN_CYCLE_GAP_MINUTES` | Minimum time between a desk's claims (0 = none). |
+| `DESKS_WAKE_GRACE_MINUTES` | How long a due wake may go unclaimed before `agent_wake_missed` (default 90). |
+| `DESKS_SHADOW_DESKS` | Dry run: decisions are quoted, checked and sized, published as `shadow_decision`, graded as `shadow_settlement`; nothing is reserved or sent. |
+| `DESKS_ALERT_FORMAT` | `ntfy` sends readable text with ntfy headers instead of JSON. |
+
+`GET /api/desks/<desk>/wake` (that desk's token or the operator's) tells a host whether to start a
+cycle: a base window passed, the desk's requested check-in (`next_check_at` in its research
+output, clamped to 10 min–24 h) arrived, one of its decisions settled, or a dashboard Continue is
+queued, each since its last claim. A claim beyond the cap or gap is refused
+(`cycle_budget_exhausted`, `cycle_gap_not_elapsed`). For a desk with wake windows, health adds
+`agent_wake_missed` and `no_completed_cycle_24h`, which reach the operator through the alert
+channel. Dry-run grading assumes a fill at the quoted ask and does not simulate the store's
+daily-slot and one-event limits.
+
 Recoverable errors get bounded recovery and a durable note. Unknown orders, accounting
 problems, exhausted resources, and persistent blockers require attention. Pausing new
 trades does not discard open positions or stop reconciliation. Right after its single POST,

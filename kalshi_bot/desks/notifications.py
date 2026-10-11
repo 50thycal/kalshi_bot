@@ -68,7 +68,7 @@ REASONS = {
     "settlement_learning_backlog", "unattended_runner_missing",
     "paid_research_budget_not_authorized", "research_budget_exhausted",
     "repeated_research_failures", "provider_bill_requires_reconciliation",
-    "no_completed_cycle_24h", "persistent_desk_blocker",
+    "no_completed_cycle_24h", "persistent_desk_blocker", "agent_wake_missed",
 }
 IMMEDIATE = {"trading_paused", "unknown_order_status", "capital_exhausted"}
 
@@ -102,7 +102,11 @@ class _WebhookLogFilter(logging.Filter):
 
 
 class AlertNotifier:
-    def __init__(self, store, url: str, *, client: httpx.Client | None = None, resolver=None):
+    def __init__(self, store, url: str, *, client: httpx.Client | None = None, resolver=None,
+                 fmt: str = "json"):
+        if fmt not in ("json", "ntfy"):
+            raise DeskError("invalid_alert_format")
+        self.fmt = fmt
         self.store = store
         self._url = url.get_secret_value() if hasattr(url, "get_secret_value") else str(url)
         self.configured = bool(self._url)
@@ -268,9 +272,15 @@ class AlertNotifier:
                 redact = _WebhookLogFilter(target)
                 logger.addFilter(redact)
                 try:
-                    response = self.client.post(target, json=claimed["payload"],
-                        headers={"Host": host, "Idempotency-Key": claimed["event_id"]},
-                        extensions={"sni_hostname": sni}, follow_redirects=False, timeout=5)
+                    headers = {"Host": host, "Idempotency-Key": claimed["event_id"]}
+                    if self.fmt == "ntfy":
+                        text, extra = self._ntfy(claimed["payload"])
+                        response = self.client.post(target, content=text.encode(),
+                            headers={**headers, **extra}, extensions={"sni_hostname": sni},
+                            follow_redirects=False, timeout=5)
+                    else:
+                        response = self.client.post(target, json=claimed["payload"], headers=headers,
+                            extensions={"sni_hostname": sni}, follow_redirects=False, timeout=5)
                 finally:
                     logger.removeFilter(redact)
                 if not 200 <= response.status_code < 300:
@@ -297,6 +307,19 @@ class AlertNotifier:
                     row.next_at = now + timedelta(seconds=30 if row.attempts == 1 else 120)
                 results.append({"event_id": row.event_id, "state": row.state, "error": row.error})
         return results
+
+    @staticmethod
+    def _ntfy(payload: dict) -> tuple[str, dict]:
+        """Readable phone push for an ntfy topic URL: same facts, no secrets, no details."""
+        if payload.get("kind") == "test":
+            return "Desk alert channel test.", {"Title": "Kalshi desks", "Priority": "default",
+                                                "Tags": "white_check_mark"}
+        desk = {"chatgpt": "ChatGPT desk", "claude": "Claude desk"}.get(payload.get("desk"), "Desk service")
+        reason = str(payload.get("reason") or "attention").replace("_", " ")
+        urgent = payload.get("reason") in IMMEDIATE
+        return (f"{desk}: {reason}. Open the dashboard for details.",
+                {"Title": f"{desk} needs attention", "Priority": "high" if urgent else "default",
+                 "Tags": "warning"})
 
     def test_delivery(self, now: datetime) -> dict:
         if not self.configured:

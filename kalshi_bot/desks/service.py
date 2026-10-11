@@ -1,9 +1,10 @@
 """Application boundary: identities, shared start, reconciliation and desk status."""
 from __future__ import annotations
 
+import hashlib
 import logging
 from datetime import timedelta
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
 from .config import DeskSettings
 from .contracts import Decision, DeskError, utcnow
@@ -22,6 +23,7 @@ class DeskService:
         self.executors = executors or {}
         self.notifier = notifier
         self._isolation = {}
+        self._shadow_checked = {}  # decision_id -> last settlement read (in-memory throttle)
         self.last_tick = None
         self.last_error = None
 
@@ -108,7 +110,61 @@ class DeskService:
         now = require_fresh_execution()
         if self.settings.research_mode == "session":
             self.supervisor.verify_session_decision(decision, now)
+        if decision.desk_id in self.settings.shadow_desk_set():
+            return self.shadow(decision, executor, now)
         return executor.submit(decision, now=now)
+
+    @staticmethod
+    def _shadow_id(decision_id, kind):
+        return hashlib.sha256(f"{kind}:{decision_id}".encode()).hexdigest()
+
+    def shadow(self, decision: Decision, executor, now):
+        """Dry run (WS-025): record what the live path would do; never reserve or order."""
+        record_id = self._shadow_id(decision.decision_id, "shadow_decision")
+        prior = self.store.publication(record_id)
+        if prior is not None:
+            return prior["payload"]  # A replayed completion never re-quotes the decision.
+        book = next(row for row in self.store.snapshot(now)["desks"]
+                    if row["desk_id"] == decision.desk_id)
+        if book.get("paused"):
+            payload = {"decision_id": decision.decision_id, "ticker": decision.ticker,
+                       "side": decision.side, "status": "would_refuse", "reason": "desk_paused"}
+        else:
+            payload = executor.preview(decision, now)
+        payload = {**payload, "mode": "shadow"}
+        self.store.publish(decision.desk_id, "shadow_decision", payload, now, record_id=record_id)
+        return payload
+
+    def settle_shadow(self, desk, executor, now):
+        """Grade dry-run picks once their market settles: hypothetical fill at the quoted ask."""
+        for record in self.store.publications(desk, "shadow_decision"):
+            item = record["payload"]
+            if item.get("status") != "would_submit":
+                continue
+            record_id = self._shadow_id(item["decision_id"], "shadow_settlement")
+            if self.store.publication(record_id) is not None:
+                continue
+            checked = self._shadow_checked.get(item["decision_id"])
+            if checked and now - checked < timedelta(minutes=5):
+                continue  # One exchange read per open dry-run pick every five minutes.
+            self._shadow_checked[item["decision_id"]] = now
+            settlement = executor.exchange.settlement(item["ticker"])
+            if settlement is None:
+                continue
+            yes = Decimal(str(settlement.yes_payout))
+            outcome = yes if item["side"] == "yes" else 1 - yes
+            quantity, ask = Decimal(item["quantity"]), Decimal(item["ask"])
+            fee = (Decimal(item["fee_rate"]) * quantity * ask * (1 - ask)).quantize(
+                Decimal("0.01"), rounding=ROUND_CEILING)
+            payout = quantity * outcome
+            graded = {"decision_id": item["decision_id"], "ticker": item["ticker"],
+                      "side": item["side"], "yes_payout": str(yes), "quantity": str(quantity),
+                      "assumed_fill_price": str(ask), "fee": str(fee), "payout": str(payout),
+                      "pnl": str(payout - quantity * ask - fee),
+                      "settled_at": settlement.settled_at.isoformat(), "mode": "shadow"}
+            if yes in (Decimal(0), Decimal(1)):
+                graded["brier_score"] = str((Decimal(item["probability"]) - outcome) ** 2)
+            self.store.publish(desk, "shadow_settlement", graded, now, record_id=record_id)
 
     def status(self, now=None):
         now = now or utcnow()
@@ -158,6 +214,10 @@ class DeskService:
                 executor.settle(now=now)
             except Exception:
                 # A failed market read is recoverable; it cannot create a settlement.
+                self.last_error = "settlement_source_unavailable"
+            try:
+                self.settle_shadow(desk, executor, now)
+            except Exception:
                 self.last_error = "settlement_source_unavailable"
 
     def tick(self, now=None):

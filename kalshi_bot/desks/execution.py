@@ -89,19 +89,8 @@ class DeskExecutor:
         if decision.max_price % D("0.01") or decision.max_price % quote.tick_size:
             raise DeskError("unsupported_limit_grid")
 
-    def submit(self, decision: Decision, now: datetime | None = None):
-        now = now or utcnow()
-        self._guard()
-        existing = self.store.get_decision(decision.decision_id)
-        if existing:
-            if existing["payload"] != decision.model_dump(mode="json"):
-                raise DeskError("decision_id_conflict")
-            # A durable claim is never taken twice. Even an old reserved record
-            # is reconciled, not submitted again after a restart.
-            return existing
-        quote = self.exchange.quote(decision.ticker, decision.side)
-        now = utcnow()
-        self._validate(decision, quote, now)
+    def _size(self, decision: Decision, quote: Quote, now: datetime):
+        """Contracts and conservative cost under the book's limits, or a refusal."""
         snapshot = self.store.snapshot(now)
         book = next(row for row in snapshot["desks"] if row["desk_id"] == self.desk_id)
         budget = min(
@@ -120,6 +109,42 @@ class DeskExecutor:
             raise DeskError("insufficient_conservative_edge")
         if decision.probability * quantity - reserved_cost <= 0:
             raise DeskError("nonpositive_computed_edge")
+        return quantity, reserved_cost
+
+    def preview(self, decision: Decision, now: datetime | None = None) -> dict:
+        """Dry run (WS-025): the live checks and sizing on a fresh quote, with no
+        reservation, claim or order. Exchange reads only; the live flags are not needed."""
+        if decision.desk_id != self.desk_id:
+            raise DeskError("wrong_desk")
+        quote = self.exchange.quote(decision.ticker, decision.side)
+        now = utcnow()
+        result = {"decision_id": decision.decision_id, "ticker": decision.ticker,
+                  "event_id": decision.event_id, "side": decision.side,
+                  "max_price": str(decision.max_price), "probability": str(decision.probability),
+                  "quoted_at": quote.fetched_at.isoformat(), "ask": str(quote.ask),
+                  "fee_rate": str(quote.fee_rate)}
+        try:
+            self._validate(decision, quote, now)
+            quantity, reserved_cost = self._size(decision, quote, now)
+        except DeskError as exc:
+            return {**result, "status": "would_refuse", "reason": exc.code}
+        return {**result, "status": "would_submit", "reason": None, "quantity": quantity,
+                "reserved_cost": str(reserved_cost)}
+
+    def submit(self, decision: Decision, now: datetime | None = None):
+        now = now or utcnow()
+        self._guard()
+        existing = self.store.get_decision(decision.decision_id)
+        if existing:
+            if existing["payload"] != decision.model_dump(mode="json"):
+                raise DeskError("decision_id_conflict")
+            # A durable claim is never taken twice. Even an old reserved record
+            # is reconciled, not submitted again after a restart.
+            return existing
+        quote = self.exchange.quote(decision.ticker, decision.side)
+        now = utcnow()
+        self._validate(decision, quote, now)
+        quantity, reserved_cost = self._size(decision, quote, now)
         if getattr(self.exchange, "shared_primary", False):
             try:
                 self.exchange.check_isolation()

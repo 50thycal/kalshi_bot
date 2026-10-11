@@ -95,8 +95,9 @@ before any research invocation. Login success alone does not establish billing.
 
 Scheduled mode also requires a tested HTTPS webhook; session-only alerting is not valid.
 A long, random ntfy topic subscribed in the mobile app is the smallest phone-friendly
-destination compatible with the notifier's JSON `message` field. Store its URL as the
-secret `DESKS_ALERT_WEBHOOK_URL`, set `DESKS_ALERT_MODE=webhook`, and run the operator-only
+destination. Store its URL as the secret `DESKS_ALERT_WEBHOOK_URL`, set
+`DESKS_ALERT_MODE=webhook` and `DESKS_ALERT_FORMAT=ntfy` (readable text instead of raw JSON),
+and run the operator-only
 `scripts/desk_operator.py test-alerts`. Keep the gate blocked unless that test is recorded
 successful.
 
