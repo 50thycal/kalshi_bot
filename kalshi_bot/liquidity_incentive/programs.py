@@ -129,6 +129,29 @@ def _bump_last_seen(session, rows: list, now: datetime) -> None:
             set_committed_value(row, "last_seen_at", now)
 
 
+def _not_superseded_for(session, listed: list[tuple[dict, str]]) -> dict:
+    """The not-superseded rows a discovery pass reads, keyed by (program_id, terms_hash).
+
+    Every current row (not superseded, not disappeared), since a current row missing from the
+    listing is marked disappeared. A disappeared row matters only when its programme is listed
+    again, so those are fetched for just the listed programmes that match no current row.
+
+    Same rows the pass used to read with one unfiltered not-superseded load, whose ~80k long-gone
+    rows were most of what it loaded every pass (WS-024)."""
+    rows = list(session.scalars(_light(select(m.IncentiveProgram).where(
+        m.IncentiveProgram.superseded_at.is_(None),
+        m.IncentiveProgram.disappeared_at.is_(None)))).all())
+    current = {(r.program_id, r.terms_hash) for r in rows}
+    unmatched = sorted({str(prog.get("id")) for prog, _status in listed
+                        if prog.get("id") and (str(prog.get("id")), terms_hash(prog)) not in current})
+    for start in range(0, len(unmatched), _BUMP_CHUNK):
+        rows.extend(session.scalars(_light(select(m.IncentiveProgram).where(
+            m.IncentiveProgram.superseded_at.is_(None),
+            m.IncentiveProgram.disappeared_at.is_not(None),
+            m.IncentiveProgram.program_id.in_(unmatched[start:start + _BUMP_CHUNK])))).all())
+    return {(r.program_id, r.terms_hash): r for r in rows}
+
+
 def _light(stmt):
     return stmt.options(*(defer(col) for col in _HEAVY_COLUMNS))
 
@@ -219,8 +242,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
             by_id[pid_key] = (prog, observed)
     listed = list(by_id.values())
 
-    existing = {(r.program_id, r.terms_hash): r for r in session.scalars(_light(
-        select(m.IncentiveProgram).where(m.IncentiveProgram.superseded_at.is_(None)))).all()}
+    existing = _not_superseded_for(session, listed)
     by_program: dict[str, m.IncentiveProgram] = {}
     for (pid, _h), r in existing.items():
         by_program[pid] = r
