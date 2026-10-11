@@ -1,1 +1,1 @@
-{"type":"db","id":"ws024-ip-6","max_rows":12,"sql":"select id, started_at, round(extract(epoch from finished_at-started_at)::numeric,1) secs, programs_listed, new_terms, changed_terms, disappeared, errors, (select count(*) from incentive_programs where superseded_at is null and last_seen_at = c.started_at) bumped from incentive_discovery_cycles c where started_at > now() - interval '25 minutes' order by id"}
+{"type":"noop"}
