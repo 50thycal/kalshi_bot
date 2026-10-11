@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select 'twin_row' k, count(*) n from live_paper_twins where twin_tag='Kmmsell10_pt4' union all select 'twin_paper_trades', count(*) from paper_trades where strategy='Kmmsell10_pt4' union all select 'k_orders', count(*) from live_orders where strategy='Kmmsell10' union all select 'j_orders_since_arm', count(*) from live_orders where strategy='Jmmsell10' and created_at > '2026-10-11 15:29:29'", "max_rows": 10, "id": "kmm-twin-1011"}
+{"type":"noop"}
