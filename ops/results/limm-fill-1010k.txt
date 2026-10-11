@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-fill-1010k
-# code 150a0d7c539a111b16bb689063b3fac7633103cd · started 2026-10-10T21:09:14Z
-market_ticker               side  action  limit_price  quantity  status  created_at                  
---------------------------  ----  ------  -----------  --------  ------  ----------------------------
-KXMCDSBIGMAC-26NOV02-T6.08  no    sell    5            18        filled  2026-10-06 00:42:45.76059+00
-
-(1 row)
