@@ -2820,3 +2820,33 @@ Oct 14) at 04:30Z as dead for KXC4POS-26NOV03-T110, a programme first seen at 04
 to Oct 15). It then re-priced that bid in place, 2¢ to 4¢, at 05:32Z. The swap's rate log was
 lost to the 04:37Z redeploy, so whether it cleared the dead line comfortably or by a hair is
 unknown. This is the second dead swap out of a programme with a week to run.
+
+### 9.51 Rewards confirmed from Kalshi's page; the dashboard counts only those; placement run 3 (2026-10-11)
+
+**Ground truth.** Kalshi's Rewards page (operator screenshot, 2026-10-10) lists two payouts:
+**$2.21** for KXANTHVREQ-28SEP26 (Sep 29) and **$2.09** for KXTRUMPMENTION-26OCT09 (Oct 10),
+lifetime **$4.30**. Two consequences:
+
+- **Leaving early does not forfeit the reward.** The Oct 10 payout is the event that held the
+  AFFO bid for ~38 h, which §9.49's dead rule swapped out 27 h before the programme ended. Kalshi
+  still paid for the time quoted, so reward accrues per snapshot. The swap churn noted in §9.50 is
+  therefore much less costly than assumed; the "accrued amount is forfeited" premise behind the
+  proposed swap guard is withdrawn, and that guard is not built.
+- **The §9.49 attribution rule over-counted.** It also counted the $2.75 residual of 2026-10-06,
+  which Kalshi never paid as a reward, so the dashboard read $4.96 against $2.21 (then $7.05
+  against $4.30). Fix: `reward_ledger.CONFIRMED_REWARD_PAYOUTS` holds the Rewards-page payouts;
+  the dashboard counts a residual as a reward only when it matches one (UTC date ± 1 day, exact
+  cents). A residual that only passes the attribution test shows as **unconfirmed**, outside the
+  net. Cent-scale positive residuals are no longer counted (Kalshi pays nothing under $1).
+  Display only; no trading behaviour changes. New payouts are appended from the Rewards page.
+
+Corrected book total: trading about −$28.5, rewards +$4.30, net about −$24.2.
+
+**Placement run 3 (paper).** Outside research (an open-source Kalshi LIP bot, Polymarket reward
+bots, the published scoring) pointed at two levers: quote both sides, and rest deeper than the
+scoring price to cut fills. The operator approved testing both on paper first. Run 1 already
+showed the equal-size pair earns ~8× less than the cheap side alone at $10 a leg, so the
+two-sided candidate sizes each leg on its own. Pre-registered in
+[LIMM_PLACEMENT_THESIS.md](LIMM_PLACEMENT_THESIS.md) "Run 3" before the run; decided against
+P1B (the live rule) on the recorded tape up to 2026-10-07. Nothing live changes from the run
+itself: an ADOPT returns to the operator as a separate live decision.

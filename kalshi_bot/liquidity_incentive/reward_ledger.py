@@ -74,6 +74,31 @@ EXTERNAL_TRANSFER_CENTS = 100
 REWARD_ATTRIBUTION_HOURS = 24.0
 REWARD_MAX_CENTS = 2500
 
+#: §9.51 (2026-10-11): the attribution rule above is a candidate test, not a certificate. Kalshi's
+#: Rewards page (operator screenshot, 2026-10-10) lists exactly two payouts — $2.21 for
+#: KXANTHVREQ-28SEP26 (Sep 29) and $2.09 for KXTRUMPMENTION-26OCT09 (Oct 10), lifetime $4.30 —
+#: while the rule had also counted the $2.75 residual of 2026-10-06, which Kalshi never paid as a
+#: reward. No API route lists payouts, so the page is the source of truth: a payout counts as a
+#: reward only when it matches a row here (UTC date ± 1 day, exact cents). Append new rows from
+#: the Rewards page; an attributable residual not listed is shown as unconfirmed, never summed.
+CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
+    ("2026-09-29", 221, "KXANTHVREQ-28SEP26"),
+    ("2026-10-10", 209, "KXTRUMPMENTION-26OCT09"),
+)
+
+
+def confirmed_reward(residual_cents: int | None, at: datetime | None) -> bool:
+    """True when this residual is a payout listed on Kalshi's Rewards page
+    (`CONFIRMED_REWARD_PAYOUTS`). Kalshi shows a local date, hence the one-day tolerance."""
+    if residual_cents is None or at is None:
+        return False
+    cents = int(residual_cents)
+    day = at.date()
+    for iso, paid, _event in CONFIRMED_REWARD_PAYOUTS:
+        if cents == paid and abs((datetime.fromisoformat(iso).date() - day).days) <= 1:
+            return True
+    return False
+
 
 def attributable_reward(residual_cents: int | None, at: datetime | None,
                         program_ends: list[datetime]) -> bool:

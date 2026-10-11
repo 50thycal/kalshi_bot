@@ -6,10 +6,10 @@ appears as a fill, and its losses are mostly older than the month. This block ad
 
 * **all time** — realized P&L on every market the book ever traded (settled position snapshots,
   after fees), reward credits, and the net of the two;
-* **reward credits** — positive balance residuals from the reward ledger
-  (`incentive_balance_observations`): cash no fill or settlement explains, excluding presumed
-  deposits/withdrawals and readings the ledger itself marked untrustworthy. A residual is a
-  candidate reward, not a certified one (`reward_ledger.py`), and the page says so;
+* **reward credits** — balance residuals from the reward ledger
+  (`incentive_balance_observations`) that match a payout on Kalshi's Rewards page
+  (`reward_ledger.CONFIRMED_REWARD_PAYOUTS`, §9.51). A residual that only fits the §9.49
+  attribution test is reported apart as unconfirmed and never added to the net;
 * **what is resting now** — each working order with its market, side, price, size, dollars
   committed, age, its programme's pool and end, and an ESTIMATED reward per day from the
   published scoring rules (`liquidity_incentive.scoring`) on the collector's newest book.
@@ -27,7 +27,7 @@ from sqlalchemy import select
 from .. import models as m
 from ..liquidity_incentive import live as limm
 from ..liquidity_incentive import programs as progs
-from ..liquidity_incentive.reward_ledger import attributable_reward
+from ..liquidity_incentive.reward_ledger import attributable_reward, confirmed_reward
 from ..liquidity_incentive.scoring import discount_factor, order_multiplier
 
 #: A collector snapshot older than this is too stale to estimate a reward from.
@@ -109,30 +109,31 @@ def _program_ends(session, tickers: list[str]) -> list[datetime]:
     return sorted({_aware(e) for e in rows})
 
 
-def _rewards(session, tickers: list[str] | None = None) -> tuple[float, float, datetime | None]:
-    """(cash in, cash out, last credit time) from the reward ledger's trustworthy residuals.
-    A presumed transfer counts as a credit when it is attributable to one of this book's
-    programmes ending (§9.49, `reward_ledger.attributable_reward`)."""
-    cash_in = cash_out = 0.0
+def _rewards(session, tickers: list[str] | None = None
+             ) -> tuple[float, float, float, datetime | None]:
+    """(rewards, unconfirmed, cash out, last reward time) from the reward ledger.
+
+    A reward is a residual matching a payout on Kalshi's Rewards page
+    (`reward_ledger.confirmed_reward`, §9.51). A presumed transfer that only passes the §9.49
+    attribution test is UNCONFIRMED and kept apart: on 2026-10-06 that test counted $2.75 that
+    Kalshi never paid. Kalshi pays nothing under $1, so cent-scale positive residuals are
+    accounting noise, not rewards; negative ones stay the unexplained cash out."""
+    cash_in = unconfirmed = cash_out = 0.0
     last_in = None
     ends = _program_ends(session, tickers or [])
     for row in session.scalars(select(m.IncentiveBalanceObservation)):
-        if row.residual_cents is None:
+        if row.residual_cents is None or (row.notes_json or {}).get("residual_untrustworthy"):
             continue
-        if row.presumed_transfer and not attributable_reward(
-                row.residual_cents, _aware(row.at), ends):
-            continue
-        if (row.notes_json or {}).get("residual_untrustworthy"):
-            continue
-        cents = int(row.residual_cents)
-        if cents > 0:
+        cents, at = int(row.residual_cents), _aware(row.at)
+        if cents > 0 and confirmed_reward(cents, at):
             cash_in += cents / 100.0
-            at = _aware(row.at)
             if last_in is None or (at and at > last_in):
                 last_in = at
-        elif cents < 0:
+        elif cents > 0 and row.presumed_transfer and attributable_reward(cents, at, ends):
+            unconfirmed += cents / 100.0
+        elif cents < 0 and not row.presumed_transfer:
             cash_out += cents / 100.0
-    return cash_in, cash_out, last_in
+    return cash_in, unconfirmed, cash_out, last_in
 
 
 def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -> dict:
@@ -149,7 +150,7 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         if s is not None and (s.quantity or 0) == 0 and s.realized_pnl is not None:
             realized += float(s.realized_pnl)
             settled += 1
-    cash_in, cash_out, last_in = _rewards(session, tickers)
+    cash_in, unconfirmed, cash_out, last_in = _rewards(session, tickers)
 
     working = [o for o in orders if (o.status or "").lower() in WORKING]
     by_ticker = {}
@@ -196,6 +197,7 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         "settled_markets_all_time": settled,
         "markets_traded_all_time": len(tickers),
         "reward_credits_usd": _r(cash_in),
+        "reward_unconfirmed_usd": _r(unconfirmed),
         "unexplained_cash_out_usd": _r(cash_out),
         "last_reward_at": _iso(last_in),
         "net_all_time_usd": _r(realized + cash_in),

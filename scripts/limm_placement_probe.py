@@ -39,7 +39,7 @@ PULL_TRADES_5M = 3
 PULL_RANGE_5M = 3
 PULL_CLOSE_HOURS = 48.0
 REALISED_REWARD_USD = 2.21      # live book, 2026-09-17 -> 2026-10-04 (reward ledger)
-POLICIES = ("B0", "P1", "P2", "P1F", "P2F", "P1A", "P1B", "P1C", "P1ABC")
+POLICIES = ("B0", "P1", "P2", "P1F", "P2F", "P1A", "P1B", "P1C", "P1ABC", "P1BD", "P2IB")
 #: Run 2 (§ "Protections" in the thesis): loss controls layered on P1.
 #:   A  size to the pool: at most $3 at risk, and no more contracts than the side's field score
 #:   B  exit after a fill: scratch at entry once the side's bid is back at entry; stop at half
@@ -47,6 +47,12 @@ POLICIES = ("B0", "P1", "P2", "P1F", "P2F", "P1A", "P1B", "P1C", "P1ABC")
 PROTECT_RISK_CENTS = 300
 PROTECT_MIN_QTY = 50
 LONGSHOT_MAX_PRICE = 5
+#: Run 3 (§ "Run 3" in the thesis): two candidates against P1B, the live rule since §9.48.
+#:   D  rest deeper: the deepest price at or below the reference whose reward share is within
+#:      DEEPER_SHARE_KEEP of the best share over [1c, reference] (a deeper bid buys more
+#:      contracts for the same $10, so its share need not fall)
+#:   I  both sides, each leg sized to its OWN price ($10 / leg), not to the dearer leg
+DEEPER_SHARE_KEEP = 0.90
 MODELS = ("optimistic", "conservative")
 
 
@@ -123,7 +129,24 @@ class Leg:
         return self.ahead < 0
 
 
-def desired(policy: str, snap: dict, target: float) -> list[tuple[str, int]]:
+def leg_qty(price: int) -> int:
+    return min(MAX_CONTRACTS, LEG_BUDGET_CENTS // price) if price > 0 else 0
+
+
+def deeper_price(ref: int, field: float, disc: float) -> int:
+    """Protection D: the deepest price in [1, ref] whose share is >= DEEPER_SHARE_KEEP x the
+    best share in that range, at the $10 leg size for each price. Snapshot-only."""
+    shares = {}
+    for p in range(1, ref + 1):
+        ours = leg_qty(p) * disc ** (ref - p)
+        shares[p] = ours / (field + ours) if field + ours > 0 else 0.0
+    best = max(shares.values()) if shares else 0.0
+    if best <= 0:
+        return ref
+    return min(p for p, sh in shares.items() if sh >= DEEPER_SHARE_KEEP * best - 1e-12)
+
+
+def desired(policy: str, snap: dict, target: float, disc: float = 0.9) -> list[tuple[str, int]]:
     """The (side, price) legs a policy wants from this snapshot alone; [] when it stands aside."""
     ylv, nlv = snap["ylv"], snap["nlv"]
     if not ylv or not nlv:
@@ -146,6 +169,8 @@ def desired(policy: str, snap: dict, target: float) -> list[tuple[str, int]]:
         if not cands:
             return []
         p, s = min(cands)
+        if "D" in variant:
+            p = deeper_price(p, snap["fy"] if s == "yes" else snap["fn"], disc)
         return [(s, p)]
     if ry + rn > 99 or ry < 1 or rn < 1:
         return []
@@ -210,7 +235,7 @@ def simulate(policy, model, snaps, trades, prog):
             live = []
             quoted_at = None
         elif not live or quoted_at is None or follow or (t - quoted_at).total_seconds() >= REQUOTE_SECONDS:
-            want = desired(policy, snap, target)
+            want = desired(policy, snap, target, disc)
         else:
             want = None  # keep what rests
         if want is not None and not stopped:
@@ -226,7 +251,8 @@ def simulate(policy, model, snaps, trades, prog):
                     lv = snap["ylv"] if s == "yes" else snap["nlv"]
                     # We join the back of the queue at our price.
                     ahead = depth_at(lv, p) if model == "conservative" else 0.0
-                    legs.append(Leg(s, p, q, t, ahead, model))
+                    ql = leg_qty(p) if "I" in policy[2:] else q
+                    legs.append(Leg(s, p, ql, t, ahead, model))
                 quoted_at = t
             elif not want:
                 legs = [lg for lg in legs if lg.filled_at is not None]
@@ -263,12 +289,20 @@ def simulate(policy, model, snaps, trades, prog):
     # Settle fills: a completed pair locks 100 - y - n; a lone leg is marked at +24 h.
     sides = {lg.side: lg for lg in fills}
     snap_ts = [s["at"] for s in snaps]
+    lone = fills
     if "yes" in sides and "no" in sides:
         q = min(sides["yes"].qty, sides["no"].qty)
         out["pnl"] += (100 - sides["yes"].price - sides["no"].price) * q / 100.0
         out["pairs"] += 1
-    else:
-        for lg in fills:
+        lone = []
+        # Unequal legs (policy I): the larger leg's excess is naked, marked like a lone leg.
+        big = max(sides.values(), key=lambda lg: lg.qty)
+        if big.qty > q:
+            rest = Leg(big.side, big.price, big.qty - q, big.placed, 0.0, model)
+            rest.filled_at = big.filled_at
+            lone = [rest]
+    if lone:
+        for lg in lone:
             pnl = None
             if "B" in policy[2:]:
                 pnl = exit_after_fill(lg, snaps, snap_ts, out)
@@ -296,6 +330,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-markets", type=int, default=400)
     ap.add_argument("--window-only", action="store_true",
                     help="only markets closing 7-60 days after their first snapshot (the live window)")
+    ap.add_argument("--until", default=None,
+                    help="ISO end of the window (default now); the shadow tape stopped 2026-10-07")
     args = ap.parse_args(argv)
 
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
@@ -311,11 +347,14 @@ def main(argv: list[str] | None = None) -> int:
         cur = conn.cursor()
         cur.execute("SELECT now()")
         now = cur.fetchone()[0]
+        if args.until:
+            from datetime import datetime
+            now = datetime.fromisoformat(args.until.replace("Z", "+00:00"))
         start = now - timedelta(days=args.days)
         cur.execute("""
             SELECT s.market_ticker, count(*) n, max(s.program_row_id)
-            FROM incentive_market_snapshots s WHERE s.at >= %s
-            GROUP BY 1 ORDER BY 2 DESC LIMIT %s""", (start, args.max_markets))
+            FROM incentive_market_snapshots s WHERE s.at >= %s AND s.at < %s
+            GROUP BY 1 ORDER BY 2 DESC LIMIT %s""", (start, now, args.max_markets))
         markets = cur.fetchall()
         tot = {(p, m): defaultdict(float) for p in POLICIES for m in MODELS}
         per_mkt = {(p, m): {} for p in POLICIES for m in MODELS}
@@ -336,8 +375,9 @@ def main(argv: list[str] | None = None) -> int:
                                   est_no_score_total, est_yes_meets_target, est_no_meets_target,
                                   trades_last_5m, price_range_5m_cents
                            FROM incentive_market_snapshots
-                           WHERE market_ticker = %s AND at >= %s AND book_valid IS TRUE
-                           ORDER BY at""", (ticker, start))
+                           WHERE market_ticker = %s AND at >= %s AND at < %s
+                             AND book_valid IS TRUE
+                           ORDER BY at""", (ticker, start, now))
             snaps = [{"at": r[0], "ylv": levels(r[1]), "nlv": levels(r[2]),
                       "fy": float(r[3] or 0), "fn": float(r[4] or 0),
                       "qual": bool(r[5]) and bool(r[6]), "trades5": r[7], "range5": r[8]}
@@ -351,8 +391,9 @@ def main(argv: list[str] | None = None) -> int:
                     continue
             cur.execute("""SELECT received_at, yes_price_cents, count_fp, taker_outcome_side
                            FROM incentive_trade_events
-                           WHERE market_ticker = %s AND received_at >= %s ORDER BY received_at""",
-                        (ticker, start))
+                           WHERE market_ticker = %s AND received_at >= %s AND received_at < %s
+                           ORDER BY received_at""",
+                        (ticker, start, now))
             trades = [(r[0], r[1], float(r[2] or 0), r[3]) for r in cur.fetchall()]
             prog = {"target": float(target), "disc_bps": disc_bps, "end": p_end, "close": close,
                     "pool_ps": float(pool) / period}
@@ -454,6 +495,28 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  PROTECTION CHOICE: {pick}")
     else:
         print("  PROTECTION CHOICE: none passes; P1 unprotected is the reference")
+    # Run 3 (thesis "Run 3"): candidates vs P1B, the live rule. Relative, same run.
+    ref = res[("P1B", "conservative")]
+    ref_o = res[("P1B", "optimistic")]
+    print("\nRUN 3 vs P1B (live rule): adopt = conservative net/md >= 110% of P1B's AND optimistic "
+          "net/md >= P1B's AND top market <= 50%")
+    adopt = []
+    for p in ("P1BD", "P2IB"):
+        c, o = res[(p, "conservative")], res[(p, "optimistic")]
+        rel = (c["net_md"] / ref["net_md"] * 100.0) if ref["net_md"] > 0 else float("nan")
+        ok = (ref["net_md"] > 0 and c["net_md"] >= 1.10 * ref["net_md"]
+              and o["net_md"] >= ref_o["net_md"] and not (c["top"] == c["top"] and c["top"] > 50.0))
+        if ok:
+            adopt.append(p)
+        print(f"  {p:5} cons net/md {c['net_md']:+.3f} ({rel:4.0f}% of P1B {ref['net_md']:+.3f})  "
+              f"opt net/md {o['net_md']:+.3f} vs {ref_o['net_md']:+.3f}  reward/md {c['rew_md']:.3f}  "
+              f"loss ${c['loss']:.2f} vs ${ref['loss']:.2f}  worst ${c['worst']:.2f}  "
+              f"top {c['top']:.0f}%  md {c['md']:.1f} -> {'ADOPT' if ok else 'keep P1B'}")
+    if adopt:
+        pick = max(adopt, key=lambda p: res[(p, "conservative")]["net_md"])
+        print(f"  RUN 3 CHOICE: {pick}")
+    else:
+        print("  RUN 3 CHOICE: none — the live rule (P1B) stays")
     winners = [p for p, v in verdicts.items() if v == "PROMOTE"]
     if winners:
         best = max(winners, key=lambda p: res[(p, "conservative")]["net_md"])
