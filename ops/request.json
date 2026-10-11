@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["pcr-xos44-resolve-1"],"id":"pcr-xos44-rcpt-1"}
+{"type":"logs","limit":30,"filter":"issue command","id":"pcr-xos44-logs-1"}
