@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","id":"desk-1011-diag","args":["--hours","168","--min-volume","0"]}
+{"type":"script","name":"kalshi_desk_board","id":"desk-1011-diesel","args":["--hours","168","--min-volume","0","--search","diesel"]}
