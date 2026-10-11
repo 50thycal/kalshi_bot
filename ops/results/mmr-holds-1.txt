@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=mmr-holds-1
+# code 85580aaa8512ff72f3df08cc3cfe618aa14900b7 · started 2026-10-11T22:49:07Z
+exp                      verdict  at           computed_by  i  txt                                                                                       
+-----------------------  -------  -----------  -----------  -  ------------------------------------------------------------------------------------------
+mmsell-type-tight        HOLD     10-01 14:37  system       0  sample floor not met: mmsell-type-tight/v1/e2/Tmmsell2 settled_trades=43 vs >= 100        
+mmsell-variants-2026-07  HOLD     10-04 21:09  system       0  holding: mmsell-variants-2026-07/v1/e1/mmsell6 realizable_cents_per_trade=-0.297 (needs > 
+mmsell-variants-2026-07  HOLD     10-04 21:09  system       1  0); mmsell-variants-2026-07/v1/e1/mmsell7 realizable_cents_per_trade=-0.54 (needs > 0)    
+
+(3 rows)
