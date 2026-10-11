@@ -590,6 +590,68 @@ def test_a_failed_paid_out_fetch_does_not_cost_us_the_active_listing(settings):
     assert result.errors == 1
 
 
+def test_an_ended_programme_listed_only_as_paid_out_is_seen_but_not_restamped(settings):
+    """XOS-000044, option A. The paid_out listing returns every programme Kalshi ever paid, so
+    re-stamping them was ~86% of each pass's row rewrites and made the shared metric count every
+    one as observed in every window. Such a row keeps its last stamp; it is still SEEN, so it is
+    never marked disappeared. Everything else keeps the re-stamp."""
+    ended = dict(start=T0 - timedelta(days=5), end=T0 - timedelta(days=2))
+    client = _ReadClient(programs=[
+        _program(pid="p_live", ticker="KXT-LIVE"),
+        dict(_program(pid="p_both", ticker="KXT-BOTH", **ended), paid_out=True),
+    ])
+    client.paid_out_programs = [
+        dict(_program(pid="p_old", ticker="KXT-OLD", **ended), paid_out=True),
+        dict(_program(pid="p_both", ticker="KXT-BOTH", **ended), paid_out=True),
+        # Paid out but its end_date has not passed: still re-stamped.
+        dict(_program(pid="p_early", ticker="KXT-EARLY"), paid_out=True),
+        dict(_program(pid="p_open", ticker="KXT-OPEN"), paid_out=True, end_date=None),
+    ]
+    _db(settings)
+    with db.session_scope() as s:
+        first = pg.run_discovery(client, s, now=T0)
+        assert first.new_terms == 5 and first.ended_paid_out_unstamped == 0
+    later = T0 + timedelta(minutes=5)
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=later)
+        assert (r.new_terms, r.changed_terms, r.disappeared) == (0, 0, 0)
+        assert r.ended_paid_out_unstamped == 1
+        cyc = s.scalars(select(m.IncentiveDiscoveryCycle).order_by(
+            m.IncentiveDiscoveryCycle.id.desc())).first()
+        assert cyc.notes_json["ended_paid_out_unstamped"] == 1
+        rows = {row.program_id: row for row in s.scalars(select(m.IncentiveProgram)).all()}
+    assert run_aware(rows["p_old"].last_seen_at) == T0          # first sight, never re-stamped
+    assert rows["p_old"].disappeared_at is None and rows["p_old"].superseded_at is None
+    for pid in ("p_live", "p_both", "p_early", "p_open"):
+        assert run_aware(rows[pid].last_seen_at) == later, pid
+
+
+def test_an_unstamped_paid_out_programme_still_reappears_after_a_failed_fetch(settings):
+    """A failed paid_out fetch marks the terminal rows disappeared (they were not listed). The
+    next good pass must clear that, without re-stamping the ended programme."""
+    ended = dict(start=T0 - timedelta(days=5), end=T0 - timedelta(days=2))
+    client = _ReadClient(programs=[_program(pid="p_live", ticker="KXT-LIVE")])
+    client.paid_out_programs = [dict(_program(pid="p_old", ticker="KXT-OLD", **ended),
+                                     paid_out=True)]
+    _db(settings)
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+    good = client.paid_out_programs
+    client.paid_out_programs = RuntimeError("kalshi 503")
+    with db.session_scope() as s:
+        assert pg.run_discovery(client, s, now=T0 + timedelta(minutes=5)).disappeared == 1
+    client.paid_out_programs = good
+    with db.session_scope() as s:
+        r = pg.run_discovery(client, s, now=T0 + timedelta(minutes=10))
+        assert (r.disappeared, r.ended_paid_out_unstamped) == (0, 1)
+        old = s.scalars(select(m.IncentiveProgram).where(
+            m.IncentiveProgram.program_id == "p_old")).one()
+        assert old.disappeared_at is None and run_aware(old.last_seen_at) == T0
+        cyc = s.scalars(select(m.IncentiveDiscoveryCycle).order_by(
+            m.IncentiveDiscoveryCycle.id.desc())).first()
+        assert cyc.notes_json["reappeared"] == ["p_old"]
+
+
 def test_the_live_books_markets_survive_the_tracking_cap(settings):
     """The shadow ranks by reward size; the live runner ranks by soonest programme end. The two
     sets were disjoint, so the shadow never once observed a market the live book traded

@@ -453,6 +453,62 @@ with what the row already stores. Expect the live worker's next boot to then
 record `Dmmsell10`'s stand-down, and either drift or nothing on `Fmmsell10`,
 through the audited path.
 
+## A shared metric that counted every programme ever paid
+
+### The verdict (Platform Change Review, 2026-10-11) — XOS-000044
+
+Routed here by Live Ops (WS-024). Discovery re-stamped `last_seen_at` on every programme
+Kalshi's `status=paid_out` listing returned, and that listing returns every programme ever
+paid. So `incentive_programs_observed` (`first_seen_at <= end AND last_seen_at >= start`)
+counted each one as observed in every window, and ~86% of each pass's row rewrites were
+for programmes that had ended.
+
+**Owner decision (2026-10-11, "yes, A"):** the metric counts only live programmes, and an
+ended programme listed only as paid out is not re-stamped.
+
+**No Platform Revision was registered.** The change is to one metric provider, not to the
+metrics engine. `docs/EXPERIMENT_OS_METRICS.md` ("Provider revisions") makes the
+provider's own `revision` the unit for exactly this: bumping it re-records the gates that
+read that metric and nothing else. A `METRICS_ENGINE` revision would re-pin every running
+experiment to describe a change one experiment can see. The precedent is `live_exec_v2`
+(XOS-000013).
+
+| change | where |
+|---|---|
+| writer: no stamp for a programme listed only as `paid_out` whose `end_date` has passed; still seen, so never marked disappeared | `liquidity_incentive/programs.run_discovery` |
+| metric `limm_v1` → `limm_v2`: also requires `end_date` unset or `>= window start` | `experiment_os/metrics.py` |
+
+The metric filter makes the count independent of how often the writer stamps. With the
+writer change alone, a programme paid out days after it ended would still count in the
+window of its first `paid_out` sighting.
+
+**Affected experiments**, found from the registered gate specs (ops `pcr-xos44-db-2`),
+not from docs:
+
+| experiment | state | gates reading the metric | impact |
+|---|---|---|---|
+| `liquidity-incentive-mm` | LIVE_CANARY | `shadow_instrument_ready` (PROBE→PAPER, pass `>= 10`), `paper_to_live_smoke` (PAPER→LIVE_CANARY, hold `< 20`) | none on any decision (I0-equivalent) |
+
+Both gates are promotion gates whose transitions were recorded on 2026-09-17. The gate
+that still decides anything, `live_canary_keep`, does not read this metric. No verdict
+flips under `limm_v2` on any measured window:
+
+| window | `limm_v1` | `limm_v2` | thresholds |
+|---|---|---|---|
+| the last authorizing PASS window (2026-09-17 15:52Z → 09-21 01:23Z) | 42,434 | 14,644 | ≥ 10 / < 20 |
+| last 24 h (to 2026-10-11 21:09Z) | 39,256 | 8,656 | ≥ 10 / < 20 |
+| last 1 h | 34,931 | 4,931 | ≥ 10 / < 20 |
+
+Results recorded under `limm_v1` stay as immutable history. The gate runner's fingerprint
+includes provider revisions, so the next evaluation re-records under `limm_v2`.
+
+**Historical recomputation is exact.** `limm_v2` reads only stored columns (`end_date`,
+`first_seen_at`, `last_seen_at`). Rows the old writer stamped after a programme ended
+are excluded by `end_date`, whatever their stamp.
+
+**`Alimm1` is untouched.** The live runner reads `current_programs(now=...)`, which already
+drops ended programmes. No exposure, envelope, arm, epoch or Version changes.
+
 ## Scope boundary
 
 No Evo integration, no Claude session roles, no automatic promotions, no

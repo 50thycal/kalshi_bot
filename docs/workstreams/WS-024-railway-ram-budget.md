@@ -79,8 +79,10 @@ market-catalog (SQLite /data, 20 GB volume) ── collect() every 30 s
 - **D3 = archive, then empty the two tapes.** Owner, 2026-10-10: "let's do D3 and archive".
   The archive is fully automated and restore-tested; emptying the tables is the exact
   statement brought back for approval once both `COMPLETE.json` files exist.
-- **`incentive_programs.last_seen_at` bump semantics stay.** The XOS metric
-  `incentive_programs_observed` reads it; changing it is Platform Change Review.
+- **Stop re-stamping ended paid-out programmes (XOS-000044, option A).** Owner, 2026-10-11:
+  "yes, A". The metric `incentive_programs_observed` counts only live programmes. Option B
+  (re-stamp once a day) was not chosen. Platform Change Review recorded the impact on
+  XOS-000044; the writer change and the metric's `limm_v2` ship in one PR.
 
 ## Open Decisions
 
@@ -308,9 +310,21 @@ Every step records a before and an after here. Windows end at the stated time.
 - **B, done in this PR, no semantic change:** the re-stamp is a few chunked bulk UPDATEs
   (5,000 rows each) instead of one statement per row. It cuts per-pass statements and time in
   `main`'s cycle. It does not reduce row versions.
-- **A, routed:** stop re-stamping ended paid-out programmes, ~86% fewer row rewrites. This changes
-  the shared metric `incentive_programs_observed`, so it went to Platform Change Review as
-  **XOS-000044** (OPEN, PLATFORM, LOW/P2). Live Ops changes the writer only after that decision.
+- **A, decided 2026-10-11 (owner: "yes, A"):** stop re-stamping ended paid-out programmes.
+  It changes the shared metric `incentive_programs_observed`, so it went to Platform Change
+  Review as **XOS-000044**. Verdict: a provider revision of that one metric
+  (`limm_v1` → `limm_v2`), **not** a Platform Revision. Full reasoning:
+  `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`, "A shared metric that counted every programme ever
+  paid".
+  - Writer: `run_discovery` skips the stamp for a programme listed **only** as `paid_out`
+    whose `end_date` has passed. It is still seen, so it is never marked disappeared. Each
+    cycle records the skipped count in `notes_json.ended_paid_out_unstamped`.
+  - Metric `limm_v2`: also requires `end_date` unset or at/after the window start, so the
+    count no longer depends on how often the writer stamps.
+  - **Before** (ops `pcr-xos44-db-1`, last clean pass 2026-10-11 21:08:59Z): 34,808 rows
+    stamped; 29,949 of them (86%) ended paid-out; **4,859 would remain under A**.
+  - **After:** to be measured after deploy (rows stamped per pass, expect ~5k) and recorded
+    here.
 - **Then D4:** the Postgres cap 2 → 1 GB is the billing lever. Ask the owner first.
 
 **Diagnosis from the code (2026-10-08):**

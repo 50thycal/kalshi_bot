@@ -77,10 +77,11 @@ def test_error_rate_is_undefined_rather_than_zero_on_an_empty_window(xos_session
 # ------------------------------------------------------------------ programs
 
 
-def _program(session, pid, *, first, last, ticker="KXA-1"):
+def _program(session, pid, *, first, last, ticker="KXA-1", end_date=None):
     session.add(m.IncentiveProgram(
         program_id=pid, market_ticker=ticker, incentive_type="liquidity",
-        terms_hash=f"h{pid}{first}", first_seen_at=first, last_seen_at=last))
+        terms_hash=f"h{pid}{first}", first_seen_at=first, last_seen_at=last,
+        end_date=end_date))
     session.flush()
 
 
@@ -91,6 +92,22 @@ def test_programs_observed_counts_distinct_ids_overlapping_the_window(xos_sessio
     _program(xos_session, "p2", first=START - timedelta(days=5), last=START + timedelta(hours=1))
     _program(xos_session, "p3", first=OUTSIDE, last=OUTSIDE)       # ended before the window
     assert _v(xos_session, "incentive_programs_observed").value == 2.0
+
+
+def test_programs_observed_excludes_a_programme_that_ended_before_the_window(xos_session):
+    """limm_v2 (XOS-000044). The paid_out listing stamps programmes that ended long ago; v1
+    counted every one of them as observed in every window. A stamp in the window is no longer
+    enough: the programme's own end_date must reach the window start."""
+    _program(xos_session, "paid_long_ago", first=OUTSIDE, last=END,
+             end_date=OUTSIDE)                                      # stamped, but ended: out
+    _program(xos_session, "ends_inside", first=OUTSIDE, last=END,
+             end_date=START + timedelta(hours=2))                   # live for part of it: in
+    _program(xos_session, "ends_at_start", first=OUTSIDE, last=START,
+             end_date=START)                                        # boundary inclusive: in
+    _program(xos_session, "no_end", first=START, last=END)          # open-ended: in
+    mv = _v(xos_session, "incentive_programs_observed")
+    assert mv.value == 3.0
+    assert mv.provenance["provider_revision"] == "limm_v2"
 
 
 # ------------------------------------------------------------------ shadow outcomes
