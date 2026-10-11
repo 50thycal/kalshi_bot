@@ -274,6 +274,71 @@ def test_mmsell_live_per_ticker_dedup(settings):
     assert len(client.placed) == 1
 
 
+def _seed_held(session, ticker="KXTEAM-26-A", qty_fp=-3.0, qty=-3):
+    session.add(m.Position(
+        market_ticker=ticker, captured_at=datetime.now(timezone.utc), side="no",
+        quantity=qty, quantity_fp=qty_fp, avg_price=93.0, market_exposure=2.79,
+        realized_pnl=None, unrealized_pnl=None, raw_json=None))
+    session.flush()
+
+
+def test_mmsell_live_refuses_market_another_tag_holds(settings):
+    """XOS-000040: a successor tag must not stack a clip on a market the account already
+    holds under its predecessor. Per-strategy dedup cannot see it (no in-flight order, a
+    different strategy), so the gate reads the account's own position snapshot."""
+    _live_settings(settings, live_strategies="Hmmsell10,Jmmsell10")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_held(session)  # Hmmsell10's filled 3-lot, now just an account position
+        outcome = ex.mirror_mmsell_entry(
+            session, strategy="Jmmsell10", event_ticker="KXTEAM-26", ticker="KXTEAM-26-A",
+            metrics=_metrics(), no_price=92, account_state={"cash_balance": 150.0})
+    assert outcome == "gate:held"
+    assert client.placed == []
+
+
+def test_mmsell_live_held_gate_reads_fractional_quantity(settings):
+    """`quantity` can be empty on a fractional snapshot; that must not read as flat."""
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_held(session, qty_fp=-1.0, qty=None)
+        _enter(ex, session)
+    assert client.placed == []
+
+
+def test_mmsell_live_flat_snapshot_does_not_block(settings):
+    """A settled (flat) market is not held: the gate must not refuse it."""
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_held(session, qty_fp=0.0, qty=0)
+        _enter(ex, session)
+    assert len(client.placed) == 1
+
+
+def test_mmsell_live_held_gate_can_be_switched_off(settings):
+    _live_settings(settings, mmsell_live_refuse_account_held=False,
+                   max_market_exposure=25.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_held(session)
+        _enter(ex, session)
+    assert len(client.placed) == 1
+
+
 def test_mmsell_live_max_open_cap_blocks(settings):
     _live_settings(settings, mmsell_live_max_open_positions=0)
     db.init_engine(settings.database_url)

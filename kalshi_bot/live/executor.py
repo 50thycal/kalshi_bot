@@ -466,6 +466,15 @@ class LiveExecutor:
                 or repo.live_open_order_exists(session, ticker):
             self.summary.skipped_dedup += 1
             return "gate:dedup"
+        # The ACCOUNT already holds this market — under another tag (XOS-000040). The dedup
+        # above is per strategy, and a predecessor's FILLED position leaves no in-flight
+        # order, so at a canary cutover the successor stacked a second clip on markets the
+        # draining tag still held: 3+3 contracts on one KXBTCD market settled at -$5.58
+        # against a registered $3.00 per-market bound. MAX_MARKET_EXPOSURE does not catch it
+        # because it is portfolio-wide (25 in production), not the book's per-market bound.
+        if s.mmsell_live_refuse_account_held and self._account_holds(session, ticker):
+            self.summary.skipped_dedup += 1
+            return "gate:held"
         # Cap the book's concurrent live footprint.
         if repo.count_live_book_open(session, strategy) >= s.mmsell_live_max_open_positions:
             self.summary.skipped_gate += 1
@@ -1125,6 +1134,17 @@ class LiveExecutor:
         if self.settings.live_entry_style == "passive":
             ask = ask - self.settings.live_passive_offset_cents
         return max(1, min(99, int(ask)))
+
+    @staticmethod
+    def _account_holds(session, ticker: str) -> bool:
+        """True when the newest position snapshot shows the account holding contracts on
+        `ticker`, whichever book bought them. Reads `quantity_fp` first: `quantity` can be
+        empty on a fractional snapshot, and treating that as flat would reopen the hole."""
+        pos = repo.latest_position_snapshot(session, ticker)
+        if pos is None:
+            return False
+        qty = pos.quantity_fp if pos.quantity_fp is not None else pos.quantity
+        return bool(qty) and abs(float(qty)) > 0
 
     def _market_exposure(self, session, ticker: str) -> float:
         pos = repo.latest_position_snapshot(session, ticker)
