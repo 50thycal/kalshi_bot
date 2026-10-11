@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-df-1011e","sql":"select discount_factor_bps, count(*) from incentive_programs where incentive_type='liquidity' group by 1 order by 2 desc limit 10"}
