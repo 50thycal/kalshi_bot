@@ -2855,3 +2855,24 @@ itself: an ADOPT returns to the operator as a separate live decision.
 "Deeper" never moved off the reference, because nearly every programme here uses a 0.50 discount
 factor: one tick deeper halves the score. "Both sides" kept 66% of the live rule's net per
 market-day for 1.8× its fill losses. Detail: LIMM_PLACEMENT_THESIS.md "Result — run 3".
+
+### 9.52 The paper twin's P&L is invalid for this book (2026-10-11)
+
+**Finding.** `Alimm1_pt3` reports about **+$4,562** over 156 rows since 2026-09-17, against a live
+book at about −$28.5 in trading. It is an artefact, not evidence:
+
+- The twin assumes every live bid **fills at once at its limit price** (`_open_twin`). This book
+  rests at the side's reference price, which is often 1–2¢ on a side whose best bid is 70–90¢.
+  Such a bid scores the reward but is almost never filled.
+- The shared paper engine then closes the position after `paper_max_hold_hours` (2 h) at that
+  side's best bid (`closed_timeout`). The live book has no such timeout. Example: NO 1¢ ×500 on
+  KXAAAGASM-26OCT31-4.70, "sold" at 89¢ two hours later, +$436.48.
+- 147 `closed_timeout` rows carry +$4,543.57 of the total. The twin also records no reward,
+  which is this book's whole return.
+
+**Ruling.** For this book the twin's P&L, win rate and every paper-vs-live comparison built on it
+are **invalid**, from its first row. Read the book only from real fills, settlements and
+Kalshi-confirmed rewards (§9.51). No live behaviour, safeguard or the twin itself is changed
+here. A faithful twin would need the public tape, which has been off since 2026-10-07 (§9.50),
+and retiring it touches the arming requirement, so both are left as owner questions. Ticketed in
+Experiment OS (`limm-twin-invalid-20261011`).
