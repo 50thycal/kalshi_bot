@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=db  id=catalog-sel-size-20261011a
-# code adbf5cd335b84bd11035d065d17697d135dd2e5b · started 2026-10-11T23:40:38Z
-src          rows    markets  series  markets_new_24h
------------  ------  -------  ------  ---------------
-markets_tbl  77      0        45      0              
-live         2931    2868     250     34             
-paper        138024  42117    773     729            
-
-(3 rows)
+# type=noop
+# code adbf5cd335b84bd11035d065d17697d135dd2e5b · started 2026-10-11T23:42:23Z
+(noop — nothing to do)
