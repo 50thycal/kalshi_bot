@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-span-1011c","sql":"select 'snap' t, min(at)::text, max(at)::text, count(*) from incentive_market_snapshots union all select 'trade', min(received_at)::text, max(received_at)::text, count(*) from incentive_trade_events union all select 'balobs', min(at)::text, max(at)::text, count(*) from incentive_balance_observations where presumed_transfer"}
