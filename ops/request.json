@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-twin-1011i","sql":"select market_ticker, side, assumed_price, quantity, status, exit_price, resolved_value, pnl, fees, created_at::text, closed_at::text from paper_trades where strategy='Alimm1_pt3' order by abs(pnl) desc nulls last limit 25"}
