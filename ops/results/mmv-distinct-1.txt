@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=mmv-distinct-1
-# code a4c61bad3d1c4c053e2908dda0be79e62e1510cd · started 2026-10-11T22:25:09Z
-open_positions  distinct_tickers  mmsell_open  mmsell_distinct_tickers  ticks_24h
---------------  ----------------  -----------  -----------------------  ---------
-1256            351               1255         350                      135395   
-
-(1 row)
