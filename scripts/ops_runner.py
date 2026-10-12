@@ -128,6 +128,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_market_survey",
     "kalshi_desk_board",
     "desk_fetch",
+    "catalog_review_sources",
     "evo_order_probe",
     "xvenue_probe",
     "xvenue_leadlag",
