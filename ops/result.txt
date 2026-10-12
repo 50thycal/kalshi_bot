@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T18:50:10Z
-(noop — nothing to do)
+# type=db  id=limm-db-1012l
+# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T20:11:44Z
+market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                     disc                           credits
+---------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------  -------
+KXMILLERLITEPOS-26NOV03-T84  no    buy     10           100       resting                 2026-10-12 16:25:50.893425+00  2026-10-12 20:07:03.618226+00         
+KXYTVIEWSHIGH-TAT26NOV-3.0M  no    buy     5            200       resting                 2026-10-11 22:01:42.778319+00  2026-10-12 20:07:03.618226+00         
+
+(2 rows)
