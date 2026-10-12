@@ -1,87 +1,46 @@
 # ops request [READ]
-# type=db  id=catalog-review-priority-20261012a
-# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T20:14:54Z
-series                 live_markets  fills  cum_pct  rank
----------------------  ------------  -----  -------  ----
-KXMLBHR                465           470    16.1     1   
-KXATPCHALLENGERMATCH   129           134    20.5     2   
-KXITFWMATCH            126           127    24.9     3   
-KXITFMATCH             122           125    29.1     4   
-KXMLBTOTAL             117           118    33.1     5   
-KXBTCD                 104           112    36.7     6   
-KXMLBSPREAD            104           106    40.3     7   
-KXRAIN                 71            78     42.8     8   
-KXWCGOAL               47            47     44.4     9   
-KXMLBKS                42            44     45.9     10  
-KXWTI                  41            41     47.3     11  
-KXWTACHALLENGERMATCH   40            41     48.7     12  
-KXNFLTOTAL             39            41     50.0     13  
-KXMLBGAME              38            39     51.3     14  
-KXWTAMATCH             38            38     52.6     15  
-KXATPMATCH             37            37     53.9     16  
-KXTRUMPSAY             37            40     55.2     17  
-KXWNBATOTAL            32            33     56.3     18  
-KXWNBASPREAD           31            32     57.4     19  
-KXINXU                 30            30     58.4     20  
-KXUFCMOV               30            30     59.5     21  
-KXETHD                 29            32     60.5     22  
-KXAAAGASD              27            27     61.4     23  
-KXNFLSPREAD            26            26     62.3     24  
-KXWCSCORE              26            26     63.2     25  
-KXBTC                  23            24     64.0     26  
-KXRT                   22            22     64.7     27  
-KXCLUBFGAME            21            21     65.5     28  
-KXLOLGAME              21            21     66.2     29  
-KXMLBTEAMTOTAL         21            21     66.9     30  
-KXMLSGAME              20            20     67.6     31  
-KXNCAAFSPREAD          20            21     68.3     32  
-KXNPBGAME              20            20     69.0     33  
-KXT20MATCH             20            21     69.7     34  
-KXWTIW                 20            21     70.4     35  
-KXCS2GAME              19            20     71.0     36  
-KXMLBASGHR             17            17     71.6     37  
-KXODIMATCH             17            17     72.2     38  
-KXKBOGAME              16            16     72.8     39  
-KXWCMENTION            16            16     73.3     40  
-KXWNBAGAME             16            16     73.9     41  
-KXNASDAQ100U           15            15     74.4     42  
-KXARGPREMDIVGAME       14            14     74.9     43  
-KXBRASILEIROGAME       14            14     75.4     44  
-KXLEAGUESCUPTOTAL      14            14     75.8     45  
-KXWCSOA                14            14     76.3     46  
-KXAAAGASW              13            13     76.8     47  
-KXNATGASD              13            13     77.2     48  
-KXNCAAFTOTAL           13            13     77.7     49  
-KXWCAST                13            13     78.1     50  
-KXARGPREMDIVTOTAL      12            12     78.5     51  
-KXBRENTD               12            12     78.9     52  
-KXLALIGASCORE          12            12     79.4     53  
-KXLEAGUESCUPSPREAD     12            12     79.8     54  
-KXLIGAMXGAME           12            12     80.2     55  
-KXGOLDD                11            11     80.6     56  
-KXMLBASGMVP            11            11     81.0     57  
-KXMLBHRDERBYFORECAST   11            11     81.3     58  
-KXPGATOUR              11            11     81.7     59  
-KXTESTMATCH            11            11     82.1     60  
-KXLALIGAGAME           10            10     82.4     61  
-KXLALIGATOTAL          10            10     82.8     62  
-KXLEAGUESCUPSCORE      10            10     83.1     63  
-KXWCMOV                10            10     83.5     64  
-KXWCSPREAD             10            10     83.8     65  
-KXDIMAYORGAME          9             9      84.1     66  
-KXEFLCHAMPIONSHIPGAME  9             10     84.4     67  
-KXLIGAMXTOTAL          9             9      84.8     68  
-KXATPEXACTMATCH        8             8      85.0     69  
-KXDPWORLDTOUR          8             9      85.3     70  
-KXECULPGAME            8             8      85.6     71  
-KXUCLTOTAL             8             8      85.9     72  
-KXVALORANTGAME         8             8      86.1     73  
-KXWCFIRSTGOAL          8             8      86.4     74  
-KXBRASILEIROTOTAL      7             9      86.7     75  
-KXEPLTOTAL             7             7      86.9     76  
-KXLIGAMXSCORE          7             9      87.1     77  
-KXNBASUMMERGAME        7             7      87.4     78  
-KXNCAAFGAME            7             7      87.6     79  
-KXNWSLGAME             7             7      87.9     80  
+# type=db  id=catalog-review-samples-20261012a
+# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T20:16:19Z
+series                market_ticker                                last_fill                         rn  n    first_fill                      
+--------------------  -------------------------------------------  --------------------------------  --  ---  --------------------------------
+KXATPCHALLENGERMATCH  KXATPCHALLENGERMATCH-26OCT09PINGOJ-GOJ       2026-10-09 11:15:04.741648+00:00  1   129  2026-07-14 00:35:44.380052+00:00
+KXATPCHALLENGERMATCH  KXATPCHALLENGERMATCH-26OCT09SUNKAC-SUN       2026-10-09 06:24:57.315865+00:00  2   129  2026-07-14 00:35:44.380052+00:00
+KXATPCHALLENGERMATCH  KXATPCHALLENGERMATCH-26OCT08TOBBAR-TOB       2026-10-08 17:30:47.569758+00:00  3   129  2026-07-14 00:35:44.380052+00:00
+KXBTCD                KXBTCD-26OCT1617-T87999.99                   2026-10-10 06:04:55.790436+00:00  1   104  2026-07-13 16:26:13.452248+00:00
+KXBTCD                KXBTCD-26OCT1017-T83499.99                   2026-10-09 22:09:02.768934+00:00  2   104  2026-07-13 16:26:13.452248+00:00
+KXBTCD                KXBTCD-26OCT0817-T85249.99                   2026-10-08 00:25:54.889451+00:00  3   104  2026-07-13 16:26:13.452248+00:00
+KXITFMATCH            KXITFMATCH-26OCT08CHEALK-CHE                 2026-10-09 03:14:06.288087+00:00  1   122  2026-07-15 04:16:06.410173+00:00
+KXITFMATCH            KXITFMATCH-26OCT08RIVSAL-SAL                 2026-10-08 22:19:48.976344+00:00  2   122  2026-07-15 04:16:06.410173+00:00
+KXITFMATCH            KXITFMATCH-26OCT08COVMBI-MBI                 2026-10-08 16:58:33.662870+00:00  3   122  2026-07-15 04:16:06.410173+00:00
+KXITFWMATCH           KXITFWMATCH-26OCT09POPDOR-POP                2026-10-09 09:37:33.125503+00:00  1   126  2026-07-14 06:42:52.112997+00:00
+KXITFWMATCH           KXITFWMATCH-26OCT09POPSNI-POP                2026-10-09 08:33:48.364411+00:00  2   126  2026-07-14 06:42:52.112997+00:00
+KXITFWMATCH           KXITFWMATCH-26OCT08EGOCHE-CHE                2026-10-09 02:11:56.944555+00:00  3   126  2026-07-14 06:42:52.112997+00:00
+KXMLBHR               KXMLBHR-26OCT121700LADMIL-MILBTURANG2-1      2026-10-12 13:55:50.633067+00:00  1   465  2026-07-27 00:09:28.460981+00:00
+KXMLBHR               KXMLBHR-26OCT112000LADMIL-MILBTURANG2-1      2026-10-12 00:04:53.896383+00:00  2   465  2026-07-27 00:09:28.460981+00:00
+KXMLBHR               KXMLBHR-26OCT102000CWSCLE-CWSCMEIDROTH10-1   2026-10-10 23:56:10.923624+00:00  3   465  2026-07-27 00:09:28.460981+00:00
+KXMLBKS               KXMLBKS-26OCT071800LADATL-LADTGLASNOW31-11   2026-10-07 19:16:45.531155+00:00  1   42   2026-08-09 00:42:30.505946+00:00
+KXMLBKS               KXMLBKS-26OCT062130MILSD-MILDMAY3-7          2026-10-06 22:01:09.854963+00:00  2   42   2026-08-09 00:42:30.505946+00:00
+KXMLBKS               KXMLBKS-26OCT061800LADATL-LADYYAMAMOTO18-11  2026-10-06 18:11:50.852112+00:00  3   42   2026-08-09 00:42:30.505946+00:00
+KXMLBSPREAD           KXMLBSPREAD-26OCT032030SDMIL-SD5             2026-10-04 02:23:20.132233+00:00  1   104  2026-07-15 01:45:58.442950+00:00
+KXMLBSPREAD           KXMLBSPREAD-26SEP271505LADSF-LAD4            2026-09-27 21:36:30.033212+00:00  2   104  2026-07-15 01:45:58.442950+00:00
+KXMLBSPREAD           KXMLBSPREAD-26SEP261910COLCWS-CWS3           2026-09-27 00:31:30.036115+00:00  3   104  2026-07-15 01:45:58.442950+00:00
+KXMLBTOTAL            KXMLBTOTAL-26SEP271510STLMIL-11              2026-09-27 21:06:07.821220+00:00  1   117  2026-07-15 01:46:50.402344+00:00
+KXMLBTOTAL            KXMLBTOTAL-26SEP271510CLEKC-11               2026-09-27 21:06:00.056318+00:00  2   117  2026-07-15 01:46:50.402344+00:00
+KXMLBTOTAL            KXMLBTOTAL-26SEP262140LAASEA-12              2026-09-27 03:05:57.825092+00:00  3   117  2026-07-15 01:46:50.402344+00:00
+KXNFLTOTAL            KXNFLTOTAL-26OCT11BALATL-68                  2026-10-12 00:24:51.502009+00:00  1   39   2026-08-13 23:03:42.179653+00:00
+KXNFLTOTAL            KXNFLTOTAL-26OCT11SFSEA-68                   2026-10-11 20:25:22.752846+00:00  2   39   2026-08-13 23:03:42.179653+00:00
+KXNFLTOTAL            KXNFLTOTAL-26OCT11DENLAC-65                  2026-10-11 20:06:16.519100+00:00  3   39   2026-08-13 23:03:42.179653+00:00
+KXRAIN                KXRAIN-26OCT13-NYC                           2026-10-12 19:00:20.516948+00:00  1   71   2026-08-09 00:09:07.175258+00:00
+KXRAIN                KXRAIN-26OCT13-SGF                           2026-10-12 14:55:37.152492+00:00  2   71   2026-08-09 00:09:07.175258+00:00
+KXRAIN                KXRAIN-26OCT13-MIN                           2026-10-12 14:00:16.036099+00:00  3   71   2026-08-09 00:09:07.175258+00:00
+KXWCGOAL              KXWCGOAL-26JUL19ESPARG-ESPMZUBIM36-1         2026-07-19 21:47:19.908028+00:00  1   47   2026-07-14 19:30:18.205833+00:00
+KXWCGOAL              KXWCGOAL-26JUL19ESPARG-ESPLYAMAL10-1         2026-07-19 21:46:41.349930+00:00  2   47   2026-07-14 19:30:18.205833+00:00
+KXWCGOAL              KXWCGOAL-26JUL19ESPARG-ESPMMERIN23-1         2026-07-19 21:46:40.474207+00:00  3   47   2026-07-14 19:30:18.205833+00:00
+KXWTACHALLENGERMATCH  KXWTACHALLENGERMATCH-26OCT08ZAVZAR-ZAV       2026-10-09 03:43:33.643902+00:00  1   40   2026-07-13 15:23:43.679367+00:00
+KXWTACHALLENGERMATCH  KXWTACHALLENGERMATCH-26OCT06BUYKLI-BUY       2026-10-06 21:15:21.195954+00:00  2   40   2026-07-13 15:23:43.679367+00:00
+KXWTACHALLENGERMATCH  KXWTACHALLENGERMATCH-26OCT06WALERC-ERC       2026-10-06 14:45:46.754721+00:00  3   40   2026-07-13 15:23:43.679367+00:00
+KXWTI                 KXWTI-26OCT1314-T95.49                       2026-10-12 06:17:07.262500+00:00  1   41   2026-07-27 16:18:33.310281+00:00
+KXWTI                 KXWTI-26OCT0914-T93.49                       2026-10-09 18:04:56.573425+00:00  2   41   2026-07-27 16:18:33.310281+00:00
+KXWTI                 KXWTI-26OCT0814-T94.49                       2026-10-08 09:14:18.806953+00:00  3   41   2026-07-27 16:18:33.310281+00:00
 
-(80 rows)
+(39 rows)
