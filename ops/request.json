@@ -1,1 +1,1 @@
-{"type": "db", "id": "cc-rmm-1012b", "sql": "SELECT split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',2) AS ev, string_agg(split_part(market_ticker,'-',3)||':'||right(strategy,1)||':'||left(status,1)||':'||coalesce(round(pnl::numeric,2)::text,'-'),' ' ORDER BY market_ticker,strategy) legs FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') AND (created_at >= '2026-10-10' OR (pnl < 0 AND closed_at >= '2026-10-11 18:35')) GROUP BY 1 HAVING bool_or(market_ticker LIKE 'KXNFL%') OR bool_or(pnl<0) ORDER BY 1"}
+{"type":"noop"}
