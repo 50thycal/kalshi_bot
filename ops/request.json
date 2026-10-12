@@ -1,1 +1,1 @@
-{"type":"db","id":"catalog-series-skew-20261012a","max_rows":12,"sql":"select split_part(market_ticker,'-',1) as series, count(*) as rows from paper_trades where strategy ilike '%mmsell%' group by 1 order by 2 desc limit 10"}
+{"type":"noop"}
