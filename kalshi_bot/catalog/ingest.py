@@ -66,6 +66,10 @@ SOURCE_COVERAGE_QUERIES = {
 }
 
 
+RECONCILIATION_SECONDS = 86400
+SWEEP_SECONDS = 86400
+
+
 class DiscoveryDeferred(Exception):
     def __init__(self, retry_at):
         self.retry_at = retry_at
@@ -118,6 +122,7 @@ def seed(store):
                 "after": 0,
                 "reconciliation_complete": False,
                 "last_coverage_check_at": None,
+                "pass_started_at": now(),
             },
         )
         store.set_state("live_projection_version", "canonical-direction-v2")
@@ -200,6 +205,9 @@ def source_page(store, url, source, batch_size=PAGE_SIZE):
         "last_success_at": now(),
         "initial_complete": bool(cursor.get("initial_coverage_verified")),
     }
+    if len(records) < batch_size:
+        # This pass has read to the current end of the source; a reset may now start the next.
+        next_cursor["caught_up_at"] = now()
     if records:
         next_cursor["after"] = records[-1]["id"]
         next_cursor["reconciliation_complete"] = False
@@ -211,9 +219,26 @@ def source_page(store, url, source, batch_size=PAGE_SIZE):
     return len(records)
 
 
-def reset_source_reconciliation(store):
+def _age_seconds(value):
+    if not value:
+        return math.inf
+    return (datetime.now(timezone.utc) - datetime.fromisoformat(value)).total_seconds()
+
+
+def reset_source_reconciliation(store, every=RECONCILIATION_SECONDS):
+    """Start a source's next re-read only after its current pass reached the end AND the
+    interval has passed since that pass started. A timer never discards an unfinished pass."""
+    restarted = []
+    # Cursors written before passes were dated keep the old global clock as their start, so a
+    # deploy does not restart a pass early.
+    legacy = store.state("last_reconciliation")
+    legacy = datetime.fromtimestamp(legacy, timezone.utc).isoformat() if legacy else None
     for source in SOURCE_QUERIES:
         cursor = store.state("cursor:" + source, {"initial_complete": False})
+        started = cursor.get("pass_started_at") or legacy
+        caught_up = cursor.get("caught_up_at")
+        if started and not (caught_up and caught_up >= started and _age_seconds(started) >= every):
+            continue
         store.set_state(
             "cursor:" + source,
             {
@@ -221,8 +246,11 @@ def reset_source_reconciliation(store):
                 "after": 0,
                 "reconciliation_complete": False,
                 "last_coverage_check_at": None,
+                "pass_started_at": now(),
             },
         )
+        restarted.append(source)
+    return restarted
 
 
 class Discovery:
@@ -277,6 +305,7 @@ class Discovery:
         if state["cursor"]:
             params["cursor"] = state["cursor"]
         data = self.get_json(path, params)
+        started = state.get("sweep_started_at") or now()
         for row in data[key]:
             ticker = row["ticker"] if job == "series" else row["event_ticker"]
             series = ticker if job == "series" else row["series_ticker"]
@@ -289,15 +318,45 @@ class Discovery:
             if job != "series":
                 for market in row.get("markets", []):
                     self.store.upsert("market", market["ticker"], market, series)
+        complete = not bool(data.get("cursor"))
         self.store.set_state(
             "discovery:" + job,
             {
                 "cursor": data.get("cursor"),
-                "complete": not bool(data.get("cursor")),
+                "complete": complete,
                 "last_success_at": now(),
+                "sweep_started_at": started,
+                "sweep_pages": state.get("sweep_pages", 0) + 1,
+                "sweep_records": state.get("sweep_records", 0) + len(data[key]),
+                "completed_at": now() if complete else None,
+                "previous_sweep": state.get("previous_sweep"),
             },
         )
         return len(data[key])
+
+    def restart_completed_sweeps(self, every=SWEEP_SECONDS):
+        """Begin a new traversal only once the current one has finished and `every` seconds
+        have passed since it began. An unfinished sweep keeps its cursor whatever the clock
+        says: the old daily reset discarded a ~26h events sweep before it could finish."""
+        restarted = []
+        for job in ("series", "events"):
+            state = self.store.state("discovery:" + job, {"cursor": None, "complete": False})
+            if not state.get("complete") or _age_seconds(state.get("sweep_started_at")) < every:
+                continue
+            self.store.set_state(
+                "discovery:" + job,
+                {
+                    "cursor": None,
+                    "complete": False,
+                    "previous_sweep": {
+                        key: state.get(key)
+                        for key in ("sweep_started_at", "completed_at", "sweep_pages",
+                                    "sweep_records")
+                    },
+                },
+            )
+            restarted.append(job)
+        return restarted
 
     def updates(self):
         """Incremental updates include new listings/outcomes; daily event sweep repairs gaps."""
@@ -335,10 +394,14 @@ class Discovery:
         from urllib.parse import quote
 
         with self.store.connect() as db:
+            # The indexed column where filled; decode only rows the bootstrap has not reached.
             tickers = sorted(
                 {
-                    unpack(r[0])["market_ticker"]
-                    for r in db.execute("SELECT document FROM evidence WHERE source='live'")
+                    r[0] if r[0] is not None else unpack(r[1])["market_ticker"]
+                    for r in db.execute(
+                        "SELECT market, CASE WHEN market IS NULL THEN document END "
+                        "FROM evidence WHERE source='live'"
+                    )
                 }
             )
         state = self.store.state("discovery:live_outcomes", {"after": ""})
@@ -376,5 +439,7 @@ class Discovery:
         return count
 
     def reset(self):
+        """Forced restart (tests and operator repair only); the loop uses
+        `restart_completed_sweeps`."""
         for job in ("series", "events"):
             self.store.set_state("discovery:" + job, {"cursor": None, "complete": False})

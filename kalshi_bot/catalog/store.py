@@ -68,11 +68,12 @@ def digest(value):
     return hashlib.sha256(encode(value).encode()).hexdigest()
 
 
-def pack(value):
-    """Lossless storage encoding; content hashes always use canonical JSON."""
+def pack(value, minimum=1024):
+    """Lossless storage encoding; content hashes always use canonical JSON. Readers decode
+    any size, so a caller may lower `minimum` for documents known to compress well."""
     text = encode(value)
     raw = text.encode()
-    if len(raw) >= 1024:
+    if len(raw) >= minimum:
         compressed = COMPRESSED_PREFIX + zlib.compress(raw)
         if DICTIONARY_WRITES:
             # Keep whichever is smaller, so a document unlike the dictionary never grows.
@@ -144,7 +145,27 @@ class Store:
               url TEXT PRIMARY KEY, next_check REAL NOT NULL, status TEXT NOT NULL,
               capture_id TEXT, attempted_at TEXT, error TEXT);
             CREATE INDEX IF NOT EXISTS contract_targets_due ON contract_targets(next_check,url);
+            CREATE TABLE IF NOT EXISTS selection_members (
+              scope TEXT, ticker TEXT, reason TEXT, provider TEXT, active INTEGER NOT NULL,
+              selected_at TEXT, effective_at TEXT, updated_at TEXT, document BLOB,
+              PRIMARY KEY(scope,ticker,reason,provider));
+            CREATE INDEX IF NOT EXISTS selection_active ON selection_members(scope,ticker,active);
+            CREATE TABLE IF NOT EXISTS selection_events (
+              id TEXT PRIMARY KEY, scope TEXT, ticker TEXT, recorded_at TEXT, document BLOB);
+            CREATE INDEX IF NOT EXISTS selection_events_lookup
+              ON selection_events(scope,ticker,recorded_at);
+            CREATE TABLE IF NOT EXISTS hydration_targets (
+              scope TEXT, ticker TEXT, status TEXT NOT NULL, next_check REAL NOT NULL,
+              cursor TEXT, enqueued_at TEXT, attempted_at TEXT, completed_at TEXT, error TEXT,
+              attempts INTEGER NOT NULL DEFAULT 0, records INTEGER NOT NULL DEFAULT 0,
+              PRIMARY KEY(scope,ticker));
+            CREATE INDEX IF NOT EXISTS hydration_due ON hydration_targets(status,next_check);
             """)
+            # Additive column for indexed per-market evidence reads; NULL until the membership
+            # bootstrap or a changed import fills it. ADD COLUMN does not rewrite the table.
+            if "market" not in {row[1] for row in db.execute("PRAGMA table_info(evidence)")}:
+                db.execute("ALTER TABLE evidence ADD COLUMN market TEXT")
+            db.execute("CREATE INDEX IF NOT EXISTS evidence_market ON evidence(market)")
 
     @contextmanager
     def connect(self):
@@ -180,7 +201,12 @@ class Store:
     def upsert_revision(self, kind, ticker, raw, series=None, source="kalshi_rest"):
         """`upsert`, plus whether it wrote a new semantic revision (rules, status, result or
         settlement differ from every revision already stored)."""
+        from . import selection
+
         with self.connect() as db:
+            # One write transaction: the selection check below and the revision write cannot
+            # be split by a concurrent membership publish (DEC-034).
+            db.execute("BEGIN IMMEDIATE")
             previous = db.execute(
                 "SELECT document FROM objects WHERE kind=? AND ticker=?", (kind, ticker)
             ).fetchone()
@@ -222,10 +248,29 @@ class Store:
                     "settlement_value_dollars": raw.get("settlement_value_dollars"),
                 }
             )
+            mode, _reason = selection.history_mode(
+                db, kind, ticker, document["series_ticker"], raw.get("event_ticker")
+            )
+            if mode == "compact":
+                # Inventory depth: rules, lifecycle and provenance. Current objects stay full.
+                revision = selection.compact_observation(
+                    document, semantic, include_rules=old.get("rules_hash") != document["rules_hash"]
+                )
+                key = selection.compact_key(semantic)
+            else:
+                revision, key = document, semantic
             revised = db.execute(
                 "INSERT OR IGNORE INTO revisions VALUES (?,?,?,?,?)",
-                (kind, ticker, semantic, stamp, pack(document)),
+                (
+                    kind,
+                    ticker,
+                    key,
+                    stamp,
+                    pack(revision, selection.COMPACT_PACK_MINIMUM if mode == "compact" else 1024),
+                ),
             ).rowcount == 1
+            if revised:
+                selection.count_write(db, mode)
             db.execute(
                 "INSERT OR REPLACE INTO objects VALUES (?,?,?,?,?,?)",
                 (
@@ -355,6 +400,14 @@ class Store:
                 raise LookupError("Rules changed or object missing; review the current version")
             result = {**payload, "created_at": now()}
             result["id"] = digest(result)
+            from . import selection
+
+            if payload["kind"] in selection.SCOPES:
+                # Reviewed contexts keep detailed history; published with the review itself.
+                selection.select_in(
+                    db, payload["kind"], payload["ticker"], payload["kind"] + "_review",
+                    "catalog", source_ref="review:" + result["id"],
+                )
             db.execute(
                 "INSERT INTO reviews VALUES (?,?,?,?,?,?,?)",
                 (
@@ -370,6 +423,8 @@ class Store:
         return result
 
     def evidence_page(self, source, records, cursor, coverage=None):
+        from . import selection
+
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             changed = 0
@@ -384,8 +439,15 @@ class Store:
                     continue
                 series = record["market_ticker"].split("-", 1)[0]
                 db.execute(
-                    "INSERT OR REPLACE INTO evidence VALUES (?,?,?,?)",
-                    (source, record["id"], series, pack(record)),
+                    "INSERT OR REPLACE INTO evidence (source,source_id,series,document,market) "
+                    "VALUES (?,?,?,?,?)",
+                    (source, record["id"], series, pack(record), record["market_ticker"]),
+                )
+                # Membership is published in the same transaction as the evidence, so no
+                # upsert can see the evidence without also seeing the selection (DEC-034).
+                selection.select_in(
+                    db, "market", record["market_ticker"], source + "_evidence", "catalog",
+                    source_ref=f"{source}:{record['id']}",
                 )
                 changed += 1
             if changed:
@@ -436,6 +498,20 @@ class Store:
                 (row["source"], unpack(row["document"]))
                 for row in db.execute("SELECT source,document FROM evidence")
             ]
+
+    def evidence_by_series(self):
+        """Yield (series, records) one series at a time; peak memory is the largest series,
+        not the whole evidence table. Each read is its own short connection."""
+        with self.connect() as db:
+            names = [row[0] for row in db.execute("SELECT DISTINCT series FROM evidence")]
+        # Every stored row has a series (its ticker prefix), so equality covers the table.
+        for series in sorted(names):
+            with self.connect() as db:
+                rows = db.execute(
+                    "SELECT source,document FROM evidence WHERE series=? ORDER BY rowid",
+                    (series,),
+                ).fetchall()
+            yield series, [(row[0], unpack(row[1])) for row in rows]
 
     def migrate_review(self, document):
         migration_id = digest(document)
@@ -778,6 +854,9 @@ class Store:
                 "reviewed": reviewed,
                 "needs_review": counts.get("series", 0) - reviewed,
             }
+            from .selection import status_in
+
+            history_policy = status_in(db)
         return {
             "captured_at": now(),
             "objects": counts,
@@ -785,6 +864,7 @@ class Store:
             "evidence": evidence,
             "assessment_contexts": assessments,
             "contract_archive": archive,
+            "history_policy": history_policy,
             "jobs": states,
             "backfill": {
                 source: {
