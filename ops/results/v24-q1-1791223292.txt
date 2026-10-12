@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=v24-q1-1791223292
-# code a06b4425681afe9775a011978ac65b7d01e2965f · started 2026-10-05T18:01:52Z
-parent  live        twin    n 
-------  ----------  ------  --
-opened  placed      opened  71
-opened  gate:dedup  opened  1 
-
-(2 rows)
