@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "adbf5cd335b84bd11035d065d17697d135dd2e5b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-12T00:14:47Z",
+  "id": "catalog-series-skew-20261012a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/catalog-series-skew-20261012a.receipt.json",
+  "result_file": "ops/results/catalog-series-skew-20261012a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38187254783",
+  "service": null,
+  "started_at": "2026-10-12T00:14:47Z",
+  "targets": [],
+  "type": "db"
+}

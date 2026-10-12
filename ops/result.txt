@@ -1,4 +1,17 @@
 # ops request [READ]
-# type=noop
-# code adbf5cd335b84bd11035d065d17697d135dd2e5b · started 2026-10-11T23:42:23Z
-(noop — nothing to do)
+# type=db  id=catalog-series-skew-20261012a
+# code adbf5cd335b84bd11035d065d17697d135dd2e5b · started 2026-10-12T00:14:47Z
+series                rows 
+--------------------  -----
+KXMLBHR               13485
+KXMLBSPREAD           8100 
+KXMLBTOTAL            7886 
+KXNCAAFSPREAD         5511 
+KXBTCD                4483 
+KXNFLSPREAD           3468 
+KXATPCHALLENGERMATCH  3463 
+KXITFMATCH            3061 
+KXNCAAFTOTAL          2937 
+KXITFWMATCH           2920 
+
+(10 rows)
