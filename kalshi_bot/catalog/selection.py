@@ -352,15 +352,17 @@ def _bootstrap_rows(db, phase, after, batch, drafts):
                                source_ref="review_drafts.json")
         return rows, start + len(rows), added
     rows = db.execute(
-        "SELECT rowid,source,source_id,document,market FROM evidence WHERE rowid>? "
-        "ORDER BY rowid LIMIT ?",
+        "SELECT e.rowid,e.source,e.source_id,e.document,m.market FROM evidence e "
+        "LEFT JOIN evidence_markets m ON m.source=e.source AND m.source_id=e.source_id "
+        "WHERE e.rowid>? ORDER BY e.rowid LIMIT ?",
         (after or 0, batch),
     ).fetchall()
-    for rowid, source, source_id, document, market in rows:
+    for _rowid, source, source_id, document, market in rows:
         ticker = market or unpack(document)["market_ticker"]
         if market is None:
-            # Backfills the indexed column cohort reads use; the stored document is unchanged.
-            db.execute("UPDATE evidence SET market=? WHERE rowid=?", (ticker, rowid))
+            # Backfills the per-market index cohort reads use; evidence itself is untouched.
+            db.execute("INSERT OR REPLACE INTO evidence_markets VALUES (?,?,?)",
+                       (source, source_id, ticker))
         added += select_in(db, "market", ticker, source + "_evidence", "catalog",
                            source_ref=f"{source}:{source_id}")
     return rows, rows[-1][0] if rows else None, added
@@ -398,9 +400,48 @@ def bootstrap_page(store, batch=BOOTSTRAP_BATCH):
             if state["phase"] == len(BOOTSTRAP_PHASES):
                 state["complete"] = True
                 state["completed_at"] = now()
+                state["covered"] = _coverage_counts(db)
         state["last_page_at"] = now()
         _put(db, "selection:bootstrap", state)
     return examined
+
+
+def _coverage_counts(db):
+    return {
+        "evidence": db.execute("SELECT count(*) FROM evidence").fetchone()[0],
+        "evidence_markets": db.execute("SELECT count(*) FROM evidence_markets").fetchone()[0],
+        "reviews": db.execute("SELECT count(*) FROM reviews").fetchone()[0],
+    }
+
+
+def verify_bootstrap(store):
+    """At startup: if an image without this code wrote evidence or reviews after membership
+    was built (a rollback, then a roll forward), reopen the bootstrap. Until it completes
+    again, every write keeps full history."""
+    with store.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        state = _state(db, "selection:bootstrap") or {}
+        if not state.get("complete") or state.get("version") != MEMBERSHIP_VERSION:
+            return False
+        counts = _coverage_counts(db)
+        covered = state.get("covered") or {}
+        # Evidence rows are never deleted, so equal counts mean every row is indexed (and was
+        # selected when indexed). Reviews are few: check each has its membership.
+        counts["reviews_without_membership"] = db.execute(
+            "SELECT count(*) FROM reviews r WHERE r.kind IN ('market','event','series') AND "
+            "NOT EXISTS (SELECT 1 FROM selection_members m WHERE m.scope=r.kind AND "
+            "m.ticker=r.ticker AND m.reason=r.kind||'_review')"
+        ).fetchone()[0]
+        if counts["evidence"] == counts["evidence_markets"] and not counts[
+            "reviews_without_membership"
+        ]:
+            return False
+        _put(db, "selection:bootstrap", {
+            "version": MEMBERSHIP_VERSION, "phase": 0, "after": None, "complete": False,
+            "started_at": now(), "added": 0, "examined": 0,
+            "reopened_because": {"found": counts, "covered": covered},
+        })
+    return True
 
 
 def policy_tick(store):

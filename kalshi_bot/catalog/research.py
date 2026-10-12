@@ -97,7 +97,9 @@ def _known_at(source, row):
 def _evidence(db, ticker, as_of, include_rows):
     groups, rows, ids = {}, [], []
     for source, source_id, stored in db.execute(
-        "SELECT source,source_id,document FROM evidence WHERE market=? ORDER BY source,source_id",
+        "SELECT e.source,e.source_id,e.document FROM evidence_markets m JOIN evidence e "
+        "ON e.source=m.source AND e.source_id=m.source_id WHERE m.market=? "
+        "ORDER BY e.source,e.source_id",
         (ticker,),
     ):
         row = unpack(stored)

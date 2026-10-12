@@ -160,12 +160,12 @@ class Store:
               attempts INTEGER NOT NULL DEFAULT 0, records INTEGER NOT NULL DEFAULT 0,
               PRIMARY KEY(scope,ticker));
             CREATE INDEX IF NOT EXISTS hydration_due ON hydration_targets(status,next_check);
+            -- Per-market index of evidence rows. A separate table, not a column on evidence,
+            -- so an older image's positional evidence INSERT still works after a rollback.
+            CREATE TABLE IF NOT EXISTS evidence_markets (
+              source TEXT, source_id INTEGER, market TEXT, PRIMARY KEY(source,source_id));
+            CREATE INDEX IF NOT EXISTS evidence_markets_market ON evidence_markets(market);
             """)
-            # Additive column for indexed per-market evidence reads; NULL until the membership
-            # bootstrap or a changed import fills it. ADD COLUMN does not rewrite the table.
-            if "market" not in {row[1] for row in db.execute("PRAGMA table_info(evidence)")}:
-                db.execute("ALTER TABLE evidence ADD COLUMN market TEXT")
-            db.execute("CREATE INDEX IF NOT EXISTS evidence_market ON evidence(market)")
 
     @contextmanager
     def connect(self):
@@ -439,9 +439,12 @@ class Store:
                     continue
                 series = record["market_ticker"].split("-", 1)[0]
                 db.execute(
-                    "INSERT OR REPLACE INTO evidence (source,source_id,series,document,market) "
-                    "VALUES (?,?,?,?,?)",
-                    (source, record["id"], series, pack(record), record["market_ticker"]),
+                    "INSERT OR REPLACE INTO evidence VALUES (?,?,?,?)",
+                    (source, record["id"], series, pack(record)),
+                )
+                db.execute(
+                    "INSERT OR REPLACE INTO evidence_markets VALUES (?,?,?)",
+                    (source, record["id"], record["market_ticker"]),
                 )
                 # Membership is published in the same transaction as the evidence, so no
                 # upsert can see the evidence without also seeing the selection (DEC-034).
@@ -514,8 +517,15 @@ class Store:
             yield series, [(row[0], unpack(row[1])) for row in rows]
 
     def migrate_review(self, document):
+        from . import selection
+
         migration_id = digest(document)
         with self.connect() as db:
+            # Registry provenance keeps its series on detailed history (DEC-034).
+            selection.select_in(
+                db, "series", document["series_ticker"], "legacy_registry", "catalog",
+                source_ref="review_migration:" + migration_id,
+            )
             db.execute(
                 "INSERT OR IGNORE INTO review_migrations VALUES (?,?,?)",
                 (migration_id, document["series_ticker"], pack(document)),

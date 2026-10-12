@@ -482,6 +482,22 @@ review/import writes. Metrics and existing authenticated reads remain available.
 automatically resumes work without deleting history, advancing deferred cursors or changing
 source/trading workers. Details: [storage guard](MARKET_CATALOG_STORAGE_GUARD.md).
 
+### Catalog collection scope (DEC-034)
+
+Every series, event and market is inventoried. Detailed history follows persisted selection
+membership: imported live/paper evidence selects its market, structured reviews the reviewed
+object, registry provenance its series, and an authenticated research request any market, event
+or series for any strategy. Membership is published in the same transaction as the evidence or
+review that creates it. With `CATALOG_HISTORY_POLICY=selective` and membership ready, an
+unselected object's new revisions are compact (rules on first sight and on each change,
+lifecycle and provenance otherwise; never prices); current objects stay full. The default and
+any unready state keep full history. Newly selected contexts hydrate a few requests a cycle
+and their earlier compact history stays a named gap. `/v1/research/cohort` returns one series'
+markets as known at a point in time, with bindings, coverage gaps and look-ahead flags.
+Selection is relevance, not qualification, and a selected cohort is not an unbiased control.
+Discovery sweeps and source re-reads restart only after completing. Evaluation reads evidence
+one series at a time. Details: [selective history](MARKET_CATALOG_SELECTIVE_HISTORY.md).
+
 ### Catalog operator view
 
 The standalone market-catalog service includes a responsive dashboard at its

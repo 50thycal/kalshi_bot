@@ -394,13 +394,14 @@ class Discovery:
         from urllib.parse import quote
 
         with self.store.connect() as db:
-            # The indexed column where filled; decode only rows the bootstrap has not reached.
+            # The per-market index where present; decode only rows it does not cover yet.
             tickers = sorted(
                 {
                     r[0] if r[0] is not None else unpack(r[1])["market_ticker"]
                     for r in db.execute(
-                        "SELECT market, CASE WHEN market IS NULL THEN document END "
-                        "FROM evidence WHERE source='live'"
+                        "SELECT m.market, CASE WHEN m.market IS NULL THEN e.document END "
+                        "FROM evidence e LEFT JOIN evidence_markets m "
+                        "ON m.source=e.source AND m.source_id=e.source_id WHERE e.source='live'"
                     )
                 }
             )

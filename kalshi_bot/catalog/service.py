@@ -516,6 +516,8 @@ def main():
     backup = store.backup_before_compression()
     LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
+    if selection.verify_bootstrap(store):
+        LOG.warning("selection_bootstrap status=reopened reason=uncovered_evidence_or_reviews")
     stopped = threading.Event()
     thread = threading.Thread(
         target=collect,

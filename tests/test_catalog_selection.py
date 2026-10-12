@@ -232,7 +232,7 @@ def test_bootstrap_is_bounded_resumable_and_backfills_evidence_index(store, sele
     while not selection.membership_ready_for(reopened):
         selection.bootstrap_page(reopened, batch=2)
     with reopened.connect() as db:
-        assert db.execute("SELECT count(*) FROM evidence WHERE market IS NULL").fetchone()[0] == 0
+        assert db.execute("SELECT count(*) FROM evidence_markets").fetchone()[0] == 5
     status = reopened.status()["history_policy"]
     assert status["membership_ready"] and status["policy_effective"]
     assert status["active_by_reason"]["paper_evidence"] == 1
@@ -712,3 +712,20 @@ def test_legacy_cursors_keep_the_old_reconciliation_clock(store):
     store.set_state("last_reconciliation", time.time() - 90000)
     assert reset_source_reconciliation(store) == ["paper"]  # live has not caught up yet
     assert store.state("cursor:live")["after"] == 9
+
+
+def test_rows_written_by_an_older_image_reopen_membership_at_startup(store, selective):
+    ready(store)
+    assert selection.verify_bootstrap(store) is False
+    store.evidence_page("paper", [paper(1, "KXNEW-26OCT11-T1")], {"after": 1})
+    assert selection.verify_bootstrap(store) is False  # current code indexed and selected it
+    with store.connect() as db:  # an older image's positional insert still works
+        db.execute("INSERT OR REPLACE INTO evidence VALUES ('live',9,'KXLATE',?)",
+                   (json.dumps(paper(9, "KXLATE-26OCT11-T1")),))
+    assert selection.verify_bootstrap(store) is True
+    store.upsert("market", "KXLATE-26OCT11-T1", market("KXLATE-26OCT11-T1"), "KXLATE")
+    assert selection.representation(revisions(store, "KXLATE-26OCT11-T1")[0][1]) == selection.FULL
+    ready(store)
+    assert selection.verify_bootstrap(store) is False
+    reasons = {m["reason"] for m in selection.members(store, ticker="KXLATE-26OCT11-T1")["items"]}
+    assert reasons == {"live_evidence"}

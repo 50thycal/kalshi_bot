@@ -359,3 +359,35 @@ Review State: solo, owner acceptance pending; no independent review claimed.
 Design handoff PR: [#586](https://github.com/50thycal/kalshi_bot/pull/586) (draft).
 Implementation and executable validation pending; resume on this PR when the coding
 environment is connected. No current implementation acceptance verdict is issued.
+
+## Selective history implementation — 2026-10-12 UTC
+
+Task-specific catalog role (Claude Code), continuing PR #586 on the same branch. The coding
+environment worked; the branch was merged up to default `adbf5cd` (#595) without undoing the
+WS-024 cost changes. Build OS compatibility re-checked against canonical v0.12: no delta.
+
+Built, per [selective history](../MARKET_CATALOG_SELECTIVE_HISTORY.md#implementation-record--2026-10-12-utc):
+persisted versioned membership with transactional publication, conservative bootstrap and a
+startup re-check for rows written by an older image; compact rules/lifecycle/provenance
+revisions behind `CATALOG_HISTORY_POLICY=selective` (default `broad_full`, so merge changes no
+history depth); bounded hydration with named gaps; authenticated research selection and an
+as-of research cohort API; sweeps and source passes that restart only after completing (the
+parked events-sweep finding is fixed and removed from the Parked list); per-series evaluation;
+a 15-minute counts log. Dashboard shows collection scope.
+
+Dated baseline (2026-10-11 ~23:30 UTC): catalog RAM 24 h avg 0.69 GB / max 1.00 GB at a 1 GB
+limit; revisions +380k rows and +0.42 GB of pages per day; 43k evidence markets would be
+selected. Synthetic benchmark: revision bytes ×0.77 and file growth ×0.85 under selective
+with dictionary encoding; evaluation Python peak 301 → 30 MB at 140k rows. Neither is a
+production result. Selective history is a modest disk lever; the WS-024 RAM target is not
+claimed met.
+
+Unchanged and still open, in evidence order: exact-rule reviews (zero structured reviews
+exist), historical document binding (captures are dated observations only), independence and
+strategy-specific calibration. Confidence stays null. No source writes, executor, XOS, shared
+metric, exposure or consumer change; no Platform Revision.
+
+Review State: solo, owner acceptance pending; no independent review claimed.
+Next: owner merges #586 after green CI; verify bootstrap, cohorts, sweep continuity and 24 h RAM
+on the catalog; then the owner decides whether to set `CATALOG_HISTORY_POLICY=selective`.
+WS-023 is not complete on merge.

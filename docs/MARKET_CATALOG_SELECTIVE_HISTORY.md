@@ -1,8 +1,8 @@
 # Catalog selective history — option 3
 
-**Workstream:** WS-023 · **Build OS:** v0.12 · **Status:** approved direction; implementation pending.
+**Workstream:** WS-023 · **Build OS:** v0.12 · **Status:** implemented and tested on PR #586; owner merge, catalog-only rollout and production verification pending.
 **Owner direction:** Calvin approved option 3 in ChatGPT on 2026-10-11 America/Chicago.
-**Implementation actor:** Codex, task-specific catalog scope. No independent review claimed.
+**Implementation actors:** Codex (design), Claude Code (implementation, 2026-10-12), task-specific catalog scope. No independent review claimed.
 
 ## Build card
 
@@ -185,8 +185,115 @@ consumer semantics, unsafe selection race, proof falsely promoted from compact d
 or scope that touches shared trading/XOS behavior. Resolve within the mission or bring
 the genuine owner decision back; do not weaken evidence bars.
 
-The coding environment is disconnected (environment_offline); local implementation,
-tests and benchmarks have not run. GitHub documentation access works. The next session
-must resume this same PR with a connected coding environment and inspect current
-deployed state before implementing. Authenticated production metadata and actual
-policy behavior remain future release checks. This does not complete WS-023.
+## Implementation record — 2026-10-12 UTC
+
+The coding environment worked in this session (the earlier blocker was `environment_offline`).
+The branch was brought up to date with the default branch (WS-024 cost work through #595,
+including the 3600/1800/86400 s evaluation and storage defaults) by merge; nothing was undone.
+
+### What was built
+
+| Piece | Where | Behaviour |
+|---|---|---|
+| Policy switch | `CATALOG_HISTORY_POLICY` (default `broad_full`) | `selective` takes effect only when membership for `selection-membership-v1` is complete. Unready, invalid or unset means full history for everything. |
+| Membership | `selection_members`, `selection_events` | Scope `market`/`event`/`series`; reason and provider; who/what, source reference, selected/effective times; every select/deselect is an event. Counts kept transactionally in state. |
+| Automatic relevance | `Store.evidence_page`, `Store.review`, `Store.migrate_review` | Live and paper evidence select their market; structured reviews select the reviewed object; registry provenance selects the series. Published **in the same transaction** as the write that creates it. |
+| Bootstrap | `selection.bootstrap_page` | Registry → reviews → review drafts → evidence, bounded pages (2,000), resumable, atomic. Startup `verify_bootstrap` reopens it if an older image wrote evidence or reviews after completion (rollback safety). |
+| Upsert decision | `Store.upsert_revision` | Runs under `BEGIN IMMEDIATE`; a concurrent membership publish cannot split the check from the write (tested with a held lock). |
+| Compact observation | `compact-observation-v1` | Rule-bearing row (first sight or any rules/parent change): exact `RULE_FIELDS` (rules hash re-derivable), parent hashes, identity and provenance. Lifecycle row: status, result, settlement and expiry fields only. Never prices, sizes, volume or open interest. Own key namespace and `content_sha256`; `full_payload_retained=false`, `satisfies_payload_proof=false`. Current `objects` rows stay full. |
+| Hydration | `hydration_targets`, `selection.hydrate_step` | Enqueued only when compact history actually exists. A few requests a cycle; market → live then historical endpoint; event; series → series then paged markets with persisted cursor. 404 everywhere is `unavailable`, never coverage. Provider throttling raises into the shared backoff without spending attempts. Series targets wait while bulk discovery is storage-paused. |
+| Visibility | `/v1/status.history_policy`, dashboard "Collection scope", `/v1/objects/{k}/{t}/coverage`, revisions API `representations` + `coverage` | Policy configured/effective and transitions, membership readiness and phase, counts by reason and scope, full vs compact writes, hydration by status, per-object gaps (`compact_revisions_without_full_payload`, `observed_after_exchange_creation`, `hydration_unavailable_from_exchange`, …). |
+| Research selection | `POST /v1/selection` (4 KiB body, bearer token, storage guard) and `GET /v1/selection` | Explicit select/deselect with actor, reason and provider (any strategy, not only MMSELL). Deselect ends only that research membership; automatic relevance and history are untouched. |
+| Research cohorts | `GET /v1/research/cohort?series=&as_of=&population=all|selected|unselected&cursor=&limit≤100&include_rows=` | See below. |
+| Sweeps | `Discovery.restart_completed_sweeps`, `reset_source_reconciliation` | A series/events sweep restarts only after it **completed** and 24 h passed since it began; a source re-read restarts only after the pass caught up. Legacy cursors keep the old clock, so a deploy does not restart a pass early. |
+| Memory | `evaluators.refresh`, `Store.evidence_by_series` | Series-partitioned evaluators (MMSELL) read and evaluate one series at a time; any evaluator registered without `partition="series"` still receives the whole table. Results identical (tested). The `catalog_counts` log (an index scan of every object) runs every 15 min instead of every cycle. |
+
+### Research cohort contract
+
+One page = markets of one series, keyset-paged by ticker, with what the catalog knew **as of**
+the requested time: the latest revision captured at or before `as_of` (with its representation),
+whether rules changed afterwards, reviews created by then, the latest archived contract capture by
+then (`governing_terms_proven: false`), selection memberships and whether they postdate `as_of`,
+history coverage, evidence groups by source/strategy/arm/twin (paper outcomes masked until
+`closed_at`; live rows by source collection time), up to 200 source IDs plus a fingerprint, and
+current attributable live economics flagged when settlement or fills postdate `as_of`. Envelope:
+`cohort_id` (hash of the definition), `page_fingerprint`, index-only population counts
+(`prefix_population_complete` names a ticker/series mismatch), policy state, missing denominators
+(unfilled live orders, paper candidates not entered, opportunity population) and explicit
+statements that selection is not qualification, the selected sample is not an unbiased control,
+paper and live are not pooled and XOS epoch poolability is the consumer's to honour. Confidence
+stays `null`; nothing is qualified.
+
+### Measurements
+
+Production, dated 2026-10-11 ~23:30 UTC, before this change (Railway metrics and catalog logs):
+
+| Measure | Value |
+|---|---|
+| market-catalog RAM, 24 h | avg 0.69 GB, max 1.00 GB (limit 1.0 GB); 7-day avg 0.83 GB |
+| CPU, 24 h | avg 0.21 vCPU, max 0.44 |
+| Collect cycle | ~70 s; evaluation of ~153.7k contexts hourly |
+| Revisions | 7.02M → 7.40M rows/day (10-10 17:37 → 10-11 18:08 UTC); table pages +0.42 GB/day, PK index +47 MB/day |
+| Objects | 3.72M → 3.80M rows/day; document bytes 4.40 → 2.95 GB (dictionary writes visibly active) |
+| File / volume | 18.90 GB file, 1.19 GB reusable pages, 19.2 GB free of 39.4 GB |
+| Discovery | events page 200 per cycle over 214k events: one sweep ≈ 21 h, close to the old 24 h reset |
+| Source evidence (ops `catalog-sel-size-20261011a`, SELECT-only) | paper 138,024 rows / 42,117 markets / 773 series (729 new markets/24 h); live 2,931 fills / 2,868 markets / 250 series |
+
+`CATALOG_DICTIONARY_COMPRESSION` exists on the service; its value is withheld from this session.
+The 4.40 → 2.95 GB fall in object document bytes while rows grew is consistent with writes being on.
+Not toggled.
+
+Synthetic benchmark (`scripts/catalog_selective_benchmark.py`, this sandbox; **not** a production
+saving and not Railway RSS):
+
+| Workload | broad-full | selective | Ratio |
+|---|---|---|---|
+| 4,000 markets × 4 lifecycle states + 2 quote passes, 5% of series selected, dictionary on | 587 B/revision | 452 B/revision | revision bytes **0.77**, file growth **0.85** |
+| Upsert latency (mean / p95) | 4.05 / 5.77 ms | 4.02 / 5.67 ms | unchanged |
+| Same, dictionary off | 1,025 B/revision | 777 B/revision (earlier compact form) | 0.76 / 0.79 |
+| Evaluation, 140,132 evidence rows / 773 series, largest synthetic series 2,745 rows | whole table: 301 MB Python peak, 87 s | per series: 30 MB, 64 s | identical 47,592 contexts |
+
+Reading: selective history cuts future **revision** growth by roughly a quarter in this workload,
+because every lifecycle change is still recorded, rule-bearing rows still carry the rules, and
+dictionary compression had already removed most redundancy. Row count, index size and the
+`objects` rewrite cost are unchanged. It is a modest disk lever, not the RAM lever. The larger RAM
+effect expected from this PR is the evaluation peak (one series at a time) and the dropped
+per-cycle counts scan; neither is a measured Railway result yet.
+
+### Rollout (catalog only)
+
+1. Owner merges after green CI. The catalog redeploys (watch path `kalshi_bot/catalog/**`).
+   Policy stays `broad_full`: behaviour equals today's plus membership, cohorts and sweep fixes.
+2. Verify on the catalog: `job:selection:bootstrap` progressing without error; within ~1.5 h
+   (≈70 cycles at ~70 s) `history_policy.membership_ready=true` with ≈43k evidence markets and the
+   registry series; `revision_writes.compact=0`; `discovery:events` cursor not reset mid-sweep;
+   `/v1/research/cohort?series=<a traded series>` returns items; 24 h RAM and evaluation duration
+   compared against the baseline above.
+3. Then, as a separate owner step, set `CATALOG_HISTORY_POLICY=selective` on market-catalog only.
+   Verify `policy_effective=true`, compact writes rising, hydration backlog draining, and the daily
+   revisions rows/bytes from the `catalog_storage_detail` log against 10-10 → 10-11.
+4. Rollback: unset the variable (full history resumes for all writes). Compact rows, membership and
+   targets remain and stay readable. An older image can still read and write the store (new tables
+   are additive; `evidence` is unchanged); on the next deploy of this code `verify_bootstrap`
+   reopens membership if that image wrote evidence or reviews. No space is reclaimed by rollback.
+
+### Limits stated plainly
+
+- Compact rows can never satisfy a full-payload or historical-term requirement; consumers read
+  `representation`. Pre-policy rows carry no marker and are full snapshots.
+- Hydration recovers what the exchange still serves *now*; it cannot recreate earlier versions,
+  execution-time conditions or unobserved history. Archived markets beyond the historical endpoint
+  stay `unavailable`. Series hydration uses the live `/markets` listing only.
+- Cohort population is the ticker-prefix range of one series; the response counts any mismatch with
+  the stored series column. Selection filters use current membership; an item says when its
+  selection postdates `as_of`. The catalog keeps the latest version of each imported row, so earlier
+  row states are not reconstructable; paper outcomes are masked by `closed_at`.
+- Current document captures are dated observations, not proof of the terms that governed an older
+  execution. Imported economics do not prove exchange-account coverage. Independence, exact-rule
+  reviews and calibration are unchanged by this PR: no new evidence was produced for them, and no
+  score was invented.
+
+Validation: catalog, selection, documents, readiness, economics and headroom tests (227) plus the
+full repository suite; Ruff; JavaScript syntax; a headless-Chromium render of the dashboard at
+1280 px and 390 px (scope panel rendered, no script errors, no horizontal scroll). Remote tree and
+final-head CI are recorded on PR #586. This does not complete WS-023.
