@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=limm-db-1012m
+# code 74369598b4c4a42fc543a0f44cc5393260916e6d · started 2026-10-12T22:14:16Z
+market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                     disc                           credits
+---------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------  -------
+KXMILLERLITEPOS-26NOV03-T84  yes   buy     85           100       resting                 2026-10-12 21:39:35.245795+00  2026-10-12 22:12:46.825099+00         
+KXMILLERLITEPOS-26NOV03-T84  no    buy     10           100       filled                  2026-10-12 16:25:50.893425+00  2026-10-12 22:12:46.825099+00         
+KXYTVIEWSHIGH-TAT26NOV-3.0M  no    buy     5            200       resting                 2026-10-11 22:01:42.778319+00  2026-10-12 22:12:46.825099+00         
+
+(3 rows)
