@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-fbtx-rev1","sql":"SELECT r.version, r.status, r.fingerprint, r.activated_at, r.created_at FROM platform_revisions r JOIN platform_components c ON c.id=r.component_id WHERE c.key='MARKET_TAXONOMY' ORDER BY r.created_at"}
+{"type":"noop"}
