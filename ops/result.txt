@@ -1,20 +1,1225 @@
 # ops request [READ]
-# type=db  id=catalog-review-early-samples-20261012a
-# code 2bc882d2be3f6a136badf141bf3895c17c64c6e7 · started 2026-10-12T22:53:49Z
-series                market_ticker                                first_fill                      
---------------------  -------------------------------------------  --------------------------------
-KXATPCHALLENGERMATCH  KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN       2026-07-14 00:35:42.904016+00:00
-KXBTCD                KXBTCD-26JUL1317-T62999.99                   2026-07-13 16:26:13.452248+00:00
-KXITFMATCH            KXITFMATCH-26JUL14JASJON-JAS                 2026-07-15 04:16:06.410173+00:00
-KXITFWMATCH           KXITFWMATCH-26JUL13YOSSIB-SIB                2026-07-14 06:42:52.112997+00:00
-KXMLBHR               KXMLBHR-26JUL261920NYYPHI-PHIABOHM28-1       2026-07-27 00:09:28.460981+00:00
-KXMLBKS               KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10  2026-08-09 00:42:30.505946+00:00
-KXMLBSPREAD           KXMLBSPREAD-26JUL142000ALNL-NL2              2026-07-15 01:45:58.442950+00:00
-KXMLBTOTAL            KXMLBTOTAL-26JUL142000ALNL-12                2026-07-15 01:46:50.402344+00:00
-KXNFLTOTAL            KXNFLTOTAL-26AUG13INDNE-60                   2026-08-13 23:03:42.179653+00:00
-KXRAIN                KXRAIN-26AUG08-DC                            2026-08-09 00:09:07.175258+00:00
-KXWCGOAL              KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1            2026-07-14 19:30:18.205833+00:00
-KXWTACHALLENGERMATCH  KXWTACHALLENGERMATCH-26JUL13PENTHA-THA       2026-07-13 15:23:43.679367+00:00
-KXWTI                 KXWTI-26JUL2714-T84.99                       2026-07-27 16:18:33.310281+00:00
-
-(13 rows)
+# type=script  id=catalog-review-sources-20261012b
+# code 2bc882d2be3f6a136badf141bf3895c17c64c6e7 · started 2026-10-12T22:54:16Z
+{
+ "documents": [],
+ "markets": [
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXATPCHALLENGERMATCH-26JUL13KENSHE",
+    "mutually_exclusive": true,
+    "series_ticker": "KXATPCHALLENGERMATCH",
+    "strike_period": "",
+    "sub_title": "Kennedy vs Shepp (Jul 13)",
+    "title": "Kennedy vs Shepp"
+   },
+   "market_facts": {
+    "event_ticker": "KXATPCHALLENGERMATCH-26JUL13KENSHE",
+    "expiration_time": "2026-07-27T22:30:00Z",
+    "expiration_value": "Anton Shepp",
+    "latest_expiration_time": "2026-07-27T22:30:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-14T00:42:19.535994Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN"
+   },
+   "public_payload_fingerprints": {
+    "event": "15eea6c4fba6aaa3992c32a6ca71ddac32195da52a3504c07808d0fbe98ce4be",
+    "market": "19fc7c5e2d94a1a8efbd3f55d583f074db82fe2054574cfda0f986b37f6cc89e",
+    "series": "3c2f827bce797167bbbcdfb83ffb59abd88639c761fdfd24342ef9627a7aa030"
+   },
+   "public_rules_fingerprint": "ba230d0299555fb98e4bd1095771db4ecc555cc7214ca0f1c6f2c16bb67ce0f8",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-14T00:40:16Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "tennis_competitor": "ec1bc2bb-ebc8-4635-95e1-29d7f71a8bd6"
+    },
+    "early_close_condition": "This market will close and expire after a winner is declared.",
+    "expected_expiration_time": "2026-07-14T01:30:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": null,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Jack Kennedy",
+    "open_time": "2026-07-13T10:40:00Z",
+    "rules_primary": "If Jack Kennedy wins the Kennedy vs Shepp professional tennis match in the 2026 ATP Challenger Lincoln (NE) Round Of 32 after a ball has been played, then the market resolves to Yes.",
+    "rules_secondary": "The following market refers to the Kennedy vs Shepp professional tennis match in the 2026 ATP Challenger Lincoln (NE) Round Of 32 after a ball has been played. If the match does not occur (signaled by a ball being played) due to a player injury, walkover, forfeiture, or any other cancellation (all before the match starts), the market will resolve to a fair price in accordance with the rules. If this match is postponed or delayed, the market will remain open and close after the rescheduled match has finished (within two weeks).\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "structured",
+    "title": "Will Jack Kennedy win the Kennedy vs Shepp: Round Of 32 match?",
+    "yes_sub_title": "Jack Kennedy"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "ATP",
+      "url": "https://www.atptour.com/"
+     }
+    ],
+    "tags": [
+     "Tennis"
+    ],
+    "ticker": "KXATPCHALLENGERMATCH",
+    "title": "Challenger ATP "
+   },
+   "status": "retrieved",
+   "ticker": "KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/BTC.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/BTC.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Crypto",
+    "event_ticker": "KXBTCD-26JUL1317",
+    "mutually_exclusive": false,
+    "series_ticker": "KXBTCD",
+    "strike_date": "2026-07-13T21:00:00Z",
+    "strike_period": "",
+    "sub_title": "On Jul 13, 2026 at 5pm EDT",
+    "title": "BTC price on Jul 13, 2026 at 5pm EDT?"
+   },
+   "market_facts": {
+    "event_ticker": "KXBTCD-26JUL1317",
+    "expiration_time": "2026-07-20T21:00:00Z",
+    "expiration_value": "62148.48",
+    "latest_expiration_time": "2026-07-20T21:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-13T21:02:19.612433Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "subtitle": "$63,000 or above",
+    "ticker": "KXBTCD-26JUL1317-T62999.99"
+   },
+   "public_payload_fingerprints": {
+    "event": "5a6f71327161fdec45530b956120e662c0c00279fb0596610401ed0b22abc288",
+    "market": "00d9cfcad5efdbea997b8f8075ccf3ebc69ecc41092905bf1014e8a28c398c48",
+    "series": "e96794f904dc074845687c84231fea988ba4a36dcd509b179b07580fd176a625"
+   },
+   "public_rules_fingerprint": "0b64f1f8b2c8ac147290657afd2d47f4c0124633c66abf869544b4b9067febe4",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-13T21:00:00Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": null,
+    "early_close_condition": null,
+    "expected_expiration_time": "2026-07-13T21:05:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 62999.99,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "$63,000 or above",
+    "open_time": "2026-07-12T20:00:00Z",
+    "rules_primary": "If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI) before 5 PM EDT is above 62999.99 at 5 PM EDT on Jul 13, 2026, then the market resolves to Yes.",
+    "rules_secondary": "Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase may help guide your decision, the price used to determine this market is based on CF Benchmarks' corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are collected. The official and final value is the average of these prices.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "greater",
+    "title": "Bitcoin price on Jul 13, 2026?",
+    "yes_sub_title": "$63,000 or above"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Crypto",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/BTC.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BTC.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "hourly",
+    "settlement_sources": [
+     {
+      "name": "CF Benchmarks",
+      "url": "https://www.cfbenchmarks.com/data/indices/BRTI?ref=blog.cfbenchmarks.com"
+     }
+    ],
+    "tags": [
+     "Bitcoin",
+     "Crypto",
+     "Hourly",
+     "BTC"
+    ],
+    "ticker": "KXBTCD",
+    "title": "Bitcoin price Above/below"
+   },
+   "status": "retrieved",
+   "ticker": "KXBTCD-26JUL1317-T62999.99"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXITFMATCH-26JUL14JASJON",
+    "mutually_exclusive": true,
+    "series_ticker": "KXITFMATCH",
+    "strike_period": "",
+    "sub_title": "Jasika vs Jones (Jul 14)",
+    "title": "Jasika vs Jones"
+   },
+   "market_facts": {
+    "event_ticker": "KXITFMATCH-26JUL14JASJON",
+    "expiration_time": "2026-07-29T01:00:00Z",
+    "expiration_value": "Scott Jones",
+    "latest_expiration_time": "2026-07-29T01:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-15T04:30:45.812341Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXITFMATCH-26JUL14JASJON-JAS"
+   },
+   "public_payload_fingerprints": {
+    "event": "b7b29e09c2210719320e7e0f4ccfeafb296717f1ab746ef35b40f5dbc78c534a",
+    "market": "250fd7b393d4fe630b2ecf5b7d6a069981a76c60be363d42a6e344e98e5f4f9f",
+    "series": "db0ec7278434fb01e83e6ca80b3840c4e5a61047df9bf1b9d8cf6df3d5834bee"
+   },
+   "public_rules_fingerprint": "1ded2023a19a6f483ec06a4db6e38cf2414a16f778ee91a1e5abdb3b42751d39",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-15T04:28:38Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "tennis_competitor": "651387af-f52c-4328-9e67-5cfc1f766ce5"
+    },
+    "early_close_condition": "This market will close and expire after a winner is declared.",
+    "expected_expiration_time": "2026-07-15T07:00:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": null,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Omar Jasika",
+    "open_time": "2026-07-14T13:12:00Z",
+    "rules_primary": "If Omar Jasika wins the Jasika vs Jones professional tennis match in the 2026 M25 Brisbane Round of 32 after a ball has been played, then the market resolves to Yes.",
+    "rules_secondary": "The following market refers to the Jasika vs Jones professional tennis match in the 2026 M25 Brisbane Round of 32 after a ball has been played. If the match does not occur (signaled by a ball being played) due to a player injury, walkover, forfeiture, or any other cancellation (all before the match starts), all markets will resolve to $0.50. If a player withdraws or forfeits after a match has started, that player will resolve to No. If this match is postponed or delayed, the market will remain open and close after the rescheduled match has finished (within two weeks).\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "structured",
+    "title": "Will Omar Jasika win the Jasika vs Jones: M25 Brisbane Round of 32 match?",
+    "yes_sub_title": "Omar Jasika"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "ITF",
+      "url": "https://www.itftennis.com/en/"
+     },
+     {
+      "name": "Flashscore",
+      "url": "https://www.flashscoreusa.com/tennis/itf-men-singles/"
+     },
+     {
+      "name": "Fox Sports",
+      "url": "https://www.foxsports.com"
+     },
+     {
+      "name": "ESPN",
+      "url": "https://www.espn.com"
+     }
+    ],
+    "tags": [
+     "Tennis"
+    ],
+    "ticker": "KXITFMATCH",
+    "title": "ITF Men's Match"
+   },
+   "status": "retrieved",
+   "ticker": "KXITFMATCH-26JUL14JASJON-JAS"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXITFWMATCH-26JUL13YOSSIB",
+    "mutually_exclusive": true,
+    "series_ticker": "KXITFWMATCH",
+    "strike_period": "",
+    "sub_title": "Yoshimoto vs Sibai (Jul 13)",
+    "title": "Yoshimoto vs Sibai"
+   },
+   "market_facts": {
+    "event_ticker": "KXITFWMATCH-26JUL13YOSSIB",
+    "expiration_time": "2026-07-28T02:30:00Z",
+    "expiration_value": "Natsuki Yoshimoto",
+    "latest_expiration_time": "2026-07-28T02:30:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-14T06:55:49.51014Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXITFWMATCH-26JUL13YOSSIB-SIB"
+   },
+   "public_payload_fingerprints": {
+    "event": "15e36b468aed75429602284784483f7ad6c0de27ff017fb9dd101c6c7476d473",
+    "market": "92328d05cc93d7e06eace3c832e700de78e11c5c14e5b76ed9b9b90d284b38b2",
+    "series": "4df89bedfb3f3d71688b915fabe9a78b3508f3bd5c2531cdc35951ffaa8b0fcd"
+   },
+   "public_rules_fingerprint": "d02a1be7386226b65289b4a785d93d99d7baf0f34b5020fc4ee582b5f6620906",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-14T06:53:45Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "tennis_competitor": "73c983df-da8f-4282-87e6-c7ef1d6bf5da"
+    },
+    "early_close_condition": "This market will close and expire after a winner is declared.",
+    "expected_expiration_time": "2026-07-14T08:30:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": null,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Jizelle Sibai",
+    "open_time": "2026-07-13T14:43:00Z",
+    "rules_primary": "If Jizelle Sibai wins the Yoshimoto vs Sibai professional tennis match in the 2026 W15 Brisbane Round of 32 after a ball has been played, then the market resolves to Yes.",
+    "rules_secondary": "The following market refers to the Yoshimoto vs Sibai professional tennis match in the 2026 W15 Brisbane Round of 32 after a ball has been played. If the match does not occur (signaled by a ball being played) due to a player injury, walkover, forfeiture, or any other cancellation (all before the match starts), all markets will resolve to $0.50. If a player withdraws or forfeits after a match has started, that player will resolve to No. If this match is postponed or delayed, the market will remain open and close after the rescheduled match has finished (within two weeks).\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "structured",
+    "title": "Will Jizelle Sibai win the Yoshimoto vs Sibai: W15 Brisbane Round of 32 match?",
+    "yes_sub_title": "Jizelle Sibai"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "ITF",
+      "url": "https://www.itftennis.com/en/"
+     },
+     {
+      "name": "ESPN",
+      "url": "https://www.espn.com"
+     },
+     {
+      "name": "Flashscore",
+      "url": "https://www.flashscoreusa.com/tennis/itf-men-singles/"
+     },
+     {
+      "name": "Fox Sports",
+      "url": "https://www.foxsports.com"
+     }
+    ],
+    "tags": [
+     "Tennis"
+    ],
+    "ticker": "KXITFWMATCH",
+    "title": "ITF Women's Match"
+   },
+   "status": "retrieved",
+   "ticker": "KXITFWMATCH-26JUL13YOSSIB-SIB"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLENTITYSTAT.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXMLBHR-26JUL261920NYYPHI",
+    "mutually_exclusive": false,
+    "series_ticker": "KXMLBHR",
+    "strike_period": "",
+    "sub_title": "NYY vs PHI (Jul 26)",
+    "title": "New York Y vs Philadelphia: Home Runs"
+   },
+   "market_facts": {
+    "event_ticker": "KXMLBHR-26JUL261920NYYPHI",
+    "expiration_time": "2026-07-29T23:20:00Z",
+    "expiration_value": "Alec Bohm: 0 home runs",
+    "latest_expiration_time": "2026-07-29T23:20:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-27T02:36:06.027235Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXMLBHR-26JUL261920NYYPHI-PHIABOHM28-1"
+   },
+   "public_payload_fingerprints": {
+    "event": "b099f524c4eb52f7b4e203223021ad584426c760cfbf91453ecf31a03ff3f306",
+    "market": "10ab5b2e4b93748eaac83a7cb431e108d69a62b4991e22c0f01c1799d2343911",
+    "series": "565c4d94d4fe275c2b778bf1604e144369fd4e1822b53c0173761adbb377f32a"
+   },
+   "public_rules_fingerprint": "5257db470208aa87484268da0b01674de40eead5c5c1835e329164fbf278fcea",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-27T02:30:05Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "baseball_player": "25584184-3bfa-49bc-9f6d-c6f53eeb746b",
+     "baseball_team": "bf277158-b28d-4a0e-aa3b-54fd3acd3009"
+    },
+    "early_close_condition": "This market will close and expire after the event occurs.",
+    "expected_expiration_time": "2026-07-27T05:20:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 0.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Alec Bohm: 1+",
+    "open_time": "2026-07-26T20:50:00Z",
+    "rules_primary": "If Alec Bohm records 1+ home runs in New York Y vs Philadelphia professional baseball game originally scheduled for Jul 26, 2026 at 7:20 PM EDT, then the market resolves to Yes.",
+    "rules_secondary": "Player Participation & Settlement Criteria\nIf Alec Bohm is scratched or not included in the starting lineup, the market will resolve to the fair market price.\nIf Alec Bohm starts the game but does not record a plate appearance, the market will resolve to the fair market price.\nIf Alec Bohm is not in the starting lineup but later enters the game, the market will resolve to the fair market price, pinch hit at bats will not count towards the market.\nIf Alec Bohm is in the starting lineup and records at least one plate appearance the market will settle based on home runs recorded.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 300,
+    "strike_type": "structured",
+    "title": "Alec Bohm: 1+ home runs?",
+    "yes_sub_title": "Alec Bohm: 1+"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLENTITYSTAT.pdf",
+    "fee_multiplier": 0.5,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "ESPN",
+      "url": "https://www.espn.com"
+     },
+     {
+      "name": "Fox Sports",
+      "url": "https://www.foxsports.com"
+     },
+     {
+      "name": "the Governing League",
+      "url": "https://www.mlb.com/"
+     }
+    ],
+    "tags": [
+     "Baseball"
+    ],
+    "ticker": "KXMLBHR",
+    "title": "Pro Baseball Home Runs"
+   },
+   "status": "retrieved",
+   "ticker": "KXMLBHR-26JUL261920NYYPHI-PHIABOHM28-1"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLENTITYSTAT.pdf"
+   ],
+   "endpoint": "live",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXMLBKS-26AUG081915CLECWS",
+    "mutually_exclusive": false,
+    "series_ticker": "KXMLBKS",
+    "strike_period": "",
+    "sub_title": "CLE vs CWS (Aug 8)",
+    "title": "Cleveland vs Chicago WS: Strikeouts"
+   },
+   "market_facts": {
+    "event_ticker": "KXMLBKS-26AUG081915CLECWS",
+    "expiration_time": "2026-08-11T23:15:00Z",
+    "expiration_value": "Gavin Williams: 7 strikeouts",
+    "latest_expiration_time": "2026-08-11T23:15:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-08-09T02:41:15.839496Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10"
+   },
+   "public_payload_fingerprints": {
+    "event": "136560c89c592675aca430377f04c939053e4fe95e89228180682aebbcc81789",
+    "market": "40aec759f600b3924bdf57f8ec628fa9caf4af216f58bdf106790f0ed5ebbb8a",
+    "series": "54b97e02f3fa69d849af15deec09df1e174ada3f293dd31bf1e98ef7fabd91e6"
+   },
+   "public_rules_fingerprint": "2864550839d6c2dbe2a76b0514ee0fb62a9341bdfc14598f6d57600a159ff80e",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-08-09T02:35:13Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "baseball_player": "a7b97d53-a61c-41f8-be64-bdba19207a4b",
+     "baseball_team": "60097777-bab8-4215-8d29-b92466b5bb65"
+    },
+    "early_close_condition": "This market will close and expire after the event occurs.",
+    "expected_expiration_time": "2026-08-09T02:15:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 9.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Gavin Williams: 10+",
+    "open_time": "2026-08-08T04:11:00Z",
+    "rules_primary": "If Gavin Williams records 10+ strikeouts in the Cleveland vs Chicago WS professional baseball game originally scheduled for Aug 8, 2026 at 7:15 PM EDT, then the market resolves to Yes.",
+    "rules_secondary": "Player Participation & Settlement Criteria\nIf Gavin Williams is scratched or is not a starting pitcher, the market will resolve to the fair market price.\nIf Gavin Williams is not a starting pitcher but later enters the game, the market will resolve to the fair market price, relief appearances will not count towards this market.\nIf Gavin Williams is a starting pitcher and records at least one pitch the market will settle based on strikeouts recorded.\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 300,
+    "strike_type": "structured",
+    "title": "Gavin Williams: 10+ strikeouts?",
+    "yes_sub_title": "Gavin Williams: 10+"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLENTITYSTAT.pdf",
+    "fee_multiplier": 0.5,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "ESPN",
+      "url": "https://www.espn.com"
+     },
+     {
+      "name": "Fox Sports",
+      "url": "https://www.foxsports.com"
+     },
+     {
+      "name": "the Governing League",
+      "url": "https://www.mlb.com/"
+     }
+    ],
+    "tags": [
+     "Baseball"
+    ],
+    "ticker": "KXMLBKS",
+    "title": "Pro Baseball Strikeouts"
+   },
+   "status": "retrieved",
+   "ticker": "KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLSPREAD.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXMLBSPREAD-26JUL142000ALNL",
+    "mutually_exclusive": false,
+    "series_ticker": "KXMLBSPREAD",
+    "strike_period": "",
+    "sub_title": "AL vs NL (Jul 14)",
+    "title": "AL vs NL: Spread"
+   },
+   "market_facts": {
+    "event_ticker": "KXMLBSPREAD-26JUL142000ALNL",
+    "expiration_time": "2026-07-18T00:00:00Z",
+    "expiration_value": "4",
+    "latest_expiration_time": "2026-07-18T00:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-15T03:21:35.895127Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXMLBSPREAD-26JUL142000ALNL-NL2"
+   },
+   "public_payload_fingerprints": {
+    "event": "a69edce3e83331db681c4fafa95dad792194fee9575f3f6c8c0ba5754863d1f9",
+    "market": "68a99f95fcdf93140465c92dafbcf59cfab40c5b116a14154ef101513e506423",
+    "series": "0dc96d5e14befce25f49035f203696b1fb1a9b0aa1fc65f6da10fbe468b191eb"
+   },
+   "public_rules_fingerprint": "a58721c7488f3fbeb19339b9149c82ea00221b678716778bebe85c7fe6c80573",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-15T03:19:29Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "baseball_team": "a9dc0022-3d30-4f05-84d8-d2b3c3fce272"
+    },
+    "early_close_condition": "This market will close and expire after a winner is declared.",
+    "expected_expiration_time": "2026-07-15T03:00:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 1.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "NL wins by over 1.5 runs",
+    "open_time": "2026-07-13T22:40:00Z",
+    "rules_primary": "If the NL wins by more than 1.5 runs in the AL vs NL professional baseball game originally scheduled for Jul 14, 2026 at 8:00 PM EDT, then the market resolves to Yes.",
+    "rules_secondary": "",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "greater",
+    "title": "NL wins by over 1.5 runs?",
+    "yes_sub_title": "NL wins by over 1.5 runs"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLSPREAD.pdf",
+    "fee_multiplier": 0.5,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "the Governing League",
+      "url": "https://www.mlb.com/"
+     }
+    ],
+    "tags": [
+     "Baseball"
+    ],
+    "ticker": "KXMLBSPREAD",
+    "title": "Pro Baseball Spread"
+   },
+   "status": "retrieved",
+   "ticker": "KXMLBSPREAD-26JUL142000ALNL-NL2"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLTOTALS.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXMLBTOTAL-26JUL142000ALNL",
+    "mutually_exclusive": false,
+    "series_ticker": "KXMLBTOTAL",
+    "strike_period": "",
+    "sub_title": "AL vs NL (Jul 14)",
+    "title": "AL vs NL: Total Runs"
+   },
+   "market_facts": {
+    "event_ticker": "KXMLBTOTAL-26JUL142000ALNL",
+    "expiration_time": "2026-07-18T00:00:00Z",
+    "expiration_value": "4",
+    "latest_expiration_time": "2026-07-18T00:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-15T03:21:35.885906Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXMLBTOTAL-26JUL142000ALNL-12"
+   },
+   "public_payload_fingerprints": {
+    "event": "413134ddcd4b74f027f666b7ac0d9c18b2eae20a8e4d61be02cd7eb16513d22d",
+    "market": "3a96cea714d8327cb5f27622eefb778b5893de18e5c46f0e950a1da451393ea1",
+    "series": "dfb4ec345aa6d7197c98d74455f087b039bae8e84077dd5c67559c90b3ba3a40"
+   },
+   "public_rules_fingerprint": "7660a6c2eecb757393a1bfef5d4311df96c99c95e63b3078346d55e20df911c7",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-15T03:19:29Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": null,
+    "early_close_condition": "This market will close and expire early if the event occurs.",
+    "expected_expiration_time": "2026-07-15T03:00:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 11.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Over 11.5 runs scored",
+    "open_time": "2026-07-13T22:40:00Z",
+    "rules_primary": "If the AL and NL collectively score more 11.5 runs in the AL vs NL professional baseball game originally scheduled for Jul 14, 2026 at 8:00 PM EDT, then the market resolves to Yes.",
+    "rules_secondary": "",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "greater",
+    "title": "AL vs NL Total Runs?",
+    "yes_sub_title": "Over 11.5 runs scored"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/BASEBALLTOTALS.pdf",
+    "fee_multiplier": 0.5,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "MLB",
+      "url": "https://www.mlb.com/"
+     }
+    ],
+    "tags": [
+     "Baseball"
+    ],
+    "ticker": "KXMLBTOTAL",
+    "title": "Pro Baseball Total Points"
+   },
+   "status": "retrieved",
+   "ticker": "KXMLBTOTAL-26JUL142000ALNL-12"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf"
+   ],
+   "endpoint": "live",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXNFLTOTAL-26AUG13INDNE",
+    "mutually_exclusive": false,
+    "series_ticker": "KXNFLTOTAL",
+    "strike_period": "",
+    "sub_title": "IND vs NE (Aug 13)",
+    "title": "Indianapolis vs New England: Total Points"
+   },
+   "market_facts": {
+    "event_ticker": "KXNFLTOTAL-26AUG13INDNE",
+    "expiration_time": "2026-08-15T23:30:00Z",
+    "expiration_value": "26",
+    "latest_expiration_time": "2026-08-15T23:30:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-08-14T03:17:34.395159Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXNFLTOTAL-26AUG13INDNE-60"
+   },
+   "public_payload_fingerprints": {
+    "event": "d1397b95b4ec55c6eb93e5863723aaab3a4ce7828968ffbe637011427c19f6b0",
+    "market": "b5c224828aef13fd104cd73cf83364543ed9eadacf483a85e60d17a780181e58",
+    "series": "adbb325c72d04b584eaace45967fa1454732a5d9ff99aac37ea7567e04264c45"
+   },
+   "public_rules_fingerprint": "7a9efd29f5529b4b2d48adf8e573133660f038bbeaba1601cefcd5785c51d6b8",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-08-14T03:15:26Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": null,
+    "early_close_condition": "This market will close and expire early if the event occurs.",
+    "expected_expiration_time": "2026-08-14T02:30:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 59.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Over 59.5 points scored",
+    "open_time": "2026-08-07T16:05:00Z",
+    "rules_primary": "If Indianapolis and New England collectively score more than 59.5 points in the Indianapolis vs New England Pro Football game originally scheduled for Aug 13, 2026, then the market resolves to Yes.",
+    "rules_secondary": "Kalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "greater",
+    "title": "Will there be over 59.5 points scored?",
+    "yes_sub_title": "Over 59.5 points scored"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/FOOTBALLTOTALS.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic_with_maker_fees",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "the Governing League",
+      "url": "https://www.nfl.com/"
+     }
+    ],
+    "tags": [
+     "Football"
+    ],
+    "ticker": "KXNFLTOTAL",
+    "title": "Pro Football Total Points"
+   },
+   "status": "retrieved",
+   "ticker": "KXNFLTOTAL-26AUG13INDNE-60"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/RAINGLOBALPERIOD.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/RAINGLOBALPERIOD.pdf"
+   ],
+   "endpoint": "live",
+   "event": {
+    "category": "Climate and Weather",
+    "event_ticker": "KXRAIN-26AUG08",
+    "mutually_exclusive": false,
+    "series_ticker": "KXRAIN",
+    "strike_date": "2026-08-09T03:59:59Z",
+    "strike_period": "",
+    "sub_title": "On Aug 8, 2026",
+    "title": "Where will it rain on Aug 8, 2026?"
+   },
+   "market_facts": {
+    "event_ticker": "KXRAIN-26AUG08",
+    "expiration_time": "2026-08-10T04:00:00Z",
+    "expiration_value": "0.00",
+    "latest_expiration_time": "2026-08-10T04:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-08-09T16:31:05.46203Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXRAIN-26AUG08-DC"
+   },
+   "public_payload_fingerprints": {
+    "event": "f5602b933dfd65e124e3e3344bd168316faf3b07677d3f01a778f3b1b455ea12",
+    "market": "cc204e68f8c92f3b61e4cfca7c9a0fc89e8885e9f64fcfccc66b91c26d9e5b0f",
+    "series": "5aa98ae632addc6cd94a632b8856d6c81107f92c36b57e96c5f4a2216380bf16"
+   },
+   "public_rules_fingerprint": "d85dd15487faf47314102e99b6741b83c95d8f2c8b4fe6248d511935322610ed",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-08-09T04:00:00Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": null,
+    "early_close_condition": "This market will close and expire early if the event occurs.",
+    "expected_expiration_time": "2026-08-10T03:59:59Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 0,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Washington DC",
+    "open_time": "2026-08-07T09:10:00Z",
+    "rules_primary": "If the total precipitation at CLIDCA in Washington DC in Aug 8, 2026 is strictly greater than 0 inches, then the market resolves to Yes.",
+    "rules_secondary": "Data for CLIDCA can be found by clicking the following URL: https://weather.com/kalshi. \u201cTrace\u201d amounts (T) and missing daily precipitation values are counted as 0 inches. \n\nNot all weather data is the same. While checking a source like AccuWeather or Google Weather may help guide your decision, the official and final value used to determine this market as reported by the Weather Company linked in the rules above.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 1800,
+    "strike_type": "greater",
+    "title": "Will it rain in Washington DC on Aug 8, 2026?",
+    "yes_sub_title": "Washington DC"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Climate and Weather",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/RAINGLOBALPERIOD.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/RAINGLOBALPERIOD.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "daily",
+    "settlement_sources": [
+     {
+      "name": "The Weather Company",
+      "url": "https://weather.com/kalshi"
+     }
+    ],
+    "tags": [
+     "Snow and rain"
+    ],
+    "ticker": "KXRAIN",
+    "title": "Where will it rain daily"
+   },
+   "status": "retrieved",
+   "ticker": "KXRAIN-26AUG08-DC"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/SOCCERENTITYSTAT.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/SOCCERENTITYSTAT.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXWCGOAL-26JUL14FRAESP",
+    "mutually_exclusive": false,
+    "series_ticker": "KXWCGOAL",
+    "strike_period": "",
+    "sub_title": "FRA vs ESP (Jul 14)",
+    "title": "France vs Spain: Goalscorer"
+   },
+   "market_facts": {
+    "event_ticker": "KXWCGOAL-26JUL14FRAESP",
+    "expiration_time": "2026-07-28T19:00:00Z",
+    "expiration_value": "goalscorer",
+    "latest_expiration_time": "2026-07-28T19:00:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-14T21:10:40.951884Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1"
+   },
+   "public_payload_fingerprints": {
+    "event": "626c7188564c5a4dcb8948ce7a019969c4a6c2aeaca10d33f41fd5d115484064",
+    "market": "989306b6ad62dde0367ae3ae458709b201666b8d291ec75e4bc4d01ba6332530",
+    "series": "a740b95ae064449c95e27ee17929cfd71677650e1a4a52cad2c57c631c2bbfe8"
+   },
+   "public_rules_fingerprint": "73a5a3a86da1ef37e62e7ff17e2387bd8d6bca127e4fadf37fb6bc09cf56e764",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-14T21:04:35Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "soccer_player": "4a1e71fd-da3e-40ea-a237-670866af85f9",
+     "soccer_team": "6bdef9ea-fd62-4a4d-a434-0e2ff0961d3e"
+    },
+    "early_close_condition": "This market will close and expire early if the event occurs.",
+    "expected_expiration_time": "2026-07-14T22:00:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 0.5,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Pedri: 1+",
+    "open_time": "2026-07-10T22:25:00Z",
+    "rules_primary": "If Pedri records at least 1 goal during the entire game (regulation, stoppage and any extra time periods) of the France vs Spain professional FIFA World Cup soccer game originally scheduled for Jul 14, 2026, then the market resolves to Yes.",
+    "rules_secondary": "The following market refers to a player in the entire game (regulation, stoppage and any extra time periods) of the France vs Spain professional FIFA World Cup soccer game originally scheduled for Jul 14, 2026. If a player is active but never enters the game, the market settles to the last fair market price before game start. Once a player enters the game, the market settles based on the player's goals scored.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 300,
+    "strike_type": "structured",
+    "title": "Pedri: 1+ goals",
+    "yes_sub_title": "Pedri: 1+"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/SOCCERENTITYSTAT.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/SOCCERENTITYSTAT.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "FIFA",
+      "url": "https://FIFA.com"
+     }
+    ],
+    "tags": [
+     "Soccer"
+    ],
+    "ticker": "KXWCGOAL",
+    "title": "World Cup Goal"
+   },
+   "status": "retrieved",
+   "ticker": "KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Sports",
+    "event_ticker": "KXWTACHALLENGERMATCH-26JUL13PENTHA",
+    "mutually_exclusive": true,
+    "series_ticker": "KXWTACHALLENGERMATCH",
+    "strike_period": "",
+    "sub_title": "Penickova vs Thandi (Jul 13)",
+    "title": "Penickova vs Thandi"
+   },
+   "market_facts": {
+    "event_ticker": "KXWTACHALLENGERMATCH-26JUL13PENTHA",
+    "expiration_time": "2026-07-27T11:10:00Z",
+    "expiration_value": "Kristina Penickova",
+    "latest_expiration_time": "2026-07-27T11:10:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-13T15:32:39.493221Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXWTACHALLENGERMATCH-26JUL13PENTHA-THA"
+   },
+   "public_payload_fingerprints": {
+    "event": "bd1a7f88bdb9abeefe9fd65e4b75a0c7a0443e851c8bcfa9067e7f3fa5773559",
+    "market": "3b57b5a2e76003ee204d243c2d243f07781d4bc6815ccc229ac1eeb41025b3e2",
+    "series": "701a34ea08d36101272d6ceddc4f33df4a68bfdbef90fb229dc9a1488711b6c0"
+   },
+   "public_rules_fingerprint": "64f8400f2ce863f486a8cb0449ad21121d55b6b5d9f76b413bedcf8a8551ff7f",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-13T15:30:37Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "tennis_competitor": "190c0110-38cf-4a69-9458-18c58601d833"
+    },
+    "early_close_condition": "This market will close and expire after a winner is declared.",
+    "expected_expiration_time": "2026-07-13T14:10:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": null,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Karman Kaur Thandi",
+    "open_time": "2026-07-12T23:20:00Z",
+    "rules_primary": "If Karman Kaur Thandi wins the Penickova vs Thandi professional tennis match in the 2026 WTA 125K Istanbul 2 Round Of 32 after a ball has been played, then the market resolves to Yes.",
+    "rules_secondary": "The following market refers to the Penickova vs Thandi professional tennis match in the 2026 WTA 125K Istanbul 2 Round Of 32 after a ball has been played. If the match does not occur (signaled by a ball being played) due to a player injury, walkover, forfeiture, or any other cancellation (all before the match starts), the market will resolve to a fair price in accordance with the rules. If this match is postponed or delayed, the market will remain open and close after the rescheduled match has finished (within two weeks).\n\nKalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 60,
+    "strike_type": "structured",
+    "title": "Will Karman Kaur Thandi win the Penickova vs Thandi: Round Of 32 match?",
+    "yes_sub_title": "Karman Kaur Thandi"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Current players, coaches, and staff of the league, association, or organization(s) governing the event. For college leagues/associations specifically, or where otherwise appropriate (as identified by the Exchange), this applies to current players/coaches/staff of the specific sport in <event> rather than the league/association as a whole (e.g., if the Division I Gonzaga Men\u2019s Basketball Team is playing in <event>, this prohibition will restrict trades by current players/coaches/staff on NCAA Basketball, rather than all current players/coaches/staff in any NCAA sport).",
+     "Paid employees of the league and league participants",
+     "Owners of teams and the league",
+     "and household members and immediate family of all above",
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Sports",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/ACHIEVEMENTS.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "custom",
+    "settlement_sources": [
+     {
+      "name": "WTA",
+      "url": "https://www.wtatennis.com/"
+     }
+    ],
+    "tags": [
+     "Tennis"
+    ],
+    "ticker": "KXWTACHALLENGERMATCH",
+    "title": "Challenger WTA"
+   },
+   "status": "retrieved",
+   "ticker": "KXWTACHALLENGERMATCH-26JUL13PENTHA-THA"
+  },
+  {
+   "document_urls": [
+    "https://assets.kalshi.com/contract_terms/COMMODITIES.pdf",
+    "https://assets.kalshi.com/regulatory/product-certifications/COMMODITIES.pdf"
+   ],
+   "endpoint": "historical",
+   "event": {
+    "category": "Commodities",
+    "event_ticker": "KXWTI-26JUL2714",
+    "mutually_exclusive": false,
+    "series_ticker": "KXWTI",
+    "strike_date": "2026-07-27T18:30:00Z",
+    "strike_period": "",
+    "sub_title": "Jul 27, 2026",
+    "title": "Oil Price (WTI) on Jul 27, 2026?"
+   },
+   "market_facts": {
+    "event_ticker": "KXWTI-26JUL2714",
+    "expiration_time": "2026-08-03T19:30:00Z",
+    "expiration_value": "82.61",
+    "latest_expiration_time": "2026-08-03T19:30:00Z",
+    "market_type": "binary",
+    "notional_value_dollars": "1.0000",
+    "price_level_structure": "linear_cent",
+    "result": "no",
+    "settlement_ts": "2026-07-28T01:45:46.351524Z",
+    "settlement_value_dollars": "0.0000",
+    "status": "finalized",
+    "ticker": "KXWTI-26JUL2714-T84.99"
+   },
+   "public_payload_fingerprints": {
+    "event": "9e2ce2eeb0ad002b9be3441833c7a12f6b2e46512bbaf3844a597eeea94f25d0",
+    "market": "da73606782542c46c062e4e647d57a91b3d3fce757ae5128380618b5f857837d",
+    "series": "8c59dfc3c10d1e874447a8853a2669436aaa3ea185ebb0e890200b7e0b539102"
+   },
+   "public_rules_fingerprint": "a1ed08a605d3a2892c79a16130cf011bfb8c02a234d1686670756f47e6270b50",
+   "rules": {
+    "can_close_early": true,
+    "cap_strike": null,
+    "close_time": "2026-07-27T18:30:00Z",
+    "contract_terms_url": null,
+    "contract_url": null,
+    "custom_strike": {
+     "front_month_contract": "WBS 26U-ICE",
+     "strike_date": "2026-07-27T14:30:00-04:00"
+    },
+    "early_close_condition": null,
+    "expected_expiration_time": "2026-07-27T18:30:00Z",
+    "fee_multiplier": null,
+    "fee_type": null,
+    "floor_strike": 84.99,
+    "functional_strike": null,
+    "mutually_exclusive": null,
+    "no_sub_title": "Above $84.99",
+    "open_time": "2026-07-23T23:30:00Z",
+    "rules_primary": "If the daily settlement price for WTI crude oil(September 2026 contract) on July 27, 2026 is above 84.99 USD/Bbl, then the market resolves to Yes.",
+    "rules_secondary": "Settlement is based on the nearest listed contract month, rolling forward to the next contract 2 business days before the current contract's last trading day. For example, if the May 2026 contract's last trading day is April 28, the active month switches from May \u2192 June 2 business days prior to the expiry date.\n\nThe settlement contract and corresponding month represent standard exchange symbology where contracts are named after their delivery month, not their expiration date.The settlement value is rounded to the nearest 2 decimal places. If no data is published by the specified source agency for the specified time, then the most recently available published data will be used to resolve the market.",
+    "settlement_sources": null,
+    "settlement_timer_seconds": 3600,
+    "strike_type": "greater",
+    "title": "Will the WTI crude oil settlement price be above 84.99 USD/Bbl on Jul 27, 2026?",
+    "yes_sub_title": "Above $84.99"
+   },
+   "series": {
+    "additional_prohibitions": [
+     "Persons who are employed by any of the Source Agencies are not permitted to trade on the Contract.",
+     "Persons who hold any material, non-public information on the Underlying are not permitted to trade on the Contract."
+    ],
+    "category": "Commodities",
+    "contract_terms_url": "https://assets.kalshi.com/contract_terms/COMMODITIES.pdf",
+    "contract_url": "https://assets.kalshi.com/regulatory/product-certifications/COMMODITIES.pdf",
+    "fee_multiplier": 1,
+    "fee_type": "quadratic",
+    "frequency": "daily",
+    "settlement_sources": [
+     {
+      "name": "ICE",
+      "url": "https://www.theice.com/products/213/WTI-Crude-Futures"
+     }
+    ],
+    "tags": [
+     "Oil & Gas"
+    ],
+    "ticker": "KXWTI",
+    "title": "WTI oil on day"
+   },
+   "status": "retrieved",
+   "ticker": "KXWTI-26JUL2714-T84.99"
+  }
+ ],
+ "method": "catalog-review-sources-v1",
+ "retrieval_time_is_not_effective_date": true,
+ "retrieved_at": "2026-10-12T22:54:16.225766+00:00"
+}
