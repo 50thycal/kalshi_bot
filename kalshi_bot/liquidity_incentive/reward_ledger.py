@@ -84,20 +84,28 @@ REWARD_MAX_CENTS = 2500
 CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-09-29", 221, "KXANTHVREQ-28SEP26"),
     ("2026-10-10", 209, "KXTRUMPMENTION-26OCT09"),
+    ("2026-10-11", 199, "KXTRUMPSAY-26OCT12"),
+    ("2026-10-11", 131, "KXMSFTPERM-26OCT"),
 )
 
 
 def confirmed_reward(residual_cents: int | None, at: datetime | None) -> bool:
     """True when this residual is a payout listed on Kalshi's Rewards page
-    (`CONFIRMED_REWARD_PAYOUTS`). Kalshi shows a local date, hence the one-day tolerance."""
+    (`CONFIRMED_REWARD_PAYOUTS`). Kalshi shows a local date, hence the one-day tolerance.
+    Payouts listed on the same date may land as ONE balance step (2026-10-11: $1.99 + $1.31
+    arrived as a single $3.30 residual), so that date's total matches too."""
     if residual_cents is None or at is None:
         return False
     cents = int(residual_cents)
     day = at.date()
+    by_date: dict[str, int] = {}
     for iso, paid, _event in CONFIRMED_REWARD_PAYOUTS:
-        if cents == paid and abs((datetime.fromisoformat(iso).date() - day).days) <= 1:
+        near = abs((datetime.fromisoformat(iso).date() - day).days) <= 1
+        if cents == paid and near:
             return True
-    return False
+        if near:
+            by_date[iso] = by_date.get(iso, 0) + paid
+    return cents in by_date.values()
 
 
 def attributable_reward(residual_cents: int | None, at: datetime | None,
