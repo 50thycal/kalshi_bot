@@ -138,6 +138,10 @@ def test_confirmed_reward_matches_the_rewards_page():
     assert not confirmed_reward(275, datetime(2026, 10, 6, 21, 32, tzinfo=timezone.utc))
     assert not confirmed_reward(208, oct10)                                # cents must match
     assert not confirmed_reward(209, oct10 + timedelta(days=3))            # wrong day
+    oct11 = datetime(2026, 10, 11, 10, 38, tzinfo=timezone.utc)
+    assert confirmed_reward(330, oct11)            # $1.99 + $1.31 paid as one balance step
+    assert confirmed_reward(131, oct11)
+    assert not confirmed_reward(330, oct11 + timedelta(days=3))
     assert not confirmed_reward(None, oct10)
 
 
