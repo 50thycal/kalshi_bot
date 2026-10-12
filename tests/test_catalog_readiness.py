@@ -332,7 +332,8 @@ def test_matching_draft_fields_are_separate_and_cannot_silently_fill_semantics(s
 
 
 def test_pilot_bundle_is_market_scoped_proposed_only_with_explicit_unknowns():
-    assert len(REVIEW_DRAFTS) == 3
+    # Three 2026-10-09 pilots plus the thirteen 2026-10-12 series drafts (top live volume).
+    assert len(REVIEW_DRAFTS) == 16
     for ticker, draft in REVIEW_DRAFTS.items():
         assert draft["market_ticker"] == ticker
         assert draft["status"] == "proposed_not_approved"
@@ -343,3 +344,15 @@ def test_pilot_bundle_is_market_scoped_proposed_only_with_explicit_unknowns():
         assert len(draft["contract_document"]["content_sha256"]) == 64
         assert not draft["contract_document"]["version_at_execution_verified"]
         assert not draft["candidate_exposure_verified_independent"]
+
+
+def test_series_drafts_say_what_was_not_read_and_keep_scores_unset():
+    drafts = [d for d in REVIEW_DRAFTS.values() if d["draft_id"].endswith("series-draft-20261012")]
+    assert len({d["series_ticker"] for d in drafts}) == len(drafts) == 13
+    for draft in drafts:
+        assert draft["contract_document"]["text_reviewed"] is False
+        assert draft["product_certification_document"]["text_reviewed"] is False
+        assert draft["semantics"]["risk_components"]["numeric_score"] is None
+        assert draft["semantics"]["settlement_source"]["historical_version_verified"] is False
+        assert draft["template_consistency"]["earliest_traded_market"].startswith(draft["series_ticker"])
+        assert draft["review_questions"] and draft["evidence_references"]

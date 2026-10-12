@@ -1,0 +1,69 @@
+# Proposed rule reviews — top 13 live-traded series (2026-10-12)
+
+**Workstream:** WS-023 · **Status:** proposed, not approved · **Author:** Claude Code (task-specific catalog session)
+
+These 13 series cover 50% of the markets MMSELL has traded live (2,868 markets across 250 series; ops
+`catalog-review-priority-20261012a`). Each draft quotes one recent traded market's official listing rules
+and is checked against the series' earliest traded market. The machine-readable records are in
+`kalshi_bot/catalog/review_drafts.json` (`*-series-draft-20261012`).
+
+A draft is not an approval. It sets no score, qualifies nothing and changes no trading. An approved review must be
+posted through the catalog's authenticated review API against the market's current catalog rules hash.
+
+## What was and was not read
+
+- **Read:**
+  - The exact listing rules (primary and secondary text) for 26 markets: one recent and one early market per series.
+  - Series settlement sources, fee schedule and event grouping.
+  - Sources: ops `catalog-review-sources-20261012a` and `-b`, retrieved 2026-10-12 22:52–22:55 UTC.
+- **Hashed but not read:** the contract terms PDF and the product-certification PDF for each series. Their text
+  could not be extracted (encoded fonts). Anything the listings leave to "the rules" is therefore an **open question**
+  below, not a guess.
+- **Not verified:**
+  - Which version of the terms governed older fills.
+  - Whether outcomes are independent.
+  - Any numeric threshold.
+
+## The 13 series in plain words
+
+| # | Series | Settles Yes when… | Edge cases from the listing | Open questions |
+|---|---|---|---|---|
+| 1 | KXMLBHR (465) | The named starter, with ≥1 plate appearance, hits the stated home runs. | Scratched, no plate appearance or bench entry → **fair price**, not 0/1. Pinch-hit at-bats don't count. | PDF: postponed/suspended games, stat corrections. |
+| 2 | KXATPCHALLENGERMATCH (129) | The named player wins after a ball is played. | Never starts → **fair price**. Postponed → stays open ≤2 weeks. | Mid-match retirement not stated. How the "fair price" is computed. |
+| 3 | KXITFWMATCH (126) | Same as #2. | Never starts → **$0.50 for all markets**. Retires mid-match → that player **No**. | Which source wins if ITF, Flashscore, ESPN and Fox disagree. |
+| 4 | KXITFMATCH (122) | Same as #3. | Same as #3. | Same as #3. |
+| 5 | KXMLBTOTAL (117) | Combined runs exceed the half-run line. | Closes early once the over hits. The rule text has a typo ("score more 10.5 runs"); the intent is clear. | PDF: postponed/suspended/shortened games. The earliest sample was the All-Star Game. |
+| 6 | KXBTCD (104) | The average of 60 BRTI values in the minute before 5 PM ET is **strictly above** the strike. | "$88,000 or above" is displayed for strike 87,999.99. All strikes at one time share one number. | PDF: index outage and missing data. |
+| 7 | KXMLBSPREAD (104) | The named team wins by more than the half-run line. | A loss is No. | PDF: postponed/suspended games. |
+| 8 | KXRAIN (71) | The named station records **> 0.00 in**. | Trace = 0. **Missing data = 0, so a data gap settles No.** Only the named station counts. | Calendar day or local-standard-time climate day? |
+| 9 | KXWCGOAL (47) | The player scores ≥1 goal, including extra time. | Never enters → **pre-game fair price**. | Penalty shootouts. The tournament is over: is approval still needed? |
+| 10 | KXMLBKS (42) | The starting pitcher reaches the strikeout line. | Not starting or relief → **fair price**. **The participation test changed:** "at least one pitch" (August) → "at least one batter faced" (October). | Date of the change, before applying one template to older fills. |
+| 11 | KXWTI (41) | The named **ICE** WTI contract's daily settlement (2 dp) is above the strike. | Front month rolls 2 business days before the last trading day. No settlement published → **latest available settlement**. | PDF: holidays. Observation instant versus the ICE settlement window. |
+| 12 | KXWTACHALLENGERMATCH (40) | Same as #2. | Same as #2. | Same as #2. |
+| 13 | KXNFLTOTAL (39) | Combined points exceed the half-point line. | Closes early once the over hits. **Maker fees apply** (`quadratic_with_maker_fees`); no other series here charges them. | Does overtime count? Postponement? Do the economics use the real maker fee? |
+
+The number after each series is its count of live-traded markets (ops `catalog-review-priority-20261012a`).
+
+## Findings that matter beyond the reviews
+
+1. **Non-binary settlements are common.** Fair-price or $0.50 settlement exists in 7 of the 13 series: MLB home
+   runs and strikeouts, all four tennis series, World Cup scorer. The strict binary ledger is built to block any
+   non-0/1 settlement. Whether the 23 live markets currently blocked as `unsupported_or_conflicting_settlement` are
+   these cases is not verified here.
+2. **Tennis tours differ.** Challenger tours use a "fair price" when a match never starts; ITF uses $0.50 and makes a
+   mid-match retiree No. One shared tennis template would be wrong.
+3. **Rules changed while we traded.** The KXMLBKS participation wording changed during the trading period, and MLB
+   prop strike metadata changed too. This is concrete evidence that current listing text cannot stand in for the
+   terms at fill time.
+4. **Correlated exposure is wide.** Every MLB series on one game shares that game; all BTC strikes at one time share
+   one number; every WTI strike on a date shares one settlement. Each draft records a candidate exposure key; none is
+   verified.
+
+## How to approve
+
+Approval is your decision, series by series. Reply with what you accept, reject or want changed, for example
+"approve 5, 6, 7, 11; tennis: wait for PDF".
+
+An accepted draft becomes a catalog review posted with the catalog API token against the **current** catalog rules
+hash. Posting it needs the token, which this session does not have. A series review still leaves each market's own
+review and the historical-terms question open, so confidence stays unset until the remaining calibration steps are done.

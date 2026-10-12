@@ -391,3 +391,20 @@ Review State: solo, owner acceptance pending; no independent review claimed.
 Next: owner merges #586 after green CI; verify bootstrap, cohorts, sweep continuity and 24 h RAM
 on the catalog; then the owner decides whether to set `CATALOG_HISTORY_POLICY=selective`.
 WS-023 is not complete on merge.
+
+## Exact-rule review drafts, top 13 series — 2026-10-12 UTC
+
+Calvin asked for review drafts for the top live-traded series. 250 series have live MMSELL fills; the top 13 cover 50%
+of live-traded markets (ops `catalog-review-priority-20261012a`). PR #597 (merged) added the read-only
+`catalog_review_sources` ops script because the sandbox cannot reach Kalshi. Thirteen proposed drafts
+(`*-series-draft-20261012`) quote each series' recent listing rules, compare an early traded market and hash both
+contract PDFs. Plain-language table: [review drafts](../MARKET_CATALOG_REVIEW_DRAFTS_20261012.md).
+
+Findings:
+- PDF text was not extractable, so PDF contingencies are open questions.
+- KXMLBKS participation wording changed during trading.
+- Tennis non-start settlement differs between Challenger and ITF tours.
+- Seven series have non-binary settlement paths.
+- KXNFLTOTAL charges maker fees.
+
+Nothing is approved or scored. Approval is the owner's per series, then posted through the authenticated review API.
