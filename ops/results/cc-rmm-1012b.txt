@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1012b
+# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T02:43:48Z
+ev                        legs                                                                             
+------------------------  ---------------------------------------------------------------------------------
+KXMLSGAME-26OCT10TORMTL   TOR:1:s:-0.94 TOR:2:s:-0.94                                                      
+KXNFLTOTAL-26OCT11BALATL  56:1:o:- 59:1:o:- 68:1:o:- 68:2:o:-                                              
+KXNFLTOTAL-26OCT11CHIGB   61:1:s:0.07 64:1:s:0.07 64:2:s:0.07 67:1:s:0.07                                  
+KXNFLTOTAL-26OCT11CINMIA  61:1:s:0.06 64:1:s:0.06 67:1:s:0.07 67:2:s:0.07                                  
+KXNFLTOTAL-26OCT11CLENYJ  42:1:s:0.07 59:1:s:0.06 62:1:s:0.07 62:2:s:0.07                                  
+KXNFLTOTAL-26OCT11DENLAC  59:1:s:0.07 62:1:s:0.07 65:1:s:0.06 65:2:s:0.06                                  
+KXNFLTOTAL-26OCT11DETARI  73:1:s:0.07 73:2:s:0.07 76:1:s:0.06                                              
+KXNFLTOTAL-26OCT11HOUTEN  55:1:s:0.06 58:1:s:0.07                                                          
+KXNFLTOTAL-26OCT11INDPIT  62:1:s:0.06 62:2:s:0.06 65:1:s:0.06                                              
+KXNFLTOTAL-26OCT11LVNE    66:1:s:0.06 66:2:s:0.06 69:1:s:0.06                                              
+KXNFLTOTAL-26OCT11MINNO   54:1:s:0.06 63:1:s:0.07                                                          
+KXNFLTOTAL-26OCT11PHIJAC  57:1:s:0.07 60:1:s:0.06 63:1:s:0.07 63:2:s:0.07                                  
+KXNFLTOTAL-26OCT11SFSEA   68:1:s:0.07 68:2:s:0.07 71:1:s:0.06 74:1:s:0.07                                  
+KXRAIN-26OCT10            ABQ:1:s:0.07 ABQ:2:s:0.07 NOLA:1:s:0.07 NOLA:2:s:0.07 SEA:1:s:-0.94 SEA:2:s:-0.94
+KXWNBASPREAD-26OCT09GSLV  GS7:1:s:-0.93 GS7:2:s:-0.93 LV7:1:s:0.06                                         
+
+(15 rows)
