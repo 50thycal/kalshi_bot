@@ -1,23 +1,33 @@
 # ops request [READ]
-# type=db  id=cc-fbtx-sub1
-# code c993c8150e42e7435e218c34f066fa817806f1f0 · started 2026-10-12T23:20:16Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 639, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 635, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 452, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 496, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
-    cur.execute(sql)
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column "yes_sub_title" does not exist
-LINE 1: ...it_part(market_ticker,'-',1) AS s, market_ticker, yes_sub_ti...
-                                                             ^
+# type=db  id=cc-fbtx-sub2
+# code c993c8150e42e7435e218c34f066fa817806f1f0 · started 2026-10-12T23:20:46Z
+series            market_ticker                              yes_sub_title                            strike_type  title
+----------------  -----------------------------------------  ---------------------------------------  -----------  -----
+KXNCAAF1H         KXNCAAF1H-26OCT09FSULOU-TIE                Tie 1st Half                             structured        
+KXNCAAF1HSPREAD   KXNCAAF1HSPREAD-26OCT10BSUFRES-BSU14       Boise St. wins by over 13.5 points       greater           
+KXNCAAF1HTOTAL    KXNCAAF1HTOTAL-26OCT09ISUBYU-25            Over 24.5 points                         greater           
+KXNCAAF1QSPREAD   KXNCAAF1QSPREAD-26SEP25NWIND-NW3           Northwestern wins 1Q by over 2.5 points  greater           
+KXNCAAF2HSPREAD   KXNCAAF2HSPREAD-26OCT09ISUBYU-ISU4         Iowa St. wins by over 3.5 points         greater           
+KXNCAAFGAME       KXNCAAFGAME-26OCT17NDBYU-BYU               BYU                                      structured        
+KXNCAAFSPREAD     KXNCAAFSPREAD-26OCT17ALATENN-ALA17         Alabama wins by over 16.5 points         greater           
+KXNCAAFTEAMTOTAL  KXNCAAFTEAMTOTAL-26OCT10HAWASU-HAW20       Hawai'i over 19.5 points                 greater           
+KXNCAAFTOTAL      KXNCAAFTOTAL-26OCT10HAWASU-48              Over 47.5 points                         greater           
+KXNFL1H           KXNFL1H-26OCT11BALATL-TIE                  Tie                                      structured        
+KXNFL1HFT         KXNFL1HFT-26OCT11BALATL-ATLTIE             Atlanta 1H / Tie game                    custom            
+KXNFL1HSPREAD     KXNFL1HSPREAD-26OCT12BUFLAR-BUF11          BUF Bills wins by over 10.5 points       greater           
+KXNFL1HTEAMTOTAL  KXNFL1HTEAMTOTAL-26OCT04DETCAR-DET17       Detroit over 16.5 points                 greater           
+KXNFL1QSPREAD     KXNFL1QSPREAD-26OCT11BALATL-BAL3           BAL Ravens wins by over 2.5 points       greater           
+KXNFL1QTOTAL      KXNFL1QTOTAL-26OCT11BALATL-21              Over 20.5 points                         greater           
+KXNFL2HSPREAD     KXNFL2HSPREAD-26OCT11BALATL-BAL8           BAL Ravens wins by over 7.5 points       greater           
+KXNFL2HTOTAL      KXNFL2HTOTAL-26OCT11BALATL-36              Over 35.5 points                         greater           
+KXNFL3QSPREAD     KXNFL3QSPREAD-26OCT05ATLNO-ATL4            ATL Falcons wins by over 3.5 points      greater           
+KXNFL4QSPREAD     KXNFL4QSPREAD-26OCT05ATLNO-ATL11           ATL Falcons wins by over 10.5 points     greater           
+KXNFLFIRSTTD      KXNFLFIRSTTD-26OCT12BUFLAR-BUFKSHAKIR10    Khalil Shakir                            structured        
+KXNFLPASSTDS      KXNFLPASSTDS-26OCT11BALATL-BALTHUNTLEY5-3  Tyler Huntley: 3+                        greater           
+KXNFLREC          KXNFLREC-26OCT12BUFLAR-LARBCORUM24-3       Blake Corum: 3+                          greater           
+KXNFLRECYDS       KXNFLRECYDS-26OCT12BUFLAR-BUFGDORTCH19-40  Greg Dortch: 40+                         greater           
+KXNFLRRYDS        KXNFLRRYDS-26OCT11BALATL-BALJHILL43-120    Justice Hill: 120+                       greater           
+KXNFLTEAMTOTAL    KXNFLTEAMTOTAL-26OCT12BUFLAR-BUF39         BUF Bills over 38.5 points               greater           
+KXNFLWINMARGIN    KXNFLWINMARGIN-26OCT11BALATL-BAL7TO14      Baltimore by 7 to 14                     custom            
+
+(26 rows)
