@@ -1,11 +1,11 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1012e
-# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T18:49:28Z
-strategy  status   n    pnl    losses  last_entry                      
---------  -------  ---  -----  ------  --------------------------------
-Rmmsell1  open     13   0.00   0       2026-10-12 17:00:19.339063+00:00
-Rmmsell1  settled  891  17.45  40      2026-10-12 10:20:59.234241+00:00
-Rmmsell2  open     9    0.00   0       2026-10-12 15:28:01.738624+00:00
-Rmmsell2  settled  580  7.33   30      2026-10-12 09:19:33.445167+00:00
+# type=db  id=cc-rmm-1012f
+# code f5ea7b2a65dba86ee0385a3b3f53e972cd9d4788 · started 2026-10-12T18:49:46Z
+ev                             legs                                                               
+-----------------------------  -------------------------------------------------------------------
+KXATPEXACTMATCH-26OCT10MEDSVR  MED21:1:s:0.06 SVR20:1:s:0.06 SVR21:1:s:0.07 SVR21:2:s:0.07        
+KXINXU-26OCT12H1600            T7819.9999:1:o:- T7829.9999:1:o:- T7834.9999:1:o:- T7834.9999:2:o:-
+KXNASDAQ100U-26OCT12H1600      T30819.99:1:o:- T30859.99:1:o:- T30859.99:2:o:- T30869.99:1:o:-    
+KXRAIN-26OCT13                 MIN:1:o:- MIN:2:o:- NYC:1:o:- NYC:2:o:- SGF:1:o:- SGF:2:o:-        
 
 (4 rows)
