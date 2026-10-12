@@ -250,10 +250,12 @@ saving and not Railway RSS):
 |---|---|---|---|
 | 4,000 markets × 4 lifecycle states + 2 quote passes, 5% of series selected, dictionary on | 587 B/revision | 452 B/revision | revision bytes **0.77**, file growth **0.85** |
 | Upsert latency (mean / p95) | 4.05 / 5.77 ms | 4.02 / 5.67 ms | unchanged |
-| Same, dictionary off | 1,025 B/revision | 777 B/revision (earlier compact form) | 0.76 / 0.79 |
-| Evaluation, 140,132 evidence rows / 773 series, largest synthetic series 2,745 rows | whole table: 301 MB Python peak, 87 s | per series: 30 MB, 64 s | identical 47,592 contexts |
+| Same, dictionary off (the reader-first default) | 1,025 B/revision, 3.95 ms mean | 619 B/revision, 3.69 ms mean | revision bytes **0.60**, file growth **0.71** |
+| Evaluation, 140,621 evidence rows / 773 series, largest series 13,417 rows (production's largest is 13,485: ops `catalog-series-skew-20261012a`) | whole table: 286 MB Python peak, 50 s | per series: 62 MB, 43 s | identical 14,446 contexts |
+| Evaluation, 140,132 rows, flatter skew (largest 2,745) | 301 MB, 87 s | 30 MB, 64 s | identical 47,592 contexts |
 
-Reading: selective history cuts future **revision** growth by roughly a quarter in this workload,
+Reading: selective history cuts future **revision** growth by roughly a quarter (dictionary on) to
+two fifths (dictionary off) in this workload,
 because every lifecycle change is still recorded, rule-bearing rows still carry the rules, and
 dictionary compression had already removed most redundancy. Row count, index size and the
 `objects` rewrite cost are unchanged. It is a modest disk lever, not the RAM lever. The larger RAM

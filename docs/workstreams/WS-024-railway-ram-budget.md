@@ -279,10 +279,10 @@ Every step records a before and an after here. Windows end at the stated time.
 
 **2026-10-12 — catalog changes riding WS-023 #586 (resource side only).** Before: 24 h avg
 0.69 GB, max 1.00 GB (limit 1.0), 7-day avg 0.83 GB, CPU avg 0.21 vCPU (2026-10-11 ~23:30Z).
-The evaluation now reads evidence one series at a time (synthetic Python peak 301 → 30 MB at
-140k rows; results identical), and the `catalog_counts` log, which counted every object through
+The evaluation now reads evidence one series at a time (synthetic Python peak 286 → 62 MB at
+140k rows with production's largest series of 13.5k rows; results identical), and the `catalog_counts` log, which counted every object through
 an index each ~70 s cycle, runs every 15 minutes. Selective history (default off) is a modest
-disk lever (synthetic revision bytes ×0.77). After-RAM: _pending 24 h after the catalog deploy._
+disk lever (synthetic revision bytes ×0.77 with dictionary encoding, ×0.60 without). After-RAM: _pending 24 h after the catalog deploy._
 
 ### D3 — retire the incentive tapes (2026-10-10)
 
