@@ -1424,3 +1424,24 @@ stopped, not as a result. Promotion gate, keep gate and every dollar bound are t
 predecessor's. Prerequisite: the XOS-000040 held-market gate (PR #583) is live before cutover.
 
 Extends DEC-026.
+
+## DEC-034 — Broad catalog discovery with selective detailed history
+
+**Date:** 2026-10-11 America/Chicago. **Owner direction:** Calvin approved option 3
+in ChatGPT: keep broad discovery and concentrate deep history on traded, reviewed,
+or research-selected contexts.
+
+Continue WS-023 with a persisted extensible collection selection policy. Preserve
+observed rule changes, source evidence, documents and assessment/review bindings;
+show collection scope and pre-selection gaps. Relevance is not profitability or
+qualification. No existing history is deleted and no volume resize is authorized.
+The implementation specification is [selective history](MARKET_CATALOG_SELECTIVE_HISTORY.md).
+This records approved direction, not a tested implementation or deployed policy.
+
+**Implementation choices (2026-10-12, PR #586, within the approved direction):** the policy ships
+off (`broad_full`) and needs a separate owner step to enable; evidence selects its market, not its
+whole series, while all registry-provenance series are selected at series scope (conservative:
+more full history); compact rows keep their own key namespace so a later full snapshot of the same
+state is never ignored; the per-market evidence index is a separate table so an older image can
+still write after a rollback. Measured synthetic saving is modest (revision bytes ×0.77), so this
+is not presented as the disk or RAM fix.

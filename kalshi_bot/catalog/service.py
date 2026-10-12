@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
+from . import selection
 from .documents import ContractCapture
 from .evaluators import refresh
 from .headroom import StorageDeferred, measure, require_space
@@ -23,6 +24,7 @@ from .ingest import Discovery, DiscoveryDeferred, reset_source_reconciliation, s
 from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
+COUNTS_LOG_SECONDS = 900
 
 
 def run_job(store, key, action, *, bulk=False, guard=True):
@@ -130,18 +132,24 @@ def collect(store, stopped, source_url, interval):
         300, int(os.environ.get("CATALOG_STORAGE_DETAIL_SECONDS", "86400"))
     )
     detail_thread = None
-    last_reconciliation = store.state("last_reconciliation", 0)
+    last_counts_log = 0
     while not stopped.is_set():
         stamp = time.time()
         storage_guard = measure(store)
-        if not storage_guard["bulk_paused"] and stamp - last_reconciliation >= 86400:
-            discovery.reset()
-            reset_source_reconciliation(store)
-            last_reconciliation = stamp
-            store.set_state("last_reconciliation", stamp)
+        if not storage_guard["bulk_paused"]:
+            # Each traversal restarts only after it has finished (and a day has passed since it
+            # began); an unfinished sweep or source pass is never reset by the clock.
+            discovery.restart_completed_sweeps()
+            if reset_source_reconciliation(store):
+                store.set_state("last_reconciliation", stamp)
+        # Membership first, so this cycle's writes see the newest selection state.
+        run_job(store, "selection:bootstrap", lambda: selection.bootstrap_page(store))
+        selection.policy_tick(store)
         for job in ("series", "events"):
             run_job(store, "discovery:" + job, lambda job=job: discovery.page(job), bulk=True)
         run_job(store, "discovery:updates", discovery.updates, bulk=True)
+        # Bounded: a few requests a cycle, after inventory pages, before imports and outcomes.
+        run_job(store, "selection:hydration", lambda: selection.hydrate_step(store, discovery))
         run_job(store, "documents:capture", contracts.step)
         changed = False
         if source_url:
@@ -208,16 +216,27 @@ def collect(store, stopped, source_url, interval):
                 break
             if run_job(store, "storage:compression", store.compress_page) is None:
                 break
-        LOG.info(
-            "catalog_counts=%s",
-            json.dumps(
-                {
-                    key: value
-                    for key, value in store.status().items()
-                    if key in ("objects", "evidence", "assessment_contexts", "contract_archive")
-                }
-            ),
-        )
+        if stamp - last_counts_log >= COUNTS_LOG_SECONDS:
+            # status() counts every object through an index; once a cycle kept ~0.1 GB of
+            # index pages hot for a log line (WS-024). Every 15 minutes is enough to read.
+            LOG.info(
+                "catalog_counts=%s",
+                json.dumps(
+                    {
+                        key: value
+                        for key, value in store.status().items()
+                        if key
+                        in (
+                            "objects",
+                            "evidence",
+                            "assessment_contexts",
+                            "contract_archive",
+                            "history_policy",
+                        )
+                    }
+                ),
+            )
+            last_counts_log = stamp
         stopped.wait(interval)
     discovery.client.close()
     contracts.client.close()
@@ -350,12 +369,56 @@ def make_server(store, token, address=("::", 8080)):
                             kind, limit, offset, series, path == "/v1/review-queue"
                         )
                     }
+                elif path == "/v1/selection":
+                    active = query.get("active", [None])[0]
+                    if active not in (None, "true", "false"):
+                        raise ValueError("Invalid active filter")
+                    scope = query.get("scope", [None])[0]
+                    if scope is not None and scope not in selection.SCOPES:
+                        raise ValueError("Invalid scope")
+                    result = selection.members(
+                        store,
+                        scope=scope,
+                        ticker=query.get("ticker", [None])[0],
+                        reason=query.get("reason", [None])[0],
+                        active=None if active is None else active == "true",
+                        limit=limit,
+                        offset=offset,
+                    )
+                elif path == "/v1/research/cohort":
+                    from .research import cohort
+
+                    result = cohort(
+                        store,
+                        series=series,
+                        as_of=query.get("as_of", [None])[0],
+                        population=query.get("population", ["all"])[0],
+                        cursor=query.get("cursor", [None])[0],
+                        limit=min(100, limit),
+                        include_rows=query.get("include_rows", ["false"])[0] == "true",
+                    )
                 elif path.startswith("/v1/objects/"):
                     parts = path.split("/")
                     if len(parts) == 5:
                         result = store.get(parts[3], parts[4])
-                    elif len(parts) == 6 and parts[5] in ("revisions", "reviews"):
+                    elif len(parts) == 6 and parts[5] == "revisions":
+                        items = store.history("revisions", parts[3], parts[4], limit)
+                        current = store.get(parts[3], parts[4])
+                        with store.connect() as db:
+                            coverage = selection.coverage_in(db, parts[3], parts[4], current)
+                        result = {
+                            "items": items,
+                            # Stored documents are returned exactly; pre-policy rows carry no
+                            # marker and are full snapshots.
+                            "representations": [selection.representation(i) for i in items],
+                            "coverage": coverage,
+                        }
+                    elif len(parts) == 6 and parts[5] == "reviews":
                         result = {"items": store.history(parts[5], parts[3], parts[4], limit)}
+                    elif len(parts) == 6 and parts[5] == "coverage":
+                        current = store.get(parts[3], parts[4])
+                        with store.connect() as db:
+                            result = selection.coverage_in(db, parts[3], parts[4], current)
                     else:
                         result = None
                 else:
@@ -367,13 +430,14 @@ def make_server(store, token, address=("::", 8080)):
         def do_POST(self):
             if not self.authorized():
                 return
-            if self.path not in ("/v1/reviews", "/v1/import"):
+            if self.path not in ("/v1/reviews", "/v1/import", "/v1/selection"):
                 self.respond(404, {"error": "Not found"})
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= (1048576 if self.path == "/v1/import" else 65536):
-                    raise ValueError("Review body must be 1–65536 bytes")
+                limit = {"/v1/import": 1048576, "/v1/selection": 4096}.get(self.path, 65536)
+                if not 0 < size <= limit:
+                    raise ValueError(f"Request body must be 1–{limit} bytes")
                 payload = json.loads(self.rfile.read(size))
                 if not isinstance(payload, dict):
                     raise ValueError("Review must be an object")
@@ -417,6 +481,8 @@ def make_server(store, token, address=("::", 8080)):
                     )
                     store.set_state("evaluation_requested", now())
                     self.respond(201, {"imported": len(records), "source": source})
+                elif self.path == "/v1/selection":
+                    self.respond(201, selection.research_request(store, payload))
                 else:
                     self.respond(201, store.review(payload))
             except StorageDeferred:
@@ -450,6 +516,8 @@ def main():
     backup = store.backup_before_compression()
     LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
+    if selection.verify_bootstrap(store):
+        LOG.warning("selection_bootstrap status=reopened reason=uncovered_evidence_or_reviews")
     stopped = threading.Event()
     thread = threading.Thread(
         target=collect,

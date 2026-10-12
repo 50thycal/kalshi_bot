@@ -49,7 +49,11 @@ Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 | `GET /v1/status` | Object/evidence counts, job errors, verified bounded source-ID coverage, import/discovery/storage progress |
 | `GET /v1/series`, `/v1/events`, `/v1/markets` | Catalog; `series`, `limit` (1–500), `offset` |
 | `GET /v1/objects/{kind}/{ticker}` | Facts, timing, raw rules, legacy provenance, current review |
-| `GET /v1/objects/{kind}/{ticker}/revisions` | Preserved semantic/lifecycle payloads |
+| `GET /v1/objects/{kind}/{ticker}/revisions` | Preserved semantic/lifecycle payloads, exactly as stored, plus `representations` (full or compact) and `coverage` |
+| `GET /v1/objects/{kind}/{ticker}/coverage` | Selection memberships, full vs compact revisions, hydration and named history gaps |
+| `GET /v1/selection?scope=&ticker=&reason=&active=` | Collection-scope memberships and policy status ([selective history](MARKET_CATALOG_SELECTIVE_HISTORY.md)) |
+| `POST /v1/selection` | Explicit research select/deselect (`scope`, `ticker`, `actor`, `reason`, optional `provider`, `action`); 4 KiB body; never deletes history or automatic membership |
+| `GET /v1/research/cohort?series=&as_of=&population=&cursor=&limit=&include_rows=` | One series' markets as known at `as_of`: observation, review/document/selection bindings, coverage gaps, evidence and live economics with look-ahead flags; keyset-paged, at most 100 |
 | `GET /v1/objects/{kind}/{ticker}/reviews` | Immutable human review history |
 | `GET /v1/review-queue?kind=market` | Missing/currently invalid reviews |
 | `POST /v1/import` | Bounded authenticated import of existing read-only exports; IDs/provenance required, does not skip the direct-source cursor |

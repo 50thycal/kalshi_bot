@@ -10,16 +10,22 @@ from .economics import SCORING_REQUIREMENTS, fill_time, ledger_assessments, live
 from .store import digest, now
 
 EVALUATORS = {}
+# "series": the evaluator groups only within a series, so it may be fed one series at a time.
+# Anything else receives the whole evidence table, as every evaluator did before (WS-024).
+PARTITIONS = {}
 
 
-def register(strategy_id, evaluator, scoring_requirements=None):
+def register(strategy_id, evaluator, scoring_requirements=None, partition=None):
     if strategy_id in EVALUATORS:
         raise ValueError("Evaluator already registered")
+    if partition not in (None, "series"):
+        raise ValueError("Unknown evaluator partition")
     if scoring_requirements is not None:
         if not isinstance(scoring_requirements, dict) or not scoring_requirements.get("version"):
             raise ValueError("A strategy evidence bar requires its own version")
         SCORING_REQUIREMENTS[strategy_id] = dict(scoring_requirements)
     EVALUATORS[strategy_id] = evaluator
+    PARTITIONS[strategy_id] = partition
 
 
 def timestamp(value):
@@ -131,23 +137,34 @@ def mmsell(records, as_of):
         yield result
 
 
-register("mmsell", mmsell)
+register("mmsell", mmsell, partition="series")
 
 
-def refresh(store, as_of=None):
+def refresh(store, as_of=None, partitioned=None):
+    """Re-evaluate every assessment context. Evidence, live ledgers and the MMSELL evaluators
+    all group within a series (a market's series is its ticker prefix), so by default the
+    evidence is read and evaluated one series at a time: peak memory is the largest series,
+    not the whole table. Results are identical to the whole-table pass."""
     as_of = as_of or datetime.now(timezone.utc)
-    records = store.evidence()
-    economics = list(live_economics(store, records, as_of))
-    store.save_live_economics(economics)
+    if partitioned is None:
+        partitioned = all(PARTITIONS.get(name) == "series" for name in EVALUATORS)
+    chunks = store.evidence_by_series() if partitioned else [(None, store.evidence())]
+    economics = []
     facts = {}
     coverage = {
         source: store.state("source_coverage:" + source, {}) for source in ("paper", "live")
     }
 
+    def streams():
+        for _series, records in chunks:
+            ledgers = list(live_economics(store, records, as_of))
+            economics.extend(ledgers)
+            for name, evaluator in EVALUATORS.items():
+                yield name, evaluator(records, as_of)
+            yield "mmsell", ledger_assessments(ledgers, as_of)
+
     def results():
-        streams = [(name, evaluator(records, as_of)) for name, evaluator in EVALUATORS.items()]
-        streams.append(("mmsell", ledger_assessments(economics, as_of)))
-        for strategy_id, stream in streams:
+        for strategy_id, stream in streams():
             for result in stream:
                 if result["strategy_id"] != strategy_id:
                     raise ValueError("Evaluator cannot publish another strategy's assessments")
@@ -234,6 +251,8 @@ def refresh(store, as_of=None):
                 yield scope, result
 
     count = store.assessment_batch(results())
+    economics.sort(key=lambda document: document["market_ticker"])
+    store.save_live_economics(economics)
     summary = {
         "markets": len(economics),
         "attributed": sum(r["status"] == "attributed_source_ledger" for r in economics),

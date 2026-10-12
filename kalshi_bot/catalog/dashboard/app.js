@@ -56,6 +56,13 @@ function renderStatus(s) {
     $('storage-time').textContent = 'Measured ' + date(storage.captured_at);
     if(storage.volume_free_bytes / storage.volume_total_bytes < .2) add('Volume has less than 20% free space. Review growth and capacity before it fills.');
   } else { $('storage').textContent='Not measured yet'; $('storage-detail').textContent='Storage measurement is not available.'; $('storage-time').textContent=''; $('storage-meter').value=0; }
+  $('scope').replaceChildren();
+  const h=s.history_policy || {}, writes=h.revision_writes || {}, hyd=h.hydration?.by_status || {}, reasons=h.active_by_reason || {};
+  row($('scope'),['Policy',pill(h.policy_effective?'Selective':'Full history for all',h.policy_effective?'good':'neutral'),'Configured: '+(h.policy_configured || 'unknown')+'. Selective takes effect only once membership is ready.']);
+  row($('scope'),['Membership',pill(h.membership_ready?'Ready':'Building',h.membership_ready?'good':'warn'),h.membership_ready?'Completed '+date(h.bootstrap?.completed_at):'Phase '+(h.bootstrap_phase_name || 'not started')+'; until ready, everything keeps full history.']);
+  row($('scope'),['Selected contexts',number(Object.values(h.selected_by_scope || {}).reduce((a,b)=>a+b,0)),Object.entries(reasons).filter(([,v])=>v).map(([k,v])=>k.replaceAll('_',' ')+': '+number(v)).join(' · ') || 'None yet']);
+  row($('scope'),['Revisions written',number((writes.full || 0)+(writes.compact || 0)),number(writes.full)+' full · '+number(writes.compact)+' compact since '+date(writes.since)+'. Compact rows keep rules, lifecycle and provenance, not prices; they never count as full-payload proof.']);
+  row($('scope'),['Hydration',pill(hyd.pending?number(hyd.pending)+' pending':'Idle',hyd.pending?'warn':'neutral'),number(hyd.completed)+' completed · '+number(hyd.unavailable)+' unavailable · '+number(hyd.failed)+' failed. Earlier compact history stays a visible gap.']);
   $('imports').replaceChildren();
   for(const source of ['paper','live']) { const b=s.backfill?.[source] || {}; row($('imports'),[source,number(b.local_records),pill(b.initial_complete ? 'Verified' : 'Incomplete',b.initial_complete?'good':'warn'),pill(b.reconciliation_complete?'Verified':'Incomplete',b.reconciliation_complete?'good':'neutral'),date(b.coverage?.checked_at)]); }
   $('jobs').replaceChildren();
