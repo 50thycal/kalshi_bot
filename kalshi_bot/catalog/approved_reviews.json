@@ -11,12 +11,12 @@
         {
           "market": "KXBTCD-26OCT1617-T87999.99",
           "rules_hash": "9a6f9b58c102f03acabd724d77f46d526c1f056945cd022ad28d0a0ffe9e8859",
-          "template_hash": "c1decf841abe4e0a64c49406bd06f09a0f5f2f0faa134923b5b5314e7b09cbc7"
+          "template_hash": "49283855d6d22977a9dbe841b52ae2adb2ee06c708d39046eb6e89c13b49115b"
         },
         {
           "market": "KXBTCD-26JUL1317-T62999.99",
           "rules_hash": "0b64f1f8b2c8ac147290657afd2d47f4c0124633c66abf869544b4b9067febe4",
-          "template_hash": "c1decf841abe4e0a64c49406bd06f09a0f5f2f0faa134923b5b5314e7b09cbc7"
+          "template_hash": "49283855d6d22977a9dbe841b52ae2adb2ee06c708d39046eb6e89c13b49115b"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -90,12 +90,12 @@
         {
           "market": "KXWTI-26OCT1314-T95.49",
           "rules_hash": "18780269e75a4ac0f5c43b2577d607fecdb3e3ee940eac9ac8e39c233cdbbcb7",
-          "template_hash": "6636bde9de00255aeef10421466a1f9d660d09227cd31032c79d273a1fb0c67f"
+          "template_hash": "0952db8c6cb417eb4537716811ae68d76b87e8df45ac6a1791d49b626515b064"
         },
         {
           "market": "KXWTI-26JUL2714-T84.99",
           "rules_hash": "a1ed08a605d3a2892c79a16130cf011bfb8c02a234d1686670756f47e6270b50",
-          "template_hash": "6636bde9de00255aeef10421466a1f9d660d09227cd31032c79d273a1fb0c67f"
+          "template_hash": "0952db8c6cb417eb4537716811ae68d76b87e8df45ac6a1791d49b626515b064"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -169,22 +169,22 @@
         {
           "market": "KXMLBTOTAL-26SEP271510STLMIL-11",
           "rules_hash": "4d2add6c5399d9a81a6c6df0b69d8bb51f35cac6342fef934f6641536f82d5e0",
-          "template_hash": "e2c78d40127b324e89415d7b4c7f9a9f6ceb09b9b8467e025b40399736cbad94"
+          "template_hash": "336593112eb83ad789955589c3b1b331ed4cf7a7952558aaf58ef00ddd1aab27"
         },
         {
           "market": "KXMLBTOTAL-26JUL142000ALNL-12",
           "rules_hash": "7660a6c2eecb757393a1bfef5d4311df96c99c95e63b3078346d55e20df911c7",
-          "template_hash": "2824bbaf247caf432dfecf52fddeb6cbe97e2dc632a8a03cdbd5fa428bbfdba8"
+          "template_hash": "0e8f5d130b07d6fdb2a1ad7cec79d5b367b61981d2a87f08a97e537acede0fdb"
         },
         {
           "market": "KXMLBTOTAL-26SEP251905BALNYYG2-10",
           "rules_hash": "d5439bfc196d0cfe25e35bce5ddbec67de95732eb1ed1dc63868e6c23ff121bc",
-          "template_hash": "614b502b5e1a10ef4f7998faad1eb7ae3a91b26d2decb173f815e87d6bf00636"
+          "template_hash": "7e13a21764a8fbf50d4444417e8828010afa1b6aa59e97ab9867c712ebbe0334"
         },
         {
           "market": "KXMLBTOTAL-26JUL161910NYMPHI-10",
           "rules_hash": "5794c1229600383b6e06da4602c7531cbfcb462727d6f61f5a9b967474fed133",
-          "template_hash": "7773901dfea7bc316e242dfb6f82433534786cc3806a9a9c1232717fb12e6649"
+          "template_hash": "85053659bb38a9789dd19884b877ec26586d856fe916569a46f3de4fe02f5876"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -259,22 +259,22 @@
         {
           "market": "KXMLBSPREAD-26OCT032030SDMIL-SD5",
           "rules_hash": "934ce125ae7e039153fba7305489e67e97f74ce552de26473624f395a7b3a2ad",
-          "template_hash": "278ad48af0d5a5b87178d9086af2a2858700cc562e17891d08c50ad26a591a81"
+          "template_hash": "51a440c7238576821963293fcf038af651b28ecb383c145d7760d5711c3b02c9"
         },
         {
           "market": "KXMLBSPREAD-26JUL142000ALNL-NL2",
           "rules_hash": "a58721c7488f3fbeb19339b9149c82ea00221b678716778bebe85c7fe6c80573",
-          "template_hash": "181d1be72762e3fbee3742fcab4a63e6f65dd46b37a3c17261a6ae8227875c4a"
+          "template_hash": "113869e65eb13f83e88101de80e50e8eb1ddf434bb155cd96695305b7e5e3fc0"
         },
         {
           "market": "KXMLBSPREAD-26AUG171340STLCING1-CIN3",
           "rules_hash": "ee1c45af85290bd2d88df9505f03f5df610c512150746e2e45fad8a6485bfe1f",
-          "template_hash": "0d20c1ff5d2d4d74d3293ce1be8729a3ca995652634ce8336a0d7a34cbba5425"
+          "template_hash": "4708909bdecd64141839f394223d378c37a466e2a536faf3bc566c6b97ff59ad"
         },
         {
           "market": "KXMLBSPREAD-26JUL161910NYMPHI-NYM4",
           "rules_hash": "5af0bfcf76e37577a2cd4862d8258f65f8e9dd6f3ecf12ce951314ec506f457c",
-          "template_hash": "aaba956627ca2b257d7e8b75ddf1409768dd990799a597fcdb0de88e95fb1c4b"
+          "template_hash": "4f462271eb097a361099f180203130fbbda2443d9edb46bce6488abf4d5c7381"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -345,12 +345,12 @@
         {
           "market": "KXRAIN-26OCT13-NYC",
           "rules_hash": "9b8416cd07fbb04c52d666adf6b7d3d440d73f7f41c8f50aa2f44ad0e5b61eb8",
-          "template_hash": "d2a4ce7283630b883af21942e011dad2037e0f90b226bc863a955caf06dd806d"
+          "template_hash": "1de9a0330d1d9697efc4268783f2304f40bdbc340c1fdd1f76f3926acfd0530d"
         },
         {
           "market": "KXRAIN-26AUG08-DC",
           "rules_hash": "d85dd15487faf47314102e99b6741b83c95d8f2c8b4fe6248d511935322610ed",
-          "template_hash": "382fba7c365f5967c0c887976e1b9870997ed49a12f6e3dfd56c0f0f957963e2"
+          "template_hash": "d614aff9332ddee13e1fcf8431c8609203c370838cf42287a00605ebdd76c72c"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -419,25 +419,30 @@
       "supersedes": "KXRAIN-series-approval-20261013"
     },
     {
-      "approval_id": "KXMLBHR-series-approval-20261013",
+      "approval_id": "KXMLBHR-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXMLBHR",
       "exemplars": [
         {
           "market": "KXMLBHR-26OCT121700LADMIL-MILBTURANG2-1",
           "rules_hash": "f4118336e9e693cbe9a9ac825c5745db0165b4a682fc97e32fc5dab193ee8a14",
-          "template_hash": "d96afa9a68f434dd85ba19fede21feb30309d1b23dbc65120e13ea1cfdbabc21"
+          "template_hash": "1dde92cd43b20b03b4c8839ec46052f6adc9a953fbcf8602efb001ad661b873a"
         },
         {
           "market": "KXMLBHR-26JUL261920NYYPHI-PHIABOHM28-1",
           "rules_hash": "5257db470208aa87484268da0b01674de40eead5c5c1835e329164fbf278fcea",
-          "template_hash": "dac6825c8fd7612724f36036a7c422530402bfa8bceb3d6540079fd7bcc4db55"
+          "template_hash": "8ebb2b0848a8380a887f34bd1e1a1bf54a083a365833bb65542898971a54c4f4"
+        },
+        {
+          "market": "KXMLBHR-26SEP251305CHCBOSG1-BOSNSOGARD20-1",
+          "rules_hash": "f7b5e8705b8c8460e93728a8f9b2aaab53e9fd194f425a234aa7272f9a27b475",
+          "template_hash": "fe7a3371edd915644082743bb8f11b1cd4d35033bdcc23ff0b40a38d56ea4455"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:47:38+00:00",
-      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T09:20:09+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13 (eight series approved, MLB doubleheader wording treated as the same rule), then on 2026-10-13 said 'fix the tennis and the double header wording both' for the home-run doubleheader listings (game N of the double header, strike type greater 0.5 for 1+); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXMLBHR-series-draft-20261012",
       "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
@@ -505,7 +510,8 @@
         "historical_terms_verified": false,
         "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
-      }
+      },
+      "supersedes": "KXMLBHR-series-approval-20261013"
     },
     {
       "approval_id": "KXMLBKS-series-approval-20261013",
@@ -515,12 +521,12 @@
         {
           "market": "KXMLBKS-26OCT071800LADATL-LADTGLASNOW31-11",
           "rules_hash": "fdfb0aaab2e47fae4e634193a9809d40a46f54c8b6e7646b7cfc3a38bb0df102",
-          "template_hash": "38429a64b2c5bbd24c4914abf53e09a1cded4abf99d86d707579553f36ec52f7"
+          "template_hash": "e906d1e0378381314c9c38927960de8117c79e0513ab6cb232c4402bbe2e50da"
         },
         {
           "market": "KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10",
           "rules_hash": "2864550839d6c2dbe2a76b0514ee0fb62a9341bdfc14598f6d57600a159ff80e",
-          "template_hash": "c9bbdc8595faf7cd92385a14ff6e8ee6816ae7f50bb7485bc73736c515326979"
+          "template_hash": "fcf3a300602fc3d79fb2cf9222db3e9e0dcb556a4ff9d43df944da0e391d87a0"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -602,12 +608,12 @@
         {
           "market": "KXATPCHALLENGERMATCH-26OCT09PINGOJ-GOJ",
           "rules_hash": "e7deb57e65bd73cfe0efc2f570aa78335dbf30e61c2ad78dd4976b61a11cad45",
-          "template_hash": "60c3aef7f55089740ac7d9e3fd47d09241fcf3d1b15632b819fbddfe8e9fc6ab"
+          "template_hash": "d3251bf11ede2cd73467dce0432a389c051b46c1256b9c890c8b38adcea369e9"
         },
         {
           "market": "KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN",
           "rules_hash": "ba230d0299555fb98e4bd1095771db4ecc555cc7214ca0f1c6f2c16bb67ce0f8",
-          "template_hash": "60c3aef7f55089740ac7d9e3fd47d09241fcf3d1b15632b819fbddfe8e9fc6ab"
+          "template_hash": "d3251bf11ede2cd73467dce0432a389c051b46c1256b9c890c8b38adcea369e9"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -680,12 +686,12 @@
         {
           "market": "KXWTACHALLENGERMATCH-26OCT08ZAVZAR-ZAV",
           "rules_hash": "417e085ca8a751beb80407ddd4174b04ef67bf11b5c9630cc3ee89082d1e8f41",
-          "template_hash": "60c3aef7f55089740ac7d9e3fd47d09241fcf3d1b15632b819fbddfe8e9fc6ab"
+          "template_hash": "d3251bf11ede2cd73467dce0432a389c051b46c1256b9c890c8b38adcea369e9"
         },
         {
           "market": "KXWTACHALLENGERMATCH-26JUL13PENTHA-THA",
           "rules_hash": "64f8400f2ce863f486a8cb0449ad21121d55b6b5d9f76b413bedcf8a8551ff7f",
-          "template_hash": "60c3aef7f55089740ac7d9e3fd47d09241fcf3d1b15632b819fbddfe8e9fc6ab"
+          "template_hash": "d3251bf11ede2cd73467dce0432a389c051b46c1256b9c890c8b38adcea369e9"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -758,12 +764,12 @@
         {
           "market": "KXITFMATCH-26OCT08CHEALK-CHE",
           "rules_hash": "61b474c555923c1d55b5e9c371f394c8c3d1aa68ec61f13c394340dd92b433a7",
-          "template_hash": "cc9b0de2199ce416d25818197665047ce092ffc7bf9f5eccfb511ee181c1d011"
+          "template_hash": "8499e7d926d0bb52257c7a1f36df8ae0fe586ace8fbfa45b80ba7e2b6be58c4c"
         },
         {
           "market": "KXITFMATCH-26JUL14JASJON-JAS",
           "rules_hash": "1ded2023a19a6f483ec06a4db6e38cf2414a16f778ee91a1e5abdb3b42751d39",
-          "template_hash": "cc9b0de2199ce416d25818197665047ce092ffc7bf9f5eccfb511ee181c1d011"
+          "template_hash": "8499e7d926d0bb52257c7a1f36df8ae0fe586ace8fbfa45b80ba7e2b6be58c4c"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -850,12 +856,12 @@
         {
           "market": "KXITFWMATCH-26OCT09POPDOR-POP",
           "rules_hash": "20a1182108426598ec015dca6844a5ed141f681ff5897fa8acb378036c663991",
-          "template_hash": "cc9b0de2199ce416d25818197665047ce092ffc7bf9f5eccfb511ee181c1d011"
+          "template_hash": "8499e7d926d0bb52257c7a1f36df8ae0fe586ace8fbfa45b80ba7e2b6be58c4c"
         },
         {
           "market": "KXITFWMATCH-26JUL13YOSSIB-SIB",
           "rules_hash": "d02a1be7386226b65289b4a785d93d99d7baf0f34b5020fc4ee582b5f6620906",
-          "template_hash": "cc9b0de2199ce416d25818197665047ce092ffc7bf9f5eccfb511ee181c1d011"
+          "template_hash": "8499e7d926d0bb52257c7a1f36df8ae0fe586ace8fbfa45b80ba7e2b6be58c4c"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -942,12 +948,12 @@
         {
           "market": "KXWCGOAL-26JUL19ESPARG-ESPMZUBIM36-1",
           "rules_hash": "17910dd143b4cf92934c6650747cebfbcc96679fb514be7fe9db28fa192ba92c",
-          "template_hash": "37e28afe00dadbf085308b0cdca73b438c195fecda586467e83532346b3844b9"
+          "template_hash": "8dda6dcfc0dec29b338e5d10275289814efc7d6a1b960c61204a5f34e29a89ea"
         },
         {
           "market": "KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1",
           "rules_hash": "73a5a3a86da1ef37e62e7ff17e2387bd8d6bca127e4fadf37fb6bc09cf56e764",
-          "template_hash": "37e28afe00dadbf085308b0cdca73b438c195fecda586467e83532346b3844b9"
+          "template_hash": "8dda6dcfc0dec29b338e5d10275289814efc7d6a1b960c61204a5f34e29a89ea"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
@@ -1021,12 +1027,12 @@
         {
           "market": "KXNFLTOTAL-26OCT11BALATL-68",
           "rules_hash": "d532c17ddad66fd909149d101a0ade95c0a2be06387e22bca38899481fa473e8",
-          "template_hash": "a78cd8f23ff6c6f76320d0581f0734b626e108ea931cbfedf87832fac239f727"
+          "template_hash": "8bf5497ec0cc22522bf91b7e345516026ff38ad617858c96613066bbe72f117e"
         },
         {
           "market": "KXNFLTOTAL-26AUG13INDNE-60",
           "rules_hash": "7a9efd29f5529b4b2d48adf8e573133660f038bbeaba1601cefcd5785c51d6b8",
-          "template_hash": "a78cd8f23ff6c6f76320d0581f0734b626e108ea931cbfedf87832fac239f727"
+          "template_hash": "8bf5497ec0cc22522bf91b7e345516026ff38ad617858c96613066bbe72f117e"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",

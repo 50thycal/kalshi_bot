@@ -378,3 +378,41 @@ def test_coverage_separates_parent_changes_from_wording(store):
     assert coverage["parent_rules_changed"] == 1
     assert coverage["parent_rules_changed_samples"] == ["KXRAIN-26OCT13-NYC"]
     assert coverage["unreviewed_templates"] == []
+
+
+def test_name_particles_birth_years_relocations_and_joins_share_wording():
+    for series in ("KXATPCHALLENGERMATCH", "KXITFWMATCH", "KXWTACHALLENGERMATCH"):
+        listed = [t for t in MARKETS if t.startswith(series + "-")]
+        assert len({templates.template_hash(raw(t)) for t in listed}) == 1, series
+    itf = {t: templates.template_hash(raw(t)) for t in MARKETS if t.startswith("KXITFMATCH-")}
+    lowercase_surname = "KXITFMATCH-26AUG17NORKOI-KOI"
+    assert len({h for t, h in itf.items() if t != lowercase_surname}) == 1
+    # Kalshi's lowercase surname ("Koistila larsson") is not a name to the mask: it stays out.
+    assert itf[lowercase_surname] != itf["KXITFMATCH-26OCT08CHEALK-CHE"]
+    for text in ("W35 Villeneuve d'Ascq Round of 32", "M15 Leme (moved from Sao Luis) Round of 16",
+                 "M15+H Rodez Round of 32", "M25 Plaisir + H Round of 16",
+                 "Davis Cup 2026 Group III Asia/Oceania Round", "Kenta Miyoshi (b. 2004)",
+                 "Julien de Cuyper", "Inaki Montes-de la Torre"):
+        assert templates.mask(text) == "<name>", text
+    # Particles join names only; ordinary lowercase wording is untouched.
+    assert templates.mask("if they do not play, the market will resolve") == (
+        "if they do not play, the market will resolve")
+    # A year in the display title is not the market's own strike.
+    miyoshi = raw("KXATPCHALLENGERMATCH-26AUG17MIYPAS-MIY")
+    assert "2004.0" not in templates._own_numbers(miyoshi)
+
+
+def test_doubleheader_home_run_markets_read_as_approved(store):
+    item = APPROVED["KXMLBHR"]
+    assert item["supersedes"] == "KXMLBHR-series-approval-20261013"
+    for exemplar in item["exemplars"]:
+        put(store, exemplar["market"])
+    sibling = "KXMLBHR-26SEP251605BALNYYG1-NYYAVOLPE11-1"
+    put(store, sibling)
+    assert store.get("market", sibling)["review_status"] == "needs_review"
+    result = store.review(item)
+    assert len(result["templates"]) == 3  # two single-game wordings and the doubleheader one
+    document = store.get("market", sibling)
+    assert document["review_status"] == "reviewed"
+    assert document["review"]["approval_id"] == "KXMLBHR-series-approval-20261013b"
+    assert document["semantics"]["shared_exposure_key"] == "candidate-game:MLB:26SEP251605BALNYYG1"

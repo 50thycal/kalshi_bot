@@ -70,6 +70,9 @@ Of the other eight, seven open questions are rare contingencies; the owner is co
 on the main rule. NFL overtime (#13) changes the total in roughly one game in twenty, so it waits
 for the contract PDF. PDFs can now be fetched as exact bytes (`--pdf-base64`) and read in full.
 
+Later on 2026-10-13 the owner also approved the home-run doubleheader wording ("game 1 of the
+double header", strike type `greater`), recorded as `KXMLBHR-series-approval-20261013b`.
+
 ## Contract PDF answers (2026-10-13)
 
 The contract-terms PDFs were fetched as exact bytes (ops `catalog-pdf-terms-20261013a`) and read
