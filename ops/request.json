@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1013i", "sql": "select filled_at::text, side, action, price, quantity, fee, (select status from live_orders where strategy='Alimm1' and market_ticker='KXMILLERLITEPOS-26NOV03-T84' and action='sell' order by created_at desc limit 1) sell_status from fills where market_ticker='KXMILLERLITEPOS-26NOV03-T84' order by filled_at desc limit 10"}
