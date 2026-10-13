@@ -112,6 +112,12 @@
   .inc{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
   .incrow{background:var(--panel2);border-radius:8px;padding:8px 10px;margin-top:8px}
   .incrow .mk{max-width:none}
+  .incrow.held{border-left:3px solid var(--live)}
+  .inch{font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 2px;text-transform:uppercase;letter-spacing:.04em}
+  .plan{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+  .plan > div{background:var(--panel);border-radius:6px;padding:5px 7px;font-size:12px}
+  .plan .k{font-size:10px}
+  @media(max-width:700px){ .plan{grid-template-columns:1fr} }
   .empty{color:var(--muted);padding:18px 4px;text-align:center;font-size:13px}
   .err{color:var(--neg);font-size:13px;padding:10px 0}
   .skel{height:90px;border-radius:10px;background:var(--panel);animation:pulse 1.2s ease-in-out infinite}
@@ -194,18 +200,20 @@ function renderHeadline(){
     const link = b.twin_tag ? `<a class="dim" style="font-size:12px" href="/compare?run=${encodeURIComponent(b.twin_tag)}">details →</a>` : "";
     return `<div class="panel pad book">
       <div class="top"><span class="tag">${esc(b.live_tag)}</span>${link}
-        <span class="amt ${sgn(b.total_pnl_usd)}" title="Realized this month + unrealized on open positions">${usd(b.total_pnl_usd)}</span></div>
+        ${b.incentive
+          ? `<span class="amt ${sgn(b.incentive.net_all_time_usd)}" title="All time: every settled market after fees, plus rewards Kalshi paid">${usd(b.incentive.net_all_time_usd)} <small class="dim" style="font-size:11px;font-weight:400">all time</small></span>`
+          : `<span class="amt ${sgn(b.total_pnl_usd)}" title="Realized this month + unrealized on open positions">${usd(b.total_pnl_usd)}</span>`}</div>
       <div class="pnl3">
         <div><div class="k">Realized (month)</div><div class="v ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</div></div>
         <div><div class="k">Unrealized (open)</div><div class="v ${sgn(b.unrealized_usd)}">${usd(b.unrealized_usd)}${b.open_unpriced ? `<span class="dim" title="open positions with no current price"> +${b.open_unpriced}?</span>` : ""}</div></div>
         <div><div class="k">Trades</div><div class="v">${b.trades_this_month} <span class="dim" style="font-weight:400">month · ${b.trades_all_time} all</span></div></div>
       </div>
       <div class="lights">${lights.join("")}</div>
-      <div class="stats">
+      ${b.incentive ? renderIncentive(b.incentive) : `<div class="stats">
         <span><b>${b.settled_this_month}</b> settled this month (${b.wins_this_month} won)</span>
         <span><b>${b.open_positions}</b> open (${usd(b.open_cost_usd)} at risk)</span>
         <span><b>${b.resting_orders}</b> orders resting</span>
-      </div>${b.incentive ? renderIncentive(b.incentive) : ""}</div>`;
+      </div>`}</div>`;
   }).join("");
   $("#headline").innerHTML = `
     <div class="panel pad" style="margin-bottom:12px">
@@ -252,36 +260,66 @@ function shortDate(iso){
   return d.toLocaleDateString(undefined, {month:"short", day:"numeric"});
 }
 function renderIncentive(x){
-  const rows = x.resting.map(r => `<div class="incrow">
+  const S_ = v => esc((v||"").toUpperCase());
+  const held = (x.positions||[]).map(p => {
+    const ex = p.exit_order;
+    return `<div class="incrow held">
+      <div class="mk">${esc(p.title)}<small>${esc(p.market)}</small></div>
+      <div class="stats" style="margin-top:4px">
+        <span><b>Holding ${S_(p.side)} × ${p.quantity} @ ${p.entry_cents}¢</b></span>
+        <span><b>${usd(p.at_risk_usd)}</b> at risk</span>
+        ${p.closing ? `<span class="neg">closing now</span>` : ""}
+      </div>
+      <div class="stats">${has(p.mark_cents)
+        ? `<span title="Best bid on our side — what it could be sold for now">now <b>${p.mark_cents}¢</b> · worth ${usd(p.value_usd)}</span>
+           <span>open P&amp;L <b class="${sgn(p.unrealized_usd)}">${usd(p.unrealized_usd)}</b></span>`
+        : `<span class="dim">no current price yet</span>`}</div>
+      <div class="plan">
+        <div><div class="k">Take profit</div><b class="pos">sell at ${p.take_profit_cents}¢</b> · ${usd(p.take_profit_usd)}</div>
+        <div><div class="k">Stop loss</div>${p.stop_cents
+          ? `<b class="neg">sell at ${p.stop_cents}¢</b> · ${usd(p.stop_usd)}`
+          : `<b>none</b> · most it can lose ${usd(p.stop_usd)}`}</div>
+        <div><div class="k">Exit order resting</div>${ex
+          ? `buy ${S_(ex.side)} @ ${ex.price_cents}¢ × ${ex.quantity} · locks <b class="${sgn(ex.locks_usd)}">${usd(ex.locks_usd)}</b>`
+          : `<span class="dim">none</span>`}</div>
+      </div>
+    </div>`;
+  }).join("");
+  const bids = x.resting.map(r => `<div class="incrow">
       <div class="mk">${esc(r.title)}<small>${esc(r.market)}</small></div>
       <div class="stats" style="margin-top:4px">
-        <span><b>${esc((r.side||"").toUpperCase())} @ ${r.price_cents}¢ × ${Math.round(r.quantity)}</b></span>
-        <span>${usd(r.committed_usd)} committed</span>
-        <span>resting ${dur(r.age_minutes)}</span>
+        <span><b>Resting ${S_(r.side)} @ ${r.price_cents}¢ × ${Math.round(r.quantity)}</b></span>
+        <span>for ${dur(r.age_minutes)}</span>
+        <span>${usd(r.committed_usd)} at risk only if it fills</span>
       </div>
-      <div class="stats">
-        <span title="Estimate from Kalshi's published scoring on the newest book">est. <b>${has(r.est_reward_per_day_usd) ? usd(r.est_reward_per_day_usd) : "—"}</b>/day</span>
-        <span title="If it rests to the programme's end at today's share">≈ ${usd(r.est_reward_to_end_usd)} by end</span>
-        <span>pool ${has(r.pool_usd) ? usd(r.pool_usd) : "—"} · ends ${shortDate(r.program_ends_at)}</span>
+      <div class="plan">
+        <div><div class="k">Expected reward</div><b class="pos">${has(r.est_reward_per_day_usd) ? usd(r.est_reward_per_day_usd) : "—"}</b>/day</div>
+        <div><div class="k">Rests until</div>${shortDate(r.program_ends_at)}${has(r.days_left) ? ` · ${r.days_left}d left` : ""}</div>
+        <div><div class="k">Expected by then</div>${has(r.est_reward_to_end_usd) ? `<b class="pos">≈ ${usd(r.est_reward_to_end_usd)}</b>` : "—"} · pool ${has(r.pool_usd) ? usd(r.pool_usd) : "—"}</div>
       </div>
     </div>`).join("");
   return `<div class="inc">
-    <div class="k" style="margin:10px 0 6px">Liquidity rewards</div>
+    <div class="k" style="margin:10px 0 6px">Liquidity book — all time</div>
     <div class="pnl3">
-      <div><div class="k">Realized (all time)</div><div class="v ${sgn(x.realized_all_time_usd)}">${usd(x.realized_all_time_usd)}</div>
-        <div class="dim" style="font-size:11px">${x.settled_markets_all_time} settled of ${x.markets_traded_all_time} markets</div></div>
-      <div><div class="k">Rewards received</div><div class="v ${sgn(x.reward_credits_usd)}">${usd(x.reward_credits_usd)}</div>
-        <div class="dim" style="font-size:11px">${x.last_reward_at ? "last " + shortDate(x.last_reward_at) : "none yet"}${x.reward_unconfirmed_usd ? " · " + usd(x.reward_unconfirmed_usd) + " unconfirmed" : ""}</div></div>
-      <div><div class="k">Net (all time)</div><div class="v ${sgn(x.net_all_time_usd)}">${usd(x.net_all_time_usd)}</div>
-        <div class="dim" style="font-size:11px">realized + rewards</div></div>
+      <div><div class="k">Trading (settled)</div><div class="v ${sgn(x.realized_all_time_usd)}">${usd(x.realized_all_time_usd)}</div>
+        <div class="dim" style="font-size:11px">${x.settled_markets_all_time} settled of ${x.markets_traded_all_time} markets, after fees</div></div>
+      <div><div class="k">Rewards paid</div><div class="v ${sgn(x.reward_credits_usd)}">${usd(x.reward_credits_usd)}</div>
+        <div class="dim" style="font-size:11px">${x.last_reward_at ? "last " + shortDate(x.last_reward_at) : "none yet"}${x.reward_unconfirmed_usd ? " · " + usd(x.reward_unconfirmed_usd) + " unconfirmed, not counted" : ""}</div></div>
+      <div><div class="k">Net</div><div class="v ${sgn(x.net_all_time_usd)}">${usd(x.net_all_time_usd)}</div>
+        <div class="dim" style="font-size:11px">trading + rewards</div></div>
     </div>
     <div class="stats" style="margin-top:8px">
+      <span><b>${usd(x.at_risk_usd)}</b> at risk now</span>
+      <span>${usd(x.positions_at_risk_usd)} held · ${usd(x.committed_usd)} in resting bids</span>
+      ${has(x.positions_unrealized_usd) ? `<span>open P&amp;L <b class="${sgn(x.positions_unrealized_usd)}">${usd(x.positions_unrealized_usd)}</b></span>` : ""}
+      <span>expected reward <b class="pos">${has(x.est_reward_per_day_usd) ? usd(x.est_reward_per_day_usd) : "—"}</b>/day</span>
       <span><b>${x.slots_used}</b>/${x.slots_max} markets in use</span>
-      <span><b>${usd(x.committed_usd)}</b> committed in resting bids</span>
-      <span>est. reward <b>${has(x.est_reward_per_day_usd) ? usd(x.est_reward_per_day_usd) : "—"}</b>/day</span>
     </div>
-    ${x.resting.length ? rows : `<div class="dim" style="margin-top:8px">No bids resting.</div>`}
-    <div class="note" style="margin-top:8px">Rewards received are payouts that match Kalshi's Rewards page; cash that only looks like a reward is shown as unconfirmed and left out of the net. Kalshi pays after a programme ends. Estimates use Kalshi's published scoring on the newest book and have run well above what was actually paid; treat them as a ceiling.</div>
+    <div class="inch">Resting — earning rewards (${x.resting.length})</div>
+    ${bids || `<div class="dim" style="margin-top:6px">No bids resting.</div>`}
+    <div class="inch">Filled — holding (${(x.positions||[]).length})</div>
+    ${held || `<div class="dim" style="margin-top:6px">Nothing held.</div>`}
+    <div class="note" style="margin-top:8px">Resting bids are the goal: they earn the reward while they wait, and a fill is the cost of doing it. At risk = what held positions cost plus what resting bids would cost if filled. An exit order counts nothing: it can only close a position we hold, and if it fills we keep what it "locks". The bot sells at the take-profit or the stop on its own. Rewards count only payouts that match Kalshi's Rewards page; Kalshi pays after a programme ends. Reward estimates have run well above what was paid; treat them as a ceiling.</div>
   </div>`;
 }
 

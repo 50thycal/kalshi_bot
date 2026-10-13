@@ -2906,3 +2906,10 @@ plus a new bid, as it was sized to (two slots). 2C changes the outcome of a fill
 {0, −stop} to {+5c, −stop}; with only two live fills since Oct 6 the net effect is not evidenced
 and is the operator's call. Rule changes on this grandfathered book are recorded in Experiment OS
 by the operator after merge.
+
+**Dashboard follow-up (2026-10-13, operator request).** The runner now snapshots the books of
+the markets it rests or holds in, every 10 minutes (`OWN_BOOK_SNAPSHOT_SECONDS`), as an
+`IncentiveMarketSnapshot` scored with the collector's own functions: one GET per market, never an
+order, closed markets skipped. Since the collector stopped (§9.50) the dashboard had no current
+price for a held position and no reward estimate for a resting bid. These rows cover only this
+book's own markets, so they do not close the research-tape gap §9.50 describes.
