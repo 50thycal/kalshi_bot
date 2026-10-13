@@ -571,3 +571,44 @@ with the same settled statuses Experiment OS uses, and groups one bet per approv
 Live-paper twins are kept apart. `same_markets_as_live` compares paper and live cents per contract
 only on markets both traded. Paper and live are never pooled, and paper fills are assumed, so
 paper is an optimistic reference. No score, qualification or trading change.
+
+#### Paper-beside-live snapshot — 2026-10-13 12:30Z (after #616)
+
+Read from `catalog_scorecard_series`. Values are cents per contract. "Same markets" means
+only markets both paper and live traded. Descriptive only: no score, qualification or
+trading change.
+
+| Series | Live (same mkts) | Twin (same mkts) | Paper, all its markets | Paper settled trades |
+|---|---|---|---|---|
+| KXRAIN | +5.78 | +5.61 | +5.57 | 2,043 |
+| KXNFLTOTAL | +7.24 | +7.23 | +2.76 | 2,158 |
+| KXITFMATCH | +2.24 | +2.10 | +2.01 | 2,963 |
+| KXATPCHALLENGERMATCH | +0.80 | +0.84 | −0.09 | 3,370 |
+| KXWTACHALLENGERMATCH | +0.91 | +0.79 | −0.82 | 771 |
+| KXMLBHR | −0.16 | −0.25 | +0.59 | 12,952 |
+| KXMLBKS | +1.25 | −0.41 | +1.48 | 1,523 |
+| KXMLBSPREAD | −4.28 | −2.75 | +2.10 | 8,000 |
+| KXMLBTOTAL | −3.98 | −3.36 | −0.46 | 7,783 |
+| KXITFWMATCH | −4.13 | −4.65 | +0.12 | 2,866 |
+| KXWTI | +0.79 | +1.33 | −3.75 | 1,461 |
+| KXBTCD | −11.72 | −13.63 | −0.46 | 4,182 |
+
+Readings:
+
+- **Twins track live closely** on the same markets (most series within about 1¢), so the
+  paper fill assumption is not the main source of paper optimism.
+- **Totals: paper +$408 over 51,086 trades; live −$15.57; twins −$5.54.** The gap comes from
+  what was traded: about 30 paper variants per series traded far more markets. On the markets
+  live traded, paper roughly matched live.
+- **Consistent positives across all three views:**
+  - rain: about 5–6¢; paper mean $1.84 ± $0.34 per event over 62 events;
+  - NFL totals;
+  - ITF men.
+- **Consistent negatives:** BTC daily, MLB totals and WTI on the paper side.
+- **MLB spreads diverge:** paper +$167.85, mean $0.234 ± $0.090 per game over 717 games, while
+  live was −$4.91. On live's own markets, paper was also negative (−2.26¢). This is relevant to
+  XOS-000046: the selection, not the market type, may be what lost.
+- **Caveats:**
+  - paper pools about 30 book variants per series, so it carries a multiple-comparison risk;
+  - a family member's P&L sums all books on one game;
+  - paper P&L is as recorded.
