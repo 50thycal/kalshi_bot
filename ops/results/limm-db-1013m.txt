@@ -1,0 +1,15 @@
+# ops request [READ]
+# type=db  id=limm-db-1013m
+# code 336951981d90b8373798fb5f0db3ecf710b75bcd · started 2026-10-13T09:21:06Z
+market_ticker                    side  action  limit_price  quantity  status    cancel_reason   created_at                     client_order_id                                        
+-------------------------------  ----  ------  -----------  --------  --------  --------------  -----------------------------  -------------------------------------------------------
+KXTRUMPMENTION-26OCT13-OIL       yes   buy     97           333       resting                   2026-10-13 09:15:56.900067+00  limmexitleg:455fd7c7-091b-4d90-a9dc-c89924bb99e5       
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  no    buy     51           499       resting                   2026-10-13 08:31:49.787285+00  limmexitleg:90b48988-e511-45b6-b6b5-b28e68e6195d       
+KXTRUMPMENTION-26OCT13-OIL       no    buy     3            333       filled                    2026-10-13 08:30:24.449134+00  4ed3c194-fe87-4723-a7c4-c39bc8cb58b6                   
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  yes   sell    1            500       canceled                  2026-10-13 08:30:18.080968+00  limmexit:scratch:1f115231-fc37-4cc5-8259-c48eb3d9c983  
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  no    buy     30           500       canceled  incentive_exit  2026-10-13 05:13:34.36567+00   limmexitleg:3ec10e46-0806-4c89-a84e-e0d4c8a4cf4c       
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  yes   buy     1            500       filled                    2026-10-13 04:22:38.780696+00  86997a56-998c-40e8-963e-875e8d818738                   
+KXTRUMPMENTION-26OCT13-FENT      yes   buy     3            333       canceled  repriced        2026-10-13 04:21:02.734841+00  7a6bd300-4295-4e93-aee6-47449d92a979                   
+KXMILLERLITEPOS-26NOV03-T84      no    sell    3            100       filled                    2026-10-13 04:20:48.176627+00  limmexit:stop_loss:c605cd8e-2512-4dfe-8c06-b9027df5bcc0
+
+(8 rows)
