@@ -103,3 +103,26 @@ def test_scorecard_endpoint_needs_the_token(store):
         server.shutdown()
         thread.join()
         server.server_close()
+
+
+def test_one_game_across_mlb_series_is_one_bet(store):
+    spread = "KXMLBSPREAD-26SEP271510STLMIL-STL2"
+    sibling = raw("KXMLBSPREAD-26OCT032030SDMIL-SD5")
+    sibling["event_ticker"] = "KXMLBSPREAD-26SEP271510STLMIL"
+    store.upsert("market", spread, sibling, "KXMLBSPREAD")
+    store.review(APPROVED["KXMLBSPREAD"])
+    store.save_live_economics([
+        ledger(GAME, "0.30"),
+        ledger("KXMLBTOTAL-26SEP271510STLMIL-9", "-0.50"),
+        ledger(OTHER_GAME, "0.25"),
+        ledger(spread, "-0.90"),
+    ])
+    [mlb] = scorecard(store, ["KXMLBTOTAL", "KXMLBSPREAD", "KXRAIN"])["families"]
+    assert mlb["family"] == "candidate-game:MLB"
+    assert mlb["series"] == ["KXMLBSPREAD", "KXMLBTOTAL"]
+    # STL-MIL: total +0.30 - 0.50 and spread -0.90 are one game, -1.10; ALNL is +0.25.
+    assert mlb["independent_bets"] == 2 and mlb["bets_spanning_two_or_more_series"] == 1
+    assert mlb["worst_bet"] == "candidate-game:MLB:26SEP271510STLMIL"
+    assert mlb["worst_bet_dollars"] == "-1.10"
+    assert mlb["net_pnl_dollars"] == "-0.85"
+    assert mlb["net_by_series"] == {"KXMLBSPREAD": "-0.90", "KXMLBTOTAL": "0.05"}
