@@ -456,6 +456,40 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXTRUMPUFC", "politics", DISCRETE),  # the event occurs, or does not, inside a window
     ("KXUAPFILES", "politics", DISCRETE),  # the event occurs, or does not, inside a window
     ("KXBNBMINMON", "price_strike", DISCRETE),  # resolves the instant a minute-by-minute barrier is EVER touched
+    # ===== 2026-10-12 FOOTBALL COVERAGE (MARKET_TAXONOMY football_coverage_2026_10_12) =====
+    # 24 NCAAF/NFL series that were trading unclassified (2026-08..10: ~12k paper trades). Each
+    # is classified from its OWN live yes_sub_title, read from production `mmsell_candidate_ticks`
+    # on 2026-10-12 (quoted after it); Kalshi's rules text calls all 25 in-play
+    # (scripts/mmsell_series_rules_audit.py, CONTRADICTS unknown->in_play on every one).
+    # Only types no live sizing or eligibility rule keys on are used here. Two are DELIBERATELY
+    # absent: KXNFL1HFT (half-time/full-time double, a game_prop — in Kmmsell10's `bigtypes`, so
+    # classifying it would move that live canary's paper arm assignment) and KXNFL1H (the bare
+    # prefix would swallow KXNFL1HFT as an h2h_period by longest-prefix match). Both are a
+    # separate decision: docs/mmsell_taxonomy_repair/PLATFORM_IMPACT_20261012.md.
+    ("KXNCAAFGAME", "h2h", IN_PLAY),  # BYU
+    ("KXNCAAFSPREAD", "spread", IN_PLAY),  # Alabama wins by over 16.5 points
+    ("KXNCAAFTOTAL", "total", IN_PLAY),  # Over 47.5 points
+    ("KXNCAAFTEAMTOTAL", "total", IN_PLAY),  # Hawai'i over 19.5 points
+    ("KXNCAAF1H", "h2h_period", IN_PLAY),  # Tie 1st Half
+    ("KXNCAAF1HSPREAD", "spread", IN_PLAY),  # Boise St. wins by over 13.5 points
+    ("KXNCAAF1HTOTAL", "total", IN_PLAY),  # Over 24.5 points
+    ("KXNCAAF2HSPREAD", "spread", IN_PLAY),  # Iowa St. wins by over 3.5 points
+    ("KXNCAAF1QSPREAD", "spread", IN_PLAY),  # Northwestern wins 1Q by over 2.5 points
+    ("KXNFL1HSPREAD", "spread", IN_PLAY),  # BUF Bills wins by over 10.5 points
+    ("KXNFL2HSPREAD", "spread", IN_PLAY),  # BAL Ravens wins by over 7.5 points
+    ("KXNFL1QSPREAD", "spread", IN_PLAY),  # BAL Ravens wins by over 2.5 points
+    ("KXNFL3QSPREAD", "spread", IN_PLAY),  # ATL Falcons wins by over 3.5 points
+    ("KXNFL4QSPREAD", "spread", IN_PLAY),  # ATL Falcons wins by over 10.5 points
+    ("KXNFLWINMARGIN", "spread", IN_PLAY),  # Baltimore by 7 to 14
+    ("KXNFLTEAMTOTAL", "total", IN_PLAY),  # BUF Bills over 38.5 points
+    ("KXNFL1HTEAMTOTAL", "total", IN_PLAY),  # Detroit over 16.5 points
+    ("KXNFL1QTOTAL", "total", IN_PLAY),  # Over 20.5 points
+    ("KXNFL2HTOTAL", "total", IN_PLAY),  # Over 35.5 points
+    ("KXNFLFIRSTTD", "player_prop", IN_PLAY),  # Khalil Shakir
+    ("KXNFLPASSTDS", "player_prop", IN_PLAY),  # Tyler Huntley: 3+
+    ("KXNFLREC", "player_prop", IN_PLAY),  # Blake Corum: 3+
+    ("KXNFLRECYDS", "player_prop", IN_PLAY),  # Greg Dortch: 40+
+    ("KXNFLRRYDS", "player_prop", IN_PLAY),  # Justice Hill: 120+
 )
 
 # Every type/mode name a book may legally name. A variant spec referencing anything outside

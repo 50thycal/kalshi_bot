@@ -252,6 +252,18 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXMEXCUBOIL", "politics", "discrete"), ("KXPIRROOUT", "politics", "discrete"),
     ("KXTRUMPMEET", "politics", "discrete"), ("KXTRUMPUFC", "politics", "discrete"),
     ("KXUAPFILES", "politics", "discrete"), ("KXBNBMINMON", "price_strike", "discrete"),
+    ("KXNCAAFGAME", "h2h", "in_play"), ("KXNCAAFSPREAD", "spread", "in_play"),
+    ("KXNCAAFTOTAL", "total", "in_play"), ("KXNCAAFTEAMTOTAL", "total", "in_play"),
+    ("KXNCAAF1H", "h2h_period", "in_play"), ("KXNCAAF1HSPREAD", "spread", "in_play"),
+    ("KXNCAAF1HTOTAL", "total", "in_play"), ("KXNCAAF2HSPREAD", "spread", "in_play"),
+    ("KXNCAAF1QSPREAD", "spread", "in_play"), ("KXNFL1HSPREAD", "spread", "in_play"),
+    ("KXNFL2HSPREAD", "spread", "in_play"), ("KXNFL1QSPREAD", "spread", "in_play"),
+    ("KXNFL3QSPREAD", "spread", "in_play"), ("KXNFL4QSPREAD", "spread", "in_play"),
+    ("KXNFLWINMARGIN", "spread", "in_play"), ("KXNFLTEAMTOTAL", "total", "in_play"),
+    ("KXNFL1HTEAMTOTAL", "total", "in_play"), ("KXNFL1QTOTAL", "total", "in_play"),
+    ("KXNFL2HTOTAL", "total", "in_play"), ("KXNFLFIRSTTD", "player_prop", "in_play"),
+    ("KXNFLPASSTDS", "player_prop", "in_play"), ("KXNFLREC", "player_prop", "in_play"),
+    ("KXNFLRECYDS", "player_prop", "in_play"), ("KXNFLRRYDS", "player_prop", "in_play"),
 )
 
 #: The graduated set, READ FROM THE ONE LEDGER rather than duplicated into this file.

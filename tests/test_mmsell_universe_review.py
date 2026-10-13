@@ -43,9 +43,10 @@ UNCLASSIFIED = "unclassified"
 GRADUATED_SERIES = frozenset(r["series"] for r in rows() if r["state"] == GRADUATED)
 
 # A graduated series (MLB totals: classified, 1,881 settled markets of own history) and an
-# unclassified one (NCAA football spreads: 204 settled markets, in no taxonomy).
+# unclassified one (the NFL half-time/full-time double, deliberately left out of the 2026-10-12
+# football revision — docs/mmsell_taxonomy_repair/PLATFORM_IMPACT_20261012.md).
 GRAD_SERIES, GRAD_EV = "KXMLBTOTAL", "KXMLBTOTAL-26SEP022138NYYLAA"
-UNCL_SERIES, UNCL_EV = "KXNCAAFSPREAD", "KXNCAAFSPREAD-26SEP06BAMAUGA"
+UNCL_SERIES, UNCL_EV = "KXNFL1HFT", "KXNFL1HFT-26OCT11BALATL"
 
 
 def _script():
