@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "6177a085d4eb850a46477dc869262ed613048dff",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-13T03:16:02Z",
+  "id": "mlb-issue-list-20261013a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mlb-issue-list-20261013a.receipt.json",
+  "result_file": "ops/results/mlb-issue-list-20261013a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38340868140",
+  "service": null,
+  "started_at": "2026-10-13T03:16:00Z",
+  "targets": [],
+  "type": "xos"
+}
