@@ -1,0 +1,12 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1013d
+# code fe98b41045f1b1b0b9e000dd5b5a933409c181ac · started 2026-10-13T10:56:45Z
+ev                             legs                                             
+-----------------------------  -------------------------------------------------
+KXATPEXACTMATCH-26OCT11DEKHA   KHA21:1:s:0.07 KHA21:2:s:0.07                    
+KXATPEXACTMATCH-26OCT11GEAMEN  MEN21:1:s:0.06 MEN21:2:s:0.06                    
+KXMLBSPREAD-26OCT122000CLETB   CLE3:1:s:-0.94 CLE3:2:s:-0.94                    
+KXNFLTOTAL-26OCT12BUFLAR       64:1:s:-0.94 67:1:s:-0.93 73:1:s:0.07 73:2:s:0.07
+KXNFLTOTAL-26OCT15SEADEN       64:1:o:- 64:2:o:-                                
+
+(5 rows)
