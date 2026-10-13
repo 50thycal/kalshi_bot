@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000022"],"id":"rl46-show-22"}
+{"type":"script","name":"mmsell_series_pnl","args":["--all-time","--split-subjects","--series","KXMLBTOTAL"],"id":"rl46-sp-total"}
