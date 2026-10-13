@@ -1,4 +1,10 @@
 # ops request [READ]
-# type=noop
-# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T03:20:10Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013h
+# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T04:22:07Z
+market_ticker                side  action  limit_price  quantity  status     cancel_reason   created_at                     disc                           credits
+---------------------------  ----  ------  -----------  --------  ---------  --------------  -----------------------------  -----------------------------  -------
+KXTRUMPMENTION-26OCT13-FENT  yes   buy     3            333       resting                    2026-10-13 04:21:02.734841+00  2026-10-13 04:20:47.355418+00         
+KXMILLERLITEPOS-26NOV03-T84  no    sell    3            100       submitted                  2026-10-13 04:20:48.176627+00  2026-10-13 04:20:47.355418+00         
+KXMILLERLITEPOS-26NOV03-T84  yes   buy     85           100       canceled   incentive_exit  2026-10-12 21:39:35.245795+00  2026-10-13 04:20:47.355418+00         
+
+(3 rows)
