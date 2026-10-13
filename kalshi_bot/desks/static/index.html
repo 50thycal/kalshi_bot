@@ -8,7 +8,7 @@
 <title>Research desks · Operator overview</title>
 <style>
 :root{--bg:#10151b;--panel:#19212b;--line:#354250;--text:#f3f6f8;--muted:#b4c2d0;--green:#91e2bd;--amber:#ffd18b;--red:#ffb4b4;--blue:#a9caff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{overflow-wrap:anywhere;max-width:1120px;margin:auto;padding:28px 22px 64px}header,.row,.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:24px}.eyebrow{font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.12em;color:var(--green)}h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.04em;line-height:1.2;margin:5px 0}h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:0}p{margin:8px 0}.muted,small{color:var(--muted)}small{font-size:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}.login{max-width:600px;margin:56px auto}.login label{display:block;font-weight:650;margin-top:22px}.login .row{margin-top:8px}.login input{flex:1;min-width:160px}button,input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid #6a7b8e;border-radius:9px;min-height:44px;padding:10px 14px}button{cursor:pointer;font-weight:650}button:hover:enabled{background:#293647}button.primary{background:var(--green);border-color:var(--green);color:#10231d}button.primary:hover:enabled{background:#b0efd2}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px}input{width:100%}.badge{max-width:100%;display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1.45;background:#2f3d4b;color:var(--text)}.good{color:var(--green);background:#183e30}.warn{color:var(--amber);background:#493623}.bad{color:var(--red);background:#4a2c30}.neutral{color:var(--blue);background:#273850}.connection{font-size:13px;color:var(--muted)}.notice{border-left:4px solid var(--amber)}.notice.bad{background:var(--panel);border-left-color:var(--red);color:var(--text)}.notice ul{margin:8px 0 0;padding-left:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.desk{position:relative;overflow:hidden}.desk:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--blue)}.desk.claude:before{background:#d5b4eb}.deskhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.deskhead h2{margin:0}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.metrics>div{min-width:0}.metrics dt{font-size:12px;color:var(--muted)}.metrics dd{margin:2px 0 0;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.03em}.metrics.secondary{border-top:1px solid var(--line);padding-top:16px}.metrics.secondary dd{font-size:18px}.health{background:var(--bg);padding:13px;border-radius:10px;margin:14px 0}.health ul{padding-left:18px;margin:6px 0}.actions{padding-top:8px}.actions button{flex:1;white-space:nowrap}.sectionhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px}.sectionhead h2{margin:0}.empty{color:var(--muted);padding:18px 0}.entry{border-top:1px solid var(--line);padding:16px 0}.entry:first-child{border-top:0;padding-top:0}.entry:last-child{padding-bottom:0}.entrytitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px}.entrytitle strong{overflow-wrap:anywhere}.entry p{overflow-wrap:anywhere}.entry small{display:block}.entry summary{cursor:pointer;color:var(--blue);padding:9px 0;min-height:44px}.entry pre{font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border-radius:8px;padding:12px;max-height:300px;overflow:auto}.rules{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}.message{min-height:24px;overflow-wrap:anywhere}.message.error{color:var(--red)}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{overflow-wrap:anywhere;max-width:1120px;margin:auto;padding:28px 22px 64px}header,.row,.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:24px}.eyebrow{font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.12em;color:var(--green)}h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.04em;line-height:1.2;margin:5px 0}h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:0}p{margin:8px 0}.muted,small{color:var(--muted)}small{font-size:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}.login{max-width:600px;margin:56px auto}.login label{display:block;font-weight:650;margin-top:22px}.login .row{margin-top:8px}.login input{flex:1;min-width:160px}button,input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid #6a7b8e;border-radius:9px;min-height:44px;padding:10px 14px}button{cursor:pointer;font-weight:650}button:hover:enabled{background:#293647}button.primary{background:var(--green);border-color:var(--green);color:#10231d}button.primary:hover:enabled{background:#b0efd2}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px}input{width:100%}.badge{max-width:100%;display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1.45;background:#2f3d4b;color:var(--text)}.good{color:var(--green);background:#183e30}.warn{color:var(--amber);background:#493623}.bad{color:var(--red);background:#4a2c30}.neutral{color:var(--blue);background:#273850}.connection{font-size:13px;color:var(--muted)}.notice{border-left:4px solid var(--amber)}.notice.bad{background:var(--panel);border-left-color:var(--red);color:var(--text)}.notice ul{margin:8px 0 0;padding-left:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.desk{position:relative;overflow:hidden}.desk:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--blue)}.desk.claude:before{background:#d5b4eb}.deskhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.deskhead h2{margin:0}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.metrics>div{min-width:0}.metrics dt{font-size:12px;color:var(--muted)}.metrics dd{margin:2px 0 0;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.03em}.metrics.secondary{border-top:1px solid var(--line);padding-top:16px}.metrics.secondary dd{font-size:18px}.health{background:var(--bg);padding:13px;border-radius:10px;margin:14px 0}.health ul{padding-left:18px;margin:6px 0}.actions{padding-top:8px}.actions button{flex:1;white-space:nowrap}.sectionhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px}.sectionhead h2{margin:0}.empty{color:var(--muted);padding:18px 0}.entry{border-top:1px solid var(--line);padding:16px 0}.entry:first-child{border-top:0;padding-top:0}.entry:last-child{padding-bottom:0}.entrytitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px}.entrytitle strong{overflow-wrap:anywhere}.entry p{overflow-wrap:anywhere}.entry small{display:block}.entry summary{cursor:pointer;color:var(--blue);padding:9px 0;min-height:44px}.entry pre{font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border-radius:8px;padding:12px;max-height:300px;overflow:auto}.auto{background:var(--bg);padding:13px;border-radius:10px;margin:14px 0}.auto .row{justify-content:space-between}.stepper{display:flex;align-items:center;gap:8px}.stepper button{min-width:44px;padding:8px 12px}.picks{margin:8px 0 0;padding-left:18px}.picks li{margin:4px 0}.rules{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}.message{min-height:24px;overflow-wrap:anywhere}.message.error{color:var(--red)}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
 @media(max-width:720px){main{padding:20px 14px 40px}.grid{grid-template-columns:1fr;gap:0}.panel{padding:18px}.login{margin:28px auto}.metrics dd{font-size:23px}header{align-items:flex-start}.headeractions{width:100%;justify-content:space-between}.sectionhead{align-items:flex-start}.actions button{font-size:13px;padding:10px}.entrytitle{flex-wrap:wrap}}
 </style>
 </head>
@@ -167,14 +167,59 @@
     if (validNumber(amount(desk,'cash')) && Number(amount(desk,'cash')) <= 0) reasons.push('No available book cash. New spending is blocked.');
     if (reasons.length) { const list = element('ul'); [...new Set(reasons.map(stringify))].forEach(reason => list.append(element('li',reasonText(reason)))); healthBox.append(list); }
     else healthBox.append(element('p',health.status === 'healthy' ? 'No intervention reported.' : 'No operational details reported.','muted'));
-    if (state.research_mode === 'session') healthBox.append(element('p', health.activity === 'researching' ? 'Researching in an app session.' : 'Waiting for Continue in the app. No background research runs.','muted'));
+    const auto = state.automation && state.automation[id] || {};
+    if (state.research_mode === 'session') healthBox.append(element('p', health.activity === 'researching' ? 'Researching now.' : auto.unattended ? 'Runs automatically at ' + array(auto.wake_windows).join(', ') + ' (' + (auto.timezone || 'local') + ') plus its own check-ins.' : 'Waiting for Continue in the app. No background research runs.','muted'));
     if (desk.last_cycle_at) healthBox.append(element('small','Last research cycle: ' + date(desk.last_cycle_at)));
     if (desk.next_cycle_at) healthBox.append(element('small','Next cycle: ' + date(desk.next_cycle_at)));
     card.append(healthBox);
+    if (auto.mode) card.append(renderAutomation(id, auto));
     const buttons = element('div',null,'actions');
     buttons.append(action(id,'continue','Continue research'), action(id,paused ? 'resume' : 'pause',paused ? 'Resume desk' : 'Pause desk'));
-    card.append(buttons,element('p', state.research_mode === 'session' ? 'Continue queues work; open the AI app and say Continue to perform it. Trading limits still apply.' : 'Continue requests the next research cycle. Trading readiness and limits still apply.', 'muted'));
+    card.append(buttons,element('p', auto.unattended ? 'Continue asks the automated agent for a cycle at its next check; it counts toward the research budget. Trading limits still apply.' : state.research_mode === 'session' ? 'Continue queues work; open the AI app and say Continue to perform it. Trading limits still apply.' : 'Continue requests the next research cycle. Trading readiness and limits still apply.', 'muted'));
     return card;
+  }
+  function renderAutomation(id, auto) {
+    const box = element('div', null, 'auto');
+    const live = auto.mode === 'live';
+    const top = element('div', null, 'row');
+    top.append(element('strong', 'Automation'), element('span', live ? 'Live · real money' : 'Dry run · picks recorded, not traded', 'badge ' + (live ? 'warn' : 'neutral')));
+    box.append(top);
+    const budget = element('div', null, 'row');
+    const cap = validNumber(auto.max_cycles_per_day) ? Number(auto.max_cycles_per_day) : null;
+    budget.append(element('span', 'Research budget: ' + (cap === null ? 'unlimited' : cap + ' cycle' + (cap === 1 ? '' : 's') + '/day') + ' · used ' + count(auto.cycles_today) + ' today'));
+    const stepper = element('div', null, 'stepper');
+    [['−', -1], ['+', 1]].forEach(([label, delta]) => {
+      const b = element('button', label); b.type = 'button'; b.dataset.action = 'budget';
+      b.setAttribute('aria-label', (delta < 0 ? 'Lower' : 'Raise') + ' research budget for ' + names[id]);
+      const next = (cap === null ? 3 : cap) + delta;
+      b.dataset.unavailable = String(next < 0 || next > 24); b.disabled = mutating || next < 0 || next > 24;
+      b.addEventListener('click', () => mutate(id, 'budget', {max_cycles_per_day: next}, 'Research budget set to ' + next + '/day.'));
+      stepper.append(b);
+    });
+    budget.append(stepper); box.append(budget);
+    const wake = auto.wake || {};
+    box.append(element('small', wake.due ? 'Next research: due now (' + human(wake.reason) + ')' : wake.next_wake_at ? 'Next research: ' + date(wake.next_wake_at) : 'Next research: ' + human(wake.reason || 'not scheduled')));
+    const picks = array(auto.shadow_picks);
+    if (!live || picks.length) {
+      box.append(element('p', 'Dry-run picks' + (validNumber(auto.shadow_pnl) && picks.some(p => p.settled) ? ' · graded P&L ' + dollars(auto.shadow_pnl) : ''), 'muted'));
+      if (picks.length) {
+        const list = element('ul', null, 'picks');
+        picks.slice(0, 5).forEach(p => list.append(element('li', (p.ticker || '—') + ' ' + String(p.side || '').toUpperCase() + (validNumber(p.ask) ? ' @ ' + dollars(p.ask) : '') + ' · ' + (p.status === 'would_submit' ? (p.settled ? 'settled ' + dollars(p.pnl) : 'open') : 'would refuse: ' + human(p.reason)))));
+        box.append(list);
+      } else box.append(element('small', 'No dry-run picks yet.'));
+    }
+    const toggle = element('button', live ? 'Switch to dry run' : 'Switch to live trading');
+    toggle.style.marginTop = '10px';
+    toggle.type = 'button'; toggle.dataset.action = 'mode'; toggle.dataset.unavailable = 'false'; toggle.disabled = mutating;
+    toggle.addEventListener('click', () => {
+      const target = live ? 'dry_run' : 'live';
+      const text = target === 'live'
+        ? 'Switch the ' + names[id] + ' desk to LIVE trading? Automated picks will place real orders within the $1/pick, $10 at-risk and 3 fills/day limits.'
+        : 'Switch the ' + names[id] + ' desk to dry run? New picks are recorded but not traded; open positions still settle.';
+      if (window.confirm(text)) mutate(id, 'mode', {mode: target, confirm: id}, names[id] + ': now ' + (target === 'live' ? 'LIVE.' : 'dry run.'));
+    });
+    box.append(toggle);
+    return box;
   }
   function selected(items) { const filter = $('deskfilter').value; return array(items).filter(item => filter === 'all' || item.desk_id === filter).slice(0,30); }
   function details(parent, payload) {
@@ -218,14 +263,14 @@
     else if (readiness.ready !== true) body.append(element('p','Readiness details have not been reported.','muted'));
     $('desks').replaceChildren(...knownDesks.map(renderDesk)); renderFeed();
   }
-  async function mutate(desk, actionName) {
+  async function mutate(desk, actionName, body, done) {
     if (!token || mutating || !state || !knownDesks.includes(desk)) return;
     mutating = true; controls(true); const current = generation;
     message('Sending ' + human(actionName) + ' request for ' + names[desk] + '…');
     try {
-      await api('/api/desks/' + desk + '/' + actionName,'POST',actionName === 'pause' ? {reason:'operator pause'} : {});
+      await api('/api/desks/' + desk + '/' + actionName,'POST',body || (actionName === 'pause' ? {reason:'operator pause'} : {}));
       if (current !== generation) return;
-      message(actionName === 'continue' ? names[desk] + ': research continuation requested. Existing trading gates remain in force.' : names[desk] + ': ' + actionName + ' request accepted.');
+      message(done || (actionName === 'continue' ? names[desk] + ': research continuation requested. Existing trading gates remain in force.' : names[desk] + ': ' + actionName + ' request accepted.'));
       await refresh();
     } catch (error) {
       if (current !== generation) return;

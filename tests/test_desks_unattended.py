@@ -217,3 +217,85 @@ def test_ntfy_format_sends_readable_text_with_headers(tmp_path):
     assert b"{" not in alert.content
     with pytest.raises(DeskError, match="invalid_alert_format"):
         AlertNotifier(store, "https://ntfy.example/topic", fmt="xml")
+
+
+def test_dashboard_budget_overrides_configuration_and_zero_stops_research(tmp_path):
+    sup = runtime(store_at(tmp_path), research_mode="session", max_cycles_per_day=6, **CHICAGO)
+    assert sup.cycle_cap("chatgpt") == 6 and sup.controls("chatgpt")["max_cycles_per_day"] is None
+    sup.set_control("chatgpt", NOW, max_cycles_per_day=1)
+    assert sup.cycle_cap("chatgpt") == 1 and sup.cycle_cap("claude") == 6
+    claim_and_complete(sup, NOW)
+    with pytest.raises(DeskError, match="cycle_budget_exhausted"):
+        sup.claim_external("chatgpt", "host", NOW + timedelta(hours=2))
+    sup.set_control("claude", NOW, max_cycles_per_day=0)
+    with pytest.raises(DeskError, match="cycle_budget_exhausted"):
+        sup.claim_external("claude", "host", NOW)
+    for bad in (-1, 25, "3", True, None):
+        with pytest.raises(DeskError, match="invalid_research_budget"):
+            sup.set_control("chatgpt", NOW, max_cycles_per_day=bad)
+    with pytest.raises(DeskError, match="invalid_desk"):
+        sup.set_control("gemini", NOW, max_cycles_per_day=1)
+
+
+def test_dashboard_mode_switch_overrides_configuration_and_is_published(shadow_case):
+    store, exchange, quotes, executor, service, decision = shadow_case
+    assert service.is_shadow("chatgpt") and not service.is_shadow("claude")  # configuration
+    with pytest.raises(DeskError, match="mode_change_requires_confirmation"):
+        service.set_mode("chatgpt", "live", None, NOW)
+    with pytest.raises(DeskError, match="invalid_desk_mode"):
+        service.set_mode("chatgpt", "paper", "chatgpt", NOW)
+    state = service.set_mode("chatgpt", "live", "chatgpt", NOW)
+    assert state["mode"] == "live" and state["mode_source"] == "dashboard"
+    assert not service.is_shadow("chatgpt")
+    service.set_mode("claude", "dry_run", "claude", NOW)
+    assert service.is_shadow("claude")
+    budget = service.set_budget("chatgpt", 3, NOW)
+    assert budget["max_cycles_per_day"] == 3 and budget["budget_source"] == "dashboard"
+    logged = [p["payload"] for p in store.publications("chatgpt", "operator_control")]
+    assert [(p["control"], p["from"], p["to"]) for p in logged] == [
+        ("mode", "dry_run", "live"), ("research_budget", None, 3)]
+
+
+def test_automation_status_lists_dry_run_picks_and_graded_pnl(shadow_case):
+    store, exchange, quotes, executor, service, decision = shadow_case
+    service.shadow(decision, executor, NOW)
+    exchange.outcome = D(1)
+    service.settle_shadow("chatgpt", executor, NOW)
+    view = service.automation("chatgpt", NOW)
+    assert view["mode"] == "dry_run" and view["mode_source"] == "configuration"
+    assert view["shadow_picks"][0]["ticker"] == "OBSERVATION-MARKET"
+    assert view["shadow_picks"][0]["settled"] and D(view["shadow_pnl"]) == D("1.16")
+    assert view["wake"]["desk_id"] == "chatgpt" and not view["unattended"]
+
+
+def test_dashboard_controls_are_operator_only_over_http(shadow_case):
+    import http.client
+    import json as _json
+    import threading
+
+    from test_desks_service import TOKENS
+
+    from kalshi_bot.desks.server import make_server
+    store, exchange, quotes, executor, service, decision = shadow_case
+    server = make_server(service, ("127.0.0.1", 0))
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": .01}, daemon=True)
+    thread.start()
+    def post(path, body, role):
+        conn = http.client.HTTPConnection(*server.server_address, timeout=3)
+        conn.request("POST", path, body=_json.dumps(body), headers={
+            "Authorization": "Bearer " + TOKENS[role], "Content-Type": "application/json"})
+        response = conn.getresponse()
+        value = _json.loads(response.read())
+        conn.close()
+        return response.status, value
+    try:
+        assert post("/api/desks/chatgpt/mode", {"mode": "live", "confirm": "chatgpt"}, "chatgpt")[0] == 403
+        assert post("/api/desks/chatgpt/budget", {"max_cycles_per_day": 9}, "chatgpt")[0] == 403
+        status, value = post("/api/desks/chatgpt/budget", {"max_cycles_per_day": 2}, "operator")
+        assert status == 200 and value["max_cycles_per_day"] == 2
+        status, value = post("/api/desks/chatgpt/mode", {"mode": "live"}, "operator")
+        assert status == 409 and service.is_shadow("chatgpt")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)

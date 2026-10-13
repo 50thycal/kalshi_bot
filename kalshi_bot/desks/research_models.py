@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .models import DeskBase
@@ -61,3 +61,12 @@ class ResearchMarket(DeskBase):
     round_id: Mapped[str] = mapped_column(String(80), index=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     payload: Mapped[dict] = mapped_column(JSON)
+
+
+class DeskControl(DeskBase):
+    """WS-025 operator controls set from the dashboard; NULL falls back to configuration."""
+    __tablename__ = "desk_controls"
+    desk_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    max_cycles_per_day: Mapped[int | None] = mapped_column(Integer)
+    shadow: Mapped[bool | None] = mapped_column(Boolean)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

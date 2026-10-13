@@ -163,6 +163,14 @@ behaviour, and none of them changes a money limit.
 | `DESKS_SHADOW_DESKS` | Dry run: decisions are quoted, checked and sized, published as `shadow_decision`, graded as `shadow_settlement`; nothing is reserved or sent. |
 | `DESKS_ALERT_FORMAT` | `ntfy` sends readable text with ntfy headers instead of JSON. |
 
+**Dashboard controls (operator token).** Each desk card has an Automation panel: the mode
+(dry run or live) with a confirm-guarded switch, the research budget (cycles per local day,
+0–24, with − / +), the next wake, and recent dry-run picks with graded P&L. Both controls are
+stored in the desk database (`desk_controls`), override `DESKS_SHADOW_DESKS` and
+`DESKS_MAX_CYCLES_PER_DAY`, and every change is published as an `operator_control` record.
+A budget of 0 stops all research for that desk; going live still passes every live-trading
+check and money limit.
+
 `GET /api/desks/<desk>/wake` (that desk's token or the operator's) tells a host whether to start a
 cycle: a base window passed, the desk's requested check-in (`next_check_at` in its research
 output, clamped to 10 min–24 h) arrived, one of its decisions settled, or a dashboard Continue is

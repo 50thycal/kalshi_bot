@@ -110,9 +110,61 @@ class DeskService:
         now = require_fresh_execution()
         if self.settings.research_mode == "session":
             self.supervisor.verify_session_decision(decision, now)
-        if decision.desk_id in self.settings.shadow_desk_set():
+        if self.is_shadow(decision.desk_id):
             return self.shadow(decision, executor, now)
         return executor.submit(decision, now=now)
+
+    def is_shadow(self, desk_id):
+        """Dry run: the dashboard's choice if set, else DESKS_SHADOW_DESKS."""
+        chosen = self.supervisor.controls(desk_id)["shadow"]
+        return chosen if chosen is not None else desk_id in self.settings.shadow_desk_set()
+
+    def set_mode(self, desk_id, mode, confirm, now):
+        """Operator switch between dry run and live trading. Every change is published."""
+        if mode not in ("dry_run", "live"):
+            raise DeskError("invalid_desk_mode")
+        if confirm != desk_id:
+            raise DeskError("mode_change_requires_confirmation")
+        before = "dry_run" if self.is_shadow(desk_id) else "live"
+        self.supervisor.set_control(desk_id, now, shadow=mode == "dry_run")
+        self.store.publish(desk_id, "operator_control", {"control": "mode", "from": before, "to": mode,
+                                                         "at": now.isoformat()}, now)
+        return self.automation(desk_id, now)
+
+    def set_budget(self, desk_id, cycles, now):
+        """Operator research budget: research cycles (subscription sessions) per local day."""
+        before = self.supervisor.cycle_cap(desk_id)
+        self.supervisor.set_control(desk_id, now, max_cycles_per_day=cycles)
+        self.store.publish(desk_id, "operator_control", {"control": "research_budget", "from": before,
+                                                         "to": cycles, "at": now.isoformat()}, now)
+        return self.automation(desk_id, now)
+
+    def automation(self, desk_id, now):
+        """What the dashboard shows about unattended operation for one desk."""
+        controls = self.supervisor.controls(desk_id)
+        windows = self.supervisor.wake_windows.get(desk_id) or []
+        wake = self.supervisor.wake(desk_id, now)
+        picks = []
+        graded = {item["payload"].get("decision_id"): item["payload"]
+                  for item in self.store.publications(desk_id, "shadow_settlement")}
+        for item in reversed(self.store.publications(desk_id, "shadow_decision")[-10:]):
+            pick = {key: item["payload"].get(key) for key in
+                    ("decision_id", "ticker", "side", "max_price", "ask", "quantity", "status", "reason",
+                     "probability")}
+            pick["created_at"] = item["created_at"]
+            result = graded.get(pick["decision_id"])
+            if result:
+                pick.update(settled=True, pnl=result.get("pnl"), yes_payout=result.get("yes_payout"))
+            picks.append(pick)
+        return {"desk_id": desk_id, "mode": "dry_run" if self.is_shadow(desk_id) else "live",
+                "mode_source": "dashboard" if controls["shadow"] is not None else "configuration",
+                "max_cycles_per_day": self.supervisor.cycle_cap(desk_id),
+                "budget_source": "dashboard" if controls["max_cycles_per_day"] is not None else "configuration",
+                "cycles_today": wake.get("cycles_today"), "unattended": bool(windows),
+                "wake_windows": windows, "timezone": str(self.supervisor.research_timezone),
+                "wake": wake, "shadow_picks": picks,
+                "shadow_pnl": str(sum((Decimal(r["pnl"]) for r in graded.values() if r.get("pnl")),
+                                      Decimal(0)))}
 
     @staticmethod
     def _shadow_id(decision_id, kind):
@@ -192,6 +244,12 @@ class DeskService:
                             for row in result["desks"] if row.get("paused") or row.get("pause_reason")
                             or result["health"].get(row["desk_id"], {}).get("reasons")],
             }
+        result["automation"] = {}
+        for desk in DESKS:
+            try:
+                result["automation"][desk] = self.automation(desk, now)
+            except Exception:
+                result["automation"][desk] = {"desk_id": desk, "error": "automation_status_unavailable"}
         result["generated_at"] = now.isoformat()
         result["worker"] = {"last_tick": self.last_tick.isoformat() if self.last_tick else None,
                             "error": self.last_error}

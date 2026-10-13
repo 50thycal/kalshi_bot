@@ -39,6 +39,9 @@ class FakeSupervisor:
     def request_cycle(self, desk_id, now):
         return self.tick(now)
 
+    def controls(self, desk_id):  # WS-025: no dashboard overrides in these tests
+        return {'max_cycles_per_day': None, 'shadow': None, 'updated_at': None}
+
     def tick(self, now):
         if self.fail:
             raise RuntimeError('sensitive backend exception')

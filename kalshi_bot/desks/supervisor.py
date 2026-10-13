@@ -25,7 +25,7 @@ from .research import (
     parse_output,
     shared_archive,
 )
-from .research_models import ResearchBudget, ResearchJob, ResearchSource
+from .research_models import DeskControl, ResearchBudget, ResearchJob, ResearchSource
 
 
 def _utc(dt):
@@ -74,7 +74,8 @@ class Supervisor:
         self.research_schedules = research_schedules or {}
         self.limit = _micros(monthly_budget_usd)
         self.round_id = self.store.snapshot(datetime.now(timezone.utc))["round_id"]
-        for table in (ResearchBudget.__table__, ResearchJob.__table__, ResearchSource.__table__):
+        for table in (ResearchBudget.__table__, ResearchJob.__table__, ResearchSource.__table__,
+                      DeskControl.__table__):
             table.create(store.engine, checkfirst=True)
 
     def _round_id(self):
@@ -228,11 +229,45 @@ class Supervisor:
         local = _utc(now).astimezone(self.research_timezone)
         return _utc(datetime(local.year, local.month, local.day, tzinfo=self.research_timezone))
 
-    def _cycle_block(self, claims, now):
+    def controls(self, desk_id):
+        """Dashboard overrides for one desk; None means "use the configured default"."""
+        with self.store._tx() as session:
+            row = session.get(DeskControl, desk_id)
+            return {"max_cycles_per_day": row.max_cycles_per_day if row else None,
+                    "shadow": row.shadow if row else None,
+                    "updated_at": _utc(row.updated_at).isoformat() if row else None}
+
+    def set_control(self, desk_id, now, **values):
+        if desk_id not in {"chatgpt", "claude"}:
+            raise DeskError("invalid_desk")
+        if "max_cycles_per_day" in values:
+            budget = values["max_cycles_per_day"]
+            if isinstance(budget, bool) or not isinstance(budget, int) or not 0 <= budget <= 24:
+                raise DeskError("invalid_research_budget")
+        if "shadow" in values and not isinstance(values["shadow"], bool):
+            raise DeskError("invalid_desk_mode")
+        with self.store._tx() as session:
+            row = session.get(DeskControl, desk_id)
+            if row is None:
+                row = DeskControl(desk_id=desk_id, updated_at=_utc(now))
+                session.add(row)
+            for key, value in values.items():
+                setattr(row, key, value)
+            row.updated_at = _utc(now)
+
+    def cycle_cap(self, desk_id):
+        """Claims allowed per local day: the dashboard budget, else configuration (0 = none)."""
+        override = self.controls(desk_id)["max_cycles_per_day"]
+        if override is not None:
+            return override
+        return self.max_cycles or None
+
+    def _cycle_block(self, claims, now, desk_id):
         """The hard per-desk cycle budget: (reason, until) or None. Applies to every host."""
         now = _utc(now)
         start = self._day_start(now)
-        if self.max_cycles and sum(claimed >= start for claimed in claims) >= self.max_cycles:
+        cap = self.cycle_cap(desk_id)
+        if cap is not None and sum(claimed >= start for claimed in claims) >= cap:
             local = start.astimezone(self.research_timezone) + timedelta(days=1, hours=2)
             return "cycle_budget_exhausted", self._day_start(local)
         last = max(claims, default=None)
@@ -290,7 +325,7 @@ class Supervisor:
         previous, upcoming = self._windows(desk_id, now)
         result = {"desk_id": desk_id, "due": False, "reason": "idle", "due_since": None,
                   "next_wake_at": None, "last_claim_at": last.isoformat() if last else None,
-                  "cycles_today": today, "max_cycles_per_day": self.max_cycles}
+                  "cycles_today": today, "max_cycles_per_day": self.cycle_cap(desk_id)}
         if active:
             result["reason"] = "job_active"
             return result
@@ -305,7 +340,7 @@ class Supervisor:
         own = [t for t in settled if last is None or t > last]
         if own:
             reasons.append(("own_settlement", min(own)))
-        block = self._cycle_block(claims, now)
+        block = self._cycle_block(claims, now, desk_id)
         if reasons and block:
             result.update(reason=block[0], next_wake_at=block[1].isoformat())
             return result
@@ -320,7 +355,8 @@ class Supervisor:
 
     def claim_external(self, desk_id, worker_id, now):
         with self.store._tx() as session:
-            block = self._cycle_block(self._claims(session, desk_id), now)
+            claims = self._claims(session, desk_id)
+        block = self._cycle_block(claims, now, desk_id)
         if block:
             raise DeskError(block[0])
         job_id = self.enqueue(desk_id, now)
