@@ -452,10 +452,14 @@ class Store:
     def review_series_template(self, payload):
         """Approve a series' contract wording once, as shown in named exemplar markets.
 
-        Each exemplar must still carry the exact rules the approver read (its listing rules
-        digest, the same one the review sources script prints), and binds the approval to that exemplar's template. Every market in the series
-        with the same template then reads as reviewed; reworded markets stay unreviewed. The
-        review id excludes the write time, so re-applying the same approval is a no-op."""
+        Each exemplar names the listing rules digest the approver read. An exemplar the catalog
+        still holds with that digest binds its own template. One the catalog no longer holds
+        as read (Kalshi changed the listing, or it was never captured) binds the template of
+        the text that was read, if the approval records it (`template_hash`, pinned by tests to
+        the read listing); otherwise it is refused. A refused exemplar never blocks the others;
+        the approval is refused only if nothing binds. Every market in the series with a bound
+        template then reads as reviewed; reworded markets stay unreviewed. The review id
+        excludes the write time, so re-applying the same approval is a no-op."""
         required = ("ticker", "exemplars", "actor", "approved_by", "rationale", "semantics")
         if any(not payload.get(key) for key in required):
             raise ValueError(
@@ -476,27 +480,40 @@ class Store:
             raise ValueError("Exposure key may use only {event_ticker} or {event_suffix}") from error
         from . import selection
 
-        bound = []
+        bound, refused = [], []
         for exemplar in exemplars:
+            read = exemplar.get("template_hash")
             current = self.get("market", exemplar["market"])
-            if not current or current.get("series_ticker") != series:
-                raise LookupError(f"Exemplar {exemplar['market']} is not a {series} market here")
+            if current and current.get("series_ticker") != series:
+                raise LookupError(f"Exemplar {exemplar['market']} is not a {series} market")
             # The listing's own rules digest (before parent binding), as read by the approver.
-            if rule_hash(current["raw"]) != exemplar["rules_hash"]:
-                raise LookupError(
-                    f"Exemplar {exemplar['market']} rules differ from the text that was approved"
-                )
-            if current["parent_rules_changed"]:
-                raise LookupError("Parent rules changed; wait for the current listing refresh")
-            bound.append((
-                exemplar["market"],
-                templates.template_hash(current["raw"]),
-                templates.template_document(current["raw"]),
-            ))
+            if current and rule_hash(current["raw"]) == exemplar["rules_hash"]:
+                held = templates.template_hash(current["raw"])
+                if read and read != held:
+                    raise ValueError(
+                        f"Exemplar {exemplar['market']} template_hash is stale for "
+                        f"{templates.METHOD}; recompute it from the read listing"
+                    )
+                bound.append((exemplar["market"], held,
+                              templates.template_document(current["raw"])))
+            elif read:
+                bound.append((exemplar["market"], read, None))
+                refused.append({"market": exemplar["market"], "bound_from": "read_template",
+                                "reason": "listing changed since read" if current
+                                else "listing not held"})
+            else:
+                refused.append({"market": exemplar["market"],
+                                "reason": "listing changed since read" if current
+                                else "listing not held"})
+        if not bound:
+            raise LookupError(f"No exemplar of {series} binds: {refused}")
         results = []
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            documents = {h: doc for _market, h, doc in bound}
+            documents = {}
+            for _market, template_hash, document in bound:
+                if documents.get(template_hash) is None:
+                    documents[template_hash] = document
             for template_hash, document in documents.items():
                 result = {
                     **payload,
@@ -523,7 +540,8 @@ class Store:
                      result["created_at"], pack(result)),
                 )
                 results.append(result)
-        return {"kind": SERIES_TEMPLATE, "ticker": series, "templates": results}
+        return {"kind": SERIES_TEMPLATE, "ticker": series, "templates": results,
+                "exemplars_not_held_as_read": refused}
 
     def series_template_reviews(self, series, full=False):
         """Approvals bound under the current template method; older methods' rows stay
@@ -558,7 +576,7 @@ class Store:
                     (source, series),
                 )
             ]
-        covered, by_basis, uncovered, missing = 0, {}, {}, []
+        covered, by_basis, uncovered, missing, parent_changed = 0, {}, {}, [], []
         approved = [
             doc["template_document"]
             for doc in self.series_template_reviews(series, full=True)
@@ -572,6 +590,11 @@ class Store:
             if document["review_status"] == "reviewed":
                 covered += 1
                 by_basis[document["review_basis"]] = by_basis.get(document["review_basis"], 0) + 1
+                continue
+            if document["parent_rules_changed"]:
+                # Not a wording question: the event or series changed after this listing was
+                # captured, which invalidates any review until the listing is refreshed.
+                parent_changed.append(ticker)
                 continue
             group = uncovered.setdefault(
                 templates.template_hash(document["raw"]),
@@ -590,6 +613,8 @@ class Store:
             "reviewed_by_basis": by_basis,
             "listing_missing": len(missing),
             "listing_missing_samples": missing[:3],
+            "parent_rules_changed": len(parent_changed),
+            "parent_rules_changed_samples": parent_changed[:3],
             "unreviewed_templates": [
                 {"template_hash": h, **g}
                 for h, g in sorted(uncovered.items(), key=lambda item: -item[1]["markets"])

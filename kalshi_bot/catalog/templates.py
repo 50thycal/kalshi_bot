@@ -22,7 +22,10 @@ import re
 # v2: whitespace-insensitive, absent text equals empty text, and a date in a display title no
 # longer makes its day number count as the market's own strike.
 # v3: numbers in the mechanics compare by value, so 60 and 60.0 are the same timer.
-METHOD = "rules-template-v3"
+# v4: a name may contain digits and "of"/parentheses ("49ers", "W75", "(Lima) Round of 32"), a
+# number inside a word is never a strike, and a noun's plural after a strike ("2 goals") is
+# its singular.
+METHOD = "rules-template-v4"
 # Contract wording: kept, with dates, times, own strike numbers and names masked.
 TEXT_FIELDS = ("rules_primary", "rules_secondary", "early_close_condition")
 # Settlement mechanics: kept exactly.
@@ -42,9 +45,13 @@ CLOCK_FIELDS = ("open_time", "close_time", "expected_expiration_time")
 _MONTH = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?"
 _DATE = re.compile(_MONTH + r"\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?")
 _TIME = re.compile(r"\b\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)\b(?:\s+[A-Z]{2,4}T)?")
-_NUMBER = re.compile(r"\$?\d[\d,]*(?:\.\d+)?")
-_WORD = r"(?!(?:Yes|No)\b)[A-Z][\w'’.&-]*"
-_NAME = re.compile(r"\b" + _WORD + r"(?:\s+" + _WORD + r")*")
+_NUMBER = re.compile(r"(?<![\w.])\$?\d[\d,]*(?:\.\d+)?(?![\w])")
+_WORD = r"(?!(?:Yes|No)\b)(?:[A-Z][\w'’.&-]*|\d+[A-Za-z][\w'’.&-]*)"
+_PIECE = r"\(?" + _WORD + r"\)?"
+_NAME = re.compile(
+    r"(?<![\w<])" + _PIECE + r"(?:\s+(?:of\s+)?(?:" + _PIECE + r"|\d+(?![\w.])|<n>))*"
+)
+_PLURAL = re.compile(r"(<n>\+?\s+[a-z]*[a-rt-z])s\b")
 
 
 def _value(token):
@@ -86,7 +93,7 @@ def mask(text, own_numbers=frozenset()):
     text = _NUMBER.sub(
         lambda m: "<n>" if _value(m.group()) in own_numbers else m.group(), text
     )
-    return _NAME.sub("<name>", text)
+    return _PLURAL.sub(r"\1", _NAME.sub("<name>", text))
 
 
 def template_document(raw):
