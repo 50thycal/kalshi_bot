@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1013rest2", "sql": "select strategy, action, side, count(*) n, sum(limit_price*quantity)/100.0 px_usd, sum((100-limit_price)*quantity)/100.0 comp_usd from live_orders where status in ('resting','partial','pending','submitted') group by strategy, action, side order by strategy"}
