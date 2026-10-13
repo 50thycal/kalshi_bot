@@ -135,6 +135,11 @@ TAKE_PROFIT_CENTS = 5
 #: TAKE_PROFIT_CENTS, so the resting exit and the marketable take-profit lock the same edge
 #: (§9.48: 1 -> 0, a scratch; §9.53: 0 -> 5).
 EXIT_LEG_EDGE_CENTS = TAKE_PROFIT_CENTS
+#: Most cash a resting exit leg may tie up (price x size). Kalshi reserves the full cost of a
+#: resting buy even when it would only net a held position flat, so an 51c x499 exit on a 1c leg
+#: held ~$254 and every entry after it was refused for insufficient balance (§9.54). Above this
+#: no exit leg rests; the leg is closed by the take-profit sell, the stop or the pre-close flatten.
+MAX_EXIT_LEG_DOLLARS = MAX_ORDER_DOLLARS
 #: A marketable exit crosses this many cents past the touch so it fills rather than expires.
 EXIT_SLIPPAGE_CENTS = 2
 #: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
@@ -545,6 +550,11 @@ def decide_exit(*, entry_cents: int, mark_bid_cents: int | None,
     if mark >= entry + take_profit_distance_cents(entry):
         return EXIT_TAKE_PROFIT
     return None   # §9.53: no scratch at entry — hold for the take-profit or the stop
+
+
+def exit_leg_affordable(price_cents: int, qty: int) -> bool:
+    """Whether an exit leg at this price and size stays within MAX_EXIT_LEG_DOLLARS (§9.54)."""
+    return int(price_cents) * int(qty) / 100.0 <= MAX_EXIT_LEG_DOLLARS + 1e-9
 
 
 def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | None:

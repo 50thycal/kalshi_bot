@@ -44,6 +44,7 @@ def test_the_registered_envelope_equals_the_running_constants():
     assert x["stop_loss_fraction_of_entry"] == limm.STOP_LOSS_FRACTION
     assert x["take_profit_cents"] == limm.TAKE_PROFIT_CENTS
     assert x["exit_leg_edge_cents"] == limm.EXIT_LEG_EDGE_CENTS
+    assert x["max_exit_leg_dollars"] == limm.MAX_EXIT_LEG_DOLLARS
     assert x["flatten_hours_before_close"] == limm.FLATTEN_HOURS_BEFORE_CLOSE
     assert x["exit_max_attempts"] == limm.EXIT_MAX_ATTEMPTS
 

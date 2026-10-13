@@ -1403,3 +1403,34 @@ def test_a_cycle_snapshots_the_markets_the_book_holds_then_waits(live_db, settin
                               .where(m.IncentiveMarketSnapshot.market_ticker == HELD)))
     assert out.get("book_snapshots") == 1
     assert [(r.best_yes_bid, r.best_no_bid) for r in rows] == [(40, 50)]
+
+
+# --- §9.54: an exit leg may not tie up more than MAX_EXIT_LEG_DOLLARS ------------------------
+
+def test_a_dear_exit_leg_is_not_placed(live_db, settings):
+    # The 2026-10-13 TSWIF case: YES 1c x499 held, NO touch 51c -> a $254 exit bid.
+    client = FakeClient({HELD: _book([(2, 100)], [(51, 500)])})
+    with db.session_scope() as s:
+        _held(s, entry=1, qty=499, other_leg=False)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"holding:exit_leg_over_cap": 1}
+    assert client.placed == []
+
+
+def test_a_resting_exit_leg_over_the_cap_is_cancelled(live_db, settings):
+    client = FakeClient({HELD: _book([(2, 100)], [(51, 500)])})
+    with db.session_scope() as s:
+        _held(s, entry=1, qty=499, other_leg=False)
+        s.add(m.LiveOrder(market_ticker=HELD, event_ticker=HELD, strategy=limm.LIVE_TAG,
+                          side="no", action="buy", limit_price=51, quantity=499,
+                          status="resting", kalshi_order_id="K-DEAR",
+                          client_order_id="limmexitleg:dear", created_at=NOW))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"exit_leg_over_cap:cancelled": 1}
+    assert client.canceled == ["K-DEAR"] and client.placed == []
+
+
+def test_exit_leg_cap_is_the_per_order_budget():
+    assert limm.MAX_EXIT_LEG_DOLLARS == limm.MAX_ORDER_DOLLARS == 10.0
+    assert limm.exit_leg_affordable(50, 20) and not limm.exit_leg_affordable(51, 499)

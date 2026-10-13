@@ -2913,3 +2913,18 @@ the markets it rests or holds in, every 10 minutes (`OWN_BOOK_SNAPSHOT_SECONDS`)
 order, closed markets skipped. Since the collector stopped (§9.50) the dashboard had no current
 price for a held position and no reward estimate for a resting bid. These rows cover only this
 book's own markets, so they do not close the research-tape gap §9.50 describes.
+
+### 9.54 An exit leg may tie up at most $10 of cash (2026-10-13)
+
+**Evidence.** After KXTOP10BBSPOTS-26OCT24-TSWIF-10 filled (YES 1c ×499, $4.99 at risk), its
+opposite-side exit leg rested at the NO touch, 51c ×499. Kalshi reserves the full cost of a resting
+buy (~$254) even though the order could only net the held leg flat. From 09:33Z every new entry
+was rejected `insufficient_balance` (five in an hour), so the book earned no reward while
+holding a $4.99 position. §9.53 1A fixed the book's own budget count but not the exchange's cash
+reservation.
+
+**Decision (operator, 2026-10-13: "do that cap exit order fix too"):** `MAX_EXIT_LEG_DOLLARS` =
+`MAX_ORDER_DOLLARS` ($10). An exit leg costing more is not placed (`holding:exit_leg_over_cap`),
+and a resting one is cancelled (`exit_leg_over_cap:cancelled`). That leg is then closed only by
+the +5c take-profit sell, the stop, or the pre-close flatten; a 1c leg has no stop and can lose at
+most its cost. Entry caps and the $50 budget are unchanged.
