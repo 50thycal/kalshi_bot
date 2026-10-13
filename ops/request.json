@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1013c", "sql": "select at::text, (yes_levels_json::jsonb)->0 yes_top, (no_levels_json::jsonb)->0 no_top, jsonb_array_length(yes_levels_json::jsonb) ny, jsonb_array_length(no_levels_json::jsonb) nn from incentive_market_snapshots where market_ticker='KXMILLERLITEPOS-26NOV03-T84' order by at desc limit 3"}
+{"type":"noop"}
