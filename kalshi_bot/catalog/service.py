@@ -77,6 +77,15 @@ def log_template_coverage(store):
             )
     except Exception:  # a diagnostic log must never stop the service
         LOG.exception("catalog_template_coverage status=failed")
+    try:
+        from .scorecard import scorecard
+
+        card = scorecard(store, approved_series())
+        for row in card.pop("series"):
+            LOG.info("catalog_scorecard_series=%s", json.dumps(row, sort_keys=True))
+        LOG.info("catalog_scorecard=%s", json.dumps(card, sort_keys=True))
+    except Exception:  # read-only report; never stops the service
+        LOG.exception("catalog_scorecard status=failed")
 
 
 def run_job(store, key, action, *, bulk=False, guard=True):
@@ -359,6 +368,10 @@ def make_server(store, token, address=("::", 8080)):
                     result = store.status()
                 elif path == "/v1/approvals":
                     result = {"items": recorded_approvals(store)}
+                elif path == "/v1/scorecard":
+                    from .scorecard import scorecard
+
+                    result = scorecard(store, [series] if series else approved_series())
                 elif path == "/v1/template-coverage":
                     result = {
                         "items": [

@@ -514,3 +514,19 @@ separately.
   - 9 are invalidated by a parent change.
   - About 29 are tennis listings whose names contain lowercase particles, a birth year, "+" or "(moved from …)".
   - 2 are KXMLBHR doubleheader listings with the newer strike type.
+
+### Series scorecard — 2026-10-13 UTC
+
+Calvin asked for a read-only P&L scorecard for the 13 approved series.
+
+`kalshi_bot/catalog/scorecard.py` (`series-scorecard-v1`) adds up the catalog's existing per-market live source-ledger economics (`exclusive-binary-ledger-v4`). It reports:
+- net, fees and contracts;
+- cents per contract;
+- winning markets;
+- **independent bets**: markets that share an approved exposure key, such as one game, count as one bet;
+- mean and standard error per bet;
+- the best and worst bet;
+- a split by book and side;
+- blocked markets with their reasons.
+
+It is descriptive only: no confidence score, qualification, gate verdict or trading change. It is logged at start and served at `/v1/scorecard`.
