@@ -9,9 +9,9 @@ sample, not an unbiased control. Nothing here scores, qualifies or authorizes a 
 
 from datetime import datetime, timezone
 
-from . import selection
+from . import selection, templates
 from .evaluators import timestamp
-from .store import digest, now, unpack
+from .store import SERIES_TEMPLATE, digest, now, unpack
 
 METHOD = "research-cohort-v1"
 POPULATIONS = ("all", "selected", "unselected")
@@ -67,6 +67,22 @@ def _review(db, kind, ticker, as_of):
     ).fetchone()
     return (
         {"review_id": row[0], "rules_hash": row[1], "created_at": row[2], "template": bool(row[3])}
+        if row
+        else None
+    )
+
+
+def _template_review(db, series, revision, as_of):
+    """A series approval recorded by as_of whose wording matches the as-of listing."""
+    template = templates.template_hash(revision.get("raw") or {})
+    row = db.execute(
+        "SELECT id,rules_hash,created_at FROM reviews WHERE kind=? AND ticker=? AND rules_hash=? "
+        "AND created_at<=? ORDER BY created_at DESC LIMIT 1",
+        (SERIES_TEMPLATE, series, template, as_of.isoformat()),
+    ).fetchone()
+    return (
+        {"review_id": row[0], "rules_hash": row[1], "created_at": row[2], "template": True,
+         "basis": SERIES_TEMPLATE}
         if row
         else None
     )
@@ -190,6 +206,8 @@ def _item(store, db, ticker, stored, as_of, include_rows, computed_at, evidence_
     coverage = selection.coverage_in(db, "market", ticker, document)
     memberships = [m for m in coverage["memberships"] if m["active"]]
     market_review = _review(db, "market", ticker, as_of)
+    if not market_review and at and at["representation"] == selection.FULL:
+        market_review = _template_review(db, document["series_ticker"], prior[-1][1], as_of)
     series_review = _review(db, "series", document["series_ticker"], as_of)
     missing = list(coverage["missing"])
     if at is None:
@@ -198,7 +216,9 @@ def _item(store, db, ticker, stored, as_of, include_rows, computed_at, evidence_
         missing.append("as_of_observation_compact")
     if not market_review:
         missing.append("market_review_missing_at_as_of")
-    elif at and market_review["rules_hash"] != at["rules_hash"]:
+    elif at and market_review.get("basis") != SERIES_TEMPLATE and (
+        market_review["rules_hash"] != at["rules_hash"]
+    ):
         missing.append("market_review_not_bound_to_as_of_rules")
     if not series_review:
         missing.append("series_review_missing_at_as_of")

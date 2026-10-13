@@ -408,3 +408,36 @@ Findings:
 - KXNFLTOTAL charges maker fees.
 
 Nothing is approved or scored. Approval is the owner's per series, then posted through the authenticated review API.
+
+## Series approvals — 2026-10-13 UTC
+
+Calvin approved the BTC, WTI, MLB total, MLB spread and rain drafts. He also asked that one series
+approval cover all of its strikes and dates. The catalog could not do this: a review bound one
+exact rules hash, so it reached one market.
+
+This branch adds series templates (`DEC-035`, `rules-template-v1`). One approval binds the series'
+contract wording as shown in two exemplar markets. Every traded and future market with the same
+wording then reads as reviewed, and reworded markets stay unreviewed.
+
+Tested on the real 26 sample listings:
+- BTC, WTI and World Cup goals each produce one wording version across July–October.
+- The KXMLBKS participation change produces two.
+- MLB total/spread and rain each produce two (an added disclaimer and a reordered source line).
+  Both versions are in the approval.
+
+The five approvals are recorded in `approved_reviews.json`. They bind only when posted from the
+dashboard with the catalog token. A startup-applied file was rejected because it would bypass
+the API's authentication.
+
+Coverage per series is logged at start (`catalog_template_coverage`) and served at
+`/v1/template-coverage`. It names any unapproved wording versions, with sample markets.
+
+`catalog_review_sources` gains `--pdf-base64 --terms-only`, so the contract PDFs can be read with
+a full PDF reader.
+
+Still open:
+- Read the PDFs and answer the NFL overtime question.
+- Approve the remaining series.
+- Historical terms, independence and calibration.
+
+No score, qualification, trading, XOS or shared-metric change.

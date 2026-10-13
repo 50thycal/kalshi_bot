@@ -1445,3 +1445,33 @@ more full history); compact rows keep their own key namespace so a later full sn
 state is never ignored; the per-market evidence index is a separate table so an older image can
 still write after a rollback. Measured synthetic saving is modest (revision bytes ×0.77), so this
 is not presented as the disk or RAM fix.
+
+## DEC-035 — One owner approval per series wording, posted with the catalog token
+
+**Date:** 2026-10-13 UTC. **Owner direction:** Calvin approved the BTC, WTI, MLB total, MLB
+spread and rain drafts. He also said a series like KXBTCD is one contract type: strikes and
+dates should not need separate approvals.
+
+A catalog review previously bound one exact rules hash. That hash covers each market's strike,
+clock and names, so a "series" approval reached one market only. A **series template** now binds
+the contract wording instead (`rules-template-v1`, `kalshi_bot/catalog/templates.py`):
+- The settlement mechanics are kept exactly.
+- Within the rule text, these are masked: dates, clock times, the market's own strike numbers,
+  and capitalised names.
+- Display titles and listing clocks are left out.
+- Yes/No are never masked.
+
+The approval names exemplar markets. It binds only while each exemplar still carries the
+listing rules digest that the approver read. Every market with the same template then reads
+as reviewed, with basis `series_template`. A reworded market (for example the KXMLBKS
+participation change) stays unreviewed until its wording is approved. Clock times are masked, so
+one approval covers every expiry time in a series. Time to expiry is a property of each trade.
+Grading must separate it as a cohort dimension; the approval does not.
+
+**Posting stays token-gated.** Approvals are recorded in `kalshi_bot/catalog/approved_reviews.json`,
+but recording binds nothing. The owner posts each approval from the dashboard with the catalog
+token. A design that applied the file at startup was rejected because it would bypass the
+API's authentication.
+
+An approval is not a score, a qualification or a trading change. Historical terms, contract PDF
+text and outcome independence remain unverified.

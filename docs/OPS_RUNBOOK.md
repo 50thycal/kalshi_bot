@@ -582,7 +582,7 @@ To run a request:
      a whole ladder, `--search`/`--category`/`--series` to narrow. Public endpoints only, no
      key, no order surface; the sandbox cannot reach Kalshi, so this is how a pick is checked.
    - **"desk fetch"** -> `{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","200"]}`
-   - **"catalog review sources"** -> `{"type":"script","name":"catalog_review_sources","args":["KXBTCD-26AUG0117-T63749.99","--pdf-chars","8000"]}` (public Kalshi rules, series settlement sources and contract-PDF hashes/text for WS-023 review drafts; read-only, two fixed hosts)
+   - **"catalog review sources"** -> `{"type":"script","name":"catalog_review_sources","args":["KXBTCD-26AUG0117-T63749.99","--pdf-chars","8000"]}` (public Kalshi rules, series settlement sources and contract-PDF hashes/text for WS-023 review drafts; read-only, two fixed hosts). Add `"--pdf-base64","--terms-only"` to include each contract-terms PDF's exact bytes for reading with a full PDF reader
      — one public settlement-source page (OpenRouter rankings, AAA, EIA, Chicago Fed, FRED, BLS,
      Census, NWS, Polymarket, YouTube charts …) read from the runner and printed as bounded text,
      or only the windows around `--find`. Hosts are a fixed allowlist in the script; adding one is a
