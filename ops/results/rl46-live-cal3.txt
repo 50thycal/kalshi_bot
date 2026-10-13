@@ -1,0 +1,12 @@
+# ops request [READ]
+# type=db  id=rl46-live-cal3
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:29:54Z
+k     ser          side  mkts  unresolved  contracts  avg_px  loss_pct_contracts  loss_pct_mkts  breakeven_loss_pct  net    games  mean_g   se_g    games_lost
+----  -----------  ----  ----  ----------  ---------  ------  ------------------  -------------  ------------------  -----  -----  -------  ------  ----------
+game  COMBINED                                                                                                       -9.94  144    -0.0690  0.0401  26        
+game  KXMLBSPREAD                                                                                                    -4.91  82     -0.0599  0.0462  14        
+game  KXMLBTOTAL                                                                                                     -5.03  88     -0.0572  0.0503  13        
+mkt   KXMLBSPREAD  no    104   0           126        91.99   11.90               13.46          8.01                -4.91                                    
+mkt   KXMLBTOTAL   no    117   0           133        91.75   12.03               11.97          8.25                -5.03                                    
+
+(5 rows)
