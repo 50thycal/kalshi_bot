@@ -717,6 +717,22 @@ class Store:
                 ).fetchall()
             yield series, [(row[0], unpack(row[1])) for row in rows]
 
+    def iter_evidence(self, source, series, page=2000):
+        """Stream one source's evidence documents for a series in short read pages."""
+        after = 0
+        while True:
+            with self.connect() as db:
+                rows = db.execute(
+                    "SELECT rowid,document FROM evidence WHERE series=? AND source=? AND rowid>? "
+                    "ORDER BY rowid LIMIT ?",
+                    (series, source, after, page),
+                ).fetchall()
+            if not rows:
+                return
+            for row in rows:
+                yield unpack(row[1])
+            after = rows[-1][0]
+
     def migrate_review(self, document):
         from . import selection
 
