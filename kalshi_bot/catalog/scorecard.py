@@ -92,8 +92,9 @@ def series_scorecard(store, series):
 def family_scorecards(store, series_list):
     """Bets that share one outcome across series, e.g. every MLB total, spread, home-run and
     strikeout market on one game, counted once. A family is the approved exposure key without
-    its event part ("candidate-game:MLB"); only families spanning two or more series are
-    reported, since a single series is already in its own row."""
+    its event part ("candidate-game:MLB"). Only families where at least one bet spans two or
+    more series are reported: a prefix such as "candidate-event" that merely recurs across
+    unrelated series (tennis, rain) shares no outcome and is already in each series row."""
     families = defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
     for series in series_list:
         for record in store.iter_pipeline_items("live-economics", series):
@@ -107,7 +108,7 @@ def family_scorecards(store, series_list):
     rows = []
     for family, bets in sorted(families.items()):
         members = sorted({series for parts in bets.values() for series in parts})
-        if len(members) < 2:
+        if not any(len(parts) > 1 for parts in bets.values()):
             continue
         totals = {key: sum(parts.values()) for key, parts in bets.items()}
         mean, stderr = _spread([float(v) for v in totals.values()])

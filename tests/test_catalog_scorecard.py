@@ -126,3 +126,13 @@ def test_one_game_across_mlb_series_is_one_bet(store):
     assert mlb["worst_bet_dollars"] == "-1.10"
     assert mlb["net_pnl_dollars"] == "-0.85"
     assert mlb["net_by_series"] == {"KXMLBSPREAD": "-0.90", "KXMLBTOTAL": "0.05"}
+
+
+
+def test_a_shared_key_prefix_without_a_shared_bet_is_not_a_family(store):
+    spread = "KXMLBSPREAD-26OCT032030SDMIL-SD5"
+    store.upsert("market", spread, raw(spread), "KXMLBSPREAD")
+    store.review(APPROVED["KXMLBSPREAD"])
+    store.save_live_economics([ledger(GAME, "0.30"), ledger(spread, "-0.90")])
+    # Both series key by candidate-game:MLB, but no game was traded in both: nothing shared.
+    assert scorecard(store, ["KXMLBTOTAL", "KXMLBSPREAD"])["families"] == []
