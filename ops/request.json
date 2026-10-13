@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1013n", "sql": "select market_ticker, side, action, limit_price, quantity, status, created_at::text, left(client_order_id,12) coid, (select quantity_fp::text from positions p where p.market_ticker=o.market_ticker order by captured_at desc limit 1) pos from live_orders o where strategy='Alimm1' and (status in ('resting','partial','pending','submitted') or (status='filled' and created_at > '2026-10-13 04:00')) order by created_at desc limit 20"}
+{"type":"noop"}
