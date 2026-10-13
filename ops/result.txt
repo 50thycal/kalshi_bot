@@ -1,27 +1,4 @@
 # ops request [READ]
-# type=script  id=limm-quote-1013e
-# code 41a77455e5dbc5f2e40b5841c4bb714be140f0d5 · started 2026-10-13T01:27:38Z
-=== inline quote vs orderbook — 1 series, up to 20 markets each ===
-
-  ticker                                  inline bid/ask  ob yes_bid  ob no_bid  100-no_bid  bid?  ask?
-  KXMILLERLITEPOS-26NOV03-T80                      96/97          96          3          97     Y     Y
-  KXMILLERLITEPOS-26NOV03-T82                      91/98          91          2          98     Y     Y
-  KXMILLERLITEPOS-26NOV03-T84                      90/94          90          6          94     Y     Y
-  KXMILLERLITEPOS-26NOV03-T86                      77/85          77         15          85     Y     Y
-  KXMILLERLITEPOS-26NOV03-T88                      62/65          62         35          65     Y     Y
-  KXMILLERLITEPOS-26NOV03-T89                      58/61          58         39          61     Y     Y
-  KXMILLERLITEPOS-26NOV03-T90                      50/51          50         49          51     Y     Y
-  KXMILLERLITEPOS-26NOV03-T91                      43/44          43         56          44     Y     Y
-  KXMILLERLITEPOS-26NOV03-T92                      11/15          11         85          15     Y     Y
-  KXMILLERLITEPOS-26NOV03-T94                      11/12          11         88          12     Y     Y
-
-  bid agrees 10/10   ask agrees (vs 100-no_bid) 10/10
-
-=== THE ONE-SIDED CASES (bid and ask disagree differently) ===
-  none — the two sides agree or fail together, which argues for STALENESS
-  rather than a definitional difference. A pre-filter must then distrust the
-  whole quote, and the ~1% miss floor is the honest price of the idea.
-
-  If the inline no_bid matches the book while the inline yes_ask does not equal
-  100 - no_bid, the inline ask is NOT derived the way ours is, and the fix is to
-  use the inline sides directly rather than distrusting the quote.
+# type=noop
+# code 41a77455e5dbc5f2e40b5841c4bb714be140f0d5 · started 2026-10-13T01:28:01Z
+(noop — nothing to do)
