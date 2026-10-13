@@ -47,8 +47,16 @@ A scheduled Claude Code routine may invoke this skill with no operator present. 
    false, report `reason` and `next_wake_at` in one line and stop: no Continue, no claim.
    A refused claim (`cycle_budget_exhausted`, `cycle_gap_not_elapsed`) is the service's
    cycle budget working; stop the same way.
-2. `agent_wake_missed` and `no_completed_cycle_24h` in the health gate describe the very gap
-   this run closes. They do not block an unattended run. Every other gate item still does.
+2. Three gate items describe work this run exists to do, so they do not block an unattended
+   run:
+   - `agent_wake_missed` and `no_completed_cycle_24h` (the gap this run closes);
+   - unreviewed settlements: write their postmortems first in this cycle. A settlement is
+     itself a wake reason (`own_settlement`), so blocking on it would stop the desk for good;
+   - the readiness blocker `claude_research_not_ready`, when the only health reasons behind
+     it are the exempt items above.
+
+   Every other gate item still blocks: a pause, an unknown or pending order, a worker error,
+   a pending research job, a recent research failure, or any other alert or blocker.
 3. In the completion, set `next_check_at` (ISO 8601 UTC) when a concrete later check matters,
    such as a settlement, a data release or a second time-spaced read. Otherwise omit it.
 4. After a completion with `next_check_at`, book one one-shot check-in for that time that
