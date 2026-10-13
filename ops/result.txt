@@ -1,4 +1,13 @@
 # ops request [READ]
-# type=noop
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T21:21:34Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013rest
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T21:21:38Z
+strategy          n   usd                   
+----------------  --  ----------------------
+mmsell10a         10  9.3100000000000000    
+Fmmsell10         4   3.7200000000000000    
+Jmmsell10         1   2.7900000000000000    
+mmsell10b         2   1.9000000000000000    
+Kmmsell10         2   1.8800000000000000    
+mmsell3_closeout  2   0.08000000000000000000
+
+(6 rows)
