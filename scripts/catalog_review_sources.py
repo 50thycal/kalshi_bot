@@ -14,6 +14,9 @@ Read-only: GETs only, no credentials, two fixed hosts. Retrieval time and PDF me
 NOT proof of which terms governed an earlier execution; the output says so. Text extraction is
 stdlib best-effort and reports when it fails rather than guessing.
 
+With --pdf-base64 each retrieved PDF's exact bytes are included (base64) so a full PDF reader
+can be used offline; --terms-only skips the larger product-certification documents.
+
 Usage (via the ops channel):
     {"type":"script","name":"catalog_review_sources",
      "args":["KXBTCD-26AUG0117-T63749.99","KXRAIN-26AUG01-T0","--pdf-chars","8000"]}
@@ -22,6 +25,7 @@ Usage (via the ops channel):
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import re
@@ -182,7 +186,7 @@ def pdf_metadata(body: bytes) -> dict:
     return found
 
 
-def document(url: str, chars: int) -> dict:
+def document(url: str, chars: int, raw: bool = False) -> dict:
     if not PDF_URL.fullmatch(url or ""):
         return {"url": url, "status": "unsupported_url"}
     status, headers, body = fetch(url)
@@ -207,6 +211,9 @@ def document(url: str, chars: int) -> dict:
         "text_truncated": quality == "readable" and len(text) > chars,
         "metadata_is_effective_date_proof": False,
         "version_at_execution_verified": False,
+        # The exact retrieved bytes, so a full PDF reader can extract what this stdlib
+        # extractor cannot (encoded fonts). Same bytes as content_sha256.
+        "content_base64": base64.b64encode(body).decode() if raw else None,
     }
 
 
@@ -254,6 +261,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pdf-chars", type=int, default=6000,
                     help=f"extracted text per document (hard cap {PDF_CHARS_CAP})")
     ap.add_argument("--no-pdf", action="store_true", help="skip contract documents")
+    ap.add_argument("--pdf-base64", action="store_true",
+                    help="include each retrieved PDF's exact bytes, base64-encoded")
+    ap.add_argument("--terms-only", action="store_true",
+                    help="contract terms only, not product certifications")
     args = ap.parse_args(argv)
     tickers = list(dict.fromkeys(args.tickers))
     if len(tickers) > MAX_TICKERS or any(not TICKER.fullmatch(t) for t in tickers):
@@ -267,7 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         "markets": [market_sources(ticker) for ticker in tickers],
     }
     urls = sorted({u for m in report["markets"] for u in m.get("document_urls", [])})
-    report["documents"] = [] if args.no_pdf else [document(url, chars) for url in urls]
+    if args.terms_only:
+        urls = [u for u in urls if "/contract_terms/" in u]
+    report["documents"] = [] if args.no_pdf else [
+        document(url, chars, raw=args.pdf_base64) for url in urls
+    ]
     print(json.dumps(report, indent=1, sort_keys=True, default=str))
     return 0 if all(m["status"] == "retrieved" for m in report["markets"]) else 1
 

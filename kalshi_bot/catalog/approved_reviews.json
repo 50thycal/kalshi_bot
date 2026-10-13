@@ -1,0 +1,382 @@
+{
+  "schema_version": 1,
+  "method": "series-template-approval-v1",
+  "note": "Owner approvals. The owner's merge of this file to the deployed branch is the sign-off (DEC-035): the catalog applies each approval at start while its exemplar markets still carry the approved rules digest. They can also be posted from the dashboard with the catalog token.",
+  "items": [
+    {
+      "approval_id": "KXBTCD-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXBTCD",
+      "exemplars": [
+        {
+          "market": "KXBTCD-26OCT1617-T87999.99",
+          "rules_hash": "9a6f9b58c102f03acabd724d77f46d526c1f056945cd022ad28d0a0ffe9e8859"
+        },
+        {
+          "market": "KXBTCD-26JUL1317-T62999.99",
+          "rules_hash": "0b64f1f8b2c8ac147290657afd2d47f4c0124633c66abf869544b4b9067febe4"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:11:37+00:00",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXBTCD-series-draft-20261012",
+      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Read BTC.pdf for missing-data and index-outage contingencies (same hash as the 2026-10-09 pilot).",
+        "Listing wording unchanged since the July sample; confirm before approving as a series template.",
+        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
+        "Current listing text does not prove the terms that governed earlier fills."
+      ],
+      "semantics": {
+        "resolution_mechanism": "sixty_second_index_average_threshold",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Other exchanges' spot prices are not the settlement index.",
+          "A single tick is not the sixty-observation average."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the average of the 60 BRTI values in the minute before 5 PM ET exceeds the strike; otherwise No.",
+          "comparison_operator": ">",
+          "threshold_display": "Strikes end in .99 and display as the next round dollar 'or above'; the predicate is strictly greater than the strike.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "All strikes at one time are nested on one determination; KXBTC ranges at the same time share it."
+        },
+        "shared_exposure_key": "candidate-index-time:BRTI:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "CF Benchmarks",
+              "url": "https://www.cfbenchmarks.com/data/indices/BRTI?ref=blog.cfbenchmarks.com"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BTC.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "index_vs_spot_basis",
+            "averaging_window",
+            "threshold_display_precision",
+            "shared_time_threshold_ladder"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": false,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXWTI-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXWTI",
+      "exemplars": [
+        {
+          "market": "KXWTI-26OCT1314-T95.49",
+          "rules_hash": "18780269e75a4ac0f5c43b2577d607fecdb3e3ee940eac9ac8e39c233cdbbcb7"
+        },
+        {
+          "market": "KXWTI-26JUL2714-T84.99",
+          "rules_hash": "a1ed08a605d3a2892c79a16130cf011bfb8c02a234d1686670756f47e6270b50"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:11:37+00:00",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXWTI-series-draft-20261012",
+      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Read COMMODITIES.pdf for exchange holidays and the stale-settlement fallback.",
+        "Confirm the observation instant (strike_date 14:30 ET) matches the ICE settlement window.",
+        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
+        "Current listing text does not prove the terms that governed earlier fills."
+      ],
+      "semantics": {
+        "resolution_mechanism": "futures_daily_settlement_threshold",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Uses ICE WTI futures (front month WBS), not NYMEX CL.",
+          "Front month rolls 2 business days before the current contract's last trading day.",
+          "If no settlement is published for the date, the most recent published settlement is used."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named contract's daily settlement, rounded to 2 decimals, is above the strike; otherwise No.",
+          "comparison_operator": ">",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "All strikes on one date share one settlement; KXWTIW weekly markets may share it."
+        },
+        "shared_exposure_key": "candidate-settlement:ICE-WTI:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ICE",
+              "url": "https://www.theice.com/products/213/WTI-Crude-Futures"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/COMMODITIES.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "contract_roll",
+            "stale_settlement_fallback",
+            "ice_not_nymex",
+            "shared_date_threshold_ladder"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": false,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXMLBTOTAL-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXMLBTOTAL",
+      "exemplars": [
+        {
+          "market": "KXMLBTOTAL-26SEP271510STLMIL-11",
+          "rules_hash": "4d2add6c5399d9a81a6c6df0b69d8bb51f35cac6342fef934f6641536f82d5e0"
+        },
+        {
+          "market": "KXMLBTOTAL-26JUL142000ALNL-12",
+          "rules_hash": "7660a6c2eecb757393a1bfef5d4311df96c99c95e63b3078346d55e20df911c7"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:11:37+00:00",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXMLBTOTAL-series-draft-20261012",
+      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Read BASEBALLTOTALS.pdf: postponed, suspended and shortened games.",
+        "Earliest traded sample is the All-Star Game (AL vs NL); confirm it should share the regular-season template.",
+        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
+        "Current listing text does not prove the terms that governed earlier fills."
+      ],
+      "semantics": {
+        "resolution_mechanism": "game_combined_score_threshold",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Listing rules state no postponement, suspension or extra-innings terms; those are in the unread contract terms."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if both teams' combined runs exceed the half-point line; otherwise No.",
+          "early_close": "Closes early once the over is reached.",
+          "wording_defect": "Some listings read 'collectively score more <line> runs' (missing 'than'); strike_type 'greater' and the half-run line make the intent clear.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Lines on one game are nested; shares the game with spread and player props."
+        },
+        "shared_exposure_key": "candidate-game:MLB:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "MLB",
+              "url": "https://www.mlb.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "nested_line_ladder",
+            "early_close_on_over",
+            "postponement_terms_unread",
+            "shared_game_exposure"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": false,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXMLBSPREAD-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXMLBSPREAD",
+      "exemplars": [
+        {
+          "market": "KXMLBSPREAD-26OCT032030SDMIL-SD5",
+          "rules_hash": "934ce125ae7e039153fba7305489e67e97f74ce552de26473624f395a7b3a2ad"
+        },
+        {
+          "market": "KXMLBSPREAD-26JUL142000ALNL-NL2",
+          "rules_hash": "a58721c7488f3fbeb19339b9149c82ea00221b678716778bebe85c7fe6c80573"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:11:37+00:00",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXMLBSPREAD-series-draft-20261012",
+      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Read BASEBALLSPREAD.pdf: postponed, suspended and shortened games.",
+        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
+        "Current listing text does not prove the terms that governed earlier fills."
+      ],
+      "semantics": {
+        "resolution_mechanism": "game_margin_threshold_for_named_team",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Listing rules state no postponement or suspension terms; those are in the unread contract terms."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named team wins by more than the half-run line; otherwise No (including a loss).",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Lines for one team are nested; both teams' lines and the total share one game."
+        },
+        "shared_exposure_key": "candidate-game:MLB:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "the Governing League",
+              "url": "https://www.mlb.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "nested_line_ladder",
+            "postponement_terms_unread",
+            "shared_game_exposure"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": false,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXRAIN-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXRAIN",
+      "exemplars": [
+        {
+          "market": "KXRAIN-26OCT13-NYC",
+          "rules_hash": "9b8416cd07fbb04c52d666adf6b7d3d440d73f7f41c8f50aa2f44ad0e5b61eb8"
+        },
+        {
+          "market": "KXRAIN-26AUG08-DC",
+          "rules_hash": "d85dd15487faf47314102e99b6741b83c95d8f2c8b4fe6248d511935322610ed"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:11:37+00:00",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXRAIN-series-draft-20261012",
+      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which day boundary applies (local standard time climate day vs calendar day)? The listing does not say.",
+        "Read RAINGLOBALPERIOD.pdf for revisions of the climate report after settlement.",
+        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
+        "Current listing text does not prove the terms that governed earlier fills."
+      ],
+      "semantics": {
+        "resolution_mechanism": "daily_station_precipitation_positive",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "strictly_greater_than_zero",
+        "exclusions": [
+          "Trace (T) counts as 0 inches.",
+          "Missing daily precipitation counts as 0 inches, so a data gap settles No.",
+          "Only the named climate station (e.g. CLINYC) counts, as reported by The Weather Company."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the station's daily precipitation is strictly above 0.00 inches; otherwise No.",
+          "comparison_operator": ">",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "City markets on one date are separate stations; nearby cities can share a weather system."
+        },
+        "shared_exposure_key": "candidate-event:{event_ticker}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "The Weather Company",
+              "url": "https://weather.com/kalshi"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/RAINGLOBALPERIOD.pdf",
+          "historical_version_verified": false
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "missing_data_resolves_no",
+            "trace_is_zero",
+            "station_specific",
+            "climate_day_boundary_unverified",
+            "regional_weather_correlation"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": false,
+        "outcome_independence_verified": false
+      }
+    }
+  ]
+}

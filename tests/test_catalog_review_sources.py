@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import contextlib
+import hashlib
 import io
 import json
 import pathlib
@@ -92,3 +94,28 @@ def test_report_shape_with_mocked_api(monkeypatch):
     assert doc["byte_count"] == len(pdf) and len(doc["text"]) == 40 and doc["text_truncated"]
     assert doc["version_at_execution_verified"] is False
     assert report["retrieval_time_is_not_effective_date"] is True
+
+
+def test_pdf_bytes_only_on_request_and_terms_only_filter(monkeypatch):
+    market = {"ticker": "KXA-E-T1", "event_ticker": "KXA-E", "rules_primary": "r",
+              "contract_terms_url": "https://assets.kalshi.com/contract_terms/A.pdf"}
+    series = {"ticker": "KXA", "contract_url":
+              "https://assets.kalshi.com/regulatory/product-certifications/A.pdf"}
+    payloads = {"/markets/KXA-E-T1": {"market": market},
+                "/events/KXA-E": {"event": {"event_ticker": "KXA-E", "series_ticker": "KXA"}},
+                "/series/KXA": {"series": series}}
+    monkeypatch.setattr(crs, "get_json", payloads.get)
+    pdf = _pdf(b"BT <0012003A> Tj ET")
+    monkeypatch.setattr(crs, "fetch", lambda url, **_k: (200, {}, pdf))
+
+    def run(*flags):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            crs.main(["KXA-E-T1", *flags])
+        return json.loads(out.getvalue())["documents"]
+
+    assert [d["content_base64"] for d in run()] == [None, None]
+    [doc] = run("--pdf-base64", "--terms-only")
+    assert doc["url"].endswith("/contract_terms/A.pdf")
+    assert base64.b64decode(doc["content_base64"]) == pdf
+    assert hashlib.sha256(pdf).hexdigest() == doc["content_sha256"]

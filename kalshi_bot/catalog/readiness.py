@@ -97,6 +97,7 @@ def review_facts(document):
         "listing_available": document is not None,
         "review_status": (document or {}).get("review_status", "listing_missing"),
         "review_id": review.get("id"),
+        "review_basis": (document or {}).get("review_basis"),
         "contract_document_binding_verified": False,
         "referenced_contract_documents": (document or {}).get("contract_documents")
         or [

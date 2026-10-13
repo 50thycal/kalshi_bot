@@ -10,8 +10,10 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import dictionary
+from . import dictionary, templates
 
+# A reviews row approving one series' contract wording for every matching market.
+SERIES_TEMPLATE = "series_template"
 DOCUMENT_TABLES = ("objects", "revisions", "reviews", "evidence", "assessments")
 COMPRESSED_PREFIX = b"catalog:zlib:1\x00"
 # Reading v2 is always on. Writing it is opt-in until a deploy with this reader is live:
@@ -292,6 +294,7 @@ class Store:
         return self.decorate(unpack(row[0])) if row else None
 
     def decorate(self, doc):
+        basis = "exact"
         with self.connect() as db:
             review = db.execute(
                 "SELECT document FROM reviews WHERE kind=? AND ticker=? "
@@ -307,6 +310,16 @@ class Store:
                     "ORDER BY r.created_at DESC LIMIT 1",
                     ("market", doc["series_ticker"], doc["rules_hash"]),
                 ).fetchone()
+                basis = "market_template"
+            if not review and doc["kind"] == "market" and self._has_series_template(
+                db, doc.get("series_ticker")
+            ):
+                review = db.execute(
+                    "SELECT document FROM reviews WHERE kind=? AND ticker=? AND rules_hash=? "
+                    "ORDER BY created_at DESC LIMIT 1",
+                    (SERIES_TEMPLATE, doc["series_ticker"], templates.template_hash(doc["raw"])),
+                ).fetchone()
+                basis = SERIES_TEMPLATE
         parent_changed = False
         with self.connect() as db:
             for identity, captured_hash in doc.get("parent_rules_hashes", {}).items():
@@ -318,7 +331,10 @@ class Store:
                 if (parent[0] if parent else None) != captured_hash:
                     parent_changed = True
         facts = unpack(review[0]) if review and not parent_changed else None
+        if facts and basis == SERIES_TEMPLATE:
+            facts["semantics"] = templates.bind(facts["semantics"], doc["raw"])
         doc["review"] = facts
+        doc["review_basis"] = basis if facts else None
         doc["review_status"] = "reviewed" if facts else "needs_review"
         doc["semantics"] = facts["semantics"] if facts else dict.fromkeys(SEMANTIC_FIELDS)
         doc["review_completion_pct"] = 100 if facts else 0
@@ -370,13 +386,8 @@ class Store:
             else docs
         )
 
-    def review(self, payload):
-        required = ("kind", "ticker", "rules_hash", "actor", "rationale", "semantics")
-        if any(not payload.get(key) for key in required):
-            raise ValueError(
-                "Review requires identity, current hash, actor, rationale and semantics"
-            )
-        semantics = payload["semantics"]
+    @staticmethod
+    def _check_semantics(semantics, template):
         if not isinstance(semantics, dict) or any(key not in semantics for key in SEMANTIC_FIELDS):
             raise ValueError("All semantic fields must be explicit; null means unknown")
         if any(
@@ -384,10 +395,26 @@ class Store:
             for key in ("resolution_mechanism", "settlement_source", "shared_exposure_key")
         ):
             raise ValueError("Resolution, settlement source and exposure identity must be known")
-        if payload.get("template") and any(
+        if template and any(
             semantics.get(key) is not None for key in ("observation_start", "observation_end")
         ):
             raise ValueError("Reusable templates cannot carry market-specific observation times")
+
+    @staticmethod
+    def _has_series_template(db, series):
+        return bool(series) and db.execute(
+            "SELECT 1 FROM reviews WHERE kind=? AND ticker=? LIMIT 1", (SERIES_TEMPLATE, series)
+        ).fetchone() is not None
+
+    def review(self, payload):
+        if payload.get("kind") == SERIES_TEMPLATE:
+            return self.review_series_template(payload)
+        required = ("kind", "ticker", "rules_hash", "actor", "rationale", "semantics")
+        if any(not payload.get(key) for key in required):
+            raise ValueError(
+                "Review requires identity, current hash, actor, rationale and semantics"
+            )
+        self._check_semantics(payload["semantics"], payload.get("template"))
         current = self.get(payload["kind"], payload["ticker"])
         if current and current["parent_rules_changed"]:
             raise LookupError("Parent rules changed; wait for the current listing refresh")
@@ -421,6 +448,134 @@ class Store:
                 ),
             )
         return result
+
+    def review_series_template(self, payload):
+        """Approve a series' contract wording once, as shown in named exemplar markets.
+
+        Each exemplar must still carry the exact rules the approver read (its listing rules
+        digest, the same one the review sources script prints), and binds the approval to that exemplar's template. Every market in the series
+        with the same template then reads as reviewed; reworded markets stay unreviewed. The
+        review id excludes the write time, so re-applying the same approval is a no-op."""
+        required = ("ticker", "exemplars", "actor", "approved_by", "rationale", "semantics")
+        if any(not payload.get(key) for key in required):
+            raise ValueError(
+                "Series template approval requires series, exemplars, actor, approver, "
+                "rationale and semantics"
+            )
+        series = payload["ticker"]
+        exemplars = payload["exemplars"]
+        if not isinstance(exemplars, list) or not all(
+            isinstance(e, dict) and e.get("market") and e.get("rules_hash") for e in exemplars
+        ):
+            raise ValueError("Each exemplar needs a market ticker and the rules digest that was read")
+        self._check_semantics(payload["semantics"], template=True)
+        key = payload["semantics"]["shared_exposure_key"]
+        try:
+            key.format(event_ticker="E", event_suffix="S")
+        except (AttributeError, KeyError, IndexError, ValueError) as error:
+            raise ValueError("Exposure key may use only {event_ticker} or {event_suffix}") from error
+        from . import selection
+
+        bound = []
+        for exemplar in exemplars:
+            current = self.get("market", exemplar["market"])
+            if not current or current.get("series_ticker") != series:
+                raise LookupError(f"Exemplar {exemplar['market']} is not a {series} market here")
+            # The listing's own rules digest (before parent binding), as read by the approver.
+            if rule_hash(current["raw"]) != exemplar["rules_hash"]:
+                raise LookupError(
+                    f"Exemplar {exemplar['market']} rules differ from the text that was approved"
+                )
+            if current["parent_rules_changed"]:
+                raise LookupError("Parent rules changed; wait for the current listing refresh")
+            bound.append((exemplar["market"], templates.template_hash(current["raw"])))
+        results = []
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            for template_hash in dict.fromkeys(h for _market, h in bound):
+                result = {
+                    **payload,
+                    "kind": SERIES_TEMPLATE,
+                    "template_method": templates.METHOD,
+                    "rules_hash": template_hash,
+                    "template": True,
+                    "bound_exemplars": [m for m, h in bound if h == template_hash],
+                }
+                result["id"] = digest(result)
+                result["created_at"] = payload.get("approved_at") or now()
+                if db.execute("SELECT 1 FROM reviews WHERE id=?", (result["id"],)).fetchone():
+                    results.append({**result, "already_recorded": True})
+                    continue
+                selection.select_in(
+                    db, "series", series, "series_review", "catalog",
+                    source_ref="review:" + result["id"],
+                )
+                db.execute(
+                    "INSERT INTO reviews VALUES (?,?,?,?,?,?,?)",
+                    (result["id"], SERIES_TEMPLATE, series, template_hash, True,
+                     result["created_at"], pack(result)),
+                )
+                results.append(result)
+        return {"kind": SERIES_TEMPLATE, "ticker": series, "templates": results}
+
+    def series_template_reviews(self, series):
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT document FROM reviews WHERE kind=? AND ticker=? ORDER BY created_at",
+                (SERIES_TEMPLATE, series),
+            ).fetchall()
+        return [
+            {
+                key: doc.get(key)
+                for key in ("id", "approval_id", "rules_hash", "created_at", "bound_exemplars")
+            }
+            for doc in (unpack(row[0]) for row in rows)
+        ]
+
+    def template_coverage(self, series, source="live"):
+        """How many traded markets of a series an approved template covers, and which
+        wording versions are still unapproved (with sample markets to read)."""
+        with self.connect() as db:
+            tickers = [
+                row[0]
+                for row in db.execute(
+                    "SELECT DISTINCT m.market FROM evidence_markets m JOIN evidence e "
+                    "ON e.source=m.source AND e.source_id=m.source_id "
+                    "WHERE m.source=? AND e.series=? ORDER BY m.market",
+                    (source, series),
+                )
+            ]
+        covered, by_basis, uncovered, missing = 0, {}, {}, []
+        for ticker in tickers:
+            document = self.get("market", ticker)
+            if document is None:
+                missing.append(ticker)
+                continue
+            if document["review_status"] == "reviewed":
+                covered += 1
+                by_basis[document["review_basis"]] = by_basis.get(document["review_basis"], 0) + 1
+                continue
+            group = uncovered.setdefault(
+                templates.template_hash(document["raw"]), {"markets": 0, "samples": []}
+            )
+            group["markets"] += 1
+            if len(group["samples"]) < 3:
+                group["samples"].append(ticker)
+        return {
+            "series": series,
+            "evidence_source": source,
+            "traded_markets": len(tickers),
+            "reviewed": covered,
+            "reviewed_by_basis": by_basis,
+            "listing_missing": len(missing),
+            "listing_missing_samples": missing[:3],
+            "unreviewed_templates": [
+                {"template_hash": h, **g}
+                for h, g in sorted(uncovered.items(), key=lambda item: -item[1]["markets"])
+            ],
+            "template_method": templates.METHOD,
+            "review_is_not_qualification": True,
+        }
 
     def evidence_page(self, source, records, cursor, coverage=None):
         from . import selection

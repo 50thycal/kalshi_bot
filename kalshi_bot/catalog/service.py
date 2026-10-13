@@ -25,6 +25,57 @@ from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
 COUNTS_LOG_SECONDS = 900
+# The owner's approvals, recorded in the repository. The owner's merge to the deployed
+# branch is the sign-off (DEC-035): they are applied at start, and can also be posted from
+# the dashboard with the catalog token.
+APPROVALS = Path(__file__).with_name("approved_reviews.json")
+
+
+def approved_series():
+    return sorted({item["ticker"] for item in json.loads(APPROVALS.read_text())["items"]})
+
+
+def apply_approvals(store):
+    """Bind each merged approval. One binds only while its exemplar markets still carry the
+    exact rules digest that was approved; a refusal is logged and retried at the next start,
+    and never blocks the service."""
+    outcome = {}
+    for item in json.loads(APPROVALS.read_text())["items"]:
+        try:
+            result = store.review(item)
+            outcome[item["approval_id"]] = {
+                "status": "bound",
+                "templates": len(result["templates"]),
+                "new": sum(not t.get("already_recorded") for t in result["templates"]),
+            }
+        except (LookupError, ValueError, StorageDeferred) as error:
+            outcome[item["approval_id"]] = {"status": "refused", "reason": str(error)}
+    LOG.info("catalog_template_approvals=%s", json.dumps(outcome, sort_keys=True))
+    return outcome
+
+
+def recorded_approvals(store):
+    """Each recorded approval, with whether it has been posted and what it bound."""
+    items = []
+    for item in json.loads(APPROVALS.read_text())["items"]:
+        posted = [
+            review
+            for review in store.series_template_reviews(item["ticker"])
+            if review["approval_id"] == item["approval_id"]
+        ]
+        items.append({"approval": item, "posted": bool(posted), "bound_templates": posted})
+    return items
+
+
+def log_template_coverage(store):
+    try:
+        for series in approved_series():
+            LOG.info(
+                "catalog_template_coverage=%s",
+                json.dumps(store.template_coverage(series), sort_keys=True),
+            )
+    except Exception:  # a diagnostic log must never stop the service
+        LOG.exception("catalog_template_coverage status=failed")
 
 
 def run_job(store, key, action, *, bulk=False, guard=True):
@@ -305,6 +356,15 @@ def make_server(store, token, address=("::", 8080)):
                 series = query.get("series", [None])[0]
                 if path == "/v1/status":
                     result = store.status()
+                elif path == "/v1/approvals":
+                    result = {"items": recorded_approvals(store)}
+                elif path == "/v1/template-coverage":
+                    result = {
+                        "items": [
+                            store.template_coverage(name)
+                            for name in ([series] if series else approved_series())
+                        ]
+                    }
                 elif path == "/v1/contract-documents":
                     from .documents import history
 
@@ -516,6 +576,9 @@ def main():
     backup = store.backup_before_compression()
     LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
+    apply_approvals(store)
+    # Read-only and off the start path: it decorates every traded market of each series.
+    threading.Thread(target=log_template_coverage, args=(store,), daemon=True).start()
     if selection.verify_bootstrap(store):
         LOG.warning("selection_bootstrap status=reopened reason=uncovered_evidence_or_reviews")
     stopped = threading.Event()

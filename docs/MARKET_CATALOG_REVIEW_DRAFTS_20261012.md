@@ -1,6 +1,8 @@
 # Proposed rule reviews — top 13 live-traded series (2026-10-12)
 
-**Workstream:** WS-023 · **Status:** proposed, not approved · **Author:** Claude Code (task-specific catalog session)
+**Workstream:** WS-023 · **Status:** 5 approved by the owner on 2026-10-13 (#5 MLB total, #6 BTC, #7 MLB spread,
+#8 rain, #11 WTI), recorded in `kalshi_bot/catalog/approved_reviews.json` and applied when the owner merges it;
+the other 8 are proposed · **Author:** Claude Code (task-specific catalog session)
 
 These 13 series cover 50% of the markets MMSELL has traded live (2,868 markets across 250 series; ops
 `catalog-review-priority-20261012a`). Each draft quotes one recent traded market's official listing rules
@@ -59,11 +61,22 @@ The number after each series is its count of live-traded markets (ops `catalog-r
    one number; every WTI strike on a date shares one settlement. Each draft records a candidate exposure key; none is
    verified.
 
+## Approval status (2026-10-13)
+
+The owner approved #5, #6, #7, #8 and #11. Each approval names the recent and the early sample
+market. It covers every market in that series whose rule wording matches theirs: strikes, dates
+and names may differ (`DEC-035`). Merging the file is the sign-off; the catalog applies it
+at start.
+
+Of the other eight, seven open questions are rare contingencies; the owner is content to approve
+on the main rule. NFL overtime (#13) changes the total in roughly one game in twenty, so it waits
+for the contract PDF. PDFs can now be fetched as exact bytes (`--pdf-base64`) and read in full.
+
 ## How to approve
 
 Approval is your decision, series by series. Reply with what you accept, reject or want changed, for example
 "approve 5, 6, 7, 11; tennis: wait for PDF".
 
-An accepted draft becomes a catalog review posted with the catalog API token against the **current** catalog rules
-hash. Posting it needs the token, which this session does not have. A series review still leaves each market's own
+An accepted draft is recorded in `kalshi_bot/catalog/approved_reviews.json`, and the owner's merge applies it
+(`DEC-035`). It binds only while the sample markets still carry the exact rules that were read. A series review still leaves each market's own
 review and the historical-terms question open, so confidence stays unset until the remaining calibration steps are done.

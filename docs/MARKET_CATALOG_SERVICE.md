@@ -57,7 +57,9 @@ Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 | `GET /v1/objects/{kind}/{ticker}/reviews` | Immutable human review history |
 | `GET /v1/review-queue?kind=market` | Missing/currently invalid reviews |
 | `POST /v1/import` | Bounded authenticated import of existing read-only exports; IDs/provenance required, does not skip the direct-source cursor |
-| `POST /v1/reviews` | Explicit human review tied to current rules hash |
+| `POST /v1/reviews` | Explicit human review tied to current rules hash, or a series template approval (`kind=series_template`) |
+| `GET /v1/approvals` | Owner approvals recorded in `approved_reviews.json`, with whether each is posted and what it bound |
+| `GET /v1/template-coverage?series=` | Traded markets a series approval covers, and unapproved wording versions with samples |
 | `GET /v1/review-packets?strategy=mmsell` | Current rules, unknown semantics, legacy provenance and isolated live contexts |
 | `GET /v1/calibration-inputs?strategy=mmsell` | Traceable live inputs including blocked outcomes; no assigned partitions or scores |
 | `GET /v1/assessments?strategy=mmsell&series=KX...` | Current context-specific assessments |
@@ -65,6 +67,8 @@ Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 | `GET /v1/select?strategy=mmsell&qualified=true&min_edge=1` | Advisory selection; initially empty because confidence is not calibrated |
 
 Review body: `kind`, `ticker`, `rules_hash`, `actor`, `rationale`, optional `template` (false by default), and `semantics`. Semantics requires explicit `resolution_mechanism`, `observation_start`, `observation_end`, `alternatives`, `alternative_operator`, `exclusions`, `payout_relationship`, `shared_exposure_key`, `settlement_source`, `risk_components`. Unknown values may be null, but resolution/source/exposure must be known. A reusable template cannot contain market-specific observation timestamps. Ongoing rule/parent changes invalidate review; old-hash submissions get 409. There is no automatic interpretation of aliases/OR/AND from text.
+
+Series template approval (`DEC-035`): `kind=series_template`, `ticker` (series), `exemplars` (`market` + the listing `rules_hash` digest that was read), `actor`, `approved_by`, `rationale`, `semantics` (no observation times; `shared_exposure_key` may use `{event_ticker}` or `{event_suffix}`). It binds the exemplars' wording template (`rules-template-v1`): dates, times, own strikes and names masked; mechanics exact. Every market with that template reads as reviewed (`review_basis: series_template`); reworded markets stay unreviewed. Re-posting is a no-op. Owner approvals merged into `kalshi_bot/catalog/approved_reviews.json` are applied at start: the merge is the sign-off (DEC-035). Refusals are logged as `catalog_template_approvals` and retried next start. The dashboard's *Series approvals* panel shows each approval's state and can post one with the signed-in token.
 
 ## Cutover stages
 1. Running now: additive catalog and raw evidence import, with original identifiers; validate source coverage, review missing semantics and calibrate MMSELL qualification.

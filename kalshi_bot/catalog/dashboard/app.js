@@ -15,6 +15,33 @@ async function api(path, currentToken) {
   if(!response.ok) throw new Error('Catalog request failed (' + response.status + '). Check the service and try again.');
   return response.json();
 }
+async function post(path, body, currentToken) {
+  const response = await fetch(path, {method:'POST',headers:{Authorization:'Bearer ' + currentToken,'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store',signal:AbortSignal.timeout(45000)});
+  const data = await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(data.error || 'Catalog request failed (' + response.status + ').');
+  return data;
+}
+function coverageText(c) {
+  const open=(c.unreviewed_templates || []).length;
+  return number(c.reviewed)+' of '+number(c.traded_markets)+' reviewed'+(open?' · '+number(open)+' other wording version'+(open===1?'':'s')+' unapproved (e.g. '+c.unreviewed_templates[0].samples[0]+')':'');
+}
+function renderApprovals(data) {
+  $('approvals').replaceChildren();
+  for(const item of data.items || []) {
+    const a=item.approval, coverage=node('div',''), action=node('div','');
+    const check=node('button','Check'); check.type='button';
+    check.addEventListener('click',async()=>{ check.disabled=true; try { const c=await api('/v1/template-coverage?series='+encodeURIComponent(a.ticker),token); coverage.replaceChildren(node('span',coverageText(c.items[0]))); } catch(error) { notice(error.message); check.disabled=false; } });
+    coverage.append(check);
+    if(item.posted) action.append(pill(number(item.bound_templates.length)+' wording version'+(item.bound_templates.length===1?'':'s')+' bound','good'));
+    else {
+      const button=node('button','Post approval'); button.type='button';
+      button.addEventListener('click',async()=>{ if(!confirm('Post the recorded approval for '+a.ticker+'?')) return; button.disabled=true; try { await post('/v1/reviews',a,token); notice(''); refresh(); } catch(error) { notice(a.ticker+': '+error.message); button.disabled=false; } });
+      action.append(button);
+    }
+    row($('approvals'),[a.ticker,a.approved_by+' · '+date(a.approved_at),pill(item.posted?'Applied':'Recorded, not applied',item.posted?'good':'warn'),coverage,action]);
+  }
+  if(!data.items?.length) row($('approvals'),['No recorded approvals.','—','—','—','—']);
+}
 function renderStatus(s) {
   const jobs = s.jobs || {}, reviews = s.series_reviews || {}, reviewed = reviews.reviewed || 0;
   const guard=jobs['storage:guard'] || {};
@@ -104,9 +131,9 @@ async function refresh() {
   busy=true; $('refresh').disabled=true; $('connect').querySelector('button').disabled=true;
   const g=generation, currentToken=token;
   try {
-    const [status,assessments,readiness]=await Promise.all([api('/v1/status',currentToken),api('/v1/assessments?limit=100&strategy='+encodeURIComponent($('strategy').value),currentToken),api('/v1/review-packets?strategy=mmsell&limit=10',currentToken)]);
+    const [status,assessments,readiness,approvals]=await Promise.all([api('/v1/status',currentToken),api('/v1/assessments?limit=100&strategy='+encodeURIComponent($('strategy').value),currentToken),api('/v1/review-packets?strategy=mmsell&limit=10',currentToken),api('/v1/approvals',currentToken)]);
     if(g!==generation) return;
-    renderStatus(status); renderAssessments(assessments); renderReadiness(readiness); notice('');
+    renderStatus(status); renderAssessments(assessments); renderReadiness(readiness); renderApprovals(approvals); notice('');
     $('content').hidden=false; $('login').hidden=true; $('refresh').hidden=false; $('disconnect').hidden=false;
   } catch(error) { if(g===generation) { notice(error.message); $('connection').textContent='Refresh failed · displayed data may be stale'; } }
   finally { busy=false; $('refresh').disabled=false; $('connect').querySelector('button').disabled=false; }
