@@ -1,0 +1,38 @@
+# ops request [READ]
+# type=db  id=rl46-live-all
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:31:45Z
+cell                          mkts  contracts  be_pct  loss_pct_mkts  gap_pp  net     c_per_contract
+----------------------------  ----  ---------  ------  -------------  ------  ------  --------------
+                              2879  3514       7.43    7.88           0.45    -25.35  -0.72         
+non-MLB:KXBTCD                103   147        7.35    11.65          4.30    -14.20  -9.66         
+KXMLBTOTAL                    117   133        8.25    11.97          3.72    -5.03   -3.78         
+KXMLBSPREAD                   104   126        8.01    13.46          5.45    -4.91   -3.90         
+non-MLB:KXITFWMATCH           126   161        6.99    7.94           0.95    -4.75   -2.95         
+KXMLBHR                       466   513        6.70    7.51           0.81    -3.61   -0.70         
+KXMLBTEAMTOTAL                21    27         7.96    19.05          11.08   -2.85   -10.56        
+non-MLB:KXATPCHALLENGERMATCH  129   163        7.52    8.53           1.01    -2.74   -1.68         
+KXMLBGAME                     38    46         8.57    15.79          7.22    -2.12   -4.62         
+non-MLB:KXWTI                 40    49         6.86    12.50          5.64    -1.64   -3.35         
+KXMLBTB                       1     1          6.00    100.00         94.00   -0.94   -94.00        
+KXMLBHRDERBY                  2     2          10.50   50.00          39.50   -0.79   -39.67        
+KXMLBF5TOTAL                  6     7          7.86    16.67          8.81    -0.45   -6.43         
+KXMLBHRDERBYFORECAST          11    11         8.73    9.09           0.36    -0.04   -0.36         
+KXMLBHRR                      1     1          7.00    0.00           -7.00   0.07    7.00          
+KXMLBHRDERBYLONGEST           1     1          9.00    0.00           -9.00   0.09    9.00          
+KXMLBHRDERBY500               1     1          10.00   0.00           -10.00  0.10    10.00         
+KXMLBHRDERBYSEMI              1     1          11.00   0.00           -11.00  0.11    11.00         
+KXMLBHRDERBYDISTANCE          3     3          7.67    0.00           -7.67   0.23    7.67          
+KXMLBHIT                      4     4          6.25    0.00           -6.25   0.25    6.25          
+KXMLBF5SPREAD                 2     4          9.50    0.00           -9.50   0.38    9.50          
+non-MLB:KXWTACHALLENGERMATCH  40    46         7.54    7.50           -0.04   0.47    1.02          
+KXMLBF5                       4     5          9.40    0.00           -9.40   0.47    9.40          
+KXMLBHRDERBYMATCHUP           6     6          10.00   0.00           -10.00  0.60    10.00         
+KXMLBASGMVP                   11    11         9.18    0.00           -9.18   1.01    9.18          
+non-MLB:other                 1348  1694       7.53    7.34           -0.18   1.13    0.07          
+KXMLBKS                       42    50         6.60    4.76           -1.84   1.30    2.60          
+KXMLBASGHR                    17    16         9.75    0.00           -9.75   1.56    9.75          
+non-MLB:KXWCGOAL              46    46         8.20    4.35           -3.85   1.77    3.85          
+non-MLB:KXITFMATCH            122   154        7.06    4.10           -2.97   3.88    2.52          
+non-MLB:KXRAIN                66    85         7.42    1.52           -5.91   5.31    6.25          
+
+(31 rows)
