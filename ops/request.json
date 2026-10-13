@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1013bal", "sql": "select * from incentive_balance_observations order by at desc limit 5"}
+{"type":"noop"}
