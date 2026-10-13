@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=limm-db-1013n
-# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:35:42Z
-market_ticker                    side  action  limit_price  quantity  status   created_at                     coid          pos     
--------------------------------  ----  ------  -----------  --------  -------  -----------------------------  ------------  --------
-KXTRUMPMENTION-26OCT13-OIL       no    sell    1            333       filled   2026-10-13 09:31:36.694245+00  limmexit:sto  0.0000  
-KXTOP10BBSPOTS-26OCT24-TSWIF-10  no    buy     51           499       resting  2026-10-13 08:31:49.787285+00  limmexitleg:  499.0000
-KXTRUMPMENTION-26OCT13-OIL       no    buy     3            333       filled   2026-10-13 08:30:24.449134+00  4ed3c194-fe8  0.0000  
-KXTOP10BBSPOTS-26OCT24-TSWIF-10  yes   buy     1            500       filled   2026-10-13 04:22:38.780696+00  86997a56-998  499.0000
-KXMILLERLITEPOS-26NOV03-T84      no    sell    3            100       filled   2026-10-13 04:20:48.176627+00  limmexit:sto  0.0000  
-
-(5 rows)
+# type=noop
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:36:03Z
+(noop — nothing to do)
