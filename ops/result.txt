@@ -1,4 +1,7 @@
 # ops request [READ]
-# type=noop
-# code 023e43e21b8519c2a47178a6d678484396177e1d · started 2026-10-13T01:11:10Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013d
+# code 023e43e21b8519c2a47178a6d678484396177e1d · started 2026-10-13T01:11:17Z
+captured_at  yes_bid  yes_ask  no_bid  no_ask  last_price  pos
+-----------  -------  -------  ------  ------  ----------  ---
+
+(0 rows)
