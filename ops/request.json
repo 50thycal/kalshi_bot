@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_series_pnl","args":["--days","90","--maxyes","11","--split-subjects","--series","KXMLBTOTAL"],"id":"rl46-band-kxmlbtotal"}
+{"type":"script","name":"mmsell_series_pnl","args":["--days","90","--maxyes","11","--split-subjects","--series","KXMLBSPREAD"],"id":"rl46-band-kxmlbspread"}
