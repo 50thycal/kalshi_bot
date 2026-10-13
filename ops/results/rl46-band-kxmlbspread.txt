@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=script  id=rl46-band-kxmlbspread
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:31:02Z
+=== mmsell SERIES P&L — last 90 days, contest key SUBJECT-SPLIT, entry <= 11c ===
+102428 trades across 679 series; 358 clear min-n=20.
+PAPER, fill-everything. A report, never a gate — see the module docstring.
+
+  series                        n   mkts  cnts  own%  bks    total$  c/trade  entry  loss%    be%    edge  worst3%  live
+  KXMLBSPREAD                5961   1422   525   93%   37    +83.04   +1.39c   7.2   5.6%   7.1%    +1.4     n/a%  Cmmsell10,Dmmsell10,Emmsell10...
