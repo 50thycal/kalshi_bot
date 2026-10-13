@@ -131,9 +131,10 @@ def test_stop_loss_fires_at_the_registered_distance():
 def test_take_profit_fires_at_the_registered_distance():
     entry = 40
     dist = lv.take_profit_distance_cents(entry)
-    # Below the take-profit line but at or above entry is a scratch since §9.48.
+    assert dist == lv.TAKE_PROFIT_CENTS == 5
+    # Below the take-profit line, even at or above entry, is a hold since §9.53 (no scratch).
     assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry + dist - 1,
-                          hours_to_close=24) == lv.EXIT_SCRATCH
+                          hours_to_close=24) is None
     assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry + dist,
                           hours_to_close=24) == lv.EXIT_TAKE_PROFIT
 
@@ -143,12 +144,16 @@ def test_the_stop_is_half_the_entry_rounded_up_so_a_cheap_leg_is_stopped_too():
     assert [lv.stop_distance_cents(e) for e in (1, 2, 3, 5, 10, 40)] == [1, 1, 2, 3, 5, 20]
     assert lv.decide_exit(entry_cents=5, mark_bid_cents=2, hours_to_close=24) == lv.EXIT_STOP_LOSS
     assert lv.decide_exit(entry_cents=5, mark_bid_cents=3, hours_to_close=24) is None
-    assert lv.take_profit_distance_cents(99) == lv.EXIT_MIN_DISTANCE_CENTS
+    assert lv.take_profit_distance_cents(99) == lv.TAKE_PROFIT_CENTS
 
 
-def test_a_held_leg_whose_bid_is_back_at_entry_is_scratched():
-    assert lv.decide_exit(entry_cents=5, mark_bid_cents=5, hours_to_close=24) == lv.EXIT_SCRATCH
-    assert lv.decide_exit(entry_cents=5, mark_bid_cents=4, hours_to_close=24) is None
+def test_a_held_leg_back_at_entry_is_held_for_the_take_profit():
+    # §9.53 (2C): the 2026-10-12 Miller Lite fill at 10c would have been scratched at 10c; now it
+    # holds until 15c (+5c) or the stop at 5c.
+    assert lv.decide_exit(entry_cents=10, mark_bid_cents=10, hours_to_close=24) is None
+    assert lv.decide_exit(entry_cents=10, mark_bid_cents=14, hours_to_close=24) is None
+    assert lv.decide_exit(entry_cents=10, mark_bid_cents=15, hours_to_close=24) == lv.EXIT_TAKE_PROFIT
+    assert lv.decide_exit(entry_cents=10, mark_bid_cents=5, hours_to_close=24) == lv.EXIT_STOP_LOSS
 
 
 def test_pre_close_flatten_wins_and_needs_no_mark():
@@ -164,12 +169,13 @@ def test_no_mark_and_no_close_means_hold():
     assert lv.decide_exit(entry_cents=40, mark_bid_cents=39, hours_to_close=None) is None
 
 
-def test_exit_leg_joins_the_opposite_touch_but_never_pays_past_a_scratch():
+def test_exit_leg_joins_the_opposite_touch_but_never_locks_less_than_the_take_profit():
     # Held YES at 40: a NO bid at p realises 100 - 40 - p. Joining a 50c touch locks 10c.
     assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=50) == 50
-    # A touch that would lose money is capped at the scratch (EXIT_LEG_EDGE_CENTS = 0, §9.48).
-    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=65) == 100 - 40 - lv.EXIT_LEG_EDGE_CENTS
-    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=None) == 60
+    # A touch that would lock less than +5c is capped there (EXIT_LEG_EDGE_CENTS = 5, §9.53).
+    assert lv.EXIT_LEG_EDGE_CENTS == lv.TAKE_PROFIT_CENTS == 5
+    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=65) == 55
+    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=None) == 55
     assert lv.exit_leg_price(entry_cents=100, best_opposite_bid=5) is None
 
 
@@ -231,12 +237,11 @@ def test_caps_are_the_ones_the_risk_envelope_will_name():
     assert (lv.MIN_HOURS_TO_CLOSE, lv.MAX_HOURS_TO_CLOSE, lv.FLATTEN_HOURS_BEFORE_CLOSE) == (
         168.0, 1440.0, 1.0)
     assert (lv.MIN_PROGRAM_HOURS_REMAINING, lv.QUOTE_TICKS_BEHIND_TOUCH) == (24.0, 1)
-    # Exits 0.40 / floor 3 / exit-leg edge 1 -> 0.50 / stop floor 1 / scratch, and entries
-    # pair -> cheap side at the reference (§9.48).
-    assert (lv.STOP_LOSS_FRACTION, lv.TAKE_PROFIT_FRACTION, lv.EXIT_MIN_DISTANCE_CENTS) == (
-        0.50, 0.40, 3)
+    # Exits: stop 0.50 / floor 1 and cheap side at the reference (§9.48); the scratch is retired
+    # for a fixed +5c take-profit, which the exit leg also locks (§9.53).
+    assert (lv.STOP_LOSS_FRACTION, lv.TAKE_PROFIT_CENTS) == (0.50, 5)
     assert (lv.STOP_MIN_DISTANCE_CENTS, lv.EXIT_LEG_EDGE_CENTS, lv.QUOTE_MODE) == (
-        1, 0, "cheap_side")
+        1, 5, "cheap_side")
 
 
 class TestTheUniverseRule:

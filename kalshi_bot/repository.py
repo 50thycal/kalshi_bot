@@ -1535,6 +1535,11 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
     ) > 0
 
 
+#: Client-order-id prefixes of orders that can only net a held position flat — the
+#: liquidity-incentive book's opposite-side exit bid (`LiveExecutor.place_incentive_exit_leg`).
+CLOSING_ORDER_PREFIXES: tuple[str, ...] = ("limmexitleg:",)
+
+
 def live_strategy_exposure(session, strategy: str) -> float:
     """Dollars this ONE strategy currently has committed to live orders and unsettled positions.
 
@@ -1545,16 +1550,24 @@ def live_strategy_exposure(session, strategy: str) -> float:
     because an unfilled resting bid is money that can still be taken.
 
     Mirrors `count_live_book_open`'s notion of still-open: non-terminal or filled, minus anything
-    the latest position snapshot shows as settled flat."""
+    the latest position snapshot shows as settled flat.
+
+    An order that can only CLOSE a held position (`CLOSING_ORDER_PREFIXES`) is not counted: its
+    fill nets the position flat, so it removes risk rather than adding it. Counting it at
+    limit x quantity froze the liquidity-incentive book twice on 2026-10-13 — an 85c x100 exit
+    read as $85 against a $50 cap (thesis §9.53)."""
     rows = session.execute(
-        select(m.LiveOrder.market_ticker, m.LiveOrder.limit_price, m.LiveOrder.quantity).where(
+        select(m.LiveOrder.market_ticker, m.LiveOrder.limit_price, m.LiveOrder.quantity,
+               m.LiveOrder.client_order_id).where(
             m.LiveOrder.strategy == strategy,
             m.LiveOrder.action == "buy",
             m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
         )
     ).all()
     total = 0.0
-    for (ticker, limit_price, quantity) in rows:
+    for (ticker, limit_price, quantity, coid) in rows:
+        if (coid or "").startswith(CLOSING_ORDER_PREFIXES):
+            continue  # it can only net a held position flat: it adds no money at risk
         snap = latest_position_snapshot(session, ticker)
         if snap is not None:
             qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
