@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=script  id=rl46-sp-total
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:27:35Z
+=== mmsell SERIES P&L — all time, contest key SUBJECT-SPLIT, all entry prices ===
+135636 trades across 765 series; 405 clear min-n=20.
+PAPER, fill-everything. A report, never a gate — see the module docstring.
+
+  series                        n   mkts  cnts  own%  bks    total$  c/trade  entry  loss%    be%    edge  worst3%  live
+  KXMLBTOTAL                 7800   2892   663   95%   29    -43.69   -0.56c  13.4  13.5%  12.8%    -0.6      13%  Cmmsell10,Dmmsell10,Emmsell10...
