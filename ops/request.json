@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000046"],"id":"rl46-show-46b"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl46-cmd-clear"}
