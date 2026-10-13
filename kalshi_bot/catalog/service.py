@@ -83,6 +83,8 @@ def log_template_coverage(store):
         card = scorecard(store, approved_series())
         for row in card.pop("series"):
             LOG.info("catalog_scorecard_series=%s", json.dumps(row, sort_keys=True))
+        for row in card.pop("families"):
+            LOG.info("catalog_scorecard_family=%s", json.dumps(row, sort_keys=True))
         LOG.info("catalog_scorecard=%s", json.dumps(card, sort_keys=True))
     except Exception:  # read-only report; never stops the service
         LOG.exception("catalog_scorecard status=failed")
