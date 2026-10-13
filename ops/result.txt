@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T19:00:32Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013v
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T19:15:54Z
+market_ticker                side  action  limit_price  quantity  status   cr  created_at                     coid          credits  tswif   
+---------------------------  ----  ------  -----------  --------  -------  --  -----------------------------  ------------  -------  --------
+KXTRUMPMENTION-26OCT13-PEAC  yes   buy     1            500       resting      2026-10-13 10:59:33.886046+00  ff0a6310-c55           499.0000
+
+(1 row)
