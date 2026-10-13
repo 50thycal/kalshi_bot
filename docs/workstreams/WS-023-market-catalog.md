@@ -442,3 +442,28 @@ Still open:
 - Historical terms, independence and calibration.
 
 No score, qualification, trading, XOS or shared-metric change.
+
+### Production result and PDF answers — 2026-10-13 UTC
+
+After #601 merged, all five approvals bound (`catalog_template_approvals`). Coverage of
+live-traded markets:
+
+| Series | Reviewed |
+|---|---|
+| BTC | 100/104 |
+| MLB total | 105/117 |
+| MLB spread | 99/104 |
+| Rain | 69/71 |
+| WTI | 40/41 |
+| **Total** | **413/437 (95%)** |
+
+Sampling the rest showed two kinds of gap:
+- **Template artifacts**, fixed here by `rules-template-v2`: a trailing space, and a title date read as a strike.
+- **Real wording versions**: MLB doubleheader text ("game 1 of the double header") and early-July MLB listings without the disclaimer. These need the owner's approval.
+
+Three samples showed no difference from the public API. The catalog's stored copy differs; v2's
+coverage diff will name the field.
+
+Contract PDFs are read; see the answers table in the [review drafts](../MARKET_CATALOG_REVIEW_DRAFTS_20261012.md).
+NFL overtime counts. Fair-price settlement on postponement also applies to MLB total and spread.
+Rain counts all precipitation.

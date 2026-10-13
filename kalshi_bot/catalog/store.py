@@ -488,18 +488,25 @@ class Store:
                 )
             if current["parent_rules_changed"]:
                 raise LookupError("Parent rules changed; wait for the current listing refresh")
-            bound.append((exemplar["market"], templates.template_hash(current["raw"])))
+            bound.append((
+                exemplar["market"],
+                templates.template_hash(current["raw"]),
+                templates.template_document(current["raw"]),
+            ))
         results = []
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            for template_hash in dict.fromkeys(h for _market, h in bound):
+            documents = {h: doc for _market, h, doc in bound}
+            for template_hash, document in documents.items():
                 result = {
                     **payload,
                     "kind": SERIES_TEMPLATE,
                     "template_method": templates.METHOD,
                     "rules_hash": template_hash,
                     "template": True,
-                    "bound_exemplars": [m for m, h in bound if h == template_hash],
+                    "bound_exemplars": [m for m, h, _doc in bound if h == template_hash],
+                    # The approved wording as matched, so a different version can be compared.
+                    "template_document": document,
                 }
                 result["id"] = digest(result)
                 result["created_at"] = payload.get("approved_at") or now()
@@ -518,18 +525,24 @@ class Store:
                 results.append(result)
         return {"kind": SERIES_TEMPLATE, "ticker": series, "templates": results}
 
-    def series_template_reviews(self, series):
+    def series_template_reviews(self, series, full=False):
+        """Approvals bound under the current template method; older methods' rows stay
+        stored but no longer match any market."""
         with self.connect() as db:
             rows = db.execute(
                 "SELECT document FROM reviews WHERE kind=? AND ticker=? ORDER BY created_at",
                 (SERIES_TEMPLATE, series),
             ).fetchall()
+        docs = [unpack(row[0]) for row in rows]
+        docs = [doc for doc in docs if doc.get("template_method") == templates.METHOD]
+        if full:
+            return docs
         return [
             {
                 key: doc.get(key)
                 for key in ("id", "approval_id", "rules_hash", "created_at", "bound_exemplars")
             }
-            for doc in (unpack(row[0]) for row in rows)
+            for doc in docs
         ]
 
     def template_coverage(self, series, source="live"):
@@ -546,6 +559,11 @@ class Store:
                 )
             ]
         covered, by_basis, uncovered, missing = 0, {}, {}, []
+        approved = [
+            doc["template_document"]
+            for doc in self.series_template_reviews(series, full=True)
+            if doc.get("template_document")
+        ]
         for ticker in tickers:
             document = self.get("market", ticker)
             if document is None:
@@ -556,7 +574,10 @@ class Store:
                 by_basis[document["review_basis"]] = by_basis.get(document["review_basis"], 0) + 1
                 continue
             group = uncovered.setdefault(
-                templates.template_hash(document["raw"]), {"markets": 0, "samples": []}
+                templates.template_hash(document["raw"]),
+                {"markets": 0, "samples": [],
+                 "differs_from_approved": templates.differences(
+                     templates.template_document(document["raw"]), approved)},
             )
             group["markets"] += 1
             if len(group["samples"]) < 3:

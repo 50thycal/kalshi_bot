@@ -258,3 +258,34 @@ def test_merged_approvals_apply_at_start_and_refusals_never_block(store, caplog)
     assert len(store.series_template_reviews("KXBTCD")) == 1
     posted = {i["approval"]["ticker"]: i["posted"] for i in recorded_approvals(store)}
     assert posted["KXBTCD"] and not posted["KXWTI"]
+
+
+def test_whitespace_empty_text_and_title_dates_do_not_split_wording():
+    base = raw("KXWTI-26OCT1314-T95.49")
+    assert templates.template_hash({**base, "rules_secondary": base["rules_secondary"] + " "}) == (
+        templates.template_hash(base))
+    assert templates.template_hash({**base, "early_close_condition": ""}) == (
+        templates.template_hash({**base, "early_close_condition": None}))
+    # A market titled "... Oct 2 ..." must not turn the rule's "2 business days" into a strike.
+    dated = {**base, "title": "WTI oil price on Oct 2, 2026?"}
+    assert "2 business days" in templates.template_document(dated)["text"]["rules_secondary"]
+    assert templates.template_hash(dated) == templates.template_hash(base)
+
+
+def test_coverage_says_what_differs_and_ignores_older_template_methods(store):
+    for ticker in ("KXBTCD-26OCT1617-T87999.99", "KXBTCD-26JUL1317-T62999.99"):
+        put(store, ticker)
+    other = raw("KXBTCD-26OCT1617-T87999.99")
+    other["rules_secondary"] = "An older wording version."
+    store.upsert("market", "KXBTCD-26AUG0117-T63749.99", other, "KXBTCD")
+    store.evidence_page("live", [live(1, "KXBTCD-26AUG0117-T63749.99")], {"after": 0})
+    store.review(approval("KXBTCD"))
+    [group] = store.template_coverage("KXBTCD")["unreviewed_templates"]
+    [diff] = group["differs_from_approved"]
+    assert diff["field"] == "text.rules_secondary"
+    assert diff["unapproved"] == "<name> older wording version."
+    # A row bound under an earlier template method stays stored but is not listed or matched.
+    with store.connect() as db:
+        db.execute("UPDATE reviews SET document=? WHERE kind='series_template'",
+                   (json.dumps({"template_method": "rules-template-v1", "approval_id": "x"}),))
+    assert store.series_template_reviews("KXBTCD") == []
