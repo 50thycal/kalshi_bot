@@ -530,3 +530,33 @@ Calvin asked for a read-only P&L scorecard for the 13 approved series.
 - blocked markets with their reasons.
 
 It is descriptive only: no confidence score, qualification, gate verdict or trading change. It is logged at start and served at `/v1/scorecard`.
+
+### Scorecard snapshot — 2026-10-13 02:49Z (`series-scorecard-v1`, live MMSELL only)
+
+The first production run after #607 merged. It is descriptive only: no score, qualification or trading change.
+
+**Totals:**
+- 1,421 attributed markets, 1,015 independent bets, 27 blocked.
+- Net **−$15.85** since 2026-07-13; actual fees $0.05.
+
+| Series | Net $ | Bets (won) | Mean ± s.e. per bet | Note |
+|---|---|---|---|---|
+| KXRAIN | **+5.37** | 39 (38) | +0.138 ± 0.028 | all cities on one date count as one bet; 5 blocked (fair price / unsettled) |
+| KXITFMATCH | +3.88 | 122 (117) | +0.032 ± 0.029 | |
+| KXNFLTOTAL | **+2.87** | 24 (24) | +0.120 ± 0.017 | no loss yet; 7 blocked (ownership) |
+| KXWCGOAL | +1.77 | 4 (3) | — | 4 games; tournament over |
+| KXMLBKS | +1.28 | 38 (36) | +0.034 ± 0.038 | |
+| KXWTACHALLENGERMATCH | +0.47 | 40 (37) | +0.012 ± 0.043 | |
+| KXWTI | −1.64 | 28 (25) | −0.059 ± 0.112 | |
+| KXATPCHALLENGERMATCH | −2.76 | 129 (118) | −0.021 ± 0.037 | |
+| KXMLBHR | −3.79 | 240 (211) | −0.016 ± 0.026 | 464 markets |
+| KXITFWMATCH | −4.75 | 125 (115) | −0.038 ± 0.044 | book J: −6.12 |
+| KXMLBSPREAD | −4.91 | 84 (70) | −0.059 ± 0.045 | |
+| KXMLBTOTAL | −5.06 | 88 (75) | −0.057 ± 0.050 | |
+| KXBTCD | **−8.59** | 54 (47) | −0.159 ± 0.137 | book Lmmsell8: −8.68 over 8 markets; 11 blocked |
+
+How to read it:
+- MMSELL sells expensive favourites. It wins small most of the time and loses about ten times as much when it is wrong.
+- The standard error understates risk where few or no losses have happened yet (NFL).
+- Correlation across series (an MLB total, spread and home-run market on one game) is not merged.
+- These are research questions for the Research Lab / Experiment OS; changing what trades is a recorded transition there.
