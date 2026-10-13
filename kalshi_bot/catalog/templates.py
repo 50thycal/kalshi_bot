@@ -19,7 +19,9 @@ import hashlib
 import json
 import re
 
-METHOD = "rules-template-v1"
+# v2: whitespace-insensitive, absent text equals empty text, and a date in a display title no
+# longer makes its day number count as the market's own strike.
+METHOD = "rules-template-v2"
 # Contract wording: kept, with dates, times, own strike numbers and names masked.
 TEXT_FIELDS = ("rules_primary", "rules_secondary", "early_close_condition")
 # Settlement mechanics: kept exactly.
@@ -57,14 +59,14 @@ def _own_numbers(raw):
         if isinstance(raw.get(key), (int, float)) and not isinstance(raw.get(key), bool):
             found.add(repr(float(raw[key])))
     for key in DISPLAY_FIELDS:
-        found.update(_value(token) for token in _NUMBER.findall(raw.get(key) or ""))
+        display = _TIME.sub(" ", _DATE.sub(" ", raw.get(key) or ""))
+        found.update(_value(token) for token in _NUMBER.findall(display))
     found.discard(None)
     return found
 
 
 def mask(text, own_numbers=frozenset()):
-    if text is None:
-        return None
+    text = " ".join((text or "").split())
     text = _DATE.sub("<date>", text)
     text = _TIME.sub("<time>", text)
     text = _NUMBER.sub(
@@ -102,3 +104,21 @@ def bind(semantics, raw):
     if isinstance(key, str):
         bound["shared_exposure_key"] = key.format(**values) if event else None
     return bound
+
+
+def differences(document, approved, limit=400):
+    """The template parts where a wording version differs from the closest approved one."""
+    def parts(doc):
+        return {f"{section}.{key}": value for section in ("text", "exact", "strikes_present",
+                "keyed") for key, value in doc[section].items()}
+
+    if not approved:
+        return None
+    mine = parts(document)
+    closest = min((parts(doc) for doc in approved),
+                  key=lambda other: sum(mine[k] != other.get(k) for k in mine))
+    return [
+        {"field": key, "unapproved": str(mine[key])[:limit], "approved": str(closest.get(key))[:limit]}
+        for key in mine
+        if mine[key] != closest.get(key)
+    ]

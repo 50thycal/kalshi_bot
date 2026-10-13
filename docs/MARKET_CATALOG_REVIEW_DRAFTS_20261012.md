@@ -72,6 +72,31 @@ Of the other eight, seven open questions are rare contingencies; the owner is co
 on the main rule. NFL overtime (#13) changes the total in roughly one game in twenty, so it waits
 for the contract PDF. PDFs can now be fetched as exact bytes (`--pdf-base64`) and read in full.
 
+## Contract PDF answers (2026-10-13)
+
+The contract-terms PDFs were fetched as exact bytes (ops `catalog-pdf-terms-20261013a`) and read
+with a full PDF reader. Each matches the SHA-256 the draft recorded. These are the **current**
+terms. Several were modified after our earliest fills (for example BTC on 29 Sep, rain on 1 Oct,
+baseball props on 8 Sep), so they do not prove which terms governed older fills.
+
+| Series | Open question | What the terms say |
+|---|---|---|
+| KXNFLTOTAL | Does overtime count? | **Yes.** "Overtime counts for all markets unless stated otherwise." |
+| KXNFLTOTAL | Postponement, suspension | Suspended before 55 minutes and not resumed within 48 h → **last fair price**. At 55+ minutes, or declared final → settles on what happened. Postponed within 48 h → stays open. |
+| KXMLBTOTAL, KXMLBSPREAD | Postponed or suspended games | Not resumed within 48 h → **last fair price** (non-binary). Shortened but declared official → the official result. Extra innings count. Post-game stat corrections are ignored. |
+| KXMLBHR, KXMLBKS | Postponements, stat corrections | Not official and not resumed within 48 h → last fair price. Stats are final at game end. A player removed after appearing settles on stats if they had ≥1 plate appearance (batters) or faced ≥1 batter (pitchers). |
+| KXMLBKS | Date of the participation change | The current terms (modified **8 Sep 2026**) say "faced at least one batter", matching the October listings. The change is therefore most likely around 8 Sep. Unproven. |
+| KXBTCD | Index outage | "If no data is available … the market resolves to **No**." |
+| KXWTI | Holidays and missing settlements | If no price is published and none is expected within a week → the **most recently available** price. |
+| KXRAIN | What counts | **Total precipitation, including melted snow, sleet and hail.** Trace and missing daily values = 0. No reliable data by expiration → **last fair price**. |
+| Tennis (4 series) | Retirement, sources | A player who withdraws or forfeits resolves **No**. Sources: the governing body, AP, ESPN, WSJ and Fox Sports, with no ranking among them. The listing's own no-start rules (fair price, or $0.50 on ITF) sit on top of this. |
+| KXWCGOAL | Shootouts, own goals | Penalty-shootout goals and own goals **do not count**. Extra time counts. One clause ("cup finals … only count regulation goals for standard totals") conflicts and is noted, but the listing says extra time counts. |
+
+What this means:
+- Every open question now has an answer from the terms. NFL overtime counts.
+- Fair-price settlement on postponement exists in **MLB total and spread too**, not only in props and tennis.
+- Rain covers all precipitation, not just rain.
+
 ## How to approve
 
 Approval is your decision, series by series. Reply with what you accept, reject or want changed, for example

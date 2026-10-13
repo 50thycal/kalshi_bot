@@ -1484,3 +1484,14 @@ merged.
 
 An approval is not a score, a qualification or a trading change. Historical terms, contract PDF
 text and outcome independence remain unverified.
+
+**Template v2 (2026-10-13, within DEC-035).** The first production coverage pass found
+avoidable splits:
+- a trailing space;
+- an absent field versus an empty one;
+- a title's date ("Oct 2") counted as a strike number, which masked the rule's "2 business days".
+
+`rules-template-v2` normalises whitespace and empty text, and takes strike numbers from titles
+only after removing dates and times. Approvals re-bind under v2 at the next start; v1 rows stay
+stored and inert. Coverage now reports, for each unapproved wording version, the fields that
+differ from the closest approved one.
