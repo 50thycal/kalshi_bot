@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"kalshi_quote_probe","args":["--series","KXMILLERLITEPOS","--per-series","20","--min-volume","0"],"id":"limm-quote-1013e"}
