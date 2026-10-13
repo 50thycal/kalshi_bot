@@ -1,0 +1,26 @@
+# ops request [READ]
+# type=db  id=limm-db-1013evo
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T21:23:58Z
+column_name      
+-----------------
+id               
+created_at       
+agent_uuid       
+cohort_id        
+heartbeat_id     
+strategy_id      
+opportunity_id   
+idem_key         
+market_ticker    
+side             
+action           
+style            
+limit_price_cents
+quantity         
+filled_quantity  
+status           
+reject_reason    
+expires_at       
+intent_json      
+
+(19 rows)
