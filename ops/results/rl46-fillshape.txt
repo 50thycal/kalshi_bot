@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rl46-fillshape
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:29:19Z
+a     s   n    nq   np   fee     minp  maxp  keys                                                                                                                                                                                            
+----  --  ---  ---  ---  ------  ----  ----  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+sell  no  224  224  224  0.0000  89    95    subaccount_number,yes_price_dollars,trade_id,exchange_index,count_fp,side,market_ticker,ts,action,order_id,fee_cost,ticker,outcome_side,book_side,fill_id,is_taker,no_price_dollars,created_time
+
+(1 row)

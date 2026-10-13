@@ -1,12 +1,8 @@
 # ops request [READ]
-# type=db  id=rl46-live-cal2
-# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:28:49Z
-k     ser          side  mkts  unresolved  contracts  avg_px  loss_pct_contracts  loss_pct_mkts  breakeven_loss_pct  net   games  mean_g  se_g    games_lost
-----  -----------  ----  ----  ----------  ---------  ------  ------------------  -------------  ------------------  ----  -----  ------  ------  ----------
-game  COMBINED                                                                                                       9.94  144    0.0690  0.0401  118       
-game  KXMLBSPREAD                                                                                                    4.91  82     0.0599  0.0462  68        
-game  KXMLBTOTAL                                                                                                     5.03  88     0.0572  0.0503  75        
-mkt   KXMLBSPREAD  no    104   0           0                                      13.46                              4.91                                   
-mkt   KXMLBTOTAL   no    117   0           0                                      11.97                              5.03                                   
+# type=db  id=rl46-fillshape
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:29:19Z
+a     s   n    nq   np   fee     minp  maxp  keys                                                                                                                                                                                            
+----  --  ---  ---  ---  ------  ----  ----  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+sell  no  224  224  224  0.0000  89    95    subaccount_number,yes_price_dollars,trade_id,exchange_index,count_fp,side,market_ticker,ts,action,order_id,fee_cost,ticker,outcome_side,book_side,fill_id,is_taker,no_price_dollars,created_time
 
-(5 rows)
+(1 row)
