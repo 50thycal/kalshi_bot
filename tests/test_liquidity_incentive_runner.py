@@ -1107,13 +1107,41 @@ def test_places_one_bid_on_the_cheap_side_at_its_reference(live_db, settings):
     assert [(r.side, r.limit_price) for r in rows] == [("no", 3)]
 
 
-def test_a_held_leg_back_at_entry_is_scratched(live_db, settings):
+def test_a_held_leg_back_at_entry_is_held_with_a_take_profit_exit_leg(live_db, settings):
+    # §9.53: no scratch at entry. The leg is held and the opposite-side exit bid rests at the
+    # touch (50c), which locks more than the +5c floor (cap 100 - 40 - 5 = 55).
     client = FakeClient({HELD: _book([(40, 500)], [(50, 500)])})
     with db.session_scope() as s:
         _held(s, other_leg=False)
         out = _cycle(client, settings, s)
+        legs = [r for r in s.scalars(sa_select(m.LiveOrder))
+                if (r.client_order_id or "").startswith("limmexitleg:")]
     (code,) = _managed(out)
-    assert code.startswith(limm.EXIT_SCRATCH + ":"), code
+    assert code.startswith("exit_leg:"), code
+    assert [(r.side, r.limit_price) for r in legs] == [("no", 50)]
+
+
+def test_a_held_leg_up_five_cents_takes_profit(live_db, settings):
+    client = FakeClient({HELD: _book([(45, 500)], [(50, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        out = _cycle(client, settings, s)
+    (code,) = _managed(out)
+    assert code.startswith(limm.EXIT_TAKE_PROFIT + ":"), code
+
+
+def test_a_resting_exit_leg_does_not_count_against_the_book_budget(live_db, settings):
+    # §9.53 (1A): on 2026-10-13 an 85c x100 exit bid read as $85 against the $50 cap and froze
+    # every entry. It can only net the held leg flat, so only the held leg's cost counts.
+    from kalshi_bot import repository as repo
+    with db.session_scope() as s:
+        _held(s, side="no", entry=10, qty=100, other_leg=False)
+        s.add(m.LiveOrder(market_ticker=HELD, event_ticker=HELD, strategy=limm.LIVE_TAG,
+                          side="yes", action="buy", limit_price=85, quantity=100,
+                          status="resting", kalshi_order_id="K-EXITLEG",
+                          client_order_id="limmexitleg:abc", created_at=NOW))
+        s.flush()
+        assert repo.live_strategy_exposure(s, limm.LIVE_TAG) == pytest.approx(10.0)
 
 
 # --- an account with no free cash: one refusal, then back off -------------------------------

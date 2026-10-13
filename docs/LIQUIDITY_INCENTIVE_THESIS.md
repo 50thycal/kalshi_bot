@@ -2876,3 +2876,33 @@ Kalshi-confirmed rewards (§9.51). No live behaviour, safeguard or the twin itse
 here. A faithful twin would need the public tape, which has been off since 2026-10-07 (§9.50),
 and retiring it touches the arming requirement, so both are left as owner questions. Ticketed in
 Experiment OS (`limm-twin-invalid-20261011`).
+
+### 9.53 Exit legs no longer count against the budget; a fixed +5c take-profit replaces the scratch (2026-10-13)
+
+**Evidence.** Two fills on 2026-10-12/13 froze the book. Each time the opposite-side exit bid was
+counted by `live_strategy_exposure` at limit × quantity: KXMILLERLITEPOS-26NOV03-T84 (NO 10c ×100
+held, YES 85c ×100 exit = $85) and KXTOP10BBSPOTS-26OCT24-TSWIF-10 (YES 1c ×500 held, NO 30c ×500
+exit = $150). Both exceed the $50 `MAX_STRATEGY_EXPOSURE_USD` alone, so every cycle logged
+`exposure_cap` and no reward-earning entry could rest until the position closed. That bid can only
+net the held leg flat, so it removes risk; the cap was reading a closing order as new spending.
+Separately, the §9.48 scratch (sell as soon as the held bid is back at entry) cancels the resting
+exit bid before it can fill, so a fill could end at about zero or at the stop, never better. The
+Miller Lite leg went to the stop at 5c (−$5.33 with fees).
+
+**Decision (operator, 2026-10-13: "go 1A + 2C"):**
+- **1A — closing orders do not count.** `live_strategy_exposure` skips orders whose client order
+  id starts with a `CLOSING_ORDER_PREFIXES` entry (`limmexitleg:`). The held leg itself still
+  counts at its cost until it is flat, and the $50 cap on new entries is unchanged. The shared
+  portfolio breaker (`live_total_exposure`, positions only) is untouched.
+- **2C — fixed +5c take-profit.** `decide_exit` no longer returns `scratch`. A held leg is closed
+  marketably when its bid reaches entry + `TAKE_PROFIT_CENTS` (5), or by the unchanged stop
+  (half the entry, floor 1c) or the pre-close flatten. The resting exit bid's floor
+  `EXIT_LEG_EDGE_CENTS` goes 0 → 5, so it too never locks less than +5c; it still joins a better
+  touch. `TAKE_PROFIT_FRACTION` / `EXIT_MIN_DISTANCE_CENTS` are retired.
+
+**Risk.** Entry sizes, prices, the 10c cap, the two-market cap and the $50 budget are unchanged.
+1A frees the budget for new entries while a position is held, so the book can hold one position
+plus a new bid, as it was sized to (two slots). 2C changes the outcome of a fill from about
+{0, −stop} to {+5c, −stop}; with only two live fills since Oct 6 the net effect is not evidenced
+and is the operator's call. Rule changes on this grandfathered book are recorded in Experiment OS
+by the operator after merge.

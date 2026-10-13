@@ -130,8 +130,8 @@ RISK_ENVELOPE: dict = {
     "close_window_hours": [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE],
     "exit_policy": {
         "stop_loss_fraction_of_entry": limm.STOP_LOSS_FRACTION,
-        "take_profit_fraction_of_upside": limm.TAKE_PROFIT_FRACTION,
-        "min_exit_distance_cents": limm.EXIT_MIN_DISTANCE_CENTS,
+        "take_profit_cents": limm.TAKE_PROFIT_CENTS,
+        "exit_leg_edge_cents": limm.EXIT_LEG_EDGE_CENTS,
         "flatten_hours_before_close": limm.FLATTEN_HOURS_BEFORE_CLOSE,
         "exit_slippage_cents": limm.EXIT_SLIPPAGE_CENTS,
         "exit_max_attempts": limm.EXIT_MAX_ATTEMPTS,

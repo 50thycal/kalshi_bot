@@ -123,18 +123,18 @@ MIN_PROJECTED_PROGRAM_USD = 1.00
 QUOTE_MODE = "cheap_side"
 
 #: Exit distances. Stop when the held side's bid is down STOP_LOSS_FRACTION of the entry price
-#: (rounded up, at least STOP_MIN_DISTANCE_CENTS); take profit when it is up
-#: TAKE_PROFIT_FRACTION of the remaining upside (100 - entry), at least EXIT_MIN_DISTANCE_CENTS.
+#: (rounded up, at least STOP_MIN_DISTANCE_CENTS); take profit when it is up TAKE_PROFIT_CENTS.
 #: 0.40 / floor 3 -> 0.50 / floor 1 (§9.48, protection "B", operator decision 2026-10-04): the
-#: old 3c floor never stopped a 1–3c leg at all. With SCRATCH below this is "exit after a fill":
-#: out flat once the bid is back at entry, out at half the entry if it falls.
+#: old 3c floor never stopped a 1–3c leg at all. §9.53 (operator decision 2026-10-13, "2C"): the
+#: §9.48 scratch at entry is retired and the take-profit is a fixed +5c, so a fill now ends at
+#: +5c or the stop instead of at about zero or the stop.
 STOP_LOSS_FRACTION = 0.50
 STOP_MIN_DISTANCE_CENTS = 1
-TAKE_PROFIT_FRACTION = 0.40
-EXIT_MIN_DISTANCE_CENTS = 3
-#: The opposite-side exit bid nets a held leg flat at entry + this many cents (§9.48: 1 -> 0,
-#: a scratch; the point is getting out, not the extra cent).
-EXIT_LEG_EDGE_CENTS = 0
+TAKE_PROFIT_CENTS = 5
+#: The opposite-side exit bid nets a held leg at entry + at least this many cents: the same +5c as
+#: TAKE_PROFIT_CENTS, so the resting exit and the marketable take-profit lock the same edge
+#: (§9.48: 1 -> 0, a scratch; §9.53: 0 -> 5).
+EXIT_LEG_EDGE_CENTS = TAKE_PROFIT_CENTS
 #: A marketable exit crosses this many cents past the touch so it fills rather than expires.
 EXIT_SLIPPAGE_CENTS = 2
 #: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
@@ -232,6 +232,7 @@ REFUSE_EXPOSURE_CAP = "exposure_cap"
 EXIT_STOP_LOSS = "stop_loss"
 EXIT_TAKE_PROFIT = "take_profit"
 EXIT_PRE_CLOSE = "pre_close"
+#: Retired by §9.53 (no rule returns it); kept so rows recorded under §9.48 still read.
 EXIT_SCRATCH = "scratch"
 
 
@@ -523,7 +524,7 @@ def stop_distance_cents(entry_cents: int) -> int:
 
 
 def take_profit_distance_cents(entry_cents: int) -> int:
-    return max(EXIT_MIN_DISTANCE_CENTS, round((100 - int(entry_cents)) * TAKE_PROFIT_FRACTION))
+    return TAKE_PROFIT_CENTS
 
 
 def decide_exit(*, entry_cents: int, mark_bid_cents: int | None,
@@ -543,9 +544,7 @@ def decide_exit(*, entry_cents: int, mark_bid_cents: int | None,
         return EXIT_STOP_LOSS
     if mark >= entry + take_profit_distance_cents(entry):
         return EXIT_TAKE_PROFIT
-    if mark >= entry:
-        return EXIT_SCRATCH   # §9.48: the bid is back at what we paid — get out flat
-    return None
+    return None   # §9.53: no scratch at entry — hold for the take-profit or the stop
 
 
 def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | None:
@@ -553,7 +552,7 @@ def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | 
 
     Buying the opposite side nets the held one flat, so a bid at p realises
     (100 - entry - p) per contract. Join the opposite touch, but never pay more than leaves
-    EXIT_LEG_EDGE_CENTS (0 since §9.48: a scratch). None when no such price exists."""
+    EXIT_LEG_EDGE_CENTS (+5c since §9.53). None when no such price exists."""
     cap = 100 - int(entry_cents) - EXIT_LEG_EDGE_CENTS
     price = cap if best_opposite_bid is None else min(int(best_opposite_bid), cap)
     return price if price >= 1 else None
