@@ -979,7 +979,10 @@ def test_a_fresh_full_book_fetches_nothing_and_keeps_its_pairs(live_db, settings
         _program(s, "KXTEST-N")
         out = _cycle(client, settings, s)
     assert out["outcomes"] == {run.SKIP_NO_SLOTS: 1}
-    assert client.asked == [] and client.canceled == [] and client.placed == []
+    # No candidate book is fetched. The only GETs are the book's own two markets, snapshotted
+    # for the dashboard (§9.53) — at most once per OWN_BOOK_SNAPSHOT_SECONDS.
+    assert client.asked == ["KXHELD-1", "KXHELD-2"] and out["book_snapshots"] == 2
+    assert client.canceled == [] and client.placed == []
 
 
 def test_a_live_quote_is_kept_even_when_another_market_is_better(live_db, settings):
@@ -1387,3 +1390,16 @@ def test_runner_discovery_is_bounded_per_pass(live_db, settings):
         out = _cycle(client, settings, s)
         assert out["discovery"]["new"] == 2 and out["discovery"]["deferred"] == 3
         assert len(s.scalars(sa_select(m.IncentiveProgram)).all()) == 2
+
+
+# --- the book snapshots its own markets for the dashboard (§9.53) ----------------------------
+
+def test_a_cycle_snapshots_the_markets_the_book_holds_then_waits(live_db, settings):
+    client = FakeClient({HELD: _book([(40, 500)], [(50, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        out = _cycle(client, settings, s)
+        rows = list(s.scalars(sa_select(m.IncentiveMarketSnapshot)
+                              .where(m.IncentiveMarketSnapshot.market_ticker == HELD)))
+    assert out.get("book_snapshots") == 1
+    assert [(r.best_yes_bid, r.best_no_bid) for r in rows] == [(40, 50)]

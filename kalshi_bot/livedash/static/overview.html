@@ -270,6 +270,10 @@ function renderIncentive(x){
         <span><b>${usd(p.at_risk_usd)}</b> at risk</span>
         ${p.closing ? `<span class="neg">closing now</span>` : ""}
       </div>
+      <div class="stats">${has(p.mark_cents)
+        ? `<span title="Best bid on our side — what it could be sold for now">now <b>${p.mark_cents}¢</b> · worth ${usd(p.value_usd)}</span>
+           <span>open P&amp;L <b class="${sgn(p.unrealized_usd)}">${usd(p.unrealized_usd)}</b></span>`
+        : `<span class="dim">no current price yet</span>`}</div>
       <div class="plan">
         <div><div class="k">Take profit</div><b class="pos">sell at ${p.take_profit_cents}¢</b> · ${usd(p.take_profit_usd)}</div>
         <div><div class="k">Stop loss</div>${p.stop_cents
@@ -284,13 +288,14 @@ function renderIncentive(x){
   const bids = x.resting.map(r => `<div class="incrow">
       <div class="mk">${esc(r.title)}<small>${esc(r.market)}</small></div>
       <div class="stats" style="margin-top:4px">
-        <span><b>Bid ${S_(r.side)} @ ${r.price_cents}¢ × ${Math.round(r.quantity)}</b></span>
-        <span>${usd(r.committed_usd)} if it fills</span>
-        <span>waiting ${dur(r.age_minutes)}</span>
+        <span><b>Resting ${S_(r.side)} @ ${r.price_cents}¢ × ${Math.round(r.quantity)}</b></span>
+        <span>for ${dur(r.age_minutes)}</span>
+        <span>${usd(r.committed_usd)} at risk only if it fills</span>
       </div>
-      <div class="stats">
-        <span title="Estimate from Kalshi's published scoring on the newest book">est. <b>${has(r.est_reward_per_day_usd) ? usd(r.est_reward_per_day_usd) : "—"}</b>/day</span>
-        <span>pool ${has(r.pool_usd) ? usd(r.pool_usd) : "—"} · ends ${shortDate(r.program_ends_at)}</span>
+      <div class="plan">
+        <div><div class="k">Expected reward</div><b class="pos">${has(r.est_reward_per_day_usd) ? usd(r.est_reward_per_day_usd) : "—"}</b>/day</div>
+        <div><div class="k">Rests until</div>${shortDate(r.program_ends_at)}${has(r.days_left) ? ` · ${r.days_left}d left` : ""}</div>
+        <div><div class="k">Expected by then</div>${has(r.est_reward_to_end_usd) ? `<b class="pos">≈ ${usd(r.est_reward_to_end_usd)}</b>` : "—"} · pool ${has(r.pool_usd) ? usd(r.pool_usd) : "—"}</div>
       </div>
     </div>`).join("");
   return `<div class="inc">
@@ -305,14 +310,16 @@ function renderIncentive(x){
     </div>
     <div class="stats" style="margin-top:8px">
       <span><b>${usd(x.at_risk_usd)}</b> at risk now</span>
-      <span>${usd(x.positions_at_risk_usd)} held · ${usd(x.committed_usd)} in bids</span>
+      <span>${usd(x.positions_at_risk_usd)} held · ${usd(x.committed_usd)} in resting bids</span>
+      ${has(x.positions_unrealized_usd) ? `<span>open P&amp;L <b class="${sgn(x.positions_unrealized_usd)}">${usd(x.positions_unrealized_usd)}</b></span>` : ""}
+      <span>expected reward <b class="pos">${has(x.est_reward_per_day_usd) ? usd(x.est_reward_per_day_usd) : "—"}</b>/day</span>
       <span><b>${x.slots_used}</b>/${x.slots_max} markets in use</span>
     </div>
+    <div class="inch">Resting — earning rewards (${x.resting.length})</div>
+    ${bids || `<div class="dim" style="margin-top:6px">No bids resting.</div>`}
     <div class="inch">Filled — holding (${(x.positions||[]).length})</div>
     ${held || `<div class="dim" style="margin-top:6px">Nothing held.</div>`}
-    <div class="inch">Bids waiting to fill (${x.resting.length})</div>
-    ${bids || `<div class="dim" style="margin-top:6px">No bids resting.</div>`}
-    <div class="note" style="margin-top:8px">At risk = what held positions cost plus what waiting bids would cost if filled. An exit order counts nothing: it can only close a position we hold, and if it fills we keep what it "locks". The bot sells at the take-profit or the stop on its own. Rewards count only payouts that match Kalshi's Rewards page; Kalshi pays after a programme ends. Reward estimates have run well above what was paid; treat them as a ceiling.</div>
+    <div class="note" style="margin-top:8px">Resting bids are the goal: they earn the reward while they wait, and a fill is the cost of doing it. At risk = what held positions cost plus what resting bids would cost if filled. An exit order counts nothing: it can only close a position we hold, and if it fills we keep what it "locks". The bot sells at the take-profit or the stop on its own. Rewards count only payouts that match Kalshi's Rewards page; Kalshi pays after a programme ends. Reward estimates have run well above what was paid; treat them as a ceiling.</div>
   </div>`;
 }
 

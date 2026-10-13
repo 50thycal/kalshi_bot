@@ -168,7 +168,18 @@ def _own_position(session, ticker: str, ours: list) -> tuple[float, dict]:
     return net, entry
 
 
-def _position_row(session, ticker: str, ours: list, snap, prog) -> dict | None:
+def _latest_book(session, ticker: str, now: datetime):
+    """The newest market snapshot for `ticker`, or None when it is older than SNAPSHOT_FRESH."""
+    snap = session.scalars(
+        select(m.IncentiveMarketSnapshot)
+        .where(m.IncentiveMarketSnapshot.market_ticker == ticker)
+        .order_by(m.IncentiveMarketSnapshot.at.desc()).limit(1)).first()
+    if snap is not None and (now - _aware(snap.at)) > SNAPSHOT_FRESH:
+        return None
+    return snap
+
+
+def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -> dict | None:
     """One held position with its exit plan, or None when this book holds nothing there."""
     if not any((o.status or "").lower() in ("filled", "partial") for o in ours):
         return None
@@ -193,12 +204,21 @@ def _position_row(session, ticker: str, ours: list, snap, prog) -> dict | None:
         lq = int(leg.quantity or 0)
         exit_order = {"side": leg.side, "price_cents": int(leg.limit_price), "quantity": lq,
                       "locks_usd": _r((100 - entry - int(leg.limit_price)) * lq / 100.0)}
+    book = _latest_book(session, ticker, now)
+    mark = None
+    if book is not None:
+        mark = book.best_yes_bid if side == limm.SIDE_YES else book.best_no_bid
     return {
         "market": ticker,
         "title": (prog.market_title if prog else None) or ticker,
         "side": side,
         "quantity": qty,
         "entry_cents": entry,
+        # What the held side could be sold for now (best bid), from the book's own snapshot.
+        "mark_cents": mark,
+        "value_usd": _r(mark * qty / 100.0) if mark is not None else None,
+        "unrealized_usd": _r((mark - entry) * qty / 100.0) if mark is not None else None,
+        "marked_at": _iso(book.at) if book is not None else None,
         "at_risk_usd": _r(entry * qty / 100.0),
         "take_profit_cents": tp,
         "take_profit_usd": _r((tp - entry) * qty / 100.0),
@@ -243,7 +263,8 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         ours_by_ticker.setdefault(o.market_ticker, []).append(o)
     positions = []
     for t in tickers:
-        row = _position_row(session, t, ours_by_ticker.get(t, []), snaps.get(t), by_ticker.get(t))
+        row = _position_row(session, t, ours_by_ticker.get(t, []), snaps.get(t), by_ticker.get(t),
+                            now)
         if row is not None:
             positions.append(row)
 
@@ -252,12 +273,7 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
     est_known = 0
     for o in working:
         prog = by_ticker.get(o.market_ticker)
-        snap = session.scalars(
-            select(m.IncentiveMarketSnapshot)
-            .where(m.IncentiveMarketSnapshot.market_ticker == o.market_ticker)
-            .order_by(m.IncentiveMarketSnapshot.at.desc()).limit(1)).first()
-        if snap is not None and (now - _aware(snap.at)) > SNAPSHOT_FRESH:
-            snap = None
+        snap = _latest_book(session, o.market_ticker, now)
         est = estimate_reward_per_day(o, prog, snap)
         end = _aware(prog.end_date) if prog else None
         days_left = max(0.0, (end - now).total_seconds() / 86400.0) if end else None
@@ -276,12 +292,14 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
             "age_minutes": int((now - _aware(o.created_at)).total_seconds() // 60),
             "pool_usd": _r(prog.period_reward_usd) if prog and prog.period_reward_usd is not None else None,
             "program_ends_at": _iso(end),
+            "days_left": _r(days_left, 1),
             "est_reward_per_day_usd": _r(est, 3),
             "est_reward_to_end_usd": _r(est * days_left, 2) if est is not None and days_left is not None else None,
             "status": o.status,
         })
     committed = sum(r["committed_usd"] or 0 for r in resting)
     held = sum(p["at_risk_usd"] or 0 for p in positions)
+    marked = [p for p in positions if p["unrealized_usd"] is not None]
     return {
         "realized_all_time_usd": _r(realized),
         "settled_markets_all_time": settled,
@@ -293,6 +311,7 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         "net_all_time_usd": _r(realized + cash_in),
         "positions": positions,
         "positions_at_risk_usd": _r(held),
+        "positions_unrealized_usd": _r(sum(p["unrealized_usd"] for p in marked)) if marked else None,
         "resting": resting,
         "committed_usd": _r(committed),
         "at_risk_usd": _r(held + committed),

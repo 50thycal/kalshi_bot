@@ -43,7 +43,7 @@ from . import programs as progs
 from . import reward_ledger as rl
 from . import store
 from .readonly import IncentiveReadOnlyKalshi
-from .scoring import discount_factor, estimate, side_score
+from .scoring import SCORING_VERSION, discount_factor, estimate, side_score
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,10 @@ BOOK_REFUSAL_CODES = frozenset({
 
 #: A balance reading whose unexplained remainder is worth a human look (see `reward_ledger`).
 EV_REWARD_RESIDUAL = "reward_residual"
+
+
+#: How often the book snapshots the markets it rests or holds in, for the dashboard (§9.53).
+OWN_BOOK_SNAPSHOT_SECONDS = 600.0
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -201,6 +205,8 @@ class IncentiveLiveRunner:
         #: When the reward ledger last took a reading. None until the first cycle, which is what
         #: makes the very first cycle after a deploy write the anchor row immediately.
         self._last_balance_at: datetime | None = None
+        #: When this book last snapshotted the books it rests or holds in (`_snapshot_own_books`).
+        self._last_book_snapshot_at: datetime | None = None
         #: Tickers already reported as past their exit-attempt cap, so the log says it once.
         self._exit_exhausted: set[str] = set()
         #: Ticker -> when its book may be fetched again, after the book refused a pair.
@@ -270,6 +276,9 @@ class IncentiveLiveRunner:
         retired = self._retire_unpaid_pairs(session, executor, now)
         if retired:
             summary["outcomes"]["program_ended"] = retired
+        snapped = self._snapshot_own_books(session, now)
+        if snapped:
+            summary["book_snapshots"] = snapped
 
         if self._balance_backoff_until is not None and now < self._balance_backoff_until:
             summary["outcomes"]["balance_backoff"] = 1
@@ -396,6 +405,53 @@ class IncentiveLiveRunner:
                 if self._open_twin(session, leg):
                     summary["twin_opened"] += 1
         return summary
+
+    def _snapshot_own_books(self, session, now: datetime) -> int:
+        """Record the current book of every market this book rests or holds in, every
+        OWN_BOOK_SNAPSHOT_SECONDS, as an `IncentiveMarketSnapshot`.
+
+        The shadow collector wrote these and has been off since 2026-10-07 (§9.50), so the
+        dashboard had no current price for a held position and no reward estimate for a resting
+        bid. This is the same row, scored with the same functions, for at most the book's own
+        two markets: a GET each, never an order. A failure is logged, never raised."""
+        last = self._last_book_snapshot_at
+        if last is not None and (now - last).total_seconds() < OWN_BOOK_SNAPSHOT_SECONDS:
+            return 0
+        self._last_book_snapshot_at = now
+        by_ticker = {p.market_ticker: p for p in self._running_programs(session, now)}
+        n = 0
+        for ticker in sorted(repo.live_book_open_tickers(session, limm.LIVE_TAG)):
+            close = repo.market_close_time(session, ticker)
+            if close is not None and close <= now:
+                continue   # closed, awaiting settlement: nothing to price (and leave it alone)
+            try:
+                yes_levels, no_levels = parse_orderbook(self.client.get_orderbook(ticker) or {})
+                yes_map = {int(p): float(q) for p, q in yes_levels}
+                no_map = {int(p): float(q) for p, q in no_levels}
+                prog = by_ticker.get(ticker)
+                target = float(prog.target_size) if prog and prog.target_size is not None else None
+                disc = discount_factor(prog.discount_factor_bps if prog else None)
+                ys = side_score(yes_map, target, disc)
+                ns = side_score(no_map, target, disc)
+                store.insert_market_snapshot(
+                    session, program_row_id=prog.id if prog else None, market_ticker=ticker,
+                    at=now, book_valid=bool(yes_map or no_map),
+                    best_yes_bid=max(yes_map) if yes_map else None,
+                    best_no_bid=max(no_map) if no_map else None,
+                    yes_depth_total=ys.resting_total, no_depth_total=ns.resting_total,
+                    yes_levels_json=sorted(yes_map.items(), reverse=True)[:10],
+                    no_levels_json=sorted(no_map.items(), reverse=True)[:10],
+                    est_reference_price=ys.reference_price,
+                    est_yes_qualifying_depth=ys.resting_total,
+                    est_no_qualifying_depth=ns.resting_total,
+                    est_yes_meets_target=ys.meets_target, est_no_meets_target=ns.meets_target,
+                    est_yes_score_total=ys.field_score, est_no_score_total=ns.field_score,
+                    scoring_version=SCORING_VERSION)
+                n += 1
+            except Exception as exc:  # noqa: BLE001 — a snapshot must never stop the book
+                logger.warning(f"incentive book snapshot {ticker}: "
+                               f"{type(exc).__name__}: {str(exc)[:200]}")
+        return n
 
     def _running_programs(self, session, now: datetime) -> list:
         """`progs.current_programs(now=now, liquidity_only=True)`, read once per session and
