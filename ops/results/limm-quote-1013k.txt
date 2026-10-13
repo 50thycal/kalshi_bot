@@ -1,0 +1,31 @@
+# ops request [READ]
+# type=script  id=limm-quote-1013k
+# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T06:27:07Z
+=== inline quote vs orderbook — 1 series, up to 40 markets each ===
+
+  ticker                                  inline bid/ask  ob yes_bid  ob no_bid  100-no_bid  bid?  ask?
+  KXTOP10BBSPOTS-26OCT24-TSWIF-0                    1/79           1         21          79     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-1                   23/88          23         12          88     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-2                    7/73           7         27          73     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-3                    6/73           6         27          73     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-4                    4/71           4         29          71     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-5                    1/70           1         30          70     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-6                    1/74           1         26          74     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-7                    1/69           1         31          69     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-8                    1/24           1         76          24     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-9                    1/20           1         80          20     Y     Y
+  KXTOP10BBSPOTS-26OCT24-TSWIF-10                   0/50        None         50          50    no     Y
+
+  bid agrees 10/11   ask agrees (vs 100-no_bid) 11/11
+
+=== THE ONE-SIDED CASES (bid and ask disagree differently) ===
+
+  KXTOP10BBSPOTS-26OCT24-TSWIF-10  vol=2499.00
+    inline : yes_bid=0  yes_ask=50  no_bid=50
+    book   : yes []   no [(50, 2700), (30, 1573), (26, 100)]
+    derived: 100 - no_bid(50) = 50
+    inline no_bid 50 vs book no_bid 50  -> AGREE
+
+  If the inline no_bid matches the book while the inline yes_ask does not equal
+  100 - no_bid, the inline ask is NOT derived the way ours is, and the fix is to
+  use the inline sides directly rather than distrusting the quote.
