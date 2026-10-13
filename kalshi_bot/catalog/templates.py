@@ -21,7 +21,8 @@ import re
 
 # v2: whitespace-insensitive, absent text equals empty text, and a date in a display title no
 # longer makes its day number count as the market's own strike.
-METHOD = "rules-template-v2"
+# v3: numbers in the mechanics compare by value, so 60 and 60.0 are the same timer.
+METHOD = "rules-template-v3"
 # Contract wording: kept, with dates, times, own strike numbers and names masked.
 TEXT_FIELDS = ("rules_primary", "rules_secondary", "early_close_condition")
 # Settlement mechanics: kept exactly.
@@ -65,6 +66,19 @@ def _own_numbers(raw):
     return found
 
 
+def _canonical(value):
+    """Same value, same encoding: a number is its float, however the payload typed it."""
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, list):
+        return [_canonical(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _canonical(item) for key, item in value.items()}
+    return value
+
+
 def mask(text, own_numbers=frozenset()):
     text = " ".join((text or "").split())
     text = _DATE.sub("<date>", text)
@@ -82,7 +96,7 @@ def template_document(raw):
     return {
         "method": METHOD,
         "text": {key: mask(raw.get(key), own) for key in TEXT_FIELDS},
-        "exact": {key: raw.get(key) for key in EXACT_FIELDS},
+        "exact": {key: _canonical(raw.get(key)) for key in EXACT_FIELDS},
         "strikes_present": {key: raw.get(key) is not None for key in STRIKE_FIELDS},
         "keyed": {key: sorted((raw.get(key) or {}).keys()) for key in KEYED_FIELDS},
     }
@@ -114,11 +128,19 @@ def differences(document, approved, limit=400):
 
     if not approved:
         return None
-    mine = parts(document)
-    closest = min((parts(doc) for doc in approved),
-                  key=lambda other: sum(mine[k] != other.get(k) for k in mine))
-    return [
-        {"field": key, "unapproved": str(mine[key])[:limit], "approved": str(closest.get(key))[:limit]}
+    def encoded(value):
+        return json.dumps(value, sort_keys=True, default=str)
+
+    mine = {key: encoded(value) for key, value in parts(document).items()}
+    closest = min(
+        ({key: encoded(value) for key, value in parts(doc).items()} for doc in approved),
+        key=lambda other: sum(mine[k] != other.get(k) for k in mine),
+    )
+    differing = [
+        {"field": key, "unapproved": mine[key][:limit], "approved": str(closest.get(key))[:limit]}
         for key in mine
         if mine[key] != closest.get(key)
     ]
+    # Identical parts with a different hash mean the method itself differs; say so.
+    return differing or [{"field": "method", "unapproved": document.get("method"),
+                          "approved": "see bound approvals"}]

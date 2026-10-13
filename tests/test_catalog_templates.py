@@ -246,12 +246,12 @@ def test_merged_approvals_apply_at_start_and_refusals_never_block(store, caplog)
         put(store, exemplar["market"])
     with caplog.at_level("INFO", logger="market_catalog"):
         outcome = apply_approvals(store)
-    assert outcome["KXBTCD-series-approval-20261013"] == {"status": "bound", "templates": 1,
+    assert outcome["KXBTCD-series-approval-20261013b"] == {"status": "bound", "templates": 1,
                                                           "new": 1}
     # Exemplars the catalog does not hold are refused and retried next start, not raised.
-    assert outcome["KXWTI-series-approval-20261013"]["status"] == "refused"
+    assert outcome["KXWTI-series-approval-20261013b"]["status"] == "refused"
     assert "catalog_template_approvals=" in caplog.text
-    assert apply_approvals(store)["KXBTCD-series-approval-20261013"]["new"] == 0
+    assert apply_approvals(store)["KXBTCD-series-approval-20261013b"]["new"] == 0
     assert len(store.series_template_reviews("KXBTCD")) == 1
     # The same approval posted from the dashboard is the same review, not a second one.
     store.review(APPROVED["KXBTCD"])
@@ -283,9 +283,35 @@ def test_coverage_says_what_differs_and_ignores_older_template_methods(store):
     [group] = store.template_coverage("KXBTCD")["unreviewed_templates"]
     [diff] = group["differs_from_approved"]
     assert diff["field"] == "text.rules_secondary"
-    assert diff["unapproved"] == "<name> older wording version."
+    assert diff["unapproved"] == "\"<name> older wording version.\""
     # A row bound under an earlier template method stays stored but is not listed or matched.
     with store.connect() as db:
         db.execute("UPDATE reviews SET document=? WHERE kind='series_template'",
                    (json.dumps({"template_method": "rules-template-v1", "approval_id": "x"}),))
     assert store.series_template_reviews("KXBTCD") == []
+
+
+def test_a_superseding_approval_wins_for_the_same_wording(store):
+    for exemplar in APPROVED["KXRAIN"]["exemplars"]:
+        put(store, exemplar["market"])
+    earlier = approval("KXRAIN", approval_id="KXRAIN-earlier", approved_at="2026-10-13T00:00:00+00:00")
+    earlier["semantics"] = {**earlier["semantics"], "resolution_mechanism": "older_reading"}
+    store.review(earlier)
+    assert store.get("market", "KXRAIN-26OCT13-NYC")["semantics"]["resolution_mechanism"] == (
+        "older_reading")
+    current = APPROVED["KXRAIN"]
+    assert current["supersedes"] == "KXRAIN-series-approval-20261013"
+    store.review(current)
+    document = store.get("market", "KXRAIN-26OCT13-NYC")
+    assert document["review"]["approval_id"] == current["approval_id"]
+    assert "melted snow" in document["semantics"]["payout_relationship"]["normal_case"]
+
+
+def test_numbers_in_the_mechanics_compare_by_value_and_type_diffs_are_named():
+    base = raw("KXBTCD-26OCT1617-T87999.99")
+    assert templates.template_hash({**base, "settlement_timer_seconds": 60.0}) == (
+        templates.template_hash({**base, "settlement_timer_seconds": 60}))
+    approved = [templates.template_document(base)]
+    other = templates.template_document({**base, "settlement_timer_seconds": 61})
+    [diff] = templates.differences(other, approved)
+    assert diff["field"] == "exact.settlement_timer_seconds"

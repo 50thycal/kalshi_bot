@@ -1495,3 +1495,12 @@ avoidable splits:
 only after removing dates and times. Approvals re-bind under v2 at the next start; v1 rows stay
 stored and inert. Coverage now reports, for each unapproved wording version, the fields that
 differ from the closest approved one.
+
+**Template v3 and round 2 (2026-10-13, within DEC-035).** Under v2, six BTC markets had parts
+identical to the approved wording but a different hash. The likely cause is a number typed
+differently by the payload (for example 60 versus 60.0). `rules-template-v3` compares numbers in
+the mechanics by value, and coverage diffs compare encoded values, so a type difference is named.
+
+The owner then approved all thirteen top series, the MLB doubleheader and early-July wordings,
+and the contract-PDF facts. Superseding approvals carry `supersedes`; the newest approval of
+the same wording wins.

@@ -336,6 +336,34 @@
    "title": "Tyler Glasnow: 11+ strikeouts?",
    "yes_sub_title": "Tyler Glasnow: 11+"
   },
+  "KXMLBSPREAD-26AUG171340STLCING1-CIN3": {
+   "_rules_fingerprint": "ee1c45af85290bd2d88df9505f03f5df610c512150746e2e45fad8a6485bfe1f",
+   "can_close_early": true,
+   "cap_strike": null,
+   "close_time": "2026-08-17T20:29:53Z",
+   "contract_terms_url": null,
+   "contract_url": null,
+   "custom_strike": {
+    "baseball_team": "ed1fa89d-04cc-4a5d-9e87-9a89c0142724"
+   },
+   "early_close_condition": "This market will close and expire after a winner is declared.",
+   "event_ticker": "KXMLBSPREAD-26AUG171340STLCING1",
+   "expected_expiration_time": "2026-08-17T20:40:00Z",
+   "fee_multiplier": null,
+   "fee_type": null,
+   "floor_strike": 2.5,
+   "functional_strike": null,
+   "mutually_exclusive": null,
+   "no_sub_title": "Cincinnati wins by over 2.5 runs",
+   "open_time": "2026-08-17T12:00:00Z",
+   "rules_primary": "If Cincinnati wins by more than 2.5 runs in the St. Louis vs Cincinnati professional baseball game 1 of the double header originally scheduled for Aug 17, 2026 at 1:40 PM EDT, then the market resolves to Yes.",
+   "rules_secondary": "Kalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+   "settlement_sources": null,
+   "settlement_timer_seconds": 60,
+   "strike_type": "greater",
+   "title": "Cincinnati wins by over 2.5 runs?",
+   "yes_sub_title": "Cincinnati wins by over 2.5 runs"
+  },
   "KXMLBSPREAD-26JUL142000ALNL-NL2": {
    "_rules_fingerprint": "a58721c7488f3fbeb19339b9149c82ea00221b678716778bebe85c7fe6c80573",
    "can_close_early": true,
@@ -363,6 +391,34 @@
    "strike_type": "greater",
    "title": "NL wins by over 1.5 runs?",
    "yes_sub_title": "NL wins by over 1.5 runs"
+  },
+  "KXMLBSPREAD-26JUL161910NYMPHI-NYM4": {
+   "_rules_fingerprint": "5af0bfcf76e37577a2cd4862d8258f65f8e9dd6f3ecf12ce951314ec506f457c",
+   "can_close_early": true,
+   "cap_strike": null,
+   "close_time": "2026-07-17T00:59:46Z",
+   "contract_terms_url": null,
+   "contract_url": null,
+   "custom_strike": {
+    "baseball_team": "c4a480e0-1cf0-4326-981f-dcf507692bf6"
+   },
+   "early_close_condition": "This market will close and expire after a winner is declared.",
+   "event_ticker": "KXMLBSPREAD-26JUL161910NYMPHI",
+   "expected_expiration_time": "2026-07-17T02:10:00Z",
+   "fee_multiplier": null,
+   "fee_type": null,
+   "floor_strike": 3.5,
+   "functional_strike": null,
+   "mutually_exclusive": null,
+   "no_sub_title": "New York M wins by over 3.5 runs",
+   "open_time": "2026-07-15T20:50:00Z",
+   "rules_primary": "If New York M wins by more than 3.5 runs in the New York M vs Philadelphia professional baseball game originally scheduled for Jul 16, 2026 at 7:10 PM EDT, then the market resolves to Yes.",
+   "rules_secondary": "",
+   "settlement_sources": null,
+   "settlement_timer_seconds": 60,
+   "strike_type": "greater",
+   "title": "New York M wins by over 3.5 runs?",
+   "yes_sub_title": "New York M wins by over 3.5 runs"
   },
   "KXMLBSPREAD-26OCT032030SDMIL-SD5": {
    "_rules_fingerprint": "934ce125ae7e039153fba7305489e67e97f74ce552de26473624f395a7b3a2ad",
@@ -417,6 +473,58 @@
    "strike_type": "greater",
    "title": "AL vs NL Total Runs?",
    "yes_sub_title": "Over 11.5 runs scored"
+  },
+  "KXMLBTOTAL-26JUL161910NYMPHI-10": {
+   "_rules_fingerprint": "5794c1229600383b6e06da4602c7531cbfcb462727d6f61f5a9b967474fed133",
+   "can_close_early": true,
+   "cap_strike": null,
+   "close_time": "2026-07-17T00:59:46Z",
+   "contract_terms_url": null,
+   "contract_url": null,
+   "custom_strike": null,
+   "early_close_condition": "This market will close and expire early if the event occurs.",
+   "event_ticker": "KXMLBTOTAL-26JUL161910NYMPHI",
+   "expected_expiration_time": "2026-07-17T02:10:00Z",
+   "fee_multiplier": null,
+   "fee_type": null,
+   "floor_strike": 9.5,
+   "functional_strike": null,
+   "mutually_exclusive": null,
+   "no_sub_title": "Over 9.5 runs scored",
+   "open_time": "2026-07-15T20:50:00Z",
+   "rules_primary": "If New York M and Philadelphia collectively score more 9.5 runs in the New York M vs Philadelphia professional baseball game originally scheduled for Jul 16, 2026 at 7:10 PM EDT, then the market resolves to Yes.",
+   "rules_secondary": "",
+   "settlement_sources": null,
+   "settlement_timer_seconds": 60,
+   "strike_type": "greater",
+   "title": "New York M vs Philadelphia Total Runs?",
+   "yes_sub_title": "Over 9.5 runs scored"
+  },
+  "KXMLBTOTAL-26SEP251905BALNYYG2-10": {
+   "_rules_fingerprint": "d5439bfc196d0cfe25e35bce5ddbec67de95732eb1ed1dc63868e6c23ff121bc",
+   "can_close_early": true,
+   "cap_strike": null,
+   "close_time": "2026-09-26T02:27:45Z",
+   "contract_terms_url": null,
+   "contract_url": null,
+   "custom_strike": null,
+   "early_close_condition": "This market will close and expire early if the event occurs.",
+   "event_ticker": "KXMLBTOTAL-26SEP251905BALNYYG2",
+   "expected_expiration_time": "2026-09-26T02:05:00Z",
+   "fee_multiplier": null,
+   "fee_type": null,
+   "floor_strike": 9.5,
+   "functional_strike": null,
+   "mutually_exclusive": null,
+   "no_sub_title": "Over 9.5 runs scored",
+   "open_time": "2026-09-25T08:00:00Z",
+   "rules_primary": "If Baltimore and New York Y collectively score more 9.5 runs in the Baltimore vs New York Y professional baseball game 2 of the double header originally scheduled for Sep 25, 2026 at 7:05 PM EDT, then the market resolves to Yes.",
+   "rules_secondary": "Kalshi is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Governing League. All trademarks, logos, and brand names are the property of their respective owners.",
+   "settlement_sources": null,
+   "settlement_timer_seconds": 60,
+   "strike_type": "greater",
+   "title": "Over 9.5 runs scored",
+   "yes_sub_title": "Over 9.5 runs scored"
   },
   "KXMLBTOTAL-26SEP271510STLMIL-11": {
    "_rules_fingerprint": "4d2add6c5399d9a81a6c6df0b69d8bb51f35cac6342fef934f6641536f82d5e0",
@@ -721,5 +829,5 @@
    "yes_sub_title": "Above $95.49"
   }
  },
- "source": "Kalshi public market API via ops catalog-review-sources-20261012a/-b (rule fields only)"
+ "source": "Kalshi public market API via ops catalog-review-sources-20261012a/-b and catalog-wording-variants-20261013a (rule fields only)"
 }
