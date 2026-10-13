@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["rl46-20261013-vplan"],"id":"rl46-rcpt-1"}
+{"type":"xos","command":"issue-show","args":["XOS-000046"],"id":"rl46-show-46b"}
