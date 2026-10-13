@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1013m", "sql": "select market_ticker, side, action, limit_price, quantity, status, cancel_reason, created_at::text, client_order_id from live_orders where strategy='Alimm1' and created_at > '2026-10-13 04:00' order by created_at desc limit 30"}
+{"type":"noop"}
