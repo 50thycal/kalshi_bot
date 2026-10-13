@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MLB totals/spreads live loss cell 2026-10-13 — HOLD; 2027 test pre-registered (XOS-000046)
+
+Research Lab read of [the cell](MMSELL_MLB_TOTALS_SPREADS_CELL.md). Live MMSELL lost $9.94 on
+totals and spreads together over 144 games (one game = one bet), −$0.069 ± $0.040 a game. The
+cell was picked from 13 series after the fact. Corrected for that, it is what noise gives about
+half the time. Paper in the same window and price band is break-even on totals (−0.7pp, 516
+games) and positive on spreads (+1.4pp, 525 games), so any real effect is in live fills, not the
+market. No universe change. The stop question is pre-registered on 2027 regular-season games,
+with a floor of 150 games and one extension to 300.
+
 ## MMSELL paper fleet review 2026-10-11 — mmsell5–8 retired; C/D/F/J to retire via Live Ops
 
 Research Lab review for WS-024 ([review](MMSELL_PAPER_FLEET_REVIEW_20261011.md)): which MMSELL
