@@ -514,6 +514,7 @@ separately.
   - 9 are invalidated by a parent change.
   - About 29 are tennis listings whose names contain lowercase particles, a birth year, "+" or "(moved from …)".
   - 2 are KXMLBHR doubleheader listings with the newer strike type.
+  - Owner follow-up (2026-10-13): fix both. `rules-template-v5` joins the tennis variants (all but one listing with a lowercase surname); the KXMLBHR approval `-20261013b` adds the doubleheader exemplar. Production coverage is read from `catalog_template_coverage` after the merge.
 
 ### Series scorecard — 2026-10-13 UTC
 

@@ -25,7 +25,10 @@ import re
 # v4: a name may contain digits and "of"/parentheses ("49ers", "W75", "(Lima) Round of 32"), a
 # number inside a word is never a strike, and a noun's plural after a strike ("2 goals") is
 # its singular.
-METHOD = "rules-template-v4"
+# v5: a name may carry lowercase particles ("de Cuyper", "Caldas da Rainha", "d'Ascq"), a birth
+# year ("(b. 2004)"), a relocation note ("(moved from Sao Luis)") and "+"/"/" joins ("M15+H",
+# "Asia/Oceania"); a calendar year in a display title is never the market's own strike.
+METHOD = "rules-template-v5"
 # Contract wording: kept, with dates, times, own strike numbers and names masked.
 TEXT_FIELDS = ("rules_primary", "rules_secondary", "early_close_condition")
 # Settlement mechanics: kept exactly.
@@ -48,9 +51,16 @@ _TIME = re.compile(r"\b\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)\b(?:\s+[A-Z]{2,4}T)?
 _NUMBER = re.compile(r"(?<![\w.])\$?\d[\d,]*(?:\.\d+)?(?![\w])")
 _WORD = r"(?!(?:Yes|No)\b)(?:[A-Z][\w'’.&-]*|\d+[A-Za-z][\w'’.&-]*)"
 _PIECE = r"\(?" + _WORD + r"\)?"
-_NAME = re.compile(
-    r"(?<![\w<])" + _PIECE + r"(?:\s+(?:of\s+)?(?:" + _PIECE + r"|\d+(?![\w.])|<n>))*"
+# Lowercase name particles; only ever consumed next to a capitalised piece.
+_PARTICLE = r"(?:de|da|di|do|dos|das|du|del|della|la|le|van|von|der|den|ten|ter)"
+_JOIN = (
+    r"(?:\s*[+/]\s*|\s+(?:(?:of|" + _PARTICLE + r")\s+|\(moved\s+from\s+|d['’])?)"
 )
+_NAME = re.compile(
+    r"(?<![\w<'’])(?:" + _PARTICLE + r"\s+)?" + _PIECE
+    + r"(?:" + _JOIN + _PIECE + r"|\s+(?:of\s+)?(?:\d+(?![\w.])|<n>)|\s+\(b\.\s*\d{4}\))*"
+)
+_YEAR = re.compile(r"(?:19|20)\d\d")
 _PLURAL = re.compile(r"(<n>\+?\s+[a-z]*[a-rt-z])s\b")
 
 
@@ -68,7 +78,9 @@ def _own_numbers(raw):
             found.add(repr(float(raw[key])))
     for key in DISPLAY_FIELDS:
         display = _TIME.sub(" ", _DATE.sub(" ", raw.get(key) or ""))
-        found.update(_value(token) for token in _NUMBER.findall(display))
+        found.update(
+            _value(token) for token in _NUMBER.findall(display) if not _YEAR.fullmatch(token)
+        )
     found.discard(None)
     return found
 

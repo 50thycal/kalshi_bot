@@ -1519,3 +1519,14 @@ bound, coverage was 697/1,448. The remaining gaps had three causes:
 - **Some markets are unreviewed because their event or series changed after capture**
   (`parent_rules_changed`). Coverage now counts these separately; they are not a wording
   question.
+
+**Template v5 and the home-run doubleheader (2026-10-13, within DEC-035).** The owner asked to
+fix the remaining tennis listings and to approve the home-run doubleheader wording.
+`rules-template-v5` lets a name carry lowercase particles ("de Cuyper", "Caldas da Rainha",
+"d'Ascq"), a birth year ("(b. 2004)"), a relocation note ("(moved from Sao Luis)") and "+"/"/"
+joins ("M15+H", "Asia/Oceania"). A calendar year in a display title is no longer read as the
+market's own strike. Particles are consumed only next to a capitalised name, so ordinary
+wording is untouched. The partition of the previously captured listings is unchanged. One
+listing whose surname Kalshi typed in lowercase stays unreviewed by design. The KXMLBHR approval
+is superseded by `-20261013b`, which adds a "game 1 of the double header" exemplar (strike type
+`greater` 0.5, i.e. 1+).
