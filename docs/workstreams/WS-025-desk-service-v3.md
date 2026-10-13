@@ -262,3 +262,14 @@ and changes nothing until its settings are turned on.
   fetched from this sandbox (network policy); a search summary says the non-interactive docs
   call API keys the default for automation and describe running as your own Codex account
   ("Maintain Codex account auth in CI/CD", advanced). To confirm before PR C step 3.
+
+## Dashboard controls — 2026-10-13
+
+Owner direction: no phone push channel (ntfy dropped); a dashboard checked periodically; a
+subscription usage budget that can be turned up or down; full automation including trading.
+Owner choices: dry-run week first, then live; the dry-run/live switch is a dashboard button
+(operator token, confirm step, every flip published); default research budget 3 cycles per
+desk per day. Built: `desk_controls` overrides for budget and mode, operator-only
+`POST /api/desks/<desk>/budget` and `/mode`, and an Automation panel on each desk card.
+Activation so far: Claude desk unattended in dry run since 2026-10-11 (routine at
+08:07/12:07/16:07 Chicago); ChatGPT desk waits on the one-time Codex login on `chatgpt-runner`.

@@ -249,6 +249,13 @@ def handler_for(service):
             desk, action = parts[2:]
             if desk not in ("chatgpt", "claude") or role not in (desk, "operator"):
                 raise PermissionError
+            if action in ("budget", "mode"):
+                # WS-025 dashboard controls: operator only, every change published.
+                if role != "operator":
+                    raise PermissionError
+                if action == "budget":
+                    return service.set_budget(desk, body.get("max_cycles_per_day"), now)
+                return service.set_mode(desk, body.get("mode"), body.get("confirm"), now)
             if action in ("pause", "resume"):
                 if role != "operator":
                     raise PermissionError
