@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "method": "series-template-approval-v1",
-  "note": "Recorded owner approvals. Recording binds nothing: scripts/catalog_post_approvals.py posts them through the authenticated review API.",
+  "note": "Owner approvals. The owner's merge of this file to the deployed branch is the sign-off (DEC-035): the catalog applies each approval at start while its exemplar markets still carry the approved rules digest. They can also be posted from the dashboard with the catalog token.",
   "items": [
     {
       "approval_id": "KXBTCD-series-approval-20261013",
@@ -20,7 +20,7 @@
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
       "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain).",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXBTCD-series-draft-20261012",
       "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
@@ -96,7 +96,7 @@
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
       "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain).",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXWTI-series-draft-20261012",
       "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
@@ -172,7 +172,7 @@
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
       "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain).",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXMLBTOTAL-series-draft-20261012",
       "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
@@ -247,7 +247,7 @@
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
       "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain).",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXMLBSPREAD-series-draft-20261012",
       "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
@@ -318,7 +318,7 @@
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
       "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain).",
+      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXRAIN-series-draft-20261012",
       "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [

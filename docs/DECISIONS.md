@@ -1468,10 +1468,19 @@ participation change) stays unreviewed until its wording is approved. Clock time
 one approval covers every expiry time in a series. Time to expiry is a property of each trade.
 Grading must separate it as a cohort dimension; the approval does not.
 
-**Posting stays token-gated.** Approvals are recorded in `kalshi_bot/catalog/approved_reviews.json`,
-but recording binds nothing. The owner posts each approval from the dashboard with the catalog
-token. A design that applied the file at startup was rejected because it would bypass the
-API's authentication.
+**Approve by merge (owner decision, 2026-10-13).** Approvals are recorded in
+`kalshi_bot/catalog/approved_reviews.json`. The owner's merge to the deployed branch is the
+sign-off, so the catalog token never has to leave Railway. At start, the catalog applies each
+approval through the same validation as the review API. A refusal (an exemplar missing or
+reworded) is logged as `catalog_template_approvals` and retried at the next start. It never
+blocks the service.
+
+The token-gated `POST /v1/reviews` path and the dashboard button remain. Both produce the same
+review id, so nothing is duplicated.
+
+The merge is now an approval channel. An agent may record an approval only after the owner has
+given it, and must name it in the PR body. An approval the owner did not give must never be
+merged.
 
 An approval is not a score, a qualification or a trading change. Historical terms, contract PDF
 text and outcome independence remain unverified.

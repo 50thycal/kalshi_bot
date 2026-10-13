@@ -425,9 +425,10 @@ Tested on the real 26 sample listings:
 - MLB total/spread and rain each produce two (an added disclaimer and a reordered source line).
   Both versions are in the approval.
 
-The five approvals are recorded in `approved_reviews.json`. They bind only when posted from the
-dashboard with the catalog token. A startup-applied file was rejected because it would bypass
-the API's authentication.
+The five approvals are recorded in `approved_reviews.json`. Calvin chose approve-by-merge: his
+merge is the sign-off, and the catalog applies them at start through the review API's
+validation. The dashboard panel shows each approval's state and can still post one with the
+token.
 
 Coverage per series is logged at start (`catalog_template_coverage`) and served at
 `/v1/template-coverage`. It names any unapproved wording versions, with sample markets.

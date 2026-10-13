@@ -38,7 +38,7 @@ function renderApprovals(data) {
       button.addEventListener('click',async()=>{ if(!confirm('Post the recorded approval for '+a.ticker+'?')) return; button.disabled=true; try { await post('/v1/reviews',a,token); notice(''); refresh(); } catch(error) { notice(a.ticker+': '+error.message); button.disabled=false; } });
       action.append(button);
     }
-    row($('approvals'),[a.ticker,a.approved_by+' · '+date(a.approved_at),pill(item.posted?'Posted':'Recorded, not posted',item.posted?'good':'warn'),coverage,action]);
+    row($('approvals'),[a.ticker,a.approved_by+' · '+date(a.approved_at),pill(item.posted?'Applied':'Recorded, not applied',item.posted?'good':'warn'),coverage,action]);
   }
   if(!data.items?.length) row($('approvals'),['No recorded approvals.','—','—','—','—']);
 }

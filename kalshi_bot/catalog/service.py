@@ -25,13 +25,33 @@ from .store import Store, now, unpack
 
 LOG = logging.getLogger("market_catalog")
 COUNTS_LOG_SECONDS = 900
-# The owner's recorded approvals. Recording one changes nothing here: it binds only when
-# posted through the authenticated review API (scripts/catalog_post_approvals.py).
+# The owner's approvals, recorded in the repository. The owner's merge to the deployed
+# branch is the sign-off (DEC-035): they are applied at start, and can also be posted from
+# the dashboard with the catalog token.
 APPROVALS = Path(__file__).with_name("approved_reviews.json")
 
 
 def approved_series():
     return sorted({item["ticker"] for item in json.loads(APPROVALS.read_text())["items"]})
+
+
+def apply_approvals(store):
+    """Bind each merged approval. One binds only while its exemplar markets still carry the
+    exact rules digest that was approved; a refusal is logged and retried at the next start,
+    and never blocks the service."""
+    outcome = {}
+    for item in json.loads(APPROVALS.read_text())["items"]:
+        try:
+            result = store.review(item)
+            outcome[item["approval_id"]] = {
+                "status": "bound",
+                "templates": len(result["templates"]),
+                "new": sum(not t.get("already_recorded") for t in result["templates"]),
+            }
+        except (LookupError, ValueError, StorageDeferred) as error:
+            outcome[item["approval_id"]] = {"status": "refused", "reason": str(error)}
+    LOG.info("catalog_template_approvals=%s", json.dumps(outcome, sort_keys=True))
+    return outcome
 
 
 def recorded_approvals(store):
@@ -556,6 +576,7 @@ def main():
     backup = store.backup_before_compression()
     LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
+    apply_approvals(store)
     # Read-only and off the start path: it decorates every traded market of each series.
     threading.Thread(target=log_template_coverage, args=(store,), daemon=True).start()
     if selection.verify_bootstrap(store):

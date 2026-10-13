@@ -10,7 +10,12 @@ import pytest
 
 from kalshi_bot.catalog import templates
 from kalshi_bot.catalog.research import cohort
-from kalshi_bot.catalog.service import APPROVALS, make_server, recorded_approvals
+from kalshi_bot.catalog.service import (
+    APPROVALS,
+    apply_approvals,
+    make_server,
+    recorded_approvals,
+)
 from kalshi_bot.catalog.store import RULE_FIELDS, SEMANTIC_FIELDS, Store, now
 
 MARKETS = json.loads(
@@ -234,3 +239,22 @@ def test_recorded_approvals_post_only_through_the_authenticated_api(store):
         server.shutdown()
         thread.join()
         server.server_close()
+
+
+def test_merged_approvals_apply_at_start_and_refusals_never_block(store, caplog):
+    for exemplar in APPROVED["KXBTCD"]["exemplars"]:
+        put(store, exemplar["market"])
+    with caplog.at_level("INFO", logger="market_catalog"):
+        outcome = apply_approvals(store)
+    assert outcome["KXBTCD-series-approval-20261013"] == {"status": "bound", "templates": 1,
+                                                          "new": 1}
+    # Exemplars the catalog does not hold are refused and retried next start, not raised.
+    assert outcome["KXWTI-series-approval-20261013"]["status"] == "refused"
+    assert "catalog_template_approvals=" in caplog.text
+    assert apply_approvals(store)["KXBTCD-series-approval-20261013"]["new"] == 0
+    assert len(store.series_template_reviews("KXBTCD")) == 1
+    # The same approval posted from the dashboard is the same review, not a second one.
+    store.review(APPROVED["KXBTCD"])
+    assert len(store.series_template_reviews("KXBTCD")) == 1
+    posted = {i["approval"]["ticker"]: i["posted"] for i in recorded_approvals(store)}
+    assert posted["KXBTCD"] and not posted["KXWTI"]
