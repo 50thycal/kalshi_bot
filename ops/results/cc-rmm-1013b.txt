@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1013b
+# code a1bc4d12ca5e09b8e35a0acbf3e41b9eb56b51f4 · started 2026-10-13T02:52:53Z
+ev                             legs                                                                           
+-----------------------------  -------------------------------------------------------------------------------
+KXINXU-26OCT12H1600            T7819.9999:1:s:0.07 T7829.9999:1:s:0.06 T7834.9999:1:s:0.07 T7834.9999:2:s:0.07
+KXITFMATCH-26OCT12MOUFUE       FUE:1:s:0.06 FUE:2:s:0.06                                                      
+KXITFMATCH-26OCT12SANDUM       DUM:1:s:0.06 DUM:2:s:0.06                                                      
+KXITFMATCH-26OCT12VERPIN       PIN:1:s:0.06 PIN:2:s:0.06                                                      
+KXMLBSPREAD-26OCT121700LADMIL  LAD3:1:s:0.06 LAD3:2:s:0.06                                                    
+KXMLBSPREAD-26OCT122000CLETB   CLE3:1:o:- CLE3:2:o:-                                                          
+KXNASDAQ100U-26OCT12H1600      T30819.99:1:s:0.07 T30859.99:1:s:0.07 T30859.99:2:s:0.07 T30869.99:1:s:0.07    
+KXNFLTOTAL-26OCT12BUFLAR       64:1:o:- 67:1:o:- 73:1:o:- 73:2:o:-                                            
+KXNFLTOTAL-26OCT15SEADEN       64:1:o:- 64:2:o:-                                                              
+KXUCLGAME-26OCT13ARSLIL        LIL:1:o:- LIL:2:o:-                                                            
+
+(10 rows)

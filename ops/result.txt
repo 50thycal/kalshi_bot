@@ -1,11 +1,17 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1013a
-# code a1bc4d12ca5e09b8e35a0acbf3e41b9eb56b51f4 · started 2026-10-13T02:52:33Z
-strategy  status   n    pnl    losses  last_entry                      
---------  -------  ---  -----  ------  --------------------------------
-Rmmsell1  open     13   0.00   0       2026-10-13 02:15:02.027148+00:00
-Rmmsell1  settled  901  18.09  40      2026-10-13 01:20:59.741493+00:00
-Rmmsell2  open     11   0.00   0       2026-10-13 02:15:02.048463+00:00
-Rmmsell2  settled  586  7.70   30      2026-10-13 01:20:59.754698+00:00
+# type=db  id=cc-rmm-1013b
+# code a1bc4d12ca5e09b8e35a0acbf3e41b9eb56b51f4 · started 2026-10-13T02:52:53Z
+ev                             legs                                                                           
+-----------------------------  -------------------------------------------------------------------------------
+KXINXU-26OCT12H1600            T7819.9999:1:s:0.07 T7829.9999:1:s:0.06 T7834.9999:1:s:0.07 T7834.9999:2:s:0.07
+KXITFMATCH-26OCT12MOUFUE       FUE:1:s:0.06 FUE:2:s:0.06                                                      
+KXITFMATCH-26OCT12SANDUM       DUM:1:s:0.06 DUM:2:s:0.06                                                      
+KXITFMATCH-26OCT12VERPIN       PIN:1:s:0.06 PIN:2:s:0.06                                                      
+KXMLBSPREAD-26OCT121700LADMIL  LAD3:1:s:0.06 LAD3:2:s:0.06                                                    
+KXMLBSPREAD-26OCT122000CLETB   CLE3:1:o:- CLE3:2:o:-                                                          
+KXNASDAQ100U-26OCT12H1600      T30819.99:1:s:0.07 T30859.99:1:s:0.07 T30859.99:2:s:0.07 T30869.99:1:s:0.07    
+KXNFLTOTAL-26OCT12BUFLAR       64:1:o:- 67:1:o:- 73:1:o:- 73:2:o:-                                            
+KXNFLTOTAL-26OCT15SEADEN       64:1:o:- 64:2:o:-                                                              
+KXUCLGAME-26OCT13ARSLIL        LIL:1:o:- LIL:2:o:-                                                            
 
-(4 rows)
+(10 rows)
