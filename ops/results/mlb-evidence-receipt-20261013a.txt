@@ -1,0 +1,29 @@
+# ops request [READ]
+# type=xos  id=mlb-evidence-receipt-20261013a
+# code e4994f6970479acb41ecc5b01e3257bc01feb210 · started 2026-10-13T08:56:28Z
+{
+  "command_id": "catalog-mlb-pergame-ev-20261013",
+  "action": "ADD_EVIDENCE",
+  "actor": "claude-code-for-calvin",
+  "actor_role": "TASK_SPECIFIC",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000046",
+  "schema_version": 1,
+  "payload_hash": "51b1787560d919332b9b76c3e2730b8033e25334b4b5a3e5f570ce41416f72c3",
+  "payload_fields": [
+    "evidence_type",
+    "issue",
+    "source_ref",
+    "summary"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-10-13 08:53:12.934577+00:00",
+  "started_at": "2026-10-13 08:53:12.934577+00:00",
+  "completed_at": "2026-10-13 08:53:13.052527+00:00",
+  "result": {
+    "kind": "ExperimentIssueEvidence",
+    "row_id": 95,
+    "issue_key": "XOS-000046"
+  },
+  "error": null
+}
