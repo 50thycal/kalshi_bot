@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1013q", "sql": "select captured_at::text, cash_balance, portfolio_value, (select string_agg(distinct strategy, chr(44)) from live_orders where status='rejected' and created_at > now() - interval '3 hours') rejected_books, (select count(*) from live_orders where status in ('resting','partial') ) resting_all from account_snapshots order by captured_at desc limit 3"}
