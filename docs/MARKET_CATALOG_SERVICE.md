@@ -59,6 +59,7 @@ Every `/v1` endpoint requires `Authorization: Bearer <CATALOG_API_TOKEN>`.
 | `POST /v1/import` | Bounded authenticated import of existing read-only exports; IDs/provenance required, does not skip the direct-source cursor |
 | `POST /v1/reviews` | Explicit human review tied to current rules hash, or a series template approval (`kind=series_template`) |
 | `GET /v1/approvals` | Owner approvals recorded in `approved_reviews.json`, with whether each is posted and what it bound |
+| `GET /v1/scorecard?series=` | Descriptive live P&L per approved series from the catalog's source-ledger economics; bets grouped by approved exposure key; blocked markets named, never estimated; logged at start as `catalog_scorecard_series` / `catalog_scorecard` |
 | `GET /v1/template-coverage?series=` | Traded markets a series approval covers, and unapproved wording versions with samples |
 | `GET /v1/review-packets?strategy=mmsell` | Current rules, unknown semantics, legacy provenance and isolated live contexts |
 | `GET /v1/calibration-inputs?strategy=mmsell` | Traceable live inputs including blocked outcomes; no assigned partitions or scores |
