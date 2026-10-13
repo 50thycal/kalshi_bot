@@ -1,11 +1,16 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1013e
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T18:59:42Z
-strategy  status   n    pnl    losses  last_entry                      
---------  -------  ---  -----  ------  --------------------------------
-Rmmsell1  open     14   0.00   0       2026-10-13 18:25:01.651648+00:00
-Rmmsell1  settled  915  15.97  43      2026-10-13 18:24:26.175252+00:00
-Rmmsell2  open     11   0.00   0       2026-10-13 18:24:57.335800+00:00
-Rmmsell2  settled  596  7.32   31      2026-10-13 17:23:51.687382+00:00
+# type=db  id=cc-rmm-1013f
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T19:00:11Z
+ev                             legs                                                             
+-----------------------------  -----------------------------------------------------------------
+KXATPEXACTMATCH-26OCT11GEAMEN  MEN21:1:s:0.06 MEN21:2:s:0.06                                    
+KXINXU-26OCT13H1600            T7814.9999:1:o:- T7819.9999:1:o:- T7819.9999:2:o:-               
+KXITFMATCH-26OCT13POKKOB       KOB:1:s:0.06 KOB:2:s:0.06                                        
+KXNASDAQ100U-26OCT13H1600      T30629.99:1:o:- T30629.99:2:o:- T30639.99:1:o:-                  
+KXTRUMPSAY-26OCT19             EPST:1:o:- EPST:2:o:- MAKE:1:o:- MAKE:2:o:- URAN:1:o:- URAN:2:o:-
+KXUCLGAME-26OCT13SBHSLA        SLA:1:s:0.07                                                     
+KXUCLGAME-26OCT13VIKBMU        VIK:1:o:-                                                        
+KXUCLTOTAL-26OCT13RCLSPO       6:1:s:0.06 6:2:s:0.06                                            
+KXUCLTOTAL-26OCT13SBHSLA       5:1:s:0.07 6:1:s:0.06 6:2:s:0.06                                 
 
-(4 rows)
+(9 rows)
