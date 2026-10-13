@@ -74,6 +74,9 @@ BOOK_REFUSAL_CODES = frozenset({
 EV_REWARD_RESIDUAL = "reward_residual"
 
 
+#: Client-order-id prefix of the resting opposite-side exit leg (`place_incentive_exit_leg`).
+EXIT_LEG_PREFIX = "limmexitleg:"
+
 #: How often the book snapshots the markets it rests or holds in, for the dashboard (§9.53).
 OWN_BOOK_SNAPSHOT_SECONDS = 600.0
 
@@ -733,12 +736,26 @@ class IncentiveLiveRunner:
         rule = limm.decide_exit(entry_cents=entry, mark_bid_cents=mark,
                                 hours_to_close=hours_to_close)
         if rule is None:
+            # §9.54: an exit leg dearer than MAX_EXIT_LEG_DOLLARS ties up the account's cash
+            # (Kalshi reserves its full cost), so it comes off; the leg is then closed by the
+            # take-profit, the stop or the pre-close flatten.
+            dear = [r for r in working
+                    if (r.client_order_id or "").startswith(EXIT_LEG_PREFIX)
+                    and r.limit_price is not None and r.quantity is not None
+                    and not limm.exit_leg_affordable(r.limit_price, r.quantity)]
+            if dear:
+                if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                    ticker=ticker, reason="exit_leg_over_cap"):
+                    return "exit_leg_over_cap:cancelled"
+                return "exit_leg_over_cap:cancel_pending"
             if working:
                 return "holding"
             price = limm.exit_leg_price(entry_cents=entry,
                                         best_opposite_bid=best[limm.other_side(held_side)])
             if price is None:
                 return "holding"
+            if not limm.exit_leg_affordable(price, qty):
+                return "holding:exit_leg_over_cap"
             res = executor.place_incentive_exit_leg(
                 session, strategy=limm.LIVE_TAG, ticker=ticker, held_side=held_side,
                 qty=qty, price=price)
