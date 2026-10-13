@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "fbef2809799c3f8e6bb0d3198d7138f8704fde8b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-13T09:30:43Z",
+  "id": "rl46-band-kxmlbtotal",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl46-band-kxmlbtotal.receipt.json",
+  "result_file": "ops/results/rl46-band-kxmlbtotal.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38376815586",
+  "service": null,
+  "started_at": "2026-10-13T09:30:42Z",
+  "targets": [],
+  "type": "script"
+}
