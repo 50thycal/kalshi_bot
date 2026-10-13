@@ -4,7 +4,7 @@
   "note": "Owner approvals. The owner's merge of this file to the deployed branch is the sign-off (DEC-035): the catalog applies each approval at start while its exemplar markets still carry the approved rules digest. They can also be posted from the dashboard with the catalog token.",
   "items": [
     {
-      "approval_id": "KXBTCD-series-approval-20261013",
+      "approval_id": "KXBTCD-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXBTCD",
       "exemplars": [
@@ -19,15 +19,13 @@
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXBTCD-series-draft-20261012",
-      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
-        "Read BTC.pdf for missing-data and index-outage contingencies (same hash as the 2026-10-09 pilot).",
-        "Listing wording unchanged since the July sample; confirm before approving as a series template.",
-        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
-        "Current listing text does not prove the terms that governed earlier fills."
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
       ],
       "semantics": {
         "resolution_mechanism": "sixty_second_index_average_threshold",
@@ -44,7 +42,8 @@
           "comparison_operator": ">",
           "threshold_display": "Strikes end in .99 and display as the next round dollar 'or above'; the predicate is strictly greater than the strike.",
           "event_mutually_exclusive": false,
-          "cross_market_relation": "All strikes at one time are nested on one determination; KXBTC ranges at the same time share it."
+          "cross_market_relation": "All strikes at one time are nested on one determination; KXBTC ranges at the same time share it.",
+          "no_data": "If no index data is available at expiration, the market resolves No (contract terms)."
         },
         "shared_exposure_key": "candidate-index-time:BRTI:{event_suffix}",
         "settlement_source": {
@@ -55,7 +54,8 @@
             }
           ],
           "terms_url": "https://assets.kalshi.com/contract_terms/BTC.pdf",
-          "historical_version_verified": false
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
         },
         "risk_components": {
           "numeric_score": null,
@@ -75,12 +75,13 @@
         "confidence_score": null,
         "qualified": false,
         "historical_terms_verified": false,
-        "contract_pdf_text_reviewed": false,
+        "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
-      }
+      },
+      "supersedes": "KXBTCD-series-approval-20261013"
     },
     {
-      "approval_id": "KXWTI-series-approval-20261013",
+      "approval_id": "KXWTI-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXWTI",
       "exemplars": [
@@ -95,15 +96,13 @@
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXWTI-series-draft-20261012",
-      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
-        "Read COMMODITIES.pdf for exchange holidays and the stale-settlement fallback.",
-        "Confirm the observation instant (strike_date 14:30 ET) matches the ICE settlement window.",
-        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
-        "Current listing text does not prove the terms that governed earlier fills."
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
       ],
       "semantics": {
         "resolution_mechanism": "futures_daily_settlement_threshold",
@@ -114,7 +113,8 @@
         "exclusions": [
           "Uses ICE WTI futures (front month WBS), not NYMEX CL.",
           "Front month rolls 2 business days before the current contract's last trading day.",
-          "If no settlement is published for the date, the most recent published settlement is used."
+          "If no settlement is published for the date, the most recent published settlement is used.",
+          "If no price is published and none is expected within a week, the most recently available price is used (contract terms)."
         ],
         "payout_relationship": {
           "normal_case": "Yes if the named contract's daily settlement, rounded to 2 decimals, is above the strike; otherwise No.",
@@ -131,7 +131,8 @@
             }
           ],
           "terms_url": "https://assets.kalshi.com/contract_terms/COMMODITIES.pdf",
-          "historical_version_verified": false
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
         },
         "risk_components": {
           "numeric_score": null,
@@ -151,12 +152,13 @@
         "confidence_score": null,
         "qualified": false,
         "historical_terms_verified": false,
-        "contract_pdf_text_reviewed": false,
+        "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
-      }
+      },
+      "supersedes": "KXWTI-series-approval-20261013"
     },
     {
-      "approval_id": "KXMLBTOTAL-series-approval-20261013",
+      "approval_id": "KXMLBTOTAL-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXMLBTOTAL",
       "exemplars": [
@@ -167,19 +169,25 @@
         {
           "market": "KXMLBTOTAL-26JUL142000ALNL-12",
           "rules_hash": "7660a6c2eecb757393a1bfef5d4311df96c99c95e63b3078346d55e20df911c7"
+        },
+        {
+          "market": "KXMLBTOTAL-26SEP251905BALNYYG2-10",
+          "rules_hash": "d5439bfc196d0cfe25e35bce5ddbec67de95732eb1ed1dc63868e6c23ff121bc"
+        },
+        {
+          "market": "KXMLBTOTAL-26JUL161910NYMPHI-10",
+          "rules_hash": "5794c1229600383b6e06da4602c7531cbfcb462727d6f61f5a9b967474fed133"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXMLBTOTAL-series-draft-20261012",
-      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
-        "Read BASEBALLTOTALS.pdf: postponed, suspended and shortened games.",
-        "Earliest traded sample is the All-Star Game (AL vs NL); confirm it should share the regular-season template.",
-        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
-        "Current listing text does not prove the terms that governed earlier fills."
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
       ],
       "semantics": {
         "resolution_mechanism": "game_combined_score_threshold",
@@ -188,7 +196,11 @@
         "alternatives": [],
         "alternative_operator": "single_threshold",
         "exclusions": [
-          "Listing rules state no postponement, suspension or extra-innings terms; those are in the unread contract terms."
+          "Postponed, suspended or cancelled before becoming official and not resumed within 48 hours of the scheduled start: last fair price (non-binary). Shortened but declared official: the official result.",
+          "Extra innings count, with no maximum.",
+          "Forfeit before the first pitch: last fair price.",
+          "Post-game statistical corrections are ignored.",
+          "Doubleheader listings name 'game 1/2 of the double header'; same rule."
         ],
         "payout_relationship": {
           "normal_case": "Yes if both teams' combined runs exceed the half-point line; otherwise No.",
@@ -206,14 +218,14 @@
             }
           ],
           "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLTOTALS.pdf",
-          "historical_version_verified": false
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
         },
         "risk_components": {
           "numeric_score": null,
           "qualitative_flags": [
             "nested_line_ladder",
             "early_close_on_over",
-            "postponement_terms_unread",
             "shared_game_exposure"
           ],
           "execution_quality": "unknown",
@@ -226,12 +238,13 @@
         "confidence_score": null,
         "qualified": false,
         "historical_terms_verified": false,
-        "contract_pdf_text_reviewed": false,
+        "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
-      }
+      },
+      "supersedes": "KXMLBTOTAL-series-approval-20261013"
     },
     {
-      "approval_id": "KXMLBSPREAD-series-approval-20261013",
+      "approval_id": "KXMLBSPREAD-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXMLBSPREAD",
       "exemplars": [
@@ -242,18 +255,25 @@
         {
           "market": "KXMLBSPREAD-26JUL142000ALNL-NL2",
           "rules_hash": "a58721c7488f3fbeb19339b9149c82ea00221b678716778bebe85c7fe6c80573"
+        },
+        {
+          "market": "KXMLBSPREAD-26AUG171340STLCING1-CIN3",
+          "rules_hash": "ee1c45af85290bd2d88df9505f03f5df610c512150746e2e45fad8a6485bfe1f"
+        },
+        {
+          "market": "KXMLBSPREAD-26JUL161910NYMPHI-NYM4",
+          "rules_hash": "5af0bfcf76e37577a2cd4862d8258f65f8e9dd6f3ecf12ce951314ec506f457c"
         }
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXMLBSPREAD-series-draft-20261012",
-      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
-        "Read BASEBALLSPREAD.pdf: postponed, suspended and shortened games.",
-        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
-        "Current listing text does not prove the terms that governed earlier fills."
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
       ],
       "semantics": {
         "resolution_mechanism": "game_margin_threshold_for_named_team",
@@ -262,7 +282,10 @@
         "alternatives": [],
         "alternative_operator": "single_threshold",
         "exclusions": [
-          "Listing rules state no postponement or suspension terms; those are in the unread contract terms."
+          "Postponed, suspended or cancelled before becoming official and not resumed within 48 hours of the scheduled start: last fair price (non-binary). Shortened but declared official: the official result.",
+          "Extra innings count. A game ending tied settles on a 0 run differential.",
+          "Home/away designation reversed: last fair price. Forfeit before the first pitch: last fair price.",
+          "Doubleheader listings name 'game 1/2 of the double header'; same rule."
         ],
         "payout_relationship": {
           "normal_case": "Yes if the named team wins by more than the half-run line; otherwise No (including a loss).",
@@ -278,13 +301,13 @@
             }
           ],
           "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLSPREAD.pdf",
-          "historical_version_verified": false
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
         },
         "risk_components": {
           "numeric_score": null,
           "qualitative_flags": [
             "nested_line_ladder",
-            "postponement_terms_unread",
             "shared_game_exposure"
           ],
           "execution_quality": "unknown",
@@ -297,12 +320,13 @@
         "confidence_score": null,
         "qualified": false,
         "historical_terms_verified": false,
-        "contract_pdf_text_reviewed": false,
+        "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
-      }
+      },
+      "supersedes": "KXMLBSPREAD-series-approval-20261013"
     },
     {
-      "approval_id": "KXRAIN-series-approval-20261013",
+      "approval_id": "KXRAIN-series-approval-20261013b",
       "kind": "series_template",
       "ticker": "KXRAIN",
       "exemplars": [
@@ -317,15 +341,13 @@
       ],
       "actor": "Claude Code (recording the owner approval)",
       "approved_by": "Calvin (owner)",
-      "approved_at": "2026-10-13T01:11:37+00:00",
-      "approval_record": "Owner approved the plain-language draft in docs/MARKET_CATALOG_REVIEW_DRAFTS_20261012.md in a Claude Code session on 2026-10-13 ('Yeah I approve of those' for BTC, WTI, MLB total, MLB spread, rain); recorded here for the owner's merge, which is the sign-off.",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
       "source_draft": "KXRAIN-series-draft-20261012",
-      "rationale": "The listing rules fully state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
       "open_questions": [
-        "Which day boundary applies (local standard time climate day vs calendar day)? The listing does not say.",
-        "Read RAINGLOBALPERIOD.pdf for revisions of the climate report after settlement.",
-        "Observation boundaries are left unknown where the listing does not state them; schedule times are not substituted.",
-        "Current listing text does not prove the terms that governed earlier fills."
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
       ],
       "semantics": {
         "resolution_mechanism": "daily_station_precipitation_positive",
@@ -336,10 +358,12 @@
         "exclusions": [
           "Trace (T) counts as 0 inches.",
           "Missing daily precipitation counts as 0 inches, so a data gap settles No.",
-          "Only the named climate station (e.g. CLINYC) counts, as reported by The Weather Company."
+          "Only the named climate station (e.g. CLINYC) counts, as reported by The Weather Company.",
+          "Counts all precipitation, not only rain (contract terms).",
+          "If no reliable data is available by expiration: last fair price (non-binary)."
         ],
         "payout_relationship": {
-          "normal_case": "Yes if the station's daily precipitation is strictly above 0.00 inches; otherwise No.",
+          "normal_case": "Yes if the station's total precipitation (rain plus melted snow, sleet and hail) is strictly above 0.00 inches; otherwise No.",
           "comparison_operator": ">",
           "event_mutually_exclusive": false,
           "cross_market_relation": "City markets on one date are separate stations; nearby cities can share a weather system."
@@ -353,7 +377,8 @@
             }
           ],
           "terms_url": "https://assets.kalshi.com/contract_terms/RAINGLOBALPERIOD.pdf",
-          "historical_version_verified": false
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
         },
         "risk_components": {
           "numeric_score": null,
@@ -374,7 +399,664 @@
         "confidence_score": null,
         "qualified": false,
         "historical_terms_verified": false,
-        "contract_pdf_text_reviewed": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      },
+      "supersedes": "KXRAIN-series-approval-20261013"
+    },
+    {
+      "approval_id": "KXMLBHR-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXMLBHR",
+      "exemplars": [
+        {
+          "market": "KXMLBHR-26OCT121700LADMIL-MILBTURANG2-1",
+          "rules_hash": "f4118336e9e693cbe9a9ac825c5745db0165b4a682fc97e32fc5dab193ee8a14"
+        },
+        {
+          "market": "KXMLBHR-26JUL261920NYYPHI-PHIABOHM28-1",
+          "rules_hash": "5257db470208aa87484268da0b01674de40eead5c5c1835e329164fbf278fcea"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXMLBHR-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "player_game_stat_threshold_with_participation_fair_price",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_stat_threshold",
+        "exclusions": [
+          "Scratched or not in the starting lineup: fair market price.",
+          "Starts but records no plate appearance: fair market price.",
+          "Enters later (not a starter): fair market price; pinch-hit at-bats do not count.",
+          "Postponed, suspended or cancelled before becoming official and not resumed within 48 hours of the scheduled start: last fair price (non-binary). Shortened but declared official: the official result.",
+          "Statistics are final at game end; later corrections are ignored.",
+          "Removed after appearing: settles on end-of-game stats if the batter had at least one plate appearance."
+        ],
+        "payout_relationship": {
+          "normal_case": "Starter with at least one plate appearance: Yes if home runs reach the market's strike; otherwise No.",
+          "exception_case": "Fair-market-price settlement for the participation cases and for games not made official; payout need not be 0 or 1.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Every player prop, total, spread and strikeout market on the same game shares one game outcome."
+        },
+        "shared_exposure_key": "candidate-game:MLB:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Fox Sports",
+              "url": "https://www.foxsports.com"
+            },
+            {
+              "name": "the Governing League",
+              "url": "https://www.mlb.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "lineup_and_plate_appearance_eligibility",
+            "fair_price_fallback",
+            "postponement_or_suspended_game",
+            "shared_game_exposure",
+            "official_data_finality"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXMLBKS-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXMLBKS",
+      "exemplars": [
+        {
+          "market": "KXMLBKS-26OCT071800LADATL-LADTGLASNOW31-11",
+          "rules_hash": "fdfb0aaab2e47fae4e634193a9809d40a46f54c8b6e7646b7cfc3a38bb0df102"
+        },
+        {
+          "market": "KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10",
+          "rules_hash": "2864550839d6c2dbe2a76b0514ee0fb62a9341bdfc14598f6d57600a159ff80e"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXMLBKS-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "starting_pitcher_stat_threshold_with_participation_fair_price",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_stat_threshold",
+        "exclusions": [
+          "Scratched or not a starting pitcher: fair market price.",
+          "Enters in relief: fair market price; relief appearances do not count.",
+          "Postponed, suspended or cancelled before becoming official and not resumed within 48 hours of the scheduled start: last fair price (non-binary). Shortened but declared official: the official result.",
+          "Statistics are final at game end; later corrections are ignored."
+        ],
+        "payout_relationship": {
+          "normal_case": "Starting pitcher meeting the participation test of the listing's wording: Yes if strikeouts reach the market's strike; otherwise No.",
+          "exception_case": "Fair-market-price settlement for the participation cases and for games not made official; payout need not be 0 or 1.",
+          "rule_change_observed": "Listings to about 8 Sep 2026 require 'at least one pitch'; later listings and the current terms (modified 8 Sep 2026) require 'faced at least one batter'. Each wording binds separately; the change date is unproven.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Shares the game with all other MLB markets on it."
+        },
+        "shared_exposure_key": "candidate-game:MLB:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Fox Sports",
+              "url": "https://www.foxsports.com"
+            },
+            {
+              "name": "the Governing League",
+              "url": "https://www.mlb.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/BASEBALLENTITYSTAT.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "starting_pitcher_eligibility",
+            "participation_wording_changed_during_trading",
+            "fair_price_fallback",
+            "shared_game_exposure"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXATPCHALLENGERMATCH-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXATPCHALLENGERMATCH",
+      "exemplars": [
+        {
+          "market": "KXATPCHALLENGERMATCH-26OCT09PINGOJ-GOJ",
+          "rules_hash": "e7deb57e65bd73cfe0efc2f570aa78335dbf30e61c2ad78dd4976b61a11cad45"
+        },
+        {
+          "market": "KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN",
+          "rules_hash": "ba230d0299555fb98e4bd1095771db4ecc555cc7214ca0f1c6f2c16bb67ce0f8"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXATPCHALLENGERMATCH-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "head_to_head_match_winner_after_first_ball",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "named_competitor_wins",
+        "exclusions": [
+          "No ball played (injury, walkover, forfeiture, other cancellation before start): settles to a fair price per the rules, not 0/1.",
+          "Postponed or delayed match stays open and settles after the rescheduled match, within two weeks.",
+          "Sources: the governing body, AP, ESPN, WSJ and Fox Sports; no ranking is stated."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named player wins the match after a ball has been played; otherwise No.",
+          "exception_case": "Fair-price settlement when the match never starts; payout need not be 0 or 1.",
+          "mid_match_retirement": "A player who withdraws or forfeits resolves No (contract terms).",
+          "event_mutually_exclusive": true,
+          "cross_market_relation": "The two player markets of one match are complements."
+        },
+        "shared_exposure_key": "candidate-event:{event_ticker}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ATP",
+              "url": "https://www.atptour.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "non_start_fair_price",
+            "mid_match_retirement_unspecified_in_listing",
+            "postponement_two_week_window",
+            "two_player_complement"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXWTACHALLENGERMATCH-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXWTACHALLENGERMATCH",
+      "exemplars": [
+        {
+          "market": "KXWTACHALLENGERMATCH-26OCT08ZAVZAR-ZAV",
+          "rules_hash": "417e085ca8a751beb80407ddd4174b04ef67bf11b5c9630cc3ee89082d1e8f41"
+        },
+        {
+          "market": "KXWTACHALLENGERMATCH-26JUL13PENTHA-THA",
+          "rules_hash": "64f8400f2ce863f486a8cb0449ad21121d55b6b5d9f76b413bedcf8a8551ff7f"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXWTACHALLENGERMATCH-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "head_to_head_match_winner_after_first_ball",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "named_competitor_wins",
+        "exclusions": [
+          "No ball played (injury, walkover, forfeiture, other cancellation before start): settles to a fair price per the rules, not 0/1.",
+          "Postponed or delayed match stays open and settles after the rescheduled match, within two weeks.",
+          "Sources: the governing body, AP, ESPN, WSJ and Fox Sports; no ranking is stated."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named player wins the match after a ball has been played; otherwise No.",
+          "exception_case": "Fair-price settlement when the match never starts; payout need not be 0 or 1.",
+          "mid_match_retirement": "A player who withdraws or forfeits resolves No (contract terms).",
+          "event_mutually_exclusive": true,
+          "cross_market_relation": "The two player markets of one match are complements."
+        },
+        "shared_exposure_key": "candidate-event:{event_ticker}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "WTA",
+              "url": "https://www.wtatennis.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "non_start_fair_price",
+            "mid_match_retirement_unspecified_in_listing",
+            "postponement_two_week_window",
+            "two_player_complement"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXITFMATCH-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXITFMATCH",
+      "exemplars": [
+        {
+          "market": "KXITFMATCH-26OCT08CHEALK-CHE",
+          "rules_hash": "61b474c555923c1d55b5e9c371f394c8c3d1aa68ec61f13c394340dd92b433a7"
+        },
+        {
+          "market": "KXITFMATCH-26JUL14JASJON-JAS",
+          "rules_hash": "1ded2023a19a6f483ec06a4db6e38cf2414a16f778ee91a1e5abdb3b42751d39"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXITFMATCH-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "head_to_head_match_winner_after_first_ball",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "named_competitor_wins",
+        "exclusions": [
+          "No ball played (injury, walkover, forfeiture, other cancellation before start): all markets resolve to $0.50.",
+          "Player withdraws or forfeits after the match starts: that player resolves No.",
+          "Postponed or delayed match stays open and settles after the rescheduled match, within two weeks.",
+          "Sources: the governing body, AP, ESPN, WSJ and Fox Sports; no ranking is stated."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named player wins after a ball has been played; otherwise No.",
+          "exception_case": "$0.50 for every market when the match never starts.",
+          "mid_match_retirement": "Retiring player resolves No (opponent's market Yes by complement).",
+          "event_mutually_exclusive": true,
+          "cross_market_relation": "The two player markets of one match are complements."
+        },
+        "shared_exposure_key": "candidate-event:{event_ticker}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ITF",
+              "url": "https://www.itftennis.com/en/"
+            },
+            {
+              "name": "Flashscore",
+              "url": "https://www.flashscoreusa.com/tennis/itf-men-singles/"
+            },
+            {
+              "name": "Fox Sports",
+              "url": "https://www.foxsports.com"
+            },
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "non_start_half_dollar",
+            "retirement_resolves_no",
+            "postponement_two_week_window",
+            "two_player_complement",
+            "lower_tier_data_quality"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXITFWMATCH-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXITFWMATCH",
+      "exemplars": [
+        {
+          "market": "KXITFWMATCH-26OCT09POPDOR-POP",
+          "rules_hash": "20a1182108426598ec015dca6844a5ed141f681ff5897fa8acb378036c663991"
+        },
+        {
+          "market": "KXITFWMATCH-26JUL13YOSSIB-SIB",
+          "rules_hash": "d02a1be7386226b65289b4a785d93d99d7baf0f34b5020fc4ee582b5f6620906"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXITFWMATCH-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "head_to_head_match_winner_after_first_ball",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "named_competitor_wins",
+        "exclusions": [
+          "No ball played (injury, walkover, forfeiture, other cancellation before start): all markets resolve to $0.50.",
+          "Player withdraws or forfeits after the match starts: that player resolves No.",
+          "Postponed or delayed match stays open and settles after the rescheduled match, within two weeks.",
+          "Sources: the governing body, AP, ESPN, WSJ and Fox Sports; no ranking is stated."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if the named player wins after a ball has been played; otherwise No.",
+          "exception_case": "$0.50 for every market when the match never starts.",
+          "mid_match_retirement": "Retiring player resolves No (opponent's market Yes by complement).",
+          "event_mutually_exclusive": true,
+          "cross_market_relation": "The two player markets of one match are complements."
+        },
+        "shared_exposure_key": "candidate-event:{event_ticker}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "ITF",
+              "url": "https://www.itftennis.com/en/"
+            },
+            {
+              "name": "ESPN",
+              "url": "https://www.espn.com"
+            },
+            {
+              "name": "Flashscore",
+              "url": "https://www.flashscoreusa.com/tennis/itf-men-singles/"
+            },
+            {
+              "name": "Fox Sports",
+              "url": "https://www.foxsports.com"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/ACHIEVEMENTS.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "non_start_half_dollar",
+            "retirement_resolves_no",
+            "postponement_two_week_window",
+            "two_player_complement",
+            "lower_tier_data_quality"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXWCGOAL-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXWCGOAL",
+      "exemplars": [
+        {
+          "market": "KXWCGOAL-26JUL19ESPARG-ESPMZUBIM36-1",
+          "rules_hash": "17910dd143b4cf92934c6650747cebfbcc96679fb514be7fe9db28fa192ba92c"
+        },
+        {
+          "market": "KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1",
+          "rules_hash": "73a5a3a86da1ef37e62e7ff17e2387bd8d6bca127e4fadf37fb6bc09cf56e764"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXWCGOAL-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "player_game_stat_threshold_with_participation_fair_price",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_stat_threshold",
+        "exclusions": [
+          "Active but never enters the game: last fair market price before game start.",
+          "Counts regulation, stoppage and extra time. Penalty-shootout goals and own goals do not count (contract terms).",
+          "Abandoned before 90 minutes and not restarting: last fair price, except markets already decided.",
+          "The terms also say cup finals 'only count regulation goals for standard totals'; the listing says extra time counts. Noted conflict."
+        ],
+        "payout_relationship": {
+          "normal_case": "Once the player enters, Yes if goals reach the market's strike; otherwise No.",
+          "exception_case": "Pre-game fair price if the player never enters; payout need not be 0 or 1.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "All scorer markets in one match share the match; shares with score/margin series on the same game."
+        },
+        "shared_exposure_key": "candidate-game:FIFAWC:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "FIFA",
+              "url": "https://FIFA.com"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/SOCCERENTITYSTAT.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "participation_fair_price",
+            "extra_time_included",
+            "shootout_treatment_unverified",
+            "shared_game_exposure",
+            "tournament_series_ended"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
+        "outcome_independence_verified": false
+      }
+    },
+    {
+      "approval_id": "KXNFLTOTAL-series-approval-20261013",
+      "kind": "series_template",
+      "ticker": "KXNFLTOTAL",
+      "exemplars": [
+        {
+          "market": "KXNFLTOTAL-26OCT11BALATL-68",
+          "rules_hash": "d532c17ddad66fd909149d101a0ade95c0a2be06387e22bca38899481fa473e8"
+        },
+        {
+          "market": "KXNFLTOTAL-26AUG13INDNE-60",
+          "rules_hash": "7a9efd29f5529b4b2d48adf8e573133660f038bbeaba1601cefcd5785c51d6b8"
+        }
+      ],
+      "actor": "Claude Code (recording the owner approval)",
+      "approved_by": "Calvin (owner)",
+      "approved_at": "2026-10-13T01:47:38+00:00",
+      "approval_record": "Owner said 'yes to all three' in a Claude Code session on 2026-10-13: approve the remaining eight series, treat the MLB doubleheader and early-July wordings as the same rule, and add the contract-PDF facts to the five approved series; recorded here for the owner's merge, which is the sign-off.",
+      "source_draft": "KXNFLTOTAL-series-draft-20261012",
+      "rationale": "The listing rules and the contract terms state the settlement rule for this series; the owner approved the series wording as shown in the exemplar markets. Strike, date, time and names vary per market; the wording does not.",
+      "open_questions": [
+        "Which version of the terms governed fills before each document's modification date is unproven.",
+        "Outcome independence and shared exposure are unverified."
+      ],
+      "semantics": {
+        "resolution_mechanism": "game_combined_score_threshold",
+        "observation_start": null,
+        "observation_end": null,
+        "alternatives": [],
+        "alternative_operator": "single_threshold",
+        "exclusions": [
+          "Overtime counts. Suspended before 55 minutes and not resumed within 48 hours: last fair price, except markets already decided. At 55+ minutes or declared final: settles on what happened. Postponed within 48 hours: stays open.",
+          "Forfeit before kickoff: last fair price. Venue moved beyond 48 hours or home/away reversed: last fair price."
+        ],
+        "payout_relationship": {
+          "normal_case": "Yes if both teams' combined points exceed the half-point line; otherwise No.",
+          "early_close": "Closes early once the over is reached.",
+          "fee_note": "Series fee type is quadratic_with_maker_fees: resting maker orders pay fees here, unlike the other twelve series.",
+          "event_mutually_exclusive": false,
+          "cross_market_relation": "Lines on one game are nested.",
+          "overtime": "Overtime points count (contract terms)."
+        },
+        "shared_exposure_key": "candidate-game:NFL:{event_suffix}",
+        "settlement_source": {
+          "agencies": [
+            {
+              "name": "the Governing League",
+              "url": "https://www.nfl.com/"
+            }
+          ],
+          "terms_url": "https://assets.kalshi.com/contract_terms/FOOTBALLTOTALS.pdf",
+          "historical_version_verified": false,
+          "contract_terms_read": "Contract terms read in full 2026-10-13 (ops catalog-pdf-terms-20261013a; SHA-256 matches the draft)."
+        },
+        "risk_components": {
+          "numeric_score": null,
+          "qualitative_flags": [
+            "maker_fees_charged",
+            "nested_line_ladder",
+            "shared_game_exposure"
+          ],
+          "execution_quality": "unknown",
+          "outcome_independence": "unverified",
+          "document_version_at_execution": "unverified"
+        }
+      },
+      "scope": {
+        "approves": "contract wording and settlement semantics only",
+        "confidence_score": null,
+        "qualified": false,
+        "historical_terms_verified": false,
+        "contract_pdf_text_reviewed": true,
         "outcome_independence_verified": false
       }
     }

@@ -467,3 +467,17 @@ coverage diff will name the field.
 Contract PDFs are read; see the answers table in the [review drafts](../MARKET_CATALOG_REVIEW_DRAFTS_20261012.md).
 NFL overtime counts. Fair-price settlement on postponement also applies to MLB total and spread.
 Rain counts all precipitation.
+
+### Round 2 — all 13 approved — 2026-10-13 UTC
+
+Template v2 in production raised rain to 71/71 and WTI to 41/41. MLB total went to 108/117; the
+remaining gaps are the doubleheader and early-July wordings. Six BTC markets differed only in
+encoding, which v3 fixes.
+
+Calvin then approved:
+- the remaining eight series;
+- the MLB wording variants;
+- the contract-PDF facts for the first five.
+
+All 13 are recorded in `approved_reviews.json` with 2–4 exemplars each, and the merge applies
+them.

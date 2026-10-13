@@ -1,8 +1,6 @@
 # Proposed rule reviews — top 13 live-traded series (2026-10-12)
 
-**Workstream:** WS-023 · **Status:** 5 approved by the owner on 2026-10-13 (#5 MLB total, #6 BTC, #7 MLB spread,
-#8 rain, #11 WTI), recorded in `kalshi_bot/catalog/approved_reviews.json` and applied when the owner merges it;
-the other 8 are proposed · **Author:** Claude Code (task-specific catalog session)
+**Workstream:** WS-023 · **Status:** all 13 approved by the owner on 2026-10-13 and recorded in `kalshi_bot/catalog/approved_reviews.json` (the five first approvals updated with the contract-PDF facts and the MLB doubleheader/early-July wordings) · **Author:** Claude Code (task-specific catalog session)
 
 These 13 series cover 50% of the markets MMSELL has traded live (2,868 markets across 250 series; ops
 `catalog-review-priority-20261012a`). Each draft quotes one recent traded market's official listing rules
@@ -105,3 +103,19 @@ Approval is your decision, series by series. Reply with what you accept, reject 
 An accepted draft is recorded in `kalshi_bot/catalog/approved_reviews.json`, and the owner's merge applies it
 (`DEC-035`). It binds only while the sample markets still carry the exact rules that were read. A series review still leaves each market's own
 review and the historical-terms question open, so confidence stays unset until the remaining calibration steps are done.
+
+## Round 2 approval (2026-10-13)
+
+The owner said "yes to all three":
+1. Approve the remaining eight series.
+2. Treat the MLB doubleheader ("game 1/2 of the double header") and early-July (no disclaimer) wordings as the same rule.
+3. Add the contract-PDF facts to the five first approvals.
+
+These are recorded as:
+- `*-series-approval-20261013` for the eight new series;
+- `*-series-approval-20261013b` for the five updated ones, which supersede the earlier versions.
+
+The newest approval of the same wording wins.
+
+For KXMLBKS, both participation wordings are approved; each binds separately, and the change
+date stays unproven. Nothing is scored or qualified.
