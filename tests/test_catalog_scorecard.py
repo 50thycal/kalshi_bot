@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from kalshi_bot.catalog.scorecard import scorecard, series_scorecard
+from kalshi_bot.catalog.scorecard import PAPER_SETTLED, scorecard, series_scorecard
 from kalshi_bot.catalog.service import APPROVALS, make_server
 from kalshi_bot.catalog.store import Store
 
@@ -136,3 +136,46 @@ def test_a_shared_key_prefix_without_a_shared_bet_is_not_a_family(store):
     store.save_live_economics([ledger(GAME, "0.30"), ledger(spread, "-0.90")])
     # Both series key by candidate-game:MLB, but no game was traded in both: nothing shared.
     assert scorecard(store, ["KXMLBTOTAL", "KXMLBSPREAD"])["families"] == []
+
+
+def paper(id, ticker, pnl, quantity=1, status="settled", **changes):
+    return {"id": id, "market_ticker": ticker, "strategy": "mmsell10p", "status": status,
+            "pnl": pnl, "quantity": quantity, "fees": "0.01", "is_twin": False,
+            "created_at": f"2026-09-27T18:0{id % 10}:00+00:00", **changes}
+
+
+def test_paper_sits_beside_live_with_twins_apart_and_same_market_comparison(store):
+    store.evidence_page("paper", [
+        paper(1, GAME, "0.40"),
+        paper(2, "KXMLBTOTAL-26SEP271510STLMIL-9", "-0.10"),
+        paper(3, OTHER_GAME, "-0.60", quantity=2, status="closed_sl"),
+        paper(4, OTHER_GAME, None, status="open"),
+        paper(5, OTHER_GAME, "0", status="closed_void"),
+        paper(6, GAME, "0.20", strategy="mmsell10-twin", is_twin=True),
+        paper(7, GAME, "5.00", strategy="weather_ladder"),
+    ], {"after": 0})
+    row = series_scorecard(store, "KXMLBTOTAL")
+    assert row["net_pnl_dollars"] == "0.05"  # live is unchanged by paper
+    p = row["paper"]
+    assert p["statuses"] == {"settled": 3, "closed_sl": 1, "open": 1, "closed_void": 1}
+    assert (p["settled_trades"], p["markets"], p["contracts"]) == (3, 3, "4")
+    assert p["net_pnl_dollars"] == "-0.30" and p["net_cents_per_contract"] == -7.5
+    # Both STL-MIL lines are one bet (+0.30); ALNL is the other (-0.60).
+    assert (p["independent_bets"], p["independent_bets_winning"]) == (2, 1)
+    assert p["worst_bet_dollars"] == "-0.60"
+    assert p["twins"] == {"settled_trades": 1, "markets": 1, "net_pnl_dollars": "0.20",
+                          "net_cents_per_contract": 20.0}
+    same = p["same_markets_as_live"]
+    assert same["markets"] == 3 and same["paper_cents_per_contract"] == -7.5
+    assert round(same["live_cents_per_contract"], 4) == 0.5556
+    assert p["twin_same_markets_as_live"] == {
+        "markets": 1, "live_cents_per_contract": 10.0, "paper_cents_per_contract": 20.0}
+    card = scorecard(store, ["KXMLBTOTAL"])
+    assert card["paper_live_pooled"] is False
+    assert card["paper_total"]["net_pnl_dollars"] == "-0.30"
+    assert card["total"]["net_pnl_dollars"] == "0.05"
+
+
+def test_paper_settled_statuses_match_experiment_os():
+    from kalshi_bot.experiment_os.metrics import SETTLED_STATUSES
+    assert PAPER_SETTLED == SETTLED_STATUSES

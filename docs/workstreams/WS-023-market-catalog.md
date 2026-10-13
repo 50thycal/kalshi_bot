@@ -561,3 +561,13 @@ How to read it:
 - The standard error understates risk where few or no losses have happened yet (NFL).
 - Correlation across series (an MLB total, spread and home-run market on one game) is not merged.
 - These are research questions for the Research Lab / Experiment OS; changing what trades is a recorded transition there.
+
+### Paper beside live in the scorecard — 2026-10-13 UTC
+
+Calvin chose option A: put paper results next to live per series, so paper can be checked
+against live before it is used to screen untraded markets. `series-scorecard-v2` adds a `paper`
+block to every series row. It covers settled MMSELL paper trades at the source-recorded P&L,
+with the same settled statuses Experiment OS uses, and groups one bet per approved exposure key.
+Live-paper twins are kept apart. `same_markets_as_live` compares paper and live cents per contract
+only on markets both traded. Paper and live are never pooled, and paper fills are assumed, so
+paper is an optimistic reference. No score, qualification or trading change.
