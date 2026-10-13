@@ -1,37 +1,4 @@
 # ops request [READ]
-# type=xos  id=mlb-issue-receipt-20261013a
-# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T03:19:43Z
-{
-  "command_id": "catalog-mlb-stop-q-20261013",
-  "action": "OPEN_MANUAL",
-  "actor": "claude-code-for-calvin",
-  "actor_role": "TASK_SPECIFIC",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000046",
-  "schema_version": 1,
-  "payload_hash": "e4af6ef8b8483b00058896f5843106d12286dda1fe3b0fe30e06f8e492919d37",
-  "payload_fields": [
-    "classification",
-    "owner_role",
-    "priority",
-    "problem_statement",
-    "reason",
-    "severity",
-    "title"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-10-13 03:19:25.414455+00:00",
-  "started_at": "2026-10-13 03:19:25.414455+00:00",
-  "completed_at": "2026-10-13 03:19:25.511774+00:00",
-  "result": {
-    "kind": "issue",
-    "status": "OPEN",
-    "priority": "P2",
-    "severity": "MEDIUM",
-    "issue_key": "XOS-000046",
-    "owner_role": "RESEARCH_LAB",
-    "disposition": null,
-    "classification": "STRATEGY"
-  },
-  "error": null
-}
+# type=noop
+# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T03:20:10Z
+(noop — nothing to do)
