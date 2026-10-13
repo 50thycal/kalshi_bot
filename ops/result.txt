@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=limm-db-1013y
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T21:19:55Z
-market_ticker                side  action  limit_price  quantity  status    cr                                        created_at                     coid          credits  tswif                                 
----------------------------  ----  ------  -----------  --------  --------  ----------------------------------------  -----------------------------  ------------  -------  --------------------------------------
-KXTRUMPMENTION-26OCT17-OIL   no    buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/po  2026-10-13 20:53:02.905831+00  8d1f6cb5-98d           499.0000 2026-10-13 21:18:24.102532+00
-KXTRUMPMENTION-26OCT17-DIVI  no    buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/po  2026-10-13 20:23:02.225054+00  fea096db-13f           499.0000 2026-10-13 21:18:24.102532+00
-KXBIGSKYOPEN-27-29NOV26      no    buy     7            142       rejected  Kalshi API error 400 on /trade-api/v2/po  2026-10-13 19:51:31.106771+00  4d49e459-4d3           499.0000 2026-10-13 21:18:24.102532+00
-KXBIGSKYOPEN-27-22NOV26      yes   buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/po  2026-10-13 19:20:21.592286+00  497dca9f-622           499.0000 2026-10-13 21:18:24.102532+00
-KXTRUMPMENTION-26OCT13-PEAC  yes   buy     1            500       canceled  replaced                                  2026-10-13 10:59:33.886046+00  ff0a6310-c55           499.0000 2026-10-13 21:18:24.102532+00
-
-(5 rows)
+# type=noop
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-13T21:20:18Z
+(noop — nothing to do)
