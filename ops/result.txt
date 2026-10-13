@@ -1,4 +1,20 @@
+# latest deployment 80d4a138-817c-4148-8dbd-96a2bb5f766f (status=SUCCESS, created=2026-10-13T02:11:45.652Z)
 # ops request [READ]
-# type=noop
-# code 8561522268da5eb8a1020bffd3c022418b76d098 · started 2026-10-13T02:19:57Z
-(noop — nothing to do)
+# type=logs  service=main  id=limm-logs-1013g
+# code 8561522268da5eb8a1020bffd3c022418b76d098 · started 2026-10-13T02:20:15Z
+# target service: main
+2026-10-13T02:13:12.540165930Z INFO  incentive smoke cycle
+    considered| 1283
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-13T02:18:00.094906633Z INFO  incentive smoke cycle
+    considered| 1283
+    fetched| 30
+    placed| 0
+    outcomes| {"book_too_deep":1,"exposure_cap":1}
+2026-10-13T02:19:33.157420942Z INFO  incentive smoke cycle
+    considered| 1283
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":1,"exposure_cap":1}
