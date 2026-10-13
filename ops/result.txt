@@ -1,4 +1,14 @@
 # ops request [READ]
-# type=noop
-# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:39:33Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013p
+# code fe98b41045f1b1b0b9e000dd5b5a933409c181ac · started 2026-10-13T10:31:28Z
+market_ticker                    side  action  limit_price  quantity  status    cancel_reason                                                                                                                              created_at                     coid          credits
+-------------------------------  ----  ------  -----------  --------  --------  -----------------------------------------------------------------------------------------------------------------------------------------  -----------------------------  ------------  -------
+KXTRUMPMENTION-26OCT14-GULF      yes   buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"insufficient_balance","message":"insufficient balance"}}  2026-10-13 10:20:57.988728+00  c6d985ad-d98         
+KXTRUMPMENTION-26OCT13-SAVE      no    buy     5            200       rejected  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"insufficient_balance","message":"insufficient balance"}}  2026-10-13 09:50:19.805994+00  b70beecb-137         
+KXTRUMPMENTION-26OCT13-HEAL      no    buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"insufficient_balance","message":"insufficient balance"}}  2026-10-13 09:40:16.140936+00  fb480b9f-d8f         
+KXTRUMPMENTION-26OCT13-TRUMP     yes   buy     6            166       rejected  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"insufficient_balance","message":"insufficient balance"}}  2026-10-13 09:38:13.571157+00  59a336b3-cd2         
+KXTRUMPMENTION-26OCT13-DIVI      no    buy     3            333       rejected  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"insufficient_balance","message":"insufficient balance"}}  2026-10-13 09:33:11.523036+00  19ad6c9f-f25         
+KXTRUMPMENTION-26OCT13-OIL       no    sell    1            333       filled                                                                                                                                               2026-10-13 09:31:36.694245+00  limmexit:sto         
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  no    buy     51           499       resting                                                                                                                                              2026-10-13 08:31:49.787285+00  limmexitleg:         
+
+(7 rows)
