@@ -282,7 +282,29 @@ Every step records a before and an after here. Windows end at the stated time.
 The evaluation now reads evidence one series at a time (synthetic Python peak 286 → 62 MB at
 140k rows with production's largest series of 13.5k rows; results identical), and the `catalog_counts` log, which counted every object through
 an index each ~70 s cycle, runs every 15 minutes. Selective history (default off) is a modest
-disk lever (synthetic revision bytes ×0.77 with dictionary encoding, ×0.60 without). After-RAM: _pending 24 h after the catalog deploy._
+disk lever (synthetic revision bytes ×0.77 with dictionary encoding, ×0.60 without). After-RAM: see the 2026-10-13 entry below.
+
+**2026-10-13 02:15Z — 24 h after the #586 catalog deploy (live since 2026-10-12 02:03:55Z).**
+
+| market-catalog | Before (10-11) | After (24 h to 10-13 02:15Z) | 6 h to 02:15Z |
+|---|---|---|---|
+| RAM avg / max (GB, limit 1.0) | 0.69 / 1.00 | **0.83 / 1.54** | 0.92 / 1.54 |
+| CPU avg / max (vCPU) | 0.21 | **0.09 / 0.32** | 0.08 / 0.29 |
+
+- **RAM did not improve; it rose.**
+  - The max above the 1 GB limit coincides with eight catalog redeploys in 24 h (#586, #597, #598, #601, #602, #604, #605 and a skip), when Railway briefly counts the old and new container together.
+  - The average is consistent with the page-cache reading in Step 2: SQLite's file cache fills whatever memory the container has, so the lower Python peak does not show in this metric.
+  - The WS-024 target (catalog < 0.3 GB avg) is **not met**. The owner kept the 1 GB limit on 2026-10-12.
+- **CPU fell by more than half** (0.21 → 0.09 avg). This is consistent with `catalog_counts` moving to 15 min and the partitioned evaluation.
+- **Evaluation** completes every ~30 min (the 1,800 s minimum holds; 19 runs logged 17:50Z → 02:12Z). Each run takes about 35 s: at 23:09Z the restart's first jobs finished at 23:10:43Z and evaluation at 23:11:19Z.
+- **Events sweep:**
+  - The event count was flat at 214,340 from 02:00Z to 15:15Z: the sweep re-read history it already held.
+  - It then rose steadily to 334,600 by 02:13Z, including across five redeploys after 23:09Z. The cursor persisted and there was no reset.
+  - Markets rose 3.59M → 5.44M, almost all between 15:15Z and 01:07Z, then flattened.
+- **Disk:**
+  - The database file grew 20.79 → 22.85 GB between 21:01Z and 02:12Z: ~0.5 GB/h during the new-history burst, slowing to ~0.1 GB/h after 01:00Z.
+  - Free space is 15.26 GB against the bulk-pause floor of ~7.9 GB. Railway's disk metric (26.3 GB) includes the 1.27 GB pre-compression backup and the WAL.
+  - Not an emergency at the current rate; worth re-reading in 24 h. `CATALOG_HISTORY_POLICY=selective` (an owner decision) is the modest lever already built.
 
 ### D3 — retire the incentive tapes (2026-10-10)
 

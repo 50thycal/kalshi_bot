@@ -503,3 +503,14 @@ The gaps:
 
 v4 masking and read-template binding address the first two. Coverage now names the third
 separately.
+
+### 24 h after #586 — 2026-10-13 02:15Z
+
+- **Resources** (detail in WS-024): catalog RAM 0.83 avg / 1.54 max against 0.69 / 1.00 before, so not improved. CPU fell 0.21 → 0.09.
+- **Evaluation:** runs every ~30 min and takes about 35 s.
+- **Events sweep:** continuous across eight redeploys, with no reset. Events 214k → 335k; markets 3.59M → 5.44M.
+- **Disk:** the database grew about 2 GB overnight while the sweep reached new history, then slowed to about 0.1 GB/h. 15.3 GB free.
+- **Template coverage after #605:** 1,408 of 1,448 live-traded markets in the 13 approved series are reviewed.
+  - 9 are invalidated by a parent change.
+  - About 29 are tennis listings whose names contain lowercase particles, a birth year, "+" or "(moved from …)".
+  - 2 are KXMLBHR doubleheader listings with the newer strike type.
