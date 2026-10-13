@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=limm-db-1013o
-# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:36:11Z
-filled_at                      side  action  price  quantity  fee   
------------------------------  ----  ------  -----  --------  ------
-2026-10-13 05:13:09.795564+00  yes   buy     1      500       0.0000
-2026-10-13 08:31:24.771253+00  no    sell    99     1         0.0007
-2026-10-13 09:15:30.120508+00  no    sell    3      333       0.0000
-2026-10-13 09:32:39.874204+00  yes   buy     99     233       0.1615
-2026-10-13 09:32:39.882279+00  yes   buy     99     100       0.0693
-
-(5 rows)
+# type=noop
+# code fbef2809799c3f8e6bb0d3198d7138f8704fde8b · started 2026-10-13T09:36:33Z
+(noop — nothing to do)
