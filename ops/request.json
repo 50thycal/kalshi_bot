@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"kalshi_quote_probe","args":["--series","KXTOP10BBSPOTS","--per-series","40","--min-volume","0"],"id":"limm-quote-1013k"}
