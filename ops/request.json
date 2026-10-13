@@ -1,1 +1,1 @@
-{"type":"logs","filter":"insufficient","limit":40,"id":"limm-logs-1013ib"}
+{"type": "db", "id": "limm-db-1013tbl", "sql": "select table_name from information_schema.tables where table_schema='public' and (table_name like '%order%' or table_name like '%desk%' or table_name like '%balance%')"}
