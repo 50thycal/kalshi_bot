@@ -130,18 +130,42 @@ def test_rewording_after_approval_returns_market_to_review(store):
     assert store.get("market", ticker)["review_status"] == "needs_review"
 
 
-def test_approval_refuses_text_the_owner_did_not_read(store):
-    with pytest.raises(LookupError, match="not a KXBTCD market"):
-        store.review(approval("KXBTCD"))
+def unread(series):
+    """The approval's exemplars without the recorded read templates (an API-posted approval)."""
+    return [{k: v for k, v in e.items() if k != "template_hash"}
+            for e in approval(series)["exemplars"]]
+
+
+def test_approval_binds_only_the_text_that_was_read(store):
+    # Without a recorded read template, an exemplar the catalog does not hold as read binds
+    # nothing, and an approval with nothing bound is refused.
+    with pytest.raises(LookupError, match="No exemplar of KXBTCD binds"):
+        store.review(approval("KXBTCD", exemplars=unread("KXBTCD")))
     put(store, "KXBTCD-26OCT1617-T87999.99", rules_secondary="Changed after review.")
-    with pytest.raises(LookupError, match="differ from the text"):
-        store.review(approval("KXBTCD", exemplars=approval("KXBTCD")["exemplars"][:1]))
+    with pytest.raises(LookupError, match="listing changed since read"):
+        store.review(approval("KXBTCD", exemplars=unread("KXBTCD")[:1]))
     put(store, "KXWTI-26OCT1314-T95.49")
     wrong = [{"market": "KXWTI-26OCT1314-T95.49",
               "rules_hash": approval("KXWTI")["exemplars"][0]["rules_hash"]}]
     with pytest.raises(LookupError, match="not a KXBTCD market"):
         store.review(approval("KXBTCD", exemplars=wrong))
     assert store.series_template_reviews("KXBTCD") == []
+    # With it, the edited listing still binds the wording that was read, not the edit.
+    result = store.review(approval("KXBTCD"))
+    assert {e["market"] for e in result["exemplars_not_held_as_read"]} == set(
+        e["market"] for e in approval("KXBTCD")["exemplars"])
+    edited = store.get("market", "KXBTCD-26OCT1617-T87999.99")
+    assert edited["review_status"] == "needs_review"
+    put(store, "KXBTCD-26JUL1317-T62999.99")
+    assert store.get("market", "KXBTCD-26JUL1317-T62999.99")["review_status"] == "reviewed"
+
+
+def test_a_stale_read_template_is_refused(store):
+    put(store, "KXRAIN-26OCT13-NYC")
+    stale = approval("KXRAIN", exemplars=[{**approval("KXRAIN")["exemplars"][0],
+                                           "template_hash": "0" * 64}])
+    with pytest.raises(ValueError, match="stale"):
+        store.review(stale)
 
 
 def test_template_semantics_must_be_market_independent(store):
@@ -232,7 +256,8 @@ def test_recorded_approvals_post_only_through_the_authenticated_api(store):
             assert client.post("/v1/reviews", json=APPROVED["KXRAIN"]).status_code == 201
             items = {i["approval"]["ticker"]: i for i in client.get("/v1/approvals").json()["items"]}
             assert items["KXRAIN"]["posted"] and not items["KXBTCD"]["posted"]
-            assert client.post("/v1/reviews", json=APPROVED["KXBTCD"]).status_code == 409
+            unposted = {**APPROVED["KXBTCD"], "exemplars": unread("KXBTCD")}
+            assert client.post("/v1/reviews", json=unposted).status_code == 409
             coverage = client.get("/v1/template-coverage?series=KXRAIN").json()["items"][0]
             assert coverage["series"] == "KXRAIN"
     finally:
@@ -246,10 +271,11 @@ def test_merged_approvals_apply_at_start_and_refusals_never_block(store, caplog)
         put(store, exemplar["market"])
     with caplog.at_level("INFO", logger="market_catalog"):
         outcome = apply_approvals(store)
-    assert outcome["KXBTCD-series-approval-20261013b"] == {"status": "bound", "templates": 1,
-                                                          "new": 1}
-    # Exemplars the catalog does not hold are refused and retried next start, not raised.
-    assert outcome["KXWTI-series-approval-20261013b"]["status"] == "refused"
+    assert outcome["KXBTCD-series-approval-20261013b"] == {
+        "status": "bound", "templates": 1, "new": 1, "exemplars_not_held_as_read": []}
+    # Exemplars the catalog does not hold bind the read wording and say so.
+    wti = outcome["KXWTI-series-approval-20261013b"]
+    assert wti["status"] == "bound" and len(wti["exemplars_not_held_as_read"]) == 2
     assert "catalog_template_approvals=" in caplog.text
     assert apply_approvals(store)["KXBTCD-series-approval-20261013b"]["new"] == 0
     assert len(store.series_template_reviews("KXBTCD")) == 1
@@ -257,7 +283,7 @@ def test_merged_approvals_apply_at_start_and_refusals_never_block(store, caplog)
     store.review(APPROVED["KXBTCD"])
     assert len(store.series_template_reviews("KXBTCD")) == 1
     posted = {i["approval"]["ticker"]: i["posted"] for i in recorded_approvals(store)}
-    assert posted["KXBTCD"] and not posted["KXWTI"]
+    assert all(posted.values())
 
 
 def test_whitespace_empty_text_and_title_dates_do_not_split_wording():
@@ -315,3 +341,40 @@ def test_numbers_in_the_mechanics_compare_by_value_and_type_diffs_are_named():
     other = templates.template_document({**base, "settlement_timer_seconds": 61})
     [diff] = templates.differences(other, approved)
     assert diff["field"] == "exact.settlement_timer_seconds"
+
+
+def test_names_with_digits_rounds_and_plurals_share_wording():
+    tennis = [t for t in MARKETS if t.startswith("KXATPCHALLENGERMATCH-")]
+    assert len({templates.template_hash(raw(t)) for t in tennis}) == 1
+    assert templates.mask(
+        "San Francisco 49ers and Seattle score more than 68.5 points", {"68.5"}
+    ) == templates.mask("Baltimore and Atlanta score more than 47.5 points", {"47.5"})
+    assert templates.mask("at least 2 goals", {"2.0"}) == templates.mask("at least 1 goal", {"1.0"})
+    assert "business days" in templates.mask("2 business days", {"2.0"})
+    # A number inside a word is never a strike, and a literal count stays literal.
+    assert templates.mask("in the W15 Monastir", {"15.0"}) == "in the <name>"
+    assert "60 <name> prices" in templates.mask("expiration, 60 RTI prices", set())
+
+
+def test_every_recorded_read_template_matches_the_read_listing():
+    for item in APPROVED.values():
+        for exemplar in item["exemplars"]:
+            assert exemplar["template_hash"] == templates.template_hash(raw(exemplar["market"])), (
+                f"{exemplar['market']}: recompute template_hash for {templates.METHOD}")
+
+
+def test_coverage_separates_parent_changes_from_wording(store):
+    put(store, "KXRAIN-26OCT13-NYC")
+    store.upsert("event", "KXRAIN-26OCT13", {"title": "rain"}, "KXRAIN")
+    put(store, "KXRAIN-26AUG08-DC")
+    store.evidence_page("live", [live(1, "KXRAIN-26OCT13-NYC"), live(2, "KXRAIN-26AUG08-DC")],
+                        {"after": 0})
+    store.review(approval("KXRAIN"))
+    document = store.get("market", "KXRAIN-26OCT13-NYC")
+    if not document.get("parent_rules_hashes"):
+        pytest.skip("this fixture market carries no parent binding")
+    store.upsert("event", "KXRAIN-26OCT13", {"title": "rain, revised"}, "KXRAIN")
+    coverage = store.template_coverage("KXRAIN")
+    assert coverage["parent_rules_changed"] == 1
+    assert coverage["parent_rules_changed_samples"] == ["KXRAIN-26OCT13-NYC"]
+    assert coverage["unreviewed_templates"] == []

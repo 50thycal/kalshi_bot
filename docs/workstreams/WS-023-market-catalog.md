@@ -481,3 +481,25 @@ Calvin then approved:
 
 All 13 are recorded in `approved_reviews.json` with 2–4 exemplars each, and the merge applies
 them.
+
+### Template v4 — 2026-10-13 UTC
+
+With all 13 bound, production coverage was 697/1,448. Fully or nearly covered:
+
+| Series | Reviewed |
+|---|---|
+| KXMLBKS | 42/42 |
+| MLB total | 117/117 |
+| Rain | 71/71 |
+| WTI | 41/41 |
+| MLB spread | 103/104 |
+| NFL | 38/39 |
+| World Cup goals | 41/47 |
+
+The gaps:
+- **Tennis (12–55 per tour):** tournament names split the wording.
+- **KXMLBHR (0/466):** Kalshi edited the exemplar after it was read, which refused the approval.
+- **Six BTC markets and one spread market:** the parent changed after capture.
+
+v4 masking and read-template binding address the first two. Coverage now names the third
+separately.

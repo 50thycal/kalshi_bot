@@ -1504,3 +1504,18 @@ the mechanics by value, and coverage diffs compare encoded values, so a type dif
 The owner then approved all thirteen top series, the MLB doubleheader and early-July wordings,
 and the contract-PDF facts. Superseding approvals carry `supersedes`; the newest approval of
 the same wording wins.
+
+**Template v4 and read-template binding (2026-10-13, within DEC-035).** After all 13 approvals
+bound, coverage was 697/1,448. The remaining gaps had three causes:
+
+- **Name masking split tennis by tournament** ("(Lima) Round of 32", "W15"). `rules-template-v4`
+  lets a name contain digits, "of" and parentheses, ignores a number inside a word, and reads
+  a noun's plural after a strike as its singular.
+- **KXMLBHR's October exemplar was edited by Kalshi after it was read.** This refused the whole
+  approval. Each exemplar now records `template_hash`, the template of the listing text that
+  was read; tests pin it to the read listing. An exemplar the catalog no longer holds as read
+  binds that read wording, never the edit. A missing exemplar no longer blocks the others,
+  and an approval is refused only if nothing binds.
+- **Some markets are unreviewed because their event or series changed after capture**
+  (`parent_rules_changed`). Coverage now counts these separately; they are not a wording
+  question.

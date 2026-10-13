@@ -47,6 +47,7 @@ def apply_approvals(store):
                 "status": "bound",
                 "templates": len(result["templates"]),
                 "new": sum(not t.get("already_recorded") for t in result["templates"]),
+                "exemplars_not_held_as_read": result["exemplars_not_held_as_read"],
             }
         except (LookupError, ValueError, StorageDeferred) as error:
             outcome[item["approval_id"]] = {"status": "refused", "reason": str(error)}
