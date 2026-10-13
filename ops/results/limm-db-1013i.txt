@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=limm-db-1013i
+# code 6177a085d4eb850a46477dc869262ed613048dff · started 2026-10-13T04:22:42Z
+filled_at                      side  action  price  quantity  fee     sell_status
+-----------------------------  ----  ------  -----  --------  ------  -----------
+2026-10-13 04:22:05.32323+00   yes   buy     95     100       0.3325  filled     
+2026-10-12 21:39:03.273399+00  no    sell    10     100       0.0000  filled     
+
+(2 rows)
