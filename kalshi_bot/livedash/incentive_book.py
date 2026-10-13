@@ -10,9 +10,15 @@ appears as a fill, and its losses are mostly older than the month. This block ad
   (`incentive_balance_observations`) that match a payout on Kalshi's Rewards page
   (`reward_ledger.CONFIRMED_REWARD_PAYOUTS`, §9.51). A residual that only fits the §9.49
   attribution test is reported apart as unconfirmed and never added to the net;
-* **what is resting now** — each working order with its market, side, price, size, dollars
+* **positions held** — every market where a bid actually FILLED and is not yet flat: side,
+  contracts, entry price, dollars at risk, the stop-loss and take-profit prices the runner will
+  act on (`liquidity_incentive.live`), and the resting exit order with what it locks if it fills;
+* **bids waiting to fill** — each working ENTRY bid with its market, side, price, size, dollars
   committed, age, its programme's pool and end, and an ESTIMATED reward per day from the
   published scoring rules (`liquidity_incentive.scoring`) on the collector's newest book.
+
+Money at risk counts held positions at cost plus entry bids at limit x size. An exit order is
+shown but counts nothing: it can only net a held position flat (thesis §9.53).
 
 Estimates are labelled as such everywhere: the probe found the scoring model reads far above
 what the book has actually been paid (docs/LIMM_PLACEMENT_THESIS.md, L0).
@@ -25,6 +31,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from .. import models as m
+from .. import repository as repo
 from ..liquidity_incentive import live as limm
 from ..liquidity_incentive import programs as progs
 from ..liquidity_incentive.reward_ledger import attributable_reward, confirmed_reward
@@ -33,6 +40,10 @@ from ..liquidity_incentive.scoring import discount_factor, order_multiplier
 #: A collector snapshot older than this is too stale to estimate a reward from.
 SNAPSHOT_FRESH = timedelta(hours=2)
 WORKING = ("pending", "submitted", "resting", "partial")
+#: Client-order-id prefixes of this book's closing orders: the resting opposite-side exit bid,
+#: and a marketable sell in flight (`LiveExecutor.place_incentive_exit_leg` / `close_incentive_position`).
+EXIT_LEG_PREFIX = "limmexitleg:"
+EXIT_SELL_PREFIX = "limmexit:"
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -136,12 +147,78 @@ def _rewards(session, tickers: list[str] | None = None
     return cash_in, unconfirmed, cash_out, last_in
 
 
+def _own_position(session, ticker: str, ours: list) -> tuple[float, dict]:
+    """This book's net contracts on `ticker` from ITS fills (+YES / -NO) and the fill-weighted
+    entry price per side — the same reading the runner's position manager acts on."""
+    by_koid = {r.kalshi_order_id: r for r in ours if r.kalshi_order_id}
+    net, cost, size = 0.0, {}, {}
+    for f in repo.fills_for_ticker(session, ticker):
+        row = by_koid.get(f.kalshi_order_id)
+        if row is None or not f.quantity:
+            continue
+        q = float(f.quantity)
+        if row.action == "buy":
+            net += q if row.side == limm.SIDE_YES else -q
+            if row.limit_price is not None:
+                cost[row.side] = cost.get(row.side, 0.0) + q * float(row.limit_price)
+                size[row.side] = size.get(row.side, 0.0) + q
+        else:
+            net += -q if row.side == limm.SIDE_YES else q
+    entry = {side: int(round(cost[side] / size[side])) for side in cost if size.get(side)}
+    return net, entry
+
+
+def _position_row(session, ticker: str, ours: list, snap, prog) -> dict | None:
+    """One held position with its exit plan, or None when this book holds nothing there."""
+    if not any((o.status or "").lower() in ("filled", "partial") for o in ours):
+        return None
+    if snap is not None and abs(float(snap.quantity_fp if snap.quantity_fp is not None
+                                     else snap.quantity or 0)) <= 0.01:
+        return None   # flat or settled
+    net, entry_by_side = _own_position(session, ticker, ours)
+    if abs(net) < 1:
+        return None
+    side = limm.SIDE_YES if net > 0 else limm.SIDE_NO
+    entry = entry_by_side.get(side)
+    if entry is None:
+        return None
+    qty = int(round(abs(net)))
+    stop = entry - limm.stop_distance_cents(entry)
+    tp = entry + limm.take_profit_distance_cents(entry)
+    working = [o for o in ours if (o.status or "").lower() in WORKING]
+    leg = next((o for o in working if (o.client_order_id or "").startswith(EXIT_LEG_PREFIX)), None)
+    closing = any((o.client_order_id or "").startswith(EXIT_SELL_PREFIX) for o in working)
+    exit_order = None
+    if leg is not None and leg.limit_price is not None:
+        lq = int(leg.quantity or 0)
+        exit_order = {"side": leg.side, "price_cents": int(leg.limit_price), "quantity": lq,
+                      "locks_usd": _r((100 - entry - int(leg.limit_price)) * lq / 100.0)}
+    return {
+        "market": ticker,
+        "title": (prog.market_title if prog else None) or ticker,
+        "side": side,
+        "quantity": qty,
+        "entry_cents": entry,
+        "at_risk_usd": _r(entry * qty / 100.0),
+        "take_profit_cents": tp,
+        "take_profit_usd": _r((tp - entry) * qty / 100.0),
+        # A 1c entry cannot be stopped: the bid cannot go below 0, and the most it can lose is
+        # what it cost.
+        "stop_cents": stop if stop >= 1 else None,
+        "stop_usd": _r((stop - entry) * qty / 100.0) if stop >= 1 else _r(-entry * qty / 100.0),
+        "exit_order": exit_order,
+        "closing": closing,
+        "program_ends_at": _iso(_aware(prog.end_date)) if prog else None,
+    }
+
+
 def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -> dict:
     """The incentive section for one book. `latest_snapshots(session, tickers)` is the
     overview's own newest-position-per-ticker read, passed in so both agree."""
-    orders = list(session.scalars(
-        select(m.LiveOrder).where(m.LiveOrder.strategy == book, m.LiveOrder.action == "buy")
+    every = list(session.scalars(
+        select(m.LiveOrder).where(m.LiveOrder.strategy == book)
         .order_by(m.LiveOrder.created_at)))
+    orders = [o for o in every if o.action == "buy"]
     tickers = sorted({o.market_ticker for o in orders})
     snaps = latest_snapshots(session, tickers) if tickers else {}
     realized, settled = 0.0, 0
@@ -152,13 +229,24 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
             settled += 1
     cash_in, unconfirmed, cash_out, last_in = _rewards(session, tickers)
 
-    working = [o for o in orders if (o.status or "").lower() in WORKING]
+    working = [o for o in orders if (o.status or "").lower() in WORKING
+               and not (o.client_order_id or "").startswith(EXIT_LEG_PREFIX)]
     by_ticker = {}
     for p in progs.current_programs(session, liquidity_only=True):
-        if p.market_ticker in {o.market_ticker for o in working}:
+        if p.market_ticker in set(tickers):
             prev = by_ticker.get(p.market_ticker)
             if prev is None or (_aware(p.last_seen_at) or now) > (_aware(prev.last_seen_at) or now):
                 by_ticker[p.market_ticker] = p
+
+    ours_by_ticker: dict[str, list] = {}
+    for o in every:
+        ours_by_ticker.setdefault(o.market_ticker, []).append(o)
+    positions = []
+    for t in tickers:
+        row = _position_row(session, t, ours_by_ticker.get(t, []), snaps.get(t), by_ticker.get(t))
+        if row is not None:
+            positions.append(row)
+
     resting = []
     est_total = 0.0
     est_known = 0
@@ -192,6 +280,8 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
             "est_reward_to_end_usd": _r(est * days_left, 2) if est is not None and days_left is not None else None,
             "status": o.status,
         })
+    committed = sum(r["committed_usd"] or 0 for r in resting)
+    held = sum(p["at_risk_usd"] or 0 for p in positions)
     return {
         "realized_all_time_usd": _r(realized),
         "settled_markets_all_time": settled,
@@ -201,10 +291,13 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         "unexplained_cash_out_usd": _r(cash_out),
         "last_reward_at": _iso(last_in),
         "net_all_time_usd": _r(realized + cash_in),
+        "positions": positions,
+        "positions_at_risk_usd": _r(held),
         "resting": resting,
-        "committed_usd": _r(sum(r["committed_usd"] or 0 for r in resting)),
+        "committed_usd": _r(committed),
+        "at_risk_usd": _r(held + committed),
         "est_reward_per_day_usd": _r(est_total, 3) if est_known else None,
-        "slots_used": len({r["market"] for r in resting}),
+        "slots_used": len({r["market"] for r in resting} | {p["market"] for p in positions}),
         "slots_max": limm.MAX_OPEN_ORDERS,
         "quote_mode": limm.QUOTE_MODE,
     }

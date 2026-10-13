@@ -83,6 +83,54 @@ def test_all_time_rewards_net_and_resting_orders(session):
     assert (x["slots_used"], x["slots_max"], x["committed_usd"]) == (1, limm.MAX_OPEN_ORDERS, 10.0)
 
 
+def test_a_filled_leg_shows_as_held_with_its_exit_plan_and_its_exit_bid_risks_nothing(session):
+    # The 2026-10-12 Miller Lite case: NO 10c x100 filled, a YES 85c x100 exit bid resting.
+    _setup(session)
+    held = "KXMILLERLITEPOS-26NOV03-T84"
+    session.add(m.LiveOrder(kalshi_order_id="o-ml", client_order_id="c-ml", market_ticker=held,
+                            strategy=limm.LIVE_TAG, created_at=NOW - timedelta(hours=8),
+                            side="no", action="buy", limit_price=10, quantity=100,
+                            status="filled"))
+    session.add(m.Fill(kalshi_fill_id="f-ml", kalshi_order_id="o-ml", market_ticker=held,
+                       side="no", action="buy", price=10, quantity=100))
+    session.add(m.Position(market_ticker=held, captured_at=NOW - timedelta(minutes=1), side="no",
+                           quantity=-100, quantity_fp=-100, avg_price=10.0))
+    session.add(m.LiveOrder(kalshi_order_id="o-leg", client_order_id="limmexitleg:x",
+                            market_ticker=held, strategy=limm.LIVE_TAG,
+                            created_at=NOW - timedelta(hours=2), side="yes", action="buy",
+                            limit_price=85, quantity=100, status="resting"))
+    session.flush()
+    x = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
+    (p,) = x["positions"]
+    assert (p["market"], p["side"], p["quantity"], p["entry_cents"], p["at_risk_usd"]) == (
+        held, "no", 100, 10, 10.0)
+    tp = 10 + limm.take_profit_distance_cents(10)
+    stop = 10 - limm.stop_distance_cents(10)
+    assert (p["take_profit_cents"], p["take_profit_usd"]) == (tp, (tp - 10) * 1.0)
+    assert (p["stop_cents"], p["stop_usd"]) == (stop, (stop - 10) * 1.0)
+    assert p["exit_order"] == {"side": "yes", "price_cents": 85, "quantity": 100, "locks_usd": 5.0}
+    # The exit bid is not a waiting entry and is not money at risk.
+    assert [r["market"] for r in x["resting"]] == [TICKER]
+    assert (x["positions_at_risk_usd"], x["committed_usd"], x["at_risk_usd"]) == (10.0, 10.0, 20.0)
+    assert x["slots_used"] == 2
+
+
+def test_a_one_cent_leg_has_no_stop_and_can_lose_only_its_cost(session):
+    _setup(session)
+    held = "KXTOP10-TSWIF-10"
+    session.add(m.LiveOrder(kalshi_order_id="o-ts", client_order_id="c-ts", market_ticker=held,
+                            strategy=limm.LIVE_TAG, created_at=NOW - timedelta(hours=8),
+                            side="yes", action="buy", limit_price=1, quantity=500,
+                            status="filled"))
+    session.add(m.Fill(kalshi_fill_id="f-ts", kalshi_order_id="o-ts", market_ticker=held,
+                       side="yes", action="buy", price=1, quantity=500))
+    session.add(m.Position(market_ticker=held, captured_at=NOW, side="yes", quantity=500,
+                           quantity_fp=500, avg_price=1.0))
+    session.flush()
+    (p,) = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)["positions"]
+    assert (p["stop_cents"], p["stop_usd"], p["exit_order"]) == (None, -5.0, None)
+
+
 def test_a_book_that_does_not_qualify_estimates_zero_and_a_stale_book_unknown(session):
     _setup(session)
     snap = session.query(m.IncentiveMarketSnapshot).one()
