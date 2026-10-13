@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1013o", "sql": "select filled_at::text, side, action, price, quantity, fee from fills where market_ticker in ('KXTRUMPMENTION-26OCT13-OIL','KXTOP10BBSPOTS-26OCT24-TSWIF-10') order by filled_at"}
