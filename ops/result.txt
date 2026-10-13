@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code 654bf7c9f38227df1be15acaa81ed3df327349ad · started 2026-10-13T01:38:55Z
-(noop — nothing to do)
+# type=db  id=limm-db-1013f
+# code 8561522268da5eb8a1020bffd3c022418b76d098 · started 2026-10-13T02:19:34Z
+market_ticker                side  action  limit_price  quantity  status   cancel_reason  created_at                     disc                           credits
+---------------------------  ----  ------  -----------  --------  -------  -------------  -----------------------------  -----------------------------  -------
+KXMILLERLITEPOS-26NOV03-T84  yes   buy     85           100       resting                 2026-10-12 21:39:35.245795+00  2026-10-13 02:17:41.961114+00         
+
+(1 row)
