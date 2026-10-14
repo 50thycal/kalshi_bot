@@ -258,6 +258,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         marktangle2,
         perp_v1,
         queue_aware_cancel,
+        rain_season,
         recut_mmsell10_contest_cap,
         recut_mmsell10_size_split,
         repair_dark_live_canaries,
@@ -327,6 +328,22 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=reviewed_universe.register,
             strategy_tags=(reviewed_universe.CONTROL_TAG, reviewed_universe.CAPPED_TAG),
+        ),
+        "mmsell-rain-season": ExperimentPackage(
+            name="mmsell-rain-season",
+            experiment_key=rain_season.EXPERIMENT_KEY,
+            description=(
+                "The contract for `Rainmmsell1`/`Rainmmsell2`: two PAPER books trading KXRAIN "
+                "only — the winning cheap-tail cell (YES <=7c) and the adjacent band (YES "
+                "8-12c) — each with its own keep/kill gate whose floor is in settlement DAYS "
+                "and cannot be reached before mid-February, so the evidence spans winter. No "
+                "promotion gate and no size arm (a paper fill assumes the whole clip). Arms "
+                "nothing, trades nothing, no real money: it registers the contract that lets "
+                "two paper books start; an operator-side env append to MMSELL_VARIANTS "
+                "creates them."
+            ),
+            register=rain_season.register,
+            strategy_tags=(rain_season.CELL_TAG, rain_season.ADJACENT_TAG),
         ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",
