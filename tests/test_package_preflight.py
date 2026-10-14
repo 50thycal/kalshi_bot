@@ -49,7 +49,11 @@ def test_fresh_registration_is_go_and_prints_the_envelope(xos_session, xos_platf
     env = report["envelope"]
     assert env["action"] == "REGISTER_PACKAGE"
     assert env["payload"]["package"] == PKG
-    assert env["payload"]["approved_by"] == "<operator>"
+    # The payload is exactly what the transport accepts — an envelope it would refuse
+    # (UNKNOWN_PAYLOAD_FIELD) must never be printed.
+    from kalshi_bot.experiment_os.experiment_commands import vocabulary
+    assert set(env["payload"]) <= vocabulary("REGISTER_PACKAGE")
+    assert report["audit"]["approved_by"] == "<operator>"
     assert preflight._ID_RE.match(env["command_id"])
     # the ops-channel request wraps the envelope verbatim as one string
     assert report["env_request"]["type"] == "env"

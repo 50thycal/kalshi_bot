@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## KXRAIN rain cell 2026-10-14 — real, smaller than paper, fading; winter gate registered
+
+Research Lab read of [the cell](KXRAIN_MMSELL_CELL.md): MMSELL buying NO at YES ≤ 7¢ on Kalshi's
+daily rain markets.
+- **Replay on every listed market:** 264 markets over 61 dates, realized YES 2.3% against 6.55%
+  implied, +4.3¢ per contract (about 4 s.e. per date). The bot's paper tape shows +5.7¢ with 1
+  loss in 226 markets.
+- **Fading by month:** Aug +6.6¢, Sep +2.4¢, Oct +2.9¢.
+- **No winter tape exists:** Kalshi lists KXRAIN only from July 2026.
+- **Registered `mmsell-rain-season`:** paper, `Rainmmsell1` cell and `Rainmmsell2` 8–12¢ band. Its
+  kill gates use a 120-settlement-day floor, so the earliest look is mid-February.
+- **Sizing recommendation:** hold live at Kmmsell10's 3 contracts. Scale to 10 only on a gate
+  PASS plus a December–February split that clears.
+
 ## NFL totals and ITF men 2026-10-14 — KEEP, no growth; forward test pre-registered
 
 Research Lab read of the two positive WS-023 scorecard leads ([doc](MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md)).

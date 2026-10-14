@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 
 from . import read
 from .enforcement import current_mode
-from .experiment_commands import _packages, receipts
+from .experiment_commands import _check_payload, _packages, receipts
 from .lifecycle import EnforcementMode
 from .service import get_active_platform_snapshot
 
@@ -73,8 +73,9 @@ def package_preflight(session, package: str, *, now: datetime | None = None) -> 
     """Run every mechanical criterion for `REGISTER_PACKAGE` on `package`.
 
     Returns a report: `verdict` is `GO` when every non-informational check is ok,
-    else `NO-GO`. A GO report carries the exact envelope to send (with
-    `approved_by` left for the operator's name) and the steps that follow it."""
+    else `NO-GO`. A GO report carries the exact envelope to send (payload limited
+    to the transport's own vocabulary), the `audit` approval to transcribe into the
+    PR body, and the steps that follow it."""
     now = now or datetime.now(timezone.utc)
     checks: list[dict] = []
     pkgs = _packages()
@@ -181,18 +182,27 @@ def _finish(package: str, checks: list[dict], pkg, now: datetime) -> dict:
             "action": "REGISTER_PACKAGE",
             "actor": "claude-code",
             "actor_role": "RESEARCH_LAB",
-            "payload": {"package": package, "approved_by": "<operator>",
-                        "reason": "<one line: the request that authorized this>"},
+            # Only the transport's own vocabulary for this action (`package`, optional
+            # `promotion_sample_floor`). `approved_by`/`reason` were printed here once and
+            # the transport REJECTED every envelope that carried them (UNKNOWN_PAYLOAD_FIELD,
+            # `mmsell-rain-season-register-202610140310`). The approval is recorded where
+            # the transport cannot lose it: `audit` below, transcribed into the PR body.
+            "payload": {"package": package},
             "schema_version": 1,
         }
+        _check_payload("REGISTER_PACKAGE", envelope["payload"])  # never print a refusable one
         report["envelope"] = envelope
+        report["audit"] = {"approved_by": "<operator>",
+                           "reason": "<one line: the request that authorized this>",
+                           "record_in": "the PR body's owner result (DEC-012) — the "
+                                        "REGISTER_PACKAGE transport does not carry it"}
         report["env_request"] = {
             "type": "env",
             "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": json.dumps(envelope)},
             "id": f"{cid}-send",
         }
         steps = [
-            "send env_request (approved_by = the operator's name, verbatim)",
+            "send env_request as printed (record approved_by/reason from `audit` in the PR)",
             f"read the receipt: xos experiment-command-show {cid}",
             f"xos show {pkg.experiment_key} — every declared tag on an ACTIVE arm",
         ]
