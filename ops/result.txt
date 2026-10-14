@@ -1,201 +1,9 @@
 # ops request [READ]
-# type=script  id=lookalike-listing-20261014b
-# code 5cc23595665cf38095528134450d61af7a3e5a29 · started 2026-10-14T18:51:30Z
-=== MMSELL look-alike probe — 201 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+# type=script  id=lookalike-listing-20261014c
+# code 5cc23595665cf38095528134450d61af7a3e5a29 · started 2026-10-14T18:58:02Z
+=== MMSELL look-alike probe — 155 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
   series                 listed settled              span priced
-  KXALTAOPEN                  5       0                 -      0
-  KXALTASNOW                  0       0                 -      0
-  KXALYOPEN                   5       0                 -      0
-  KXAQICITY                  13      13  2026-07..2026-07      1
-  KXARCTICICEMAX             18      18  2025-02..2026-04      3
-  KXARCTICICEMIN             22      22  2025-08..2026-10      4
-  KXARTICICE                  0       0                 -      0
-  KXASPENMTNOPEN              5       0                 -      0
-  KXASPENOPEN                 0       0                 -      0
-  KXASPSNOWM                  2       0                 -      0
-  KXAUSSNOWM                 16      16  2026-01..2026-04      4
-  KXAVGTATL                   5       5  2026-08..2026-08      1
-  KXAVGTEMP                   0       0                 -      0
-  KXAVGTKAUS                 40      40  2026-08..2026-10      3
-  KXAVGTKDEN                 40      40  2026-08..2026-10      2
-  KXAVGTKDFW                 40      40  2026-08..2026-10      2
-  KXAVGTKIAH                 40      40  2026-08..2026-10      2
-  KXAVGTKLAS                 40      40  2026-08..2026-10      2
-  KXAVGTKMSY                 40      40  2026-08..2026-10      3
-  KXAVGTKOKC                 40      40  2026-08..2026-10      2
-  KXAVGTKPHX                 40      40  2026-08..2026-10      3
-  KXAVGTKSAN                 45      45  2026-08..2026-10      2
-  KXAVGTKSAT                 40      40  2026-08..2026-10      2
-  KXBACHELOROPEN              5       0                 -      0
-  KXBALDYOPEN                 5       0                 -      0
-  KXBEAVERCLOSE               0       0                 -      0
-  KXBEAVEROPEN                5       0                 -      0
-  KXBIGGESTQUAKE            438     405  2025-07..2026-10      3
-  KXBIGGESTQUAKEH             0       0                 -      0
-  KXBIGSKYOPEN                5       0                 -      0
-  KXBOSSNOWM                 30      24  2025-12..2026-04      5
-  KXBOSSNOWXMAS               1       1  2025-12..2025-12      1
-  KXBRECKCLOSE                0       0                 -      0
-  KXBRECKOPEN                 5       0                 -      0
-  KXCHISNOWM                 41      30  2025-12..2026-04      4
-  KXCHISNOWXMAS               1       1  2025-12..2025-12      1
-  KXCITIESWEATHER         10000   10000  2024-12..2025-03      4
-  KXCO2                       0       0                 -      0
-  KXCO2LEVEL                  5       0                 -      0
-  KXCOPPEROPEN                5       0                 -      0
-  KXCORIVER                   0       0                 -      0
-  KXDALSNOWM                 20      20  2026-01..2026-04      4
-  KXDCSNOWM                  30      24  2025-12..2026-04      5
-  KXDENHIGH                   0       0                 -      0
-  KXDENSNOWM                 13       0                 -      0
-  KXDENSNOWMB                28      28  2025-12..2026-04      5
-  KXDENSNOWXMAS               0       0                 -      0
-  KXDETSNOWM                 30      24  2025-12..2026-04      5
-  KXDROUGHTLEVEL             15      15  2026-06..2026-07      2
-  KXDVHIGH                    0       0                 -      0
-  KXEARTHQUAKE               24      14  2025-04..2026-06      7
-  KXEARTHQUAKECALIFORNIA      4       1  2025-12..2025-12      1
-  KXEARTHQUAKEJAPAN           1       0                 -      0
-  KXEARTHQUAKEJAPANTATSUKI      1       1  2025-08..2025-08      1
-  KXEARTHQUAKELA              1       1  2025-07..2025-07      1
-  KXEARTHQUAKEM              34      21  2026-06..2026-09      3
-  KXEARTHQUAKEM7              5       5  2025-07..2025-10      4
-  KXECLIPSECOVER              0       0                 -      0
-  KXECLIPSECOVERBUFF          0       0                 -      0
-  KXECLIPSEREYK               0       0                 -      0
-  KXELNINO                    5       5  2026-06..2026-06      1
-  KXEMERGENCYCOL              0       0                 -      0
-  KXEMERGENCYDES              0       0                 -      0
-  KXEMERGENCYHOU              0       0                 -      0
-  KXEMERGENCYJAC              0       0                 -      0
-  KXEMERGENCYLA               0       0                 -      0
-  KXEMERGENCYLOU              0       0                 -      0
-  KXEMERGENCYMIA              0       0                 -      0
-  KXEMERGENCYNOLA             0       0                 -      0
-  KXEMERGENCYPHIL             0       0                 -      0
-  KXEMERGENCYRAP              0       0                 -      0
-  KXEMERGENCYSF               0       0                 -      0
-  KXEMERGENCYSTL              0       0                 -      0
-  KXEMERGENCYWIL              0       0                 -      0
-  KXERCOTX                    0       0                 -      0
-  KXERUPTETNA                 3       3  2025-12..2025-12      1
-  KXERUPTKILUAEA              5       5  2025-06..2025-07      2
-  KXERUPTSUPER                1       0                 -      0
-  KXEUCLIMATE                 0       0                 -      0
-  KXEVSHARE                   0       0                 -      0
-  KXFEMA                      0       0                 -      0
-  KXFIRSTHURRICANE           77      77  2026-07..2026-10      2
-  KXGTEMP                     3       1  2025-12..2025-12      1
-  KXHDDCVG                    9       0                 -      0
-  KXHEATAPHX                  1       1  2026-08..2026-08      1
-  KXHEATWARNING               0       0                 -      0
-  KXHEAVENLYCLOSE             0       0                 -      0
-  KXHEAVENLYOPEN              5       0                 -      0
-  KXHIGHAUS                4332    4320  2024-10..2026-10     25
-  KXHIGHCHI                4332    4320  2024-10..2026-10     25
-  KXHIGHDEN                4170    4158  2024-11..2026-10     24
-  KXHIGHHOU                 420     420  2024-11..2025-01      3
-  KXHIGHLAX                3894    3882  2025-01..2026-10     22
-  KXHIGHMIA                4332    4318  2024-10..2026-10     25
-  KXHIGHNY                 4332    4320  2024-10..2026-10     25
-  KXHIGHNYD                   0       0                 -      0
-  KXHIGHOU                    0       0                 -      0
-  KXHIGHPHIL               4170    4158  2024-11..2026-10     24
-  KXHIGHTATL               1524    1512  2026-02..2026-10      9
-  KXHIGHTBOS               1518    1506  2026-02..2026-10      9
-  KXHIGHTCYYZ                 0       0                 -      0
-  KXHIGHTDAL               1482    1470  2026-02..2026-10      9
-  KXHIGHTDC                1632    1602  2026-01..2026-10     10
-  KXHIGHTEBBR                 0       0                 -      0
-  KXHIGHTEDDB                 0       0                 -      0
-  KXHIGHTEDDF                 0       0                 -      0
-  KXHIGHTEGLL                 6       0                 -      0
-  KXHIGHTEHAM                 6       0                 -      0
-  KXHIGHTEMPDEN               0       0                 -      0
-  KXHIGHTEWR                306     294  2026-08..2026-10      3
-  KXHIGHTHOU               1482    1470  2026-02..2026-10      9
-  KXHIGHTKSAN                 0       0                 -      0
-  KXHIGHTLFPG                 6       0                 -      0
-  KXHIGHTLSGG                 0       0                 -      0
-  KXHIGHTLTFM                 0       0                 -      0
-  KXHIGHTLV                1650    1638  2026-01..2026-10     10
-  KXHIGHTMIN               1524    1512  2026-02..2026-10      9
-  KXHIGHTMMMX                 0       0                 -      0
-  KXHIGHTNOLA              1650    1638  2026-01..2026-10     10
-  KXHIGHTOKC               1482    1470  2026-02..2026-10      9
-  KXHIGHTOMDB                 0       0                 -      0
-  KXHIGHTPHX               1524    1512  2026-02..2026-10      9
-  KXHIGHTRJTT                 0       0                 -      0
-  KXHIGHTRKSI                 0       0                 -      0
-  KXHIGHTSAN                348     330  2026-08..2026-10      3
-  KXHIGHTSATX              1482    1470  2026-02..2026-10      9
-  KXHIGHTSBGR                 0       0                 -      0
-  KXHIGHTSDF                294     282  2026-08..2026-10      3
-  KXHIGHTSEA               1650    1638  2026-01..2026-10     10
-  KXHIGHTSFO               1650    1638  2026-01..2026-10     10
-  KXHIGHTTTN                306     294  2026-08..2026-10      3
-  KXHIGHTVABB                 0       0                 -      0
-  KXHIGHTVHHH                 6       0                 -      0
-  KXHIGHTWSSS                 0       0                 -      0
-  KXHIGHTYSSY                 0       0                 -      0
-  KXHIGHTZBAA                 0       0                 -      0
-  KXHIGHTZSPD                 6       0                 -      0
-  KXHIGHUS                    0       0                 -      0
-  KXHMONTH                   25      22  2024-12..2026-10     22
-  KXHMONTHRANGE             150     126  2024-12..2026-09     21
-  KXHOBBYTEMP                 1       1  2026-09..2026-09      1
-  KXHOLIDAYTMAX              80      60  2026-07..2026-07      1
-  KXHOLIDAYTMIN              40      20  2026-07..2026-07      1
-  KXHOTYEAR                   0       0                 -      0
-  KXHOUHIGH                   0       0                 -      0
-  KXHOUSNOWM                 16      16  2026-01..2026-04      3
-  KXHURCAL                    0       0                 -      0
-  KXHURCAT                  320     185  2025-07..2026-10      8
-  KXHURCATFL                  0       0                 -      0
-  KXHURCATH                   0       0                 -      0
-  KXHURCATI                   0       0                 -      0
-  KXHURCHARL                  0       0                 -      0
-  KXHURCITYHOU                0       0                 -      0
-  KXHURCITYTPA                6       0                 -      0
-  KXHURCLAND                  0       0                 -      0
-  KXHURCMAJ                   0       0                 -      0
-  KXHURCOASTTEX               0       0                 -      0
-  KXHURCROSSHOU               0       0                 -      0
-  KXHURCTOT                  18       9  2025-11..2025-12      2
-  KXHURCTOTMAJ               27      20  2025-08..2026-10      6
-  KXHURHAT                    0       0                 -      0
-  KXHURJACKFL                 0       0                 -      0
-  KXHURMIA                    0       0                 -      0
-  KXHURMYR                    0       0                 -      0
-  KXHURNJ                     0       0                 -      0
-  KXHURNO                     0       0                 -      0
-  KXHURNOR                    0       0                 -      0
-  KXHURNYC                    0       0                 -      0
-  KXHURORL                    0       0                 -      0
-  KXHURPATHAL                 1       0                 -      0
-  KXHURPATHFLA                1       1  2025-12..2025-12      1
-  KXHURPATHGENERAL            1       1  2025-08..2025-08      1
-  KXHURPATHGENERALMAJOR       1       1  2025-08..2025-08      1
-  KXHURPATHGULFCOAST          1       1  2025-12..2025-12      1
-  KXHURPATHHAWAII             2       1  2025-12..2025-12      1
-  KXHURPATHHOU                1       1  2025-12..2025-12      1
-  KXHURPATHNC                 1       0                 -      0
-  KXHURPATHSCAROLINA          1       1  2025-12..2025-12      1
-  KXHURRICANE                35      24  2026-07..2026-10      2
-  KXHURRICANENAMES           58      15  2026-07..2026-10      1
-  KXHURRLANDFL4               1       0                 -      0
-  KXHURRLANDNE3               1       0                 -      0
-  KXHURSAV                    0       0                 -      0
-  KXHURTB                     0       0                 -      0
-  KXHURWIL                    0       0                 -      0
-  KXINDIACLIMATE              0       0                 -      0
-  KXJACKSONOPEN               5       0                 -      0
-  KXJACWSNOWM                18      18  2025-12..2026-04      4
-  KXKEYSTONECLOSE             0       0                 -      0
-  KXKEYSTONEOPEN              5       0                 -      0
-  KXKILAUEA                   0       0                 -      0
-  KXKILLINGTONOPEN            5       0                 -      0
   KXLAXSNOWM                  8       8  2026-01..2026-04      3
   KXLOWAUS                    0       0                 -      0
   KXLOWCHI                    0       0                 -      0
@@ -204,202 +12,156 @@
   KXLOWMIA                    0       0                 -      0
   KXLOWNY                     0       0                 -      0
   KXLOWNYC                    0       0                 -      0
+  KXLOWPHIL                   0       0                 -      0
+  KXLOWTATL                1176    1158  2026-04..2026-10      7
+  KXLOWTAUS                1842    1830  2025-12..2026-10     11
+  KXLOWTBOS                1182    1164  2026-04..2026-10      7
+  KXLOWTCHI                1842    1830  2025-12..2026-10     11
+  KXLOWTCYYZ                  0       0                 -      0
+  KXLOWTDAL                1176    1164  2026-04..2026-10      7
+  KXLOWTDC                 1176    1164  2026-04..2026-10      7
+  KXLOWTDEN                1842    1830  2025-12..2026-10     11
+  KXLOWTEBBR                  0       0                 -      0
+  KXLOWTEDDB                  0       0                 -      0
+  KXLOWTEDDF                  0       0                 -      0
+  KXLOWTEGLL                  0       0                 -      0
+  KXLOWTEHAM                  0       0                 -      0
+  KXLOWTEWR                 306     294  2026-08..2026-10      3
+  KXLOWTHOU                1176    1164  2026-04..2026-10      7
+  KXLOWTKSAN                  0       0                 -      0
+  KXLOWTLAX                1842    1830  2025-12..2026-10     11
+  KXLOWTLFPG                  0       0                 -      0
+  KXLOWTLSGG                  0       0                 -      0
+  KXLOWTLSSG                  0       0                 -      0
+  KXLOWTLTFM                  0       0                 -      0
+  KXLOWTLV                 1176    1164  2026-04..2026-10      7
+  KXLOWTMIA                1842    1816  2025-12..2026-10     11
+  KXLOWTMIN                1176    1164  2026-04..2026-10      7
+  KXLOWTMMMX                  0       0                 -      0
+  KXLOWTNOLA               1176    1164  2026-04..2026-10      7
+  KXLOWTNYC                1842    1830  2025-12..2026-10     11
+  KXLOWTOKC                1176    1164  2026-04..2026-10      7
+  KXLOWTOMDB                  0       0                 -      0
+  KXLOWTPHIL               1842    1830  2025-12..2026-10     11
+  KXLOWTPHX                1176    1164  2026-04..2026-10      7
+  KXLOWTRJTT                  0       0                 -      0
+  KXLOWTRKSI                  0       0                 -      0
+  KXLOWTSAN                 348     330  2026-08..2026-10      3
+  KXLOWTSATX               1176    1164  2026-04..2026-10      7
+  KXLOWTSBGR                  0       0                 -      0
+  KXLOWTSDF                 294     282  2026-08..2026-10      3
+  KXLOWTSEA                1176    1164  2026-04..2026-10      7
+  KXLOWTSFO                1176    1164  2026-04..2026-10      7
+  KXLOWTTTN                 306     294  2026-08..2026-10      3
+  KXLOWTVABB                  0       0                 -      0
+  KXLOWTVHHH                  0       0                 -      0
+  KXLOWTWSSS                  0       0                 -      0
+  KXLOWTYSSY                  0       0                 -      0
+  KXLOWTZBAA                  0       0                 -      0
+  KXLOWTZSPD                  0       0                 -      0
+  KXMAXTEMP100                0       0                 -      0
+  KXMEAD                     34      26  2025-07..2026-07      3
+  KXMIASNOWM                 12      12  2026-01..2026-04      3
+  KXMICHTEMP                  0       0                 -      0
+  KXMINNYC                    0       0                 -      0
+  KXMKESNOWM                  6       0                 -      0
+  KXMONTHLOWMSN               0       0                 -      0
+  KXMSNLOWT                   1       0                 -      0
+  KXMSPSNOWM                  6       0                 -      0
+  KXNAMEDSTORM               14       6  2026-10..2026-10      1
+  KXNEXTCAT5HURDATE           7       5  2025-08..2026-10      2
+  KXNEXTHURDATE              14      14  2025-06..2026-10      5
+  KXNORTHSTARCLOSE            0       0                 -      0
+  KXNORTHSTAROPEN             6       0                 -      0
+  KXNYCSNOWM                 34      28  2025-12..2026-04      5
+  KXNYCSNOWXMAS               1       1  2025-12..2025-12      1
+  KXPARKCCLOSE                0       0                 -      0
+  KXPARKCOPEN                 5       0                 -      0
+  KXPHILHIGH                  0       0                 -      0
+  KXPHILSNOWM                30      24  2025-12..2026-04      5
+  KXPITSNOWM                  6       0                 -      0
   KXRAIN                   2078    2010  2026-07..2026-10      4
+  KXRAINAUSM                 88      75  2025-12..2026-10     11
+  KXRAINCHIM                 98      85  2025-07..2026-10     12
+  KXRAINCLLM                 14       3  2026-10..2026-10      1
+  KXRAINCMHM                 14       0                 -      0
+  KXRAIND                     0       0                 -      0
+  KXRAINDALM                 95      81  2025-12..2026-10     10
+  KXRAINDC                    0       0                 -      0
+  KXRAINDENM                 91      77  2025-12..2026-10     11
+  KXRAINDNYC                  1       1  2026-09..2026-09      1
+  KXRAINDPARIS                1       0                 -      0
+  KXRAINHOLIDAY              20      20  2026-07..2026-07      1
+  KXRAINHOUM                 88      75  2025-12..2026-10     11
+  KXRAINLAXM                 92      78  2025-12..2026-10     10
+  KXRAINLEXM                 14       0                 -      0
+  KXRAINMIAM                100      88  2025-12..2026-10     11
+  KXRAINMKEM                 14       1  2026-10..2026-10      1
+  KXRAINNAPAM                24       0                 -      0
+  KXRAINNYC                 551     551  2025-01..2026-07     19
+  KXRAINNYCM                136     121  2024-12..2026-10     23
+  KXRAINNYCW                  4       0                 -      0
+  KXRAINONT                   1       0                 -      0
+  KXRAINPVDM                 14       2  2026-10..2026-10      1
+  KXRAINSBOS                 10      10  2026-09..2026-09      1
+  KXRAINSEA                   0       0                 -      0
+  KXRAINSEAM                 92      78  2025-12..2026-10     11
+  KXRAINSFOM                 88      74  2025-12..2026-10     10
+  KXRAINSNYC                 10      10  2026-09..2026-09      1
+  KXRAINSTPM                 10      10  2026-08..2026-08      1
+  KXRAINWKND                202     179  2026-08..2026-10      3
+  KXRONI                     16       0                 -      0
+  KXSEASNOWM                 26      20  2026-01..2026-04      3
+  KXSFOSNOWM                  8       8  2026-01..2026-04      3
+  KXSIERRAOPEN                5       0                 -      0
+  KXSJCLOWT                   1       0                 -      0
+  KXSLCSNOWM                 11      11  2026-01..2026-04      3
+  KXSNOWAZ                    1       1  2025-01..2025-01      0
+  KXSNOWBASINOPEN             5       0                 -      0
+  KXSNOWBIRDOPEN              5       0                 -      0
+  KXSNOWCHIM                  0       0                 -      0
+  KXSNOWNY                    0       0                 -      0
+  KXSNOWNYC                   0       0                 -      0
+  KXSNOWNYM                  25      25  2025-01..2025-03      1
+  KXSNOWS                    15      15  2024-12..2024-12      1
+  KXSNOWSTORM                63      63  2026-01..2026-02      2
+  KXSPURRERUPT                8       8  2025-04..2025-11      8
+  KXSTOWECLOSE                0       0                 -      0
+  KXSTOWEOPEN                 5       0                 -      0
+  KXTEMP                      0       0                 -      0
+  KXTEMPAUSH              15364   15234  2026-07..2026-09      3
+  KXTEMPBOSH                294     222  2026-04..2026-04      0
+  KXTEMPCHIH              15553   15533  2026-04..2026-09      4
+  KXTEMPCHIHS              8110    8090  2026-09..2026-10      2
+  KXTEMPCHIMETROHS            0       0                 -      0
+  KXTEMPDCH               15565   15530  2026-04..2026-09      3
+  KXTEMPLAHS                  0       0                 -      0
+  KXTEMPLAXH              15418   15325  2026-07..2026-09      3
+  KXTEMPLAXHS              8080    8040  2026-09..2026-10      2
+  KXTEMPMIAH              10135   10115  2026-04..2026-10      2
+  KXTEMPMON                   0       0                 -      0
+  KXTEMPNYCH              16400   16376  2026-07..2026-09      3
+  KXTEMPNYCHS              7980    7960  2026-09..2026-10      2
+  KXTORNADO                 261     228  2024-12..2026-10     21
+  KXTROPSTORM                16       8  2025-12..2025-12      1
+  KXTSNOWFALLBIGSKYM         10       0                 -      0
+  KXTSUNAMI                   1       1  2024-12..2024-12      1
+  KXTXURI                     3       0                 -      0
+  KXUSCLIMATE                 0       0                 -      0
+  KXVAILOPEN                  0       0                 -      0
+  KXVEI4                      3       0                 -      0
+  KXWARMING                   1       0                 -      0
+  KXWASDESTATCORN             0       0                 -      0
+  KXWEEKHTLAS                 0       0                 -      0
+  KXWEEKHTLAX                 0       0                 -      0
+  KXWEEKHTMIA                 0       0                 -      0
+  KXWEEKHTNYC                 0       0                 -      0
+  KXWEEKHTPHX                 0       0                 -      0
+  KXWHISTLEROPEN              0       0                 -      0
+  KXXFLARE                    3       3  2025-08..2025-11      3
 
   A. PER SERIES (first in-cell entry)
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXALTAOPEN                 0
-  KXALTASNOW                 0
-  KXALYOPEN                  0
-  KXAQICITY                  0
-  KXARCTICICEMAX             0
-  KXARCTICICEMIN             0
-  KXARTICICE                 0
-  KXASPENMTNOPEN             0
-  KXASPENOPEN                0
-  KXASPSNOWM                 0
-  KXAUSSNOWM                 0
-  KXAVGTATL                  0
-  KXAVGTEMP                  0
-  KXAVGTKAUS                 0
-  KXAVGTKDEN                 0
-  KXAVGTKDFW                 0
-  KXAVGTKIAH                 0
-  KXAVGTKLAS                 0
-  KXAVGTKMSY                 0
-  KXAVGTKOKC                 0
-  KXAVGTKPHX                 0
-  KXAVGTKSAN                 0
-  KXAVGTKSAT                 0
-  KXBACHELOROPEN             0
-  KXBALDYOPEN                0
-  KXBEAVERCLOSE              0
-  KXBEAVEROPEN               0
-  KXBIGGESTQUAKE             0
-  KXBIGGESTQUAKEH            0
-  KXBIGSKYOPEN               0
-  KXBOSSNOWM                 0
-  KXBOSSNOWXMAS              0
-  KXBRECKCLOSE               0
-  KXBRECKOPEN                0
-  KXCHISNOWM                 0
-  KXCHISNOWXMAS              0
-  KXCITIESWEATHER            0
-  KXCO2                      0
-  KXCO2LEVEL                 0
-  KXCOPPEROPEN               0
-  KXCORIVER                  0
-  KXDALSNOWM                 0
-  KXDCSNOWM                  0
-  KXDENHIGH                  0
-  KXDENSNOWM                 0
-  KXDENSNOWMB                0
-  KXDENSNOWXMAS              0
-  KXDETSNOWM                 0
-  KXDROUGHTLEVEL             0
-  KXDVHIGH                   0
-  KXEARTHQUAKE               0
-  KXEARTHQUAKECALIFORNIA     0
-  KXEARTHQUAKEJAPAN          0
-  KXEARTHQUAKEJAPANTATSUKI     0
-  KXEARTHQUAKELA             0
-  KXEARTHQUAKEM              0
-  KXEARTHQUAKEM7             0
-  KXECLIPSECOVER             0
-  KXECLIPSECOVERBUFF         0
-  KXECLIPSEREYK              0
-  KXELNINO                   0
-  KXEMERGENCYCOL             0
-  KXEMERGENCYDES             0
-  KXEMERGENCYHOU             0
-  KXEMERGENCYJAC             0
-  KXEMERGENCYLA              0
-  KXEMERGENCYLOU             0
-  KXEMERGENCYMIA             0
-  KXEMERGENCYNOLA            0
-  KXEMERGENCYPHIL            0
-  KXEMERGENCYRAP             0
-  KXEMERGENCYSF              0
-  KXEMERGENCYSTL             0
-  KXEMERGENCYWIL             0
-  KXERCOTX                   0
-  KXERUPTETNA                0
-  KXERUPTKILUAEA             0
-  KXERUPTSUPER               0
-  KXEUCLIMATE                0
-  KXEVSHARE                  0
-  KXFEMA                     0
-  KXFIRSTHURRICANE           0
-  KXGTEMP                    0
-  KXHDDCVG                   0
-  KXHEATAPHX                 0
-  KXHEATWARNING              0
-  KXHEAVENLYCLOSE            0
-  KXHEAVENLYOPEN             0
-  KXHIGHAUS                  2     2    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXHIGHCHI                  0
-  KXHIGHDEN                  0
-  KXHIGHHOU                  0
-  KXHIGHLAX                  1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXHIGHMIA                  0
-  KXHIGHNY                   0
-  KXHIGHNYD                  0
-  KXHIGHOU                   0
-  KXHIGHPHIL                 0
-  KXHIGHTATL                 0
-  KXHIGHTBOS                 0
-  KXHIGHTCYYZ                0
-  KXHIGHTDAL                 0
-  KXHIGHTDC                  0
-  KXHIGHTEBBR                0
-  KXHIGHTEDDB                0
-  KXHIGHTEDDF                0
-  KXHIGHTEGLL                0
-  KXHIGHTEHAM                0
-  KXHIGHTEMPDEN              0
-  KXHIGHTEWR                 0
-  KXHIGHTHOU                 0
-  KXHIGHTKSAN                0
-  KXHIGHTLFPG                0
-  KXHIGHTLSGG                0
-  KXHIGHTLTFM                0
-  KXHIGHTLV                  0
-  KXHIGHTMIN                 1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXHIGHTMMMX                0
-  KXHIGHTNOLA                0
-  KXHIGHTOKC                 0
-  KXHIGHTOMDB                0
-  KXHIGHTPHX                 0
-  KXHIGHTRJTT                0
-  KXHIGHTRKSI                0
-  KXHIGHTSAN                 0
-  KXHIGHTSATX                1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXHIGHTSBGR                0
-  KXHIGHTSDF                 0
-  KXHIGHTSEA                 0
-  KXHIGHTSFO                 2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
-  KXHIGHTTTN                 0
-  KXHIGHTVABB                0
-  KXHIGHTVHHH                0
-  KXHIGHTWSSS                0
-  KXHIGHTYSSY                0
-  KXHIGHTZBAA                0
-  KXHIGHTZSPD                0
-  KXHIGHUS                   0
-  KXHMONTH                   0
-  KXHMONTHRANGE              0
-  KXHOBBYTEMP                0
-  KXHOLIDAYTMAX              0
-  KXHOLIDAYTMIN              0
-  KXHOTYEAR                  0
-  KXHOUHIGH                  0
-  KXHOUSNOWM                 0
-  KXHURCAL                   0
-  KXHURCAT                   0
-  KXHURCATFL                 0
-  KXHURCATH                  0
-  KXHURCATI                  0
-  KXHURCHARL                 0
-  KXHURCITYHOU               0
-  KXHURCITYTPA               0
-  KXHURCLAND                 0
-  KXHURCMAJ                  0
-  KXHURCOASTTEX              0
-  KXHURCROSSHOU              0
-  KXHURCTOT                  0
-  KXHURCTOTMAJ               0
-  KXHURHAT                   0
-  KXHURJACKFL                0
-  KXHURMIA                   0
-  KXHURMYR                   0
-  KXHURNJ                    0
-  KXHURNO                    0
-  KXHURNOR                   0
-  KXHURNYC                   0
-  KXHURORL                   0
-  KXHURPATHAL                0
-  KXHURPATHFLA               0
-  KXHURPATHGENERAL           0
-  KXHURPATHGENERALMAJOR      0
-  KXHURPATHGULFCOAST         0
-  KXHURPATHHAWAII            0
-  KXHURPATHHOU               0
-  KXHURPATHNC                0
-  KXHURPATHSCAROLINA         0
-  KXHURRICANE                0
-  KXHURRICANENAMES           0
-  KXHURRLANDFL4              0
-  KXHURRLANDNE3              0
-  KXHURSAV                   0
-  KXHURTB                    0
-  KXHURWIL                   0
-  KXINDIACLIMATE             0
-  KXJACKSONOPEN              0
-  KXJACWSNOWM                0
-  KXKEYSTONECLOSE            0
-  KXKEYSTONEOPEN             0
-  KXKILAUEA                  0
-  KXKILLINGTONOPEN           0
   KXLAXSNOWM                 0
   KXLOWAUS                   0
   KXLOWCHI                   0
@@ -408,158 +170,215 @@
   KXLOWMIA                   0
   KXLOWNY                    0
   KXLOWNYC                   0
+  KXLOWPHIL                  0
+  KXLOWTATL                  0
+  KXLOWTAUS                  0
+  KXLOWTBOS                  0
+  KXLOWTCHI                  0
+  KXLOWTCYYZ                 0
+  KXLOWTDAL                  0
+  KXLOWTDC                   0
+  KXLOWTDEN                  0
+  KXLOWTEBBR                 0
+  KXLOWTEDDB                 0
+  KXLOWTEDDF                 0
+  KXLOWTEGLL                 0
+  KXLOWTEHAM                 0
+  KXLOWTEWR                  0
+  KXLOWTHOU                  0
+  KXLOWTKSAN                 0
+  KXLOWTLAX                  0
+  KXLOWTLFPG                 0
+  KXLOWTLSGG                 0
+  KXLOWTLSSG                 0
+  KXLOWTLTFM                 0
+  KXLOWTLV                   0
+  KXLOWTMIA                  1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXLOWTMIN                  0
+  KXLOWTMMMX                 0
+  KXLOWTNOLA                 0
+  KXLOWTNYC                  1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXLOWTOKC                  0
+  KXLOWTOMDB                 0
+  KXLOWTPHIL                 0
+  KXLOWTPHX                  0
+  KXLOWTRJTT                 0
+  KXLOWTRKSI                 0
+  KXLOWTSAN                  0
+  KXLOWTSATX                 0
+  KXLOWTSBGR                 0
+  KXLOWTSDF                  0
+  KXLOWTSEA                  0
+  KXLOWTSFO                  0
+  KXLOWTTTN                  0
+  KXLOWTVABB                 0
+  KXLOWTVHHH                 0
+  KXLOWTWSSS                 0
+  KXLOWTYSSY                 0
+  KXLOWTZBAA                 0
+  KXLOWTZSPD                 0
+  KXMAXTEMP100               0
+  KXMEAD                     0
+  KXMIASNOWM                 0
+  KXMICHTEMP                 0
+  KXMINNYC                   0
+  KXMKESNOWM                 0
+  KXMONTHLOWMSN              0
+  KXMSNLOWT                  0
+  KXMSPSNOWM                 0
+  KXNAMEDSTORM               0
+  KXNEXTCAT5HURDATE          0
+  KXNEXTHURDATE              0
+  KXNORTHSTARCLOSE           0
+  KXNORTHSTAROPEN            0
+  KXNYCSNOWM                 0
+  KXNYCSNOWXMAS              0
+  KXPARKCCLOSE               0
+  KXPARKCOPEN                0
+  KXPHILHIGH                 0
+  KXPHILSNOWM                0
+  KXPITSNOWM                 0
   KXRAIN                     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXRAINAUSM                 0
+  KXRAINCHIM                 0
+  KXRAINCLLM                 0
+  KXRAINCMHM                 0
+  KXRAIND                    0
+  KXRAINDALM                 0
+  KXRAINDC                   0
+  KXRAINDENM                 0
+  KXRAINDNYC                 1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXRAINDPARIS               0
+  KXRAINHOLIDAY              0
+  KXRAINHOUM                 0
+  KXRAINLAXM                 0
+  KXRAINLEXM                 0
+  KXRAINMIAM                 0
+  KXRAINMKEM                 0
+  KXRAINNAPAM                0
+  KXRAINNYC                  0
+  KXRAINNYCM                 0
+  KXRAINNYCW                 0
+  KXRAINONT                  0
+  KXRAINPVDM                 0
+  KXRAINSBOS                 0
+  KXRAINSEA                  0
+  KXRAINSEAM                 0
+  KXRAINSFOM                 0
+  KXRAINSNYC                 0
+  KXRAINSTPM                 0
+  KXRAINWKND                 1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXRONI                     0
+  KXSEASNOWM                 0
+  KXSFOSNOWM                 0
+  KXSIERRAOPEN               0
+  KXSJCLOWT                  0
+  KXSLCSNOWM                 0
+  KXSNOWAZ                   0
+  KXSNOWBASINOPEN            0
+  KXSNOWBIRDOPEN             0
+  KXSNOWCHIM                 0
+  KXSNOWNY                   0
+  KXSNOWNYC                  0
+  KXSNOWNYM                  0
+  KXSNOWS                    0
+  KXSNOWSTORM                0
+  KXSPURRERUPT               0
+  KXSTOWECLOSE               0
+  KXSTOWEOPEN                0
+  KXTEMP                     0
+  KXTEMPAUSH                 0
+  KXTEMPBOSH                 0
+  KXTEMPCHIH                 0
+  KXTEMPCHIHS                0
+  KXTEMPCHIMETROHS           0
+  KXTEMPDCH                  0
+  KXTEMPLAHS                 0
+  KXTEMPLAXH                 0
+  KXTEMPLAXHS                0
+  KXTEMPMIAH                 0
+  KXTEMPMON                  0
+  KXTEMPNYCH                 0
+  KXTEMPNYCHS                0
+  KXTORNADO                  0
+  KXTROPSTORM                0
+  KXTSNOWFALLBIGSKYM         0
+  KXTSUNAMI                  0
+  KXTXURI                    0
+  KXUSCLIMATE                0
+  KXVAILOPEN                 0
+  KXVEI4                     0
+  KXWARMING                  0
+  KXWASDESTATCORN            0
+  KXWEEKHTLAS                0
+  KXWEEKHTLAX                0
+  KXWEEKHTMIA                0
+  KXWEEKHTNYC                0
+  KXWEEKHTPHX                0
+  KXWHISTLEROPEN             0
+  KXXFLARE                   0
 
   B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGHT                    4     2    6.75    0.00     0   +6.75   +13.50   2.08 0/0   HOLD
-  KXHIGH                     3     2    6.00    0.00     0   +6.00    +9.00   3.00 0/0   HOLD
-  KXRAIN                     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXALTAOPEN                 0
-  KXALTASNOW                 0
-  KXALYOPEN                  0
-  KXAQICITY                  0
-  KXARCTICICEMAX             0
-  KXARCTICICEMIN             0
-  KXARTICICE                 0
-  KXASPENMTNOPEN             0
-  KXASPENOPEN                0
-  KXASPSNOWM                 0
-  KXAUSSNOWM                 0
-  KXAVGTATL                  0
-  KXAVGTEMP                  0
-  KXAVGTKAUS                 0
-  KXAVGTKDEN                 0
-  KXAVGTKDFW                 0
-  KXAVGTKIAH                 0
-  KXAVGTKLAS                 0
-  KXAVGTKMSY                 0
-  KXAVGTKOKC                 0
-  KXAVGTKPHX                 0
-  KXAVGTKSAN                 0
-  KXAVGTKSAT                 0
-  KXBACHELOROPEN             0
-  KXBALDYOPEN                0
-  KXBEAVERCLOSE              0
-  KXBEAVEROPEN               0
-  KXBIGGESTQUAKE             0
-  KXBIGGESTQUAKEH            0
-  KXBIGSKYOPEN               0
-  KXBOSSNOWM                 0
-  KXBOSSNOWXMAS              0
-  KXBRECKCLOSE               0
-  KXBRECKOPEN                0
-  KXCHISNOWM                 0
-  KXCHISNOWXMAS              0
-  KXCITIESWEATHER            0
-  KXCO2                      0
-  KXCO2LEVEL                 0
-  KXCOPPEROPEN               0
-  KXCORIVER                  0
-  KXDALSNOWM                 0
-  KXDCSNOWM                  0
-  KXDENHIGH                  0
-  KXDENSNOWM                 0
-  KXDENSNOWMB                0
-  KXDENSNOWXMAS              0
-  KXDETSNOWM                 0
-  KXDROUGHTLEVEL             0
-  KXDVHIGH                   0
-  KXEARTHQUAKE               0
-  KXEARTHQUAKECALIFORNIA     0
-  KXEARTHQUAKEJAPAN          0
-  KXEARTHQUAKEJAPANTATSUKI     0
-  KXEARTHQUAKELA             0
-  KXEARTHQUAKEM              0
-  KXEARTHQUAKEM7             0
-  KXECLIPSECOVER             0
-  KXECLIPSECOVERBUFF         0
-  KXECLIPSEREYK              0
-  KXELNINO                   0
-  KXEMERGENCYCOL             0
-  KXEMERGENCYDES             0
-  KXEMERGENCYHOU             0
-  KXEMERGENCYJAC             0
-  KXEMERGENCYLA              0
-  KXEMERGENCYLOU             0
-  KXEMERGENCYMIA             0
-  KXEMERGENCYNOLA            0
-  KXEMERGENCYPHIL            0
-  KXEMERGENCYRAP             0
-  KXEMERGENCYSF              0
-  KXEMERGENCYSTL             0
-  KXEMERGENCYWIL             0
-  KXERCOTX                   0
-  KXERUPTETNA                0
-  KXERUPTKILUAEA             0
-  KXERUPTSUPER               0
-  KXEUCLIMATE                0
-  KXEVSHARE                  0
-  KXFEMA                     0
-  KXFIRSTHURRICANE           0
-  KXGTEMP                    0
-  KXHDDCVG                   0
-  KXHEATAPHX                 0
-  KXHEATWARNING              0
-  KXHEAVENLYCLOSE            0
-  KXHEAVENLYOPEN             0
-  KXHMONTH                   0
-  KXHOBBYTEMP                0
-  KXHOLIDAYTMAX              0
-  KXHOLIDAYTMIN              0
-  KXHOTYEAR                  0
-  KXHOUHIGH                  0
-  KXHOUSNOWM                 0
-  KXHURCAL                   0
-  KXHURCAT                   0
-  KXHURCATFL                 0
-  KXHURCATH                  0
-  KXHURCATI                  0
-  KXHURCHARL                 0
-  KXHURCITYHOU               0
-  KXHURCITYTPA               0
-  KXHURCLAND                 0
-  KXHURCMAJ                  0
-  KXHURCOASTTEX              0
-  KXHURCROSSHOU              0
-  KXHURCTOT                  0
-  KXHURCTOTMAJ               0
-  KXHURHAT                   0
-  KXHURJACKFL                0
-  KXHURMIA                   0
-  KXHURMYR                   0
-  KXHURNJ                    0
-  KXHURNO                    0
-  KXHURNOR                   0
-  KXHURNYC                   0
-  KXHURORL                   0
-  KXHURPATHAL                0
-  KXHURPATHFLA               0
-  KXHURPATHGENERAL           0
-  KXHURPATHGENERALMAJOR      0
-  KXHURPATHGULFCOAST         0
-  KXHURPATHHAWAII            0
-  KXHURPATHHOU               0
-  KXHURPATHNC                0
-  KXHURPATHSCAROLINA         0
-  KXHURR                     0
-  KXHURSAV                   0
-  KXHURTB                    0
-  KXHURWIL                   0
-  KXINDIACLIMATE             0
-  KXJACKSONOPEN              0
-  KXJACWSNOWM                0
-  KXKEYSTONECLOSE            0
-  KXKEYSTONEOPEN             0
-  KXKILAUEA                  0
-  KXKILLINGTONOPEN           0
+  KXLOWT                     2     1    6.00    0.00     0   +6.00   +12.00    nan 0/0   HOLD
+  KXRAIN                     2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXRAINWKND                 1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
   KXLAXSNOWM                 0
   KXLOW                      0
+  KXMAXTEMP100               0
+  KXMEAD                     0
+  KXMIASNOWM                 0
+  KXMICHTEMP                 0
+  KXMINNYC                   0
+  KXMKESNOWM                 0
+  KXMONTHLOWMSN              0
+  KXMSNLOWT                  0
+  KXMSPSNOWM                 0
+  KXNAMEDSTORM               0
+  KXNEXTCAT5HURDATE          0
+  KXNEXTHURDATE              0
+  KXNORTHSTARCLOSE           0
+  KXNORTHSTAROPEN            0
+  KXNYCSNOWM                 0
+  KXNYCSNOWXMAS              0
+  KXPARKCCLOSE               0
+  KXPARKCOPEN                0
+  KXPHILHIGH                 0
+  KXPHILSNOWM                0
+  KXPITSNOWM                 0
+  KXRONI                     0
+  KXSEASNOWM                 0
+  KXSFOSNOWM                 0
+  KXSIERRAOPEN               0
+  KXSJCLOWT                  0
+  KXSLCSNOWM                 0
+  KXSNOW                     0
+  KXSPURRERUPT               0
+  KXSTOWECLOSE               0
+  KXSTOWEOPEN                0
+  KXTEMP                     0
+  KXTORNADO                  0
+  KXTROPSTORM                0
+  KXTSNOWFALLBIGSKYM         0
+  KXTSUNAMI                  0
+  KXTXURI                    0
+  KXUSCLIMATE                0
+  KXVAILOPEN                 0
+  KXVEI4                     0
+  KXWARMING                  0
+  KXWASDESTATCORN            0
+  KXWEEKHTLAS                0
+  KXWEEKHTLAX                0
+  KXWEEKHTMIA                0
+  KXWEEKHTNYC                0
+  KXWEEKHTPHX                0
+  KXWHISTLEROPEN             0
+  KXXFLARE                   0
 
   C. PER FAMILY BY MONTH (n, c/ct)
-  KXHIGH                 2026-09: 1 @ +6.0, 2026-10: 2 @ +6.0
-  KXHIGHT                2026-08: 3 @ +6.7, 2026-10: 1 @ +7.0
-  KXRAIN                 2026-08: 1 @ +7.0
+  KXLOWT                 2026-08: 2 @ +6.0
+  KXRAIN                 2026-08: 1 @ +7.0, 2026-09: 1 @ +7.0
+  KXRAINWKND             2026-09: 1 @ +6.0
 
   CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
 
