@@ -1,10 +1,8 @@
 # ops request [READ]
-# type=db  id=nflitf-gate-dry2
-# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:55:31Z
-ser          games  trades  c_per_ct  mean_g   se_g    lcb      games_lost
------------  -----  ------  --------  -------  ------  -------  ----------
-KXITFMATCH   90     91      1.95      0.0197   0.0215  -0.0156  4         
-KXITFWMATCH  125    125     -0.07     -0.0007  0.0219  -0.0368  8         
-KXNFLTOTAL   47     87      1.77      0.0327   0.0510  -0.0511  3         
+# type=db  id=nflitf-trip-dry
+# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:55:57Z
+games  markets  net   markets_lost
+-----  -------  ----  ------------
+16     16       1.28  0           
 
-(3 rows)
+(1 row)
