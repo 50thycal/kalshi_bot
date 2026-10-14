@@ -1,13 +1,23 @@
 # ops request [READ]
-# type=db  id=rl46b-livesubset
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:26:14Z
-band       grp                       trades  mkts  games  c_per_ct  net     loss_pct  tail  mean_g  se_g 
----------  ------------------------  ------  ----  -----  --------  ------  --------  ----  ------  -----
-cheap<=11  1 live-market             872     104   82     -4.65     -40.54  11.6      6.8   -0.494  0.318
-cheap<=11  2 same-game,other-mkt     661     159   70     5.09      33.65   2.0       7.6   0.481   0.102
-cheap<=11  3 game-live-never-filled  4252    1126  430    2.10      89.10   5.0       7.2   0.207   0.083
-wide>11    1 live-market             134     42    32     13.28     17.79   7.5       22.8  0.556   0.246
-wide>11    2 same-game,other-mkt     453     174   66     6.38      28.88   13.7      22.5  0.438   0.218
-wide>11    3 game-live-never-filled  1202    788   354    1.87      22.50   17.8      23.3  0.064   0.078
+# type=db  id=rl46b-xseries
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:27:08Z
+ser          grp          mkts  contracts  c_per_ct  mkt_loss_pct  net   
+-----------  -----------  ----  ---------  --------  ------------  ------
+KXITFMATCH   live-filled  108   821        3.16      2.8           25.97 
+KXITFMATCH   not-live     278   920        2.65      5.8           24.40 
+KXITFWMATCH  live-filled  95    675        0.03      7.4           0.22  
+KXITFWMATCH  not-live     221   714        1.50      7.2           10.69 
+KXMLBHR      live-filled  456   3282       -0.20     7.5           -6.49 
+KXMLBHR      not-live     2131  8459       1.14      6.2           96.56 
+KXMLBKS      live-filled  38    306        0.80      7.9           2.45  
+KXMLBKS      not-live     251   924        0.02      6.4           0.20  
+KXMLBSPREAD  live-filled  104   872        -4.65     13.5          -40.54
+KXMLBSPREAD  not-live     1285  4913       2.50      6.5           122.75
+KXMLBTOTAL   live-filled  117   859        -5.06     13.7          -43.48
+KXMLBTOTAL   not-live     1237  3757       0.46      7.8           17.27 
+KXNFLTOTAL   live-filled  30    252        6.58      0.0           16.59 
+KXNFLTOTAL   not-live     368   1310       1.77      6.3           23.16 
+KXRAIN       live-filled  55    492        5.75      1.8           28.28 
+KXRAIN       not-live     243   1107       5.83      3.7           64.53 
 
-(6 rows)
+(16 rows)
