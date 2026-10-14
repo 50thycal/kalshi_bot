@@ -1,12 +1,12 @@
 # ops request [READ]
-# type=xos  id=nflitf-ct-1
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:24:21Z
+# type=xos  id=rain-ct-1014a
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:23:31Z
 SESSION: Experiment Control Tower
 MODE: READ ONLY
 EXPERIMENT OS: experiment_os:pr4+metrics_engine:pr3_v1
 ENFORCEMENT: NEW_ONLY since 2026-08-16 14:34:42.892897+00:00 (cutover prod-new-only-20260816)
 PLATFORM SNAPSHOT: 4f9adf15daa64035…
-AS OF: 2026-10-13 21:24 CDT
+AS OF: 2026-10-13 21:23 CDT
 
 GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator result can authorize a transition.
 
@@ -266,13 +266,13 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 === DATA COLLECTORS ===
     collector                 status  age_min  cadence
     ------------------------  ------  -------  -------
-    weather_forecasts         fresh   1.90     15     
-    weather_observations      fresh   3.70     15     
-    weather_ensembles         fresh   7.50     60     
-    weather_bucket_snapshots  fresh   1.90     5      
-    crypto_spot_candles       fresh   2.20     5      
-    crypto_ladder_snapshots   fresh   1.60     5      
-    mmsell_position_ticks     fresh   1.90     5      
+    weather_forecasts         fresh   1.50     15     
+    weather_observations      fresh   3.30     15     
+    weather_ensembles         fresh   7.10     60     
+    weather_bucket_snapshots  fresh   1.50     5      
+    crypto_spot_candles       fresh   1.80     5      
+    crypto_ladder_snapshots   fresh   1.20     5      
+    mmsell_position_ticks     fresh   1.50     5      
 
     NOT ACTIVE IN THIS DEPLOYMENT (no data for >7d) — informational, NOT an outage:
         market_snapshots: INACTIVE, last write 127.5d ago — scanner-mode table; the live worker does not write it
