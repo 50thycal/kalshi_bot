@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-rain-season"],"id":"rain-show-1014"}
+{"type":"env","id":"rain-env-read-1014b"}
