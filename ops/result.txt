@@ -1,81 +1,26 @@
 # ops request [READ]
-# type=db  id=nflitf-q2
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:30:55Z
-dim    ser                   cell     mkts  be_pct  loss_pct  c_per_mkt  games  mean_g   se_g    games_lost
------  --------------------  -------  ----  ------  --------  ---------  -----  -------  ------  ----------
-all    KXATPCHALLENGERMATCH  all      1611  21.46   22.91     -1.69      1335   -0.0204  0.0101  361       
-band   KXATPCHALLENGERMATCH  b6-7     209   6.45    6.70      0.58       172    0.0070   0.0222  10        
-band   KXATPCHALLENGERMATCH  c8-10    195   8.74    9.74      -0.22      195    -0.0022  0.0202  17        
-band   KXATPCHALLENGERMATCH  d11-20   388   15.17   14.95     -0.23      380    -0.0023  0.0181  58        
-band   KXATPCHALLENGERMATCH  e>20     819   31.30   33.94     -3.31      703    -0.0385  0.0161  278       
-month  KXATPCHALLENGERMATCH  2026-07  128   25.11   31.25     -7.84      112    -0.0897  0.0390  40        
-month  KXATPCHALLENGERMATCH  2026-08  499   21.02   20.84     0.35       393    0.0045   0.0185  97        
-month  KXATPCHALLENGERMATCH  2026-09  657   21.14   22.53     -1.66      554    -0.0196  0.0156  147       
-month  KXATPCHALLENGERMATCH  2026-10  327   21.36   23.55     -2.45      276    -0.0291  0.0217  77        
-time   KXATPCHALLENGERMATCH  a<0.5h   428   17.65   9.11      8.10       417    0.0831   0.0133  39        
-time   KXATPCHALLENGERMATCH  b0.5-1h  519   21.69   17.53     4.22       503    0.0436   0.0162  88        
-time   KXATPCHALLENGERMATCH  c1-2h    498   23.88   36.55     -12.97     477    -0.1354  0.0217  179       
-time   KXATPCHALLENGERMATCH  d2-4h    119   23.95   36.97     -13.55     107    -0.1507  0.0452  44        
-time   KXATPCHALLENGERMATCH  e4-24h   42    20.76   26.19     -5.97      39     -0.0643  0.0659  11        
-time   KXATPCHALLENGERMATCH  f>24h    5     30.10   40.00     -10.89     4      -0.1361  0.1979  2         
-all    KXITFMATCH            all      1223  18.89   17.83     0.82       1030   0.0097   0.0109  212       
-band   KXITFMATCH            b6-7     272   6.47    4.41      1.86       207    0.0244   0.0200  9         
-band   KXITFMATCH            c8-10    182   8.71    7.69      2.33       180    0.0236   0.0176  11        
-band   KXITFMATCH            d11-20   268   15.09   10.45     4.13       264    0.0419   0.0184  28        
-band   KXITFMATCH            e>20     501   31.36   32.73     -2.07      443    -0.0234  0.0208  164       
-month  KXITFMATCH            2026-07  118   21.61   19.49     0.53       107    0.0058   0.0339  23        
-month  KXITFMATCH            2026-08  547   17.57   17.00     0.62       421    0.0080   0.0174  88        
-month  KXITFMATCH            2026-09  399   19.14   17.29     1.60       360    0.0178   0.0182  68        
-month  KXITFMATCH            2026-10  159   20.76   20.75     -0.26      142    -0.0029  0.0289  33        
-time   KXITFMATCH            a<0.5h   467   16.27   8.14      7.71       438    0.0822   0.0128  38        
-time   KXITFMATCH            b0.5-1h  399   19.44   16.29     2.63       379    0.0277   0.0185  65        
-time   KXITFMATCH            c1-2h    245   22.32   32.65     -9.67      224    -0.1058  0.0305  76        
-time   KXITFMATCH            d2-4h    65    21.62   36.92     -15.83     59     -0.1745  0.0657  23        
-time   KXITFMATCH            e4-24h   46    18.53   23.91     -5.85      37     -0.0727  0.0790  10        
-time   KXITFMATCH            f>24h    1     18.00   0.00      17.74      1      0.1774           0         
-all    KXITFWMATCH           all      1202  19.31   19.38     -0.40      1029   -0.0047  0.0114  228       
-band   KXITFWMATCH           b6-7     240   6.44    4.17      2.48       196    0.0303   0.0168  8         
-band   KXITFWMATCH           c8-10    175   8.66    9.71      -0.81      175    -0.0081  0.0217  17        
-band   KXITFWMATCH           d11-20   273   15.24   17.58     -2.78      269    -0.0282  0.0229  48        
-band   KXITFWMATCH           e>20     514   31.12   30.74     -0.34      456    -0.0039  0.0202  158       
-month  KXITFWMATCH           2026-07  98    21.99   20.41     -0.02      88     -0.0002  0.0396  20        
-month  KXITFWMATCH           2026-08  439   19.37   19.59     -0.40      344    -0.0051  0.0199  83        
-month  KXITFWMATCH           2026-09  413   18.79   20.34     -1.79      366    -0.0202  0.0200  82        
-month  KXITFWMATCH           2026-10  252   19.03   17.06     1.72       231    0.0188   0.0218  43        
-time   KXITFWMATCH           a<0.5h   437   16.80   8.92      7.64       413    0.0808   0.0136  38        
-time   KXITFWMATCH           b0.5-1h  378   19.67   16.93     2.27       365    0.0235   0.0197  63        
-time   KXITFWMATCH           c1-2h    299   21.58   33.44     -12.35     284    -0.1300  0.0279  99        
-time   KXITFWMATCH           d2-4h    63    22.76   39.68     -16.26     57     -0.1797  0.0607  25        
-time   KXITFWMATCH           e4-24h   24    21.70   20.83     0.26       22     0.0029   0.0836  5         
-time   KXITFWMATCH           f>24h    1     32.00   0.00      31.62      1      0.3162           0         
-all    KXNFLTOTAL            all      701   14.63   13.98     0.44       121    0.0254   0.1214  33        
-band   KXNFLTOTAL            b6-7     221   6.56    3.17      3.29       105    0.0692   0.0249  7         
-band   KXNFLTOTAL            c8-10    190   8.37    6.32      1.90       100    0.0361   0.0432  8         
-band   KXNFLTOTAL            d11-20   116   13.49   15.52     -2.27      76     -0.0346  0.0586  14        
-band   KXNFLTOTAL            e>20     174   32.47   35.06     -2.97      80     -0.0646  0.1141  31        
-month  KXNFLTOTAL            2026-08  308   14.18   9.09      4.87       44     0.3407   0.1993  9         
-month  KXNFLTOTAL            2026-09  274   14.94   16.42     -1.68      59     -0.0781  0.1694  15        
-month  KXNFLTOTAL            2026-10  119   15.07   21.01     -6.14      26     -0.2811  0.2232  10        
-time   KXNFLTOTAL            a<0.5h   36    15.83   8.33      7.29       23     0.1141   0.0885  2         
-time   KXNFLTOTAL            b0.5-1h  46    13.20   13.04     -0.03      26     -0.0006  0.1297  3         
-time   KXNFLTOTAL            c1-2h    83    12.22   2.41      9.65       47     0.1703   0.0476  2         
-time   KXNFLTOTAL            d2-4h    198   14.02   13.13     0.70       71     0.0195   0.1041  12        
-time   KXNFLTOTAL            e4-24h   138   14.51   16.67     -2.35      54     -0.0600  0.1198  10        
-time   KXNFLTOTAL            f>24h    200   16.43   19.00     -2.84      55     -0.1033  0.1531  15        
-all    KXWTACHALLENGERMATCH  all      412   21.56   23.54     -2.37      344    -0.0283  0.0190  97        
-band   KXWTACHALLENGERMATCH  b6-7     38    6.54    5.26      1.12       38     0.0112   0.0367  2         
-band   KXWTACHALLENGERMATCH  c8-10    52    8.39    3.85      4.40       52     0.0440   0.0267  2         
-band   KXWTACHALLENGERMATCH  d11-20   115   15.55   13.04     2.15       108    0.0229   0.0310  15        
-band   KXWTACHALLENGERMATCH  e>20     207   30.97   37.68     -7.22      171    -0.0874  0.0334  78        
-month  KXWTACHALLENGERMATCH  2026-07  32    23.43   15.63     6.05       28     0.0692   0.0617  5         
-month  KXWTACHALLENGERMATCH  2026-08  6     23.94   16.67     6.98       5      0.0838   0.1445  1         
-month  KXWTACHALLENGERMATCH  2026-09  248   20.98   25.00     -4.29      206    -0.0516  0.0250  62        
-month  KXWTACHALLENGERMATCH  2026-10  126   22.12   23.02     -1.17      105    -0.0141  0.0339  29        
-time   KXWTACHALLENGERMATCH  a<0.5h   115   17.77   8.70      8.60       115    0.0860   0.0257  10        
-time   KXWTACHALLENGERMATCH  b0.5-1h  136   21.25   15.44     5.43       136    0.0543   0.0292  21        
-time   KXWTACHALLENGERMATCH  c1-2h    134   24.50   43.28     -19.12     126    -0.2033  0.0418  58        
-time   KXWTACHALLENGERMATCH  d2-4h    19    26.43   31.58     -5.47      18     -0.0577  0.1072  6         
-time   KXWTACHALLENGERMATCH  e4-24h   7     22.22   28.57     -6.62      6      -0.0772  0.1946  2         
-time   KXWTACHALLENGERMATCH  f>24h    1     9.63    0.00      9.49       1      0.0949           0         
+# type=db  id=rain-q5-1014
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:31:10Z
+strategy   status    side  action  orders  mkts  qty  filled  lim   min_to_fill  first       last        reasons                                                                                                                 
+---------  --------  ----  ------  ------  ----  ---  ------  ----  -----------  ----------  ----------  ------------------------------------------------------------------------------------------------------------------------
+Alimm1     filled    no    buy     1       1     11   11      84.0  1.0          2026-09-26  2026-09-26                                                                                                                          
+Alimm1     filled    yes   buy     1       1     11   11      14.0  1.0          2026-09-26  2026-09-26                                                                                                                          
+Cmmsell10  canceled  no    buy     1       1     1    0       94.0               2026-08-30  2026-08-30                                                                                                                          
+Cmmsell10  filled    no    buy     1       1     1    1       91.0  6.3          2026-08-29  2026-08-29                                                                                                                          
+Dmmsell10  filled    no    buy     3       3     3    3       93.3  26.6         2026-09-02  2026-09-04                                                                                                                          
+Fmmsell10  canceled  no    buy     11      9     11   0       93.0               2026-09-08  2026-10-03  timeout                                                                                                                 
+Fmmsell10  filled    no    buy     19      19    19   19      93.3  65.8         2026-09-07  2026-10-01                                                                                                                          
+Hmmsell10  canceled  no    buy     2       2     4    0       92.5               2026-10-04  2026-10-04  |timeout                                                                                                                
+Jmmsell10  canceled  no    buy     7       7     15   0       92.3               2026-10-04  2026-10-08  timeout                                                                                                                 
+Jmmsell10  filled    no    buy     13      13    29   29      92.8  32.7         2026-10-04  2026-10-11                                                                                                                          
+Kmmsell10  canceled  no    buy     3       2     9    0       92.3               2026-10-11  2026-10-12  |timeout                                                                                                                
+Kmmsell10  filled    no    buy     7       7     21   22      93.4  58.9         2026-10-12  2026-10-13                                                                                                                          
+Lmmsell10  canceled  no    buy     5       3     10   0       92.0               2026-08-17  2026-08-18  timeout                                                                                                                 
+Lmmsell10  filled    no    buy     4       4     8    8       92.8  55.2         2026-08-15  2026-08-18                                                                                                                          
+mmsell10a  canceled  no    buy     3       3     3    0       92.3               2026-08-09  2026-08-14  book_stood_down|timeout                                                                                                 
+mmsell10a  filled    no    buy     17      17    17   17      92.1  55.7         2026-08-08  2026-08-14                                                                                                                          
+mmsell10b  canceled  no    buy     11      10    11   0       91.9               2026-08-11  2026-08-14  |timeout                                                                                                                
+mmsell10b  filled    no    buy     9       9     9    8       92.0  54.7         2026-08-10  2026-08-13                                                                                                                          
+mmsell10b  rejected  no    buy     6       6     6    0       94.2               2026-08-08  2026-08-10  Kalshi API error 400 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"invalid_order","message":"invalid order
 
-(74 rows)
+(19 rows)
