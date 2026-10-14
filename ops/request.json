@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--max-series","60","--per-series","90"],"id":"lookalike-probe-20261014a"}
+{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--prefixes","KX","--max-series","200","--per-series","0","--no-control"],"id":"lookalike-listing-20261014b"}
