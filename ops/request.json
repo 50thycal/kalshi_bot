@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-rain-season-register-202610140320"],"id":"rain-receipt-1014c"}
+{"type":"script","name":"kxrain_season_probe","args":["--max-candle-markets","2400"],"id":"rain-probe-full-1014"}
