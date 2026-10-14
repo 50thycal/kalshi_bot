@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MLB live loss is the live fill, not the market 2026-10-14 (XOS-000046 addendum)
+
+[Addendum §5](MMSELL_MLB_TOTALS_SPREADS_CELL.md). Live picks MLB spreads with the same band,
+line mix and in-game timing as its paper lineage. Profitable paper books sell 14–22¢ tails,
+and none survives correction for ~30 variants. In cheap-band paper, the markets live was filled
+on lost −4.65¢ per contract, while other markets in the same games made +5.09¢. Across 8 series
+the penalty appears only on MLB totals and spreads (combined z 3.0, corrected p ≈ 0.01). The 2027
+gate is unchanged. The likely fix is fill mechanics (no in-play resting bids on MLB score lines),
+not a universe cut.
+
 ## MLB totals/spreads live loss cell 2026-10-13 — HOLD; 2027 test pre-registered (XOS-000046)
 
 Research Lab read of [the cell](MMSELL_MLB_TOTALS_SPREADS_CELL.md). Live MMSELL lost $9.94 on
