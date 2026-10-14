@@ -1,1 +1,1 @@
-{"type": "xos", "command": "issue-command-show", "args": ["rl-nflitf-ev47-20261014"], "id": "nflitf-rcpt4"}
+{"type": "env", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": ""}, "id": "nflitf-cmd-clear"}
