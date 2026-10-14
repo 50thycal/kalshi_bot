@@ -1,7 +1,4 @@
 # ops request [READ]
-# type=db  id=rain-q8-1014
-# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:33:58Z
-strategy  status  n  first  last  ex  px
---------  ------  -  -----  ----  --  --
-
-(0 rows)
+# type=noop
+# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:34:39Z
+(noop — nothing to do)
