@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_probe","args":["KXRAIN-26JAN15","KXRAIN-26FEB10","KXRAIN-25DEC15","KXRAIN-26MAR20","KXRAIN-26MAY15","KXRAIN-26JUL15","KXRAIN-26AUG01"],"id":"rain-hist-probe-1014"}
+{"type":"xos","command":"issue-command-show","args":["rl46-20261014-link-pr"],"id":"rl46b-rcpt"}
