@@ -1,1 +1,1 @@
-{"type": "db", "id": "rain-q8-1014", "max_rows": 50, "sql": "select strategy, status, count(*) n, min(created_at) first, max(created_at) last, min(market_ticker) ex, round(avg(assumed_price),1) px\nfrom paper_trades where strategy in ('Rainmmsell1','Rainmmsell2') group by 1,2 order by 1,2\n"}
+{"type":"noop"}
