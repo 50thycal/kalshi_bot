@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "d8ca07d70688d06f8606353787eae94a37658882",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-14T15:52:51Z",
+  "id": "rl46c-cmd-clear",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 723 bytes, sha256:5cf831f2fab4aeb7>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl46c-cmd-clear.receipt.json",
+  "result_file": "ops/results/rl46c-cmd-clear.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38593165277",
+  "service": "main",
+  "started_at": "2026-10-14T15:52:47Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
