@@ -1,23 +1,4 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1014b
-# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T03:03:12Z
-ev                            legs                                                       
-----------------------------  -----------------------------------------------------------
-KXINXU-26OCT13H1600           T7814.9999:1:s:0.06 T7819.9999:1:s:0.07 T7819.9999:2:s:0.07
-KXITFMATCH-26OCT13GORWIN      WIN:1:s:0.06 WIN:2:s:0.06                                  
-KXMLBGAME-26OCT132000CLETB    CLE:1:s:0.06                                               
-KXMLBSPREAD-26OCT132000CLETB  CLE2:1:s:0.06 CLE2:2:s:0.06                                
-KXNASDAQ100U-26OCT13H1600     T30629.99:1:s:0.07 T30629.99:2:s:0.07 T30639.99:1:s:0.07   
-KXRAIN-26OCT14                ABQ:1:o:- ABQ:2:o:- MKE:1:o:- MKE:2:o:-                    
-KXUCLGAME-26OCT13ATMMUN       MUN:1:s:0.06 MUN:2:s:0.06                                  
-KXUCLGAME-26OCT13SBHSLA       SLA:1:s:0.07                                               
-KXUCLGAME-26OCT13VIKBMU       TIE:1:s:-0.94 TIE:2:s:-0.94 VIK:1:s:0.06                   
-KXUCLTOTAL-26OCT13ATMMUN      4:1:s:0.06                                                 
-KXUCLTOTAL-26OCT13GALBAR      7:1:s:0.06 7:2:s:0.06 9:1:s:0.06                           
-KXUCLTOTAL-26OCT13RBLPSV      5:1:s:0.06 5:2:s:0.06                                      
-KXUCLTOTAL-26OCT13VILNAP      6:1:s:0.06 6:2:s:0.06                                      
-KXUFCMOV-26OCT13BULVIS        VISSUB:1:s:0.06 VISSUB:2:s:0.06                            
-KXUFCMOV-26OCT13DACAB         CABDEC:1:s:0.07 CABDEC:2:s:0.07                            
-KXUFCMOV-26OCT13SUNPER        SUNSUB:1:s:0.06 SUNSUB:2:s:0.06                            
-
-(16 rows)
+# type=noop
+# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T03:03:45Z
+(noop — nothing to do)
