@@ -1,1 +1,1 @@
-{"type": "db", "id": "cc-rmm-1014f", "sql": "SELECT strategy, count(*) AS n, max(created_at) AS last FROM paper_trades WHERE created_at >= now() - interval '13 hours' AND strategy LIKE '%mmsell%' GROUP BY 1 ORDER BY 3 DESC LIMIT 20"}
+{"type":"noop"}
