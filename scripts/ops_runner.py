@@ -141,6 +141,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_xlock",
     "kalshi_widequote_census",
     "kalshi_flb",
+    "kxrain_season_probe",
     "kalshi_mm",
     "kalshi_mm_exits",
     "xvenue_game",
