@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-rain-season-register-202610140320"],"id":"rain-receipt-1014d"}
+{"type":"xos","command":"show","args":["mmsell-rain-season"],"id":"rain-show-1014"}
