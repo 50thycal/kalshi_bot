@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=limm-db-1014o
+# code 5cc23595665cf38095528134450d61af7a3e5a29 · started 2026-10-14T21:55:27Z
+market_ticker              side  action  limit_price  quantity  status    cr        created_at                     credits  bal   tswif   
+-------------------------  ----  ------  -----------  --------  --------  --------  -----------------------------  -------  ----  --------
+KXAAAGASMINM-26OCT31-3.90  yes   buy     2            500       resting             2026-10-14 21:32:17.63709+00            8583  499.0000
+KXIASANDTUREK-26DEC07-R3   yes   buy     8            125       canceled  replaced  2026-10-14 20:20:02.901223+00           8583  499.0000
+
+(2 rows)
