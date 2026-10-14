@@ -41,8 +41,8 @@ request authorizes every paper-scope step; ask at none of them
 3 PR (body = handoff, owner result transcribes the request as the acceptance),
   CI green, MERGE — request-authorized because the scope is paper
 4 xos package-preflight <package> → GO  (default-branch code: after the merge)
-5 send the printed envelope: actor_role RESEARCH_LAB, approved_by = the
-  operator's name, reason = the request in one line
+5 send the printed envelope as printed (actor_role RESEARCH_LAB); approved_by =
+  the operator's name and reason = the request go in the PR body, not the payload
 6 receipt SUCCEEDED → xos show <key>: every tag on an ACTIVE arm
 7 activation_vars declared? read the LIVE value, append, set — never retype
 8 readback + control-tower after SILENT_ARM_HOURS: no silent arm

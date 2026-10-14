@@ -53,7 +53,8 @@ none of these steps; report at the end, or at a failed criterion.
  2  thesis doc + package module (arms, gate, tags as literals) + tests + package entry
  3  PR, CI green, PR body is the handoff; merge  ← request-authorized for paper scope
  4  xos package-preflight <package> → GO   (runs default-branch code, so after the merge)
- 5  send the printed envelope; approved_by = the operator's name; reason = the request
+ 5  send the printed envelope as printed; record approved_by (the operator's name) and reason
+    (the request) from the preflight's `audit` block in the PR body
  6  receipt terminal (SUCCEEDED) → xos show <key>: every tag on an ACTIVE arm
  7  runtime step if the package declares activation_vars: read the LIVE value, append the
     new paper book(s), set — never retype MMSELL_VARIANTS (the 2026-09-05 silent-arm defect)
@@ -66,9 +67,11 @@ the request **because the scope is paper**: the transport arms nothing, the env 
 a book that cannot place a real order, and both are reversible by `STAND_DOWN` or by removing
 the entry. The moment any step would touch a hard-stop item, the chain stops there.
 
-**`approved_by` names the operator, not the agent.** The request came from a person; the
-receipt records that person. The `reason` field carries the request in one line so the
-audit row explains itself a year later.
+**`approved_by` names the operator, not the agent.** The request came from a person, and the
+record names that person. The `REGISTER_PACKAGE` transport's vocabulary is `package` (plus
+an optional `promotion_sample_floor`) and it **rejects** any other field, so the approver and
+the one-line reason are transcribed into the PR body's owner result, not the envelope.
+(Found 2026-10-14: an envelope carrying them was REJECTED `UNKNOWN_PAYLOAD_FIELD`.)
 
 **Merging is the owner's acceptance, transcribed.** In `solo` mode (`DEC-011`) an agent never
 writes `Owner-accepted` on its own authority. Under this document the originating request
