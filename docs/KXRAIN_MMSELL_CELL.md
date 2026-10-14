@@ -143,6 +143,50 @@ Why it might not:
 
 The data cannot decide this, so the contract has to.
 
+### 3.5 Independent replay on Kalshi's own quotes (`kxrain_season_probe`, `rain-probe-full-1014`)
+
+The bot's paper tape covers only the markets its books happened to enter, at most 3 cities per
+date per book. The probe replays the cell rule on **every** settled KXRAIN market Kalshi has
+listed:
+- 2,044 markets listed, 1,818 settled and priced;
+- hourly candles from T−1h to T−48h;
+- the earliest in-cell hourly quote taken as the entry;
+- gross P&L, 1 contract, at the maker price.
+
+| slice | markets | dates | implied YES | realized YES | losses | ¢/contract | ¢/date ± s.e. |
+|---|---|---|---|---|---|---|---|
+| **all** | 264 | 61 | 6.55% | **2.27%** | 6 | **+4.28** | +18.5 ± 4.4 |
+| Aug | 117 | 26 | 6.56% | 0.00% | 0 | +6.56 | |
+| Sep | 121 | 24 | 6.50% | 4.13% | 5 | **+2.36** | |
+| Oct (to 13th) | 26 | 11 | 6.73% | 3.85% | 1 | **+2.88** | |
+| entry ≤ 4h to close | 44 | 32 | 6.57% | 0.00% | 0 | +6.57 | |
+| entry 6–12h | 56 | 30 | 6.59% | 5.36% | 3 | +1.23 | |
+| entry 18–24h | 86 | 44 | 6.60% | 1.16% | 1 | +5.44 | |
+| entry > 24h | 78 | 39 | 6.45% | 2.56% | 2 | +3.88 | |
+| YES sold at 6¢ | 119 | 46 | 6.00% | 3.36% | 4 | +2.64 | |
+| YES sold at 7¢ | 145 | 58 | 7.00% | 1.38% | 2 | +5.62 | |
+
+Losses: Sep 13 OKC, Sep 20 DEN, Sep 24 CMH, Sep 28 LV, Sep 28 PIT and Oct 10 SEA. They were
+spread over 5 dates and 6 cities, with no front hitting many cities at once.
+
+What this changes:
+- **The edge is real but smaller than the paper tape shows.**
+  - Replay: +4.3¢ at about 4 standard errors per date.
+  - Bot paper: +5.7¢, 1 loss in 226.
+  - The tape's near-zero loss rate is partly which 3 cities won each date's slots. Most of the
+    replay's losers were not entered by the cell books.
+- **The edge is decaying with the season.**
+  - August was perfect; September and October run at about +2.5¢.
+  - That is at the +2¢ pass bar, before any live fill gap.
+  - Winter, the main risk, starts from an already thinner autumn.
+- **Time to close.**
+  - Entries in the final 4 hours are cleanest (0 losses in 44).
+  - The 6–12h window, typically an afternoon storm forming, carries half the losses.
+  - This is a candidate rule for a future Version only. It is post hoc, so it is not adopted
+    here.
+- **Rules check.** Every city settles on the NWS climate report (`CLI<station>`) for the named
+  station, which matches the approved rules (DEC-035).
+
 ## 4. What the winning selection is (question 4)
 
 **The selection:** buy NO at the no-bid on a KXRAIN city-day when 5 ≤ YES mid ≤ 10 and the YES
@@ -215,30 +259,45 @@ an XOS issue's evidence, never as a verdict.
 
 **Now: keep rain at Kmmsell10's 3 contracts. Do not scale before winter evidence exists.**
 
+The independent replay (§3.5) puts the realistic autumn edge at about **+2.5–3¢ per contract**,
+not the +5.7¢ the paper tape shows, and it is shrinking month by month. That is reason enough
+not to add size into the season most likely to hurt it.
+
 Risk at the current size:
 - **One losing market:** −$2.82.
 - **Worst day:** −$8.46. The rung cap allows at most 3 rain markets per date.
 - **Canary loss budget:** −$30, unchanged.
-- **Expected:** about +$8 a month (about 55 filled markets × 3 × 5¢).
+- **Expected:** about +$5 a month (about 55 filled markets × 3 × 3¢).
 
-55 filled markets a month is the upper end: 3 per date at a 63% fill rate. The observed live pace under earlier caps and stand-downs was about 1 a day, so read every figure below as a ceiling.
+55 filled markets a month is the upper end: 3 per date at a 63% fill rate. The observed live
+pace under earlier caps and stand-downs was about 1 a day, so read every figure below as a
+ceiling.
 
-Then, conditional on the gate:
+Then, conditional on the gate. The expected column uses +3¢:
 
 | step | when | size on KXRAIN | expected / month | one loss | bad day (3 cities) | if winter erases the edge (YES rate 12%) |
 |---|---|---|---|---|---|---|
-| hold | now → first look | 3 | ~+$8 | −$2.8 | −$8.5 | ~−$9 |
-| optional early step (Calvin's call) | after a clean December per §5.3 interim | 5 | ~+$14 | −$4.7 | −$14 | ~−$15 |
-| scale | `cell_winter_keep` PASS **and** §5.3 winter split passes (~mid-Feb) | 10 | ~+$27 | −$9.4 | −$28 | ~−$30 |
-| ceiling | only with live fill evidence at 10 | 25 | ~+$69 | −$23.5 | −$70 | ~−$75 |
+| hold | now → first look | 3 | ~+$5 | −$2.8 | −$8.5 | ~−$9 |
+| optional early step (Calvin's call) | after a clean December per §5.3 interim | 5 | ~+$8 | −$4.7 | −$14 | ~−$15 |
+| scale | `cell_winter_keep` PASS **and** §5.3 winter split passes (~mid-Feb) | 10 | ~+$17 | −$9.4 | −$28 | ~−$30 |
+| ceiling | only with live fill evidence at 10 | 25 | ~+$41 | −$23.5 | −$70 | ~−$75 |
 
 Each step above 3 contracts is a **Live Ops canary on its own Version**, with its own risk
-envelope. A size increase expands real-money exposure, so it is a hard stop that needs
-Calvin's explicit confirmation. Nothing in this document or its experiment arms it.
+envelope. A size increase expands real-money exposure, so it is a hard stop that needs Calvin's
+explicit confirmation. Nothing in this document or its experiment arms it.
+
+Even at the 10-lot step, rain alone is about a sixth of the $100/month north star. It is worth
+keeping and worth growing carefully, but it is not the whole answer.
 
 If `rain_adjacent` also passes, the same step applies to the 8–12¢ band. That roughly doubles
 the qualifying markets per day at a smaller edge.
 
-## 7. Cost
+## 7. Cost and status
 
-Two paper books and one worker redeploy (the `MMSELL_VARIANTS` append). No real money.
+Two paper books and two worker redeploys (the registration and the `MMSELL_VARIANTS` append).
+No real money.
+
+Registered 2026-10-14 03:20:41Z (receipt `mmsell-rain-season-register-202610140320`,
+SUCCEEDED; approver Calvin, per the PR body). Both tags sit on the PAPER deployment
+`mmsell-rain-paper-1`, and both books were appended to `MMSELL_VARIANTS` at about 03:33Z.
+Experiment OS holds the live state; this section is not updated.
