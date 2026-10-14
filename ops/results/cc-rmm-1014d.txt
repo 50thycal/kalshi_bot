@@ -1,0 +1,16 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1014d
+# code d8ca07d70688d06f8606353787eae94a37658882 · started 2026-10-14T11:06:24Z
+ev                            legs                           
+----------------------------  -------------------------------
+KXITFMATCH-26OCT13DUHPAP      DUH:1:s:0.07 DUH:2:s:0.07      
+KXITFMATCH-26OCT14LOMRAW      LOM:1:s:0.07 LOM:2:s:0.07      
+KXMLBGAME-26OCT132000CLETB    CLE:1:s:0.06                   
+KXMLBSPREAD-26OCT132000CLETB  CLE2:1:s:0.06 CLE2:2:s:0.06    
+KXRAIN-26OCT14                MKE:1:o:- MKE:2:o:-            
+KXUFCMOV-26OCT13BULVIS        VISSUB:1:s:0.06 VISSUB:2:s:0.06
+KXUFCMOV-26OCT13DACAB         CABDEC:1:s:0.07 CABDEC:2:s:0.07
+KXUFCMOV-26OCT13SUNPER        SUNSUB:1:s:0.06 SUNSUB:2:s:0.06
+KXWTAMATCH-26OCT13SVISAM      SAM:1:s:0.07 SAM:2:s:0.07      
+
+(9 rows)
