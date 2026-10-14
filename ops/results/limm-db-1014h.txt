@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=limm-db-1014h
+# code d8ca07d70688d06f8606353787eae94a37658882 · started 2026-10-14T13:45:40Z
+market_ticker                side  action  limit_price  quantity  status    cr                              created_at                     credits  bal   tswif   
+---------------------------  ----  ------  -----------  --------  --------  ------------------------------  -----------------------------  -------  ----  --------
+KXASPENMTNOPEN-27-15NOV26    yes   buy     4            250       rejected  sage":"insufficient balance"}}  2026-10-14 13:42:48.146965+00           5855  499.0000
+KXTRUMPMENTION-26OCT17-AI    yes   buy     8            125       rejected  sage":"insufficient balance"}}  2026-10-14 13:12:25.574145+00           5855  499.0000
+KXCMGFT-26NOV08-T98          no    buy     10           100       rejected  sage":"insufficient balance"}}  2026-10-14 12:40:50.411303+00           5855  499.0000
+KXTRUMPMENTION-26OCT17-HORM  yes   buy     9            111       rejected  sage":"insufficient balance"}}  2026-10-14 12:10:31.151866+00           5855  499.0000
+
+(4 rows)
