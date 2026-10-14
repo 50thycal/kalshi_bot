@@ -1,396 +1,81 @@
 # ops request [READ]
-# type=xos  id=rl46b-show
-# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:30:52Z
-{
-  "issue_key": "XOS-000046",
-  "title": "Should MMSELL stop trading MLB totals and spreads? Live ledger negative across books",
-  "status": "VALIDATING",
-  "classification": "STRATEGY",
-  "severity": "LOW",
-  "priority": "P3",
-  "owner_role": "RESEARCH_LAB",
-  "opened_by_role": "TASK_SPECIFIC",
-  "opened_at": "2026-10-13 03:19:25.471208+00:00",
-  "scope": "system-wide",
-  "experiment_id": null,
-  "version_id": null,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": "RESEARCH_ONLY",
-  "latest_evidence": "RESEARCH_DOCUMENT: Verdict HOLD. Post hoc selection: the cell was picked from 13 series; under a tr",
-  "problem_statement": "The catalog series scorecard (series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4) shows KXMLBTOTAL net -5.06 USD over 88 independent games (75 won, mean -0.057 +/- 0.050 per game) and KXMLBSPREAD net -4.91 USD over 84 games (70 won, mean -0.059 +/- 0.045) from 2026-07-15 to 2026-10-04, negative across most books. Rules for both series are owner-approved in the catalog (DEC-035) and the contract terms say a game postponed >48h settles at a fair price. Totals, spreads, home-run and strikeout markets on one game share one outcome; a per-game view across all MLB series is in PR #609 and will be added as evidence. Question for Research Lab: is MLB totals/spreads a negative selection cell to stop, or too thin to call? Related: XOS-000020 (correlation unit), XOS-000022 (negative selection cell). Snapshot: docs/workstreams/WS-023-market-catalog.md (Scorecard snapshot 2026-10-13). Descriptive evidence only; this issue authorizes nothing.",
-  "evidence_summary": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
-  "proposed_fix": "No change now. MMSELL keeps KXMLBTOTAL and KXMLBSPREAD in its universe; paper keeps trading both. Run the pre-registered 2027 regular-season test (validation plan). Only a CONFIRM there leads to proposing removal of both series from live books, each as a recorded XOS transition (new epoch or Version) with operator confirmation.",
-  "validation_plan": "Frozen 2026-10-13 (doc section 3). Population: live MMSELL fills on KXMLBTOTAL and KXMLBSPREAD, 2027 regular season only. 2026 data is not pooled because it produced the hypothesis; postseason excluded. Unit: the game, all markets of both series on one game summed across live books. Statistic: mean net USD per game, with standard error, from source-ledger economics (catalog scorecard family method, or the doc's query as a fallback). Floor: n >= 150 games. CONFIRM (propose a stop) if mean + 1.96*SE < 0. REFUTE (keep, resolve) if mean >= 0. Otherwise INCONCLUSIVE: extend to n >= 300 games and read once; CONFIRM if mean + 1.645*SE < 0, else REFUTE. Fewer than 150 games by the end of the 2027 regular season: close with no action (the exposure is too small to matter). Power: 300 games detect -0.069 USD/game at 80pct (one-sided alpha 0.05, sd 0.48). Diagnostic only, not part of the decision: live market loss pct minus paper loss pct in the same window and band. The branches are exhaustive and are not to be re-interpreted after results.",
-  "resolution_summary": null,
-  "resolved_at": null,
-  "requires_new_version": false,
-  "requires_new_epoch": false,
-  "requires_platform_revision": false,
-  "requires_pause_or_stand_down": false,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-10-13 03:19:25.471208+00:00",
-  "last_observed_at": "2026-10-13 03:19:25.471208+00:00",
-  "details_json": {
-    "discovery": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-10-13 03:19:25.471208+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "TASK_SPECIFIC",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "RESEARCH_LAB",
-      "from_classification": null,
-      "to_classification": "STRATEGY",
-      "reason": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
-      "payload": {
-        "scope": "system-wide",
-        "anomaly_kind": null,
-        "owner_override": {
-          "chosen": "RESEARCH_LAB",
-          "rationale": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
-          "recommended": "LIVE_OPS"
-        },
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-13 08:53:13.021196+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "TASK_SPECIFIC",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Per-game MLB view after PR #609 (catalog scorecard families, series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4, logged 2026-10-13T08:49Z). Every MLB market on one game (KXMLBTOTAL, KXMLBSPREAD, KXMLBHR, KXMLBKS) grouped by the approved exposure key candidate-game:MLB:<game> and counted as ONE bet: 332 games, 277 won, 80 games traded in two or more MLB series. Net -12.55 USD; mean -0.038 USD per game, standard error 0.026 (about 1.4 SE below zero, so negati",
-      "payload": {
-        "source_ref": "PR #609; catalog deploy log line catalog_scorecard_family 2026-10-13T08:49Z; docs/MARKET_CATALOG_SERVICE.md",
-        "evidence_id": 95,
-        "content_hash": null,
-        "evidence_type": "LOG"
-      }
-    },
-    {
-      "event_type": "TRIAGED",
-      "occurred_at": "2026-10-13 09:37:25.580267+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "OPEN",
-      "to_status": "TRIAGE",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Research Lab takes the stop question. No live MLB totals/spreads exposure until the 2027 season; dollars are small (about 4 USD a month). Present impact LOW, ordering P3.",
-      "payload": {
-        "priority": "P3",
-        "severity": "LOW"
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-10-13 09:37:25.627845+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "TRIAGE",
-      "to_status": "INVESTIGATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "evidence read 2026-10-13: live per-game, live break-even, paper same window and band",
-      "payload": null
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.660131+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Live MMSELL, KXMLBTOTAL and KXMLBSPREAD on one game counted once (the XOS-000020 unit): 144 games, net -9.94 USD, mean -0.069 +/- 0.040 USD per game (z -1.72), 26 games lost. Reproduces the catalog scorecard (SPREAD -4.91 over 82 games exactly; TOTAL -5.03 vs -5.06 over 88). Market level against break-even: TOTAL 117 markets, avg NO 91.75c, break-even loss 8.25pct vs observed 11.97pct (+3.7pp); SPREAD 104 markets, avg NO 91.99c, 8.01pct vs 13.46pct (+5.5pp). All live MMSELL since 2026-07-01: 2,8",
-      "payload": {
-        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 1 and 4 (query embedded); ops ids rl46-live-cal3, rl46-live-all",
-        "evidence_id": 96,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.690265+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Paper family (fill-everything, twins excluded), same series, last 90 days, entry <= 11c: KXMLBTOTAL 516 contests, loss 8.1pct vs break-even 7.4pct, edge -0.7pp, -0.66c/trade; KXMLBSPREAD 525 contests, loss 5.6pct vs 7.1pct, edge +1.4pp, +1.39c/trade. All time, all prices: TOTAL -0.6pp over 663 contests, SPREAD +2.1pp over 570. A mispriced MLB market would lose on paper too (KXNFLSPREAD did, -11.1pp). The live shortfall is a paper-to-live gap; live spread market loss 13.5pct vs paper 5.6pct is a ",
-      "payload": {
-        "source_ref": "mmsell_series_pnl --days 90 --maxyes 11 --split-subjects --series <S>; ops ids rl46-band-kxmlbtotal, rl46-band-kxmlbspread, rl46-sp-total, rl46-sp-spread",
-        "evidence_id": 97,
-        "content_hash": null,
-        "evidence_type": "OPS_RESULT"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.721526+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Verdict HOLD. Post hoc selection: the cell was picked from 13 series; under a true null, the second-worst of 13 z-scores is at or below -1.14 about 51pct of the time (simulation), and the combined one-sided p 0.043 becomes 0.55 after Bonferroni over 13. Combining TOTAL and SPREAD was also chosen after seeing both negative. Paper does not show the effect. Money is about 4 USD a month against the 100 USD/month goal. Last total traded 2026-09-27, last spread 2026-10-04. Stop is not supported; the q",
-      "payload": {
-        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md (PR #614)",
-        "evidence_id": 98,
-        "content_hash": null,
-        "evidence_type": "RESEARCH_DOCUMENT"
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.765272+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "adjudication + pre-registered 2027 test",
-      "payload": {
-        "link_id": 38,
-        "link_type": "RESEARCH_DOC",
-        "reference": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md"
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.802957+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "research document PR",
-      "payload": {
-        "link_id": 39,
-        "link_type": "PR",
-        "reference": "https://github.com/50thycal/kalshi_bot/pull/614"
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.830334+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "correlation unit: the game; the test scores per game",
-      "payload": {
-        "link_id": 40,
-        "link_type": "OTHER",
-        "reference": "XOS-000020"
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-10-13 09:37:25.857832+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "precedent loss cell (KXNFLSPREAD) that also lost on paper; this one does not",
-      "payload": {
-        "link_id": 41,
-        "link_type": "OTHER",
-        "reference": "XOS-000022"
-      }
-    },
-    {
-      "event_type": "DISPOSITION_DECIDED",
-      "occurred_at": "2026-10-13 09:37:25.884243+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "HOLD on thin, post hoc evidence. No stop, no universe change, no new epoch or Version: the evidence does not establish a defect in any book's contract, and there is no live MLB totals/spreads exposure until 2027. The open question is answered by the pre-registered 2027 test in the validation plan. Recorded only; authorizes nothing.",
-      "payload": {
-        "note": "recorded only \u2014 no canonical action is performed by this call",
-        "disposition": "RESEARCH_ONLY",
-        "requires_new_epoch": false,
-        "requires_new_version": false,
-        "requires_platform_revision": false,
-        "version_and_epoch_rationale": null,
-        "requires_pause_or_stand_down": false
-      }
-    },
-    {
-      "event_type": "FIX_PROPOSED",
-      "occurred_at": "2026-10-13 09:37:25.912841+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "the remedy is a held universe plus a frozen forward test",
-      "payload": {
-        "proposed_fix": "No change now. MMSELL keeps KXMLBTOTAL and KXMLBSPREAD in its universe; paper keeps trading both. Run the pre-registered 2027 regular-season test (validation plan). Only a CONFIRM there leads to proposing removal of both series from live books, each as a recorded XOS transition (new epoch or Version) with operator confirmation."
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-10-13 09:37:25.919485+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "INVESTIGATING",
-      "to_status": "ACTION_REQUIRED",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "the remedy is a held universe plus a frozen forward test",
-      "payload": null
-    },
-    {
-      "event_type": "VALIDATION_PLANNED",
-      "occurred_at": "2026-10-13 09:37:25.941034+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "pre-registered 2026-10-13, before any 2027 data exists",
-      "payload": {
-        "validation_plan": "Frozen 2026-10-13 (doc section 3). Population: live MMSELL fills on KXMLBTOTAL and KXMLBSPREAD, 2027 regular season only. 2026 data is not pooled because it produced the hypothesis; postseason excluded. Unit: the game, all markets of both series on one game summed across live books. Statistic: mean net USD per game, with standard error, from source-ledger economics (catalog scorecard family method, or the doc's query as a fallback). Floor: n >= 150 games. CONFIRM (propose a stop) if mean + 1.96*SE < 0. REFUTE (keep, resolve) if mean >= 0. Otherwise INCONCLUSIVE: extend to n >= 300 games and read once; CONFIRM if mean + 1.645*SE < 0, else REFUTE. Fewer than 150 games by the end of the 2027 regular season: close with no action (the exposure is too small to matter). Power: 300 games detect -0.069 USD/game at 80pct (one-sided alpha 0.05, sd 0.48). Diagnostic only, not part of the decision: live market loss pct minus paper loss pct in the same window and band. The branches are exhaustive and are not to be re-interpreted after results."
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-10-13 09:37:25.950335+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "ACTION_REQUIRED",
-      "to_status": "VALIDATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "pre-registered 2026-10-13, before any 2027 data exists",
-      "payload": null
-    }
-  ],
-  "evidence": [
-    {
-      "evidence_type": "LOG",
-      "summary": "Per-game MLB view after PR #609 (catalog scorecard families, series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4, logged 2026-10-13T08:49Z). Every MLB market on one game (KXMLBTOTAL, KXMLBSPREAD, KXMLBHR, KXMLBKS) grouped by the approved exposure key candidate-game:MLB:<game> and counted as ONE bet: 332 games, 277 won, 80 games traded in two or more MLB series. Net -12.55 USD; mean -0.038 USD per game, standard error 0.026 (about 1.4 SE below zero, so negative but not statistically clear). Net by series inside the family: TOTAL -5.06, SPREAD -4.91, HR -3.86, KS +1.28. Worst single game -2.46 USD. Per-series rows unchanged: TOTAL 88 games mean -0.057 +/- 0.050; SPREAD 82 games mean -0.060 +/- 0.046. Family covers only markets with an approved exposure key (2 unreviewed HR markets, net +0.14, are outside it). Independence between games is not verified (see XOS-000020). Descriptive evidence only; authorizes nothing.",
-      "source_ref": "PR #609; catalog deploy log line catalog_scorecard_family 2026-10-13T08:49Z; docs/MARKET_CATALOG_SERVICE.md",
-      "captured_at": "2026-10-13 08:53:13.009294+00:00",
-      "captured_by": "claude-code-for-calvin",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "Live MMSELL, KXMLBTOTAL and KXMLBSPREAD on one game counted once (the XOS-000020 unit): 144 games, net -9.94 USD, mean -0.069 +/- 0.040 USD per game (z -1.72), 26 games lost. Reproduces the catalog scorecard (SPREAD -4.91 over 82 games exactly; TOTAL -5.03 vs -5.06 over 88). Market level against break-even: TOTAL 117 markets, avg NO 91.75c, break-even loss 8.25pct vs observed 11.97pct (+3.7pp); SPREAD 104 markets, avg NO 91.99c, 8.01pct vs 13.46pct (+5.5pp). All live MMSELL since 2026-07-01: 2,879 markets, +0.45pp. Other live cells with 40+ markets range -5.9pp (KXRAIN) to +5.6pp (KXWTI), KXBTCD +4.3pp, so the MLB cells sit in the bad tail, not outside it. Aggregates only.",
-      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 1 and 4 (query embedded); ops ids rl46-live-cal3, rl46-live-all",
-      "captured_at": "2026-10-13 09:37:25.653060+00:00",
-      "captured_by": "claude-code-for-calvin",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "OPS_RESULT",
-      "summary": "Paper family (fill-everything, twins excluded), same series, last 90 days, entry <= 11c: KXMLBTOTAL 516 contests, loss 8.1pct vs break-even 7.4pct, edge -0.7pp, -0.66c/trade; KXMLBSPREAD 525 contests, loss 5.6pct vs 7.1pct, edge +1.4pp, +1.39c/trade. All time, all prices: TOTAL -0.6pp over 663 contests, SPREAD +2.1pp over 570. A mispriced MLB market would lose on paper too (KXNFLSPREAD did, -11.1pp). The live shortfall is a paper-to-live gap; live spread market loss 13.5pct vs paper 5.6pct is a pointer to live-fill selection, chosen post hoc and not a measurement.",
-      "source_ref": "mmsell_series_pnl --days 90 --maxyes 11 --split-subjects --series <S>; ops ids rl46-band-kxmlbtotal, rl46-band-kxmlbspread, rl46-sp-total, rl46-sp-spread",
-      "captured_at": "2026-10-13 09:37:25.688256+00:00",
-      "captured_by": "claude-code-for-calvin",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "RESEARCH_DOCUMENT",
-      "summary": "Verdict HOLD. Post hoc selection: the cell was picked from 13 series; under a true null, the second-worst of 13 z-scores is at or below -1.14 about 51pct of the time (simulation), and the combined one-sided p 0.043 becomes 0.55 after Bonferroni over 13. Combining TOTAL and SPREAD was also chosen after seeing both negative. Paper does not show the effect. Money is about 4 USD a month against the 100 USD/month goal. Last total traded 2026-09-27, last spread 2026-10-04. Stop is not supported; the question is pre-registered on 2027 data.",
-      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md (PR #614)",
-      "captured_at": "2026-10-13 09:37:25.719717+00:00",
-      "captured_by": "claude-code-for-calvin",
-      "content_hash": null
-    }
-  ],
-  "links": [
-    {
-      "link_type": "RESEARCH_DOC",
-      "reference": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md",
-      "label": "adjudication + pre-registered 2027 test",
-      "created_at": "2026-10-13 09:37:25.759002+00:00"
-    },
-    {
-      "link_type": "PR",
-      "reference": "https://github.com/50thycal/kalshi_bot/pull/614",
-      "label": "research document PR",
-      "created_at": "2026-10-13 09:37:25.801331+00:00"
-    },
-    {
-      "link_type": "OTHER",
-      "reference": "XOS-000020",
-      "label": "correlation unit: the game; the test scores per game",
-      "created_at": "2026-10-13 09:37:25.828733+00:00"
-    },
-    {
-      "link_type": "OTHER",
-      "reference": "XOS-000022",
-      "label": "precedent loss cell (KXNFLSPREAD) that also lost on paper; this one does not",
-      "created_at": "2026-10-13 09:37:25.856219+00:00"
-    }
-  ]
-}
+# type=db  id=nflitf-q2
+# code a241b182eabb86fd47d884fd7e3920ebf2885831 · started 2026-10-14T02:30:55Z
+dim    ser                   cell     mkts  be_pct  loss_pct  c_per_mkt  games  mean_g   se_g    games_lost
+-----  --------------------  -------  ----  ------  --------  ---------  -----  -------  ------  ----------
+all    KXATPCHALLENGERMATCH  all      1611  21.46   22.91     -1.69      1335   -0.0204  0.0101  361       
+band   KXATPCHALLENGERMATCH  b6-7     209   6.45    6.70      0.58       172    0.0070   0.0222  10        
+band   KXATPCHALLENGERMATCH  c8-10    195   8.74    9.74      -0.22      195    -0.0022  0.0202  17        
+band   KXATPCHALLENGERMATCH  d11-20   388   15.17   14.95     -0.23      380    -0.0023  0.0181  58        
+band   KXATPCHALLENGERMATCH  e>20     819   31.30   33.94     -3.31      703    -0.0385  0.0161  278       
+month  KXATPCHALLENGERMATCH  2026-07  128   25.11   31.25     -7.84      112    -0.0897  0.0390  40        
+month  KXATPCHALLENGERMATCH  2026-08  499   21.02   20.84     0.35       393    0.0045   0.0185  97        
+month  KXATPCHALLENGERMATCH  2026-09  657   21.14   22.53     -1.66      554    -0.0196  0.0156  147       
+month  KXATPCHALLENGERMATCH  2026-10  327   21.36   23.55     -2.45      276    -0.0291  0.0217  77        
+time   KXATPCHALLENGERMATCH  a<0.5h   428   17.65   9.11      8.10       417    0.0831   0.0133  39        
+time   KXATPCHALLENGERMATCH  b0.5-1h  519   21.69   17.53     4.22       503    0.0436   0.0162  88        
+time   KXATPCHALLENGERMATCH  c1-2h    498   23.88   36.55     -12.97     477    -0.1354  0.0217  179       
+time   KXATPCHALLENGERMATCH  d2-4h    119   23.95   36.97     -13.55     107    -0.1507  0.0452  44        
+time   KXATPCHALLENGERMATCH  e4-24h   42    20.76   26.19     -5.97      39     -0.0643  0.0659  11        
+time   KXATPCHALLENGERMATCH  f>24h    5     30.10   40.00     -10.89     4      -0.1361  0.1979  2         
+all    KXITFMATCH            all      1223  18.89   17.83     0.82       1030   0.0097   0.0109  212       
+band   KXITFMATCH            b6-7     272   6.47    4.41      1.86       207    0.0244   0.0200  9         
+band   KXITFMATCH            c8-10    182   8.71    7.69      2.33       180    0.0236   0.0176  11        
+band   KXITFMATCH            d11-20   268   15.09   10.45     4.13       264    0.0419   0.0184  28        
+band   KXITFMATCH            e>20     501   31.36   32.73     -2.07      443    -0.0234  0.0208  164       
+month  KXITFMATCH            2026-07  118   21.61   19.49     0.53       107    0.0058   0.0339  23        
+month  KXITFMATCH            2026-08  547   17.57   17.00     0.62       421    0.0080   0.0174  88        
+month  KXITFMATCH            2026-09  399   19.14   17.29     1.60       360    0.0178   0.0182  68        
+month  KXITFMATCH            2026-10  159   20.76   20.75     -0.26      142    -0.0029  0.0289  33        
+time   KXITFMATCH            a<0.5h   467   16.27   8.14      7.71       438    0.0822   0.0128  38        
+time   KXITFMATCH            b0.5-1h  399   19.44   16.29     2.63       379    0.0277   0.0185  65        
+time   KXITFMATCH            c1-2h    245   22.32   32.65     -9.67      224    -0.1058  0.0305  76        
+time   KXITFMATCH            d2-4h    65    21.62   36.92     -15.83     59     -0.1745  0.0657  23        
+time   KXITFMATCH            e4-24h   46    18.53   23.91     -5.85      37     -0.0727  0.0790  10        
+time   KXITFMATCH            f>24h    1     18.00   0.00      17.74      1      0.1774           0         
+all    KXITFWMATCH           all      1202  19.31   19.38     -0.40      1029   -0.0047  0.0114  228       
+band   KXITFWMATCH           b6-7     240   6.44    4.17      2.48       196    0.0303   0.0168  8         
+band   KXITFWMATCH           c8-10    175   8.66    9.71      -0.81      175    -0.0081  0.0217  17        
+band   KXITFWMATCH           d11-20   273   15.24   17.58     -2.78      269    -0.0282  0.0229  48        
+band   KXITFWMATCH           e>20     514   31.12   30.74     -0.34      456    -0.0039  0.0202  158       
+month  KXITFWMATCH           2026-07  98    21.99   20.41     -0.02      88     -0.0002  0.0396  20        
+month  KXITFWMATCH           2026-08  439   19.37   19.59     -0.40      344    -0.0051  0.0199  83        
+month  KXITFWMATCH           2026-09  413   18.79   20.34     -1.79      366    -0.0202  0.0200  82        
+month  KXITFWMATCH           2026-10  252   19.03   17.06     1.72       231    0.0188   0.0218  43        
+time   KXITFWMATCH           a<0.5h   437   16.80   8.92      7.64       413    0.0808   0.0136  38        
+time   KXITFWMATCH           b0.5-1h  378   19.67   16.93     2.27       365    0.0235   0.0197  63        
+time   KXITFWMATCH           c1-2h    299   21.58   33.44     -12.35     284    -0.1300  0.0279  99        
+time   KXITFWMATCH           d2-4h    63    22.76   39.68     -16.26     57     -0.1797  0.0607  25        
+time   KXITFWMATCH           e4-24h   24    21.70   20.83     0.26       22     0.0029   0.0836  5         
+time   KXITFWMATCH           f>24h    1     32.00   0.00      31.62      1      0.3162           0         
+all    KXNFLTOTAL            all      701   14.63   13.98     0.44       121    0.0254   0.1214  33        
+band   KXNFLTOTAL            b6-7     221   6.56    3.17      3.29       105    0.0692   0.0249  7         
+band   KXNFLTOTAL            c8-10    190   8.37    6.32      1.90       100    0.0361   0.0432  8         
+band   KXNFLTOTAL            d11-20   116   13.49   15.52     -2.27      76     -0.0346  0.0586  14        
+band   KXNFLTOTAL            e>20     174   32.47   35.06     -2.97      80     -0.0646  0.1141  31        
+month  KXNFLTOTAL            2026-08  308   14.18   9.09      4.87       44     0.3407   0.1993  9         
+month  KXNFLTOTAL            2026-09  274   14.94   16.42     -1.68      59     -0.0781  0.1694  15        
+month  KXNFLTOTAL            2026-10  119   15.07   21.01     -6.14      26     -0.2811  0.2232  10        
+time   KXNFLTOTAL            a<0.5h   36    15.83   8.33      7.29       23     0.1141   0.0885  2         
+time   KXNFLTOTAL            b0.5-1h  46    13.20   13.04     -0.03      26     -0.0006  0.1297  3         
+time   KXNFLTOTAL            c1-2h    83    12.22   2.41      9.65       47     0.1703   0.0476  2         
+time   KXNFLTOTAL            d2-4h    198   14.02   13.13     0.70       71     0.0195   0.1041  12        
+time   KXNFLTOTAL            e4-24h   138   14.51   16.67     -2.35      54     -0.0600  0.1198  10        
+time   KXNFLTOTAL            f>24h    200   16.43   19.00     -2.84      55     -0.1033  0.1531  15        
+all    KXWTACHALLENGERMATCH  all      412   21.56   23.54     -2.37      344    -0.0283  0.0190  97        
+band   KXWTACHALLENGERMATCH  b6-7     38    6.54    5.26      1.12       38     0.0112   0.0367  2         
+band   KXWTACHALLENGERMATCH  c8-10    52    8.39    3.85      4.40       52     0.0440   0.0267  2         
+band   KXWTACHALLENGERMATCH  d11-20   115   15.55   13.04     2.15       108    0.0229   0.0310  15        
+band   KXWTACHALLENGERMATCH  e>20     207   30.97   37.68     -7.22      171    -0.0874  0.0334  78        
+month  KXWTACHALLENGERMATCH  2026-07  32    23.43   15.63     6.05       28     0.0692   0.0617  5         
+month  KXWTACHALLENGERMATCH  2026-08  6     23.94   16.67     6.98       5      0.0838   0.1445  1         
+month  KXWTACHALLENGERMATCH  2026-09  248   20.98   25.00     -4.29      206    -0.0516  0.0250  62        
+month  KXWTACHALLENGERMATCH  2026-10  126   22.12   23.02     -1.17      105    -0.0141  0.0339  29        
+time   KXWTACHALLENGERMATCH  a<0.5h   115   17.77   8.70      8.60       115    0.0860   0.0257  10        
+time   KXWTACHALLENGERMATCH  b0.5-1h  136   21.25   15.44     5.43       136    0.0543   0.0292  21        
+time   KXWTACHALLENGERMATCH  c1-2h    134   24.50   43.28     -19.12     126    -0.2033  0.0418  58        
+time   KXWTACHALLENGERMATCH  d2-4h    19    26.43   31.58     -5.47      18     -0.0577  0.1072  6         
+time   KXWTACHALLENGERMATCH  e4-24h   7     22.22   28.57     -6.62      6      -0.0772  0.1946  2         
+time   KXWTACHALLENGERMATCH  f>24h    1     9.63    0.00      9.49       1      0.0949           0         
+
+(74 rows)
