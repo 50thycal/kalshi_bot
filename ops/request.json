@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1014j", "sql": "select strategy, count(*) n, sum(case when action='buy' then limit_price*quantity else (100-limit_price)*quantity end)/100.0 reserved_usd, min(created_at)::text oldest from live_orders where status in ('resting','partial','pending','submitted') group by strategy order by 3 desc"}
