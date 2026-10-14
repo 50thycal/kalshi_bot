@@ -164,6 +164,16 @@ Oct −$1.36 (J).
 **Call: KEEP in paper; live stays paused.** The forward test below is the proposed `XOS-000039`
 lift criterion **for KXITFMATCH alone**, with ITF women read alongside as a control.
 
+### Live fills are not adversely selected here (cross-check)
+
+The `XOS-000046` addendum (`docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md` §5.3) splits cheap-band paper
+by whether live was filled on the market. MLB score lines lose where live gets filled. These two
+series do not. KXNFLTOTAL makes +6.58¢ on live-filled markets against +1.77¢ elsewhere. KXITFMATCH
+makes +3.16¢ against +2.65¢. ITF women is +0.03¢ against +1.50¢, a small penalty that is not
+significant. So the gap between live and paper here is not the MLB fill problem. That keeps live
+NFL as a fair read of the paper edge, and makes it unlikely that a lift on ITF men inherits that
+problem.
+
 ## 3. Why neither is a GROW: selection
 
 These two were picked from 13 series after looking, with about 30 paper variants each. If no

@@ -113,6 +113,87 @@ it needs operator confirmation. Paper keeps trading both series.
 
 ---
 
+## 5. Addendum 2026-10-14: the selection behind the live losses
+
+New evidence: catalog scorecard v2 (WS-023 "Paper beside live", 2026-10-13). All MMSELL paper
+on MLB spreads made +$167.85, +$0.234 ± $0.090 per game over 717 games. Live lost −$4.91. On
+live's own markets, paper also lost (−2.26¢ per contract), and the twin tracked live. That
+raised one question: does live *pick* spreads differently from the profitable paper books?
+
+**Does not change §3.** The 2027 test is frozen. This addendum explains the mechanism and does
+not re-score the gate. Ops reads: `rl46b-books`, `rl46b-livesubset`, `rl46b-xseries`.
+All are SELECT-only and aggregate-only.
+
+### 5.1 Live picks spreads the way its own paper lineage does
+
+| | tail ¢ | lines 1–2 / 3–4 / 5+ | entry vs listed start | net ¢/contract | z (per game) |
+|---|---:|---|---:|---:|---:|
+| **live** | 7.9 | 22 / 64 / 14 % | −1.8 h (99% in-game) | −3.90 | −1.30 |
+| cheap-band paper (`mmsell10`, `Cmmsell10`, `Dmmsell10`, `Lmmsell10`, `mmsell9`, `Tmmsell6`, `mmsell6`, `Gmmsell0`) | 6.5–7.7 | ~21 / 64 / 15 % | −1.6 to −1.8 h (97–100%) | +0.34 to +2.20 | 0.2 to 1.9 |
+| **profitable paper** (`mmsell`, `mmsell1`, `mmsell2`, `W*`) | **14–22** | ~27 / 52 / 21 % | −1.7 to +4.2 h (36–84%) | +4.0 to +6.3 | 1.4 to 2.8 |
+
+Line mix and timing are the same for live and its paper lineage. The money-makers differ in
+one way that matters: they sell **14–22¢ tails**, a band live never trades. After correcting
+for ~30 paper variants, no single book is established. The best, `mmsell1` at z = 2.81, has a
+Bonferroni-corrected p of 0.07; `mmsell` (z = 2.25) has 0.37. The `W*` books are three
+copies of one book. The pooled family (+1.98¢, per-game z ≈ 2.4) is not selected, but it is
+still fill-everything paper, mostly in a band live does not trade.
+
+### 5.2 What loses is the market that got filled live, not the selection rule
+
+Cheap-band paper (tail ≤ 11¢), the same 2026-07-15 → 10-04 window, split by whether live got a
+fill on that market:
+
+| KXMLBSPREAD paper | markets | games | ¢/contract | trade loss % | per game |
+|---|---:|---:|---:|---:|---:|
+| markets live was filled on | 104 | 82 | **−4.65** | 11.6 | −0.494 ± 0.318 |
+| other markets, same games | 159 | 70 | +5.09 | 2.0 | +0.481 ± 0.102 |
+| games live never filled | 1,126 | 430 | +2.10 | 5.0 | +0.207 ± 0.083 |
+
+Same tail price (6.8–7.6¢), same rule. Paper loses only on the markets where a live resting
+bid got hit. In a game the live book traded, the *other* cheap markets in that game won. So
+the fill is the bad news: in-play flow hits the resting NO bid when the tail is about to
+come true.
+
+### 5.3 This penalty is specific to MLB game lines
+
+The same split across 8 series (cheap band; market-level loss %; z uses a 1.3 design effect
+for clustering by game; Bonferroni over 8):
+
+| series | live-filled ¢/ct (loss %) | not-live ¢/ct (loss %) | z | corrected p |
+|---|---|---|---:|---:|
+| **KXMLBSPREAD** | **−4.65 (13.5)** | +2.50 (6.5) | 2.36 | 0.07 |
+| **KXMLBTOTAL** | **−5.06 (13.7)** | +0.46 (7.8) | 1.94 | 0.21 |
+| KXMLBHR | −0.20 (7.5) | +1.14 (6.2) | 0.90 | 1 |
+| KXMLBKS | +0.80 (7.9) | +0.02 (6.4) | 0.30 | 1 |
+| KXITFWMATCH | +0.03 (7.4) | +1.50 (7.2) | 0.06 | 1 |
+| KXITFMATCH | +3.16 (2.8) | +2.65 (5.8) | −1.07 | 1 |
+| KXNFLTOTAL | +6.58 (0.0) | +1.77 (6.3) | −1.24 | 1 |
+| KXRAIN | +5.75 (1.8) | +5.83 (3.7) | −0.62 | 1 |
+
+Totals and spreads together: z = 3.04, Bonferroni-corrected p ≈ 0.01. The combination is
+counted as a ninth look, and the result still holds. Six other series show no penalty, and
+rain and NFL totals actually do better on live-filled markets. This is a finding about
+**resting bids on in-play MLB score lines**, not about MMSELL fills in general.
+
+### 5.4 What this changes about the recommendation
+
+- **Stop the series?** Still not now. A stop would remove the loss, but it would aim at the wrong
+  variable. Paper on the same series, band and games is profitable where live is not filled.
+- **The likelier fix is mechanical:** don't rest cheap-band bids in-play on MLB score lines
+  (pre-game only), or cancel when the line moves. That work belongs to the fill/queue
+  research (`docs/MMSELL_QUEUE_AWARE_CANCEL.md`, the WITHDRAWAL probe in
+  `docs/MMSELL_CHATGPT_PROBES_20261004.md`), not to this ticket.
+- **Wide-band spreads (14–22¢)** look good on paper but are not established after correction,
+  and live has never traded them. This is not a recommendation.
+- **Caveats:**
+  - every number in §5 is from 2026, the same data that suggested the question;
+  - "live-filled" is defined by an event paper cannot see at entry, so it describes the
+    mechanism and is not a usable selection rule;
+  - the 2027 §3 read remains the decision.
+
+---
+
 ## 4. Reproduce
 
 The live per-game and per-market query is below. Ops results keep only the newest 80 files, so
