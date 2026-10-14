@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN","--per-series","2100"],"id":"lookalike-control-20261014e"}
+{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXHIGHAUS,KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHMIA,KXHIGHNY,KXHIGHPHIL,KXHIGHHOU","--per-series","600","--no-control"],"id":"lookalike-khigh-20261014f"}
