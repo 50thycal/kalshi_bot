@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=cc-rmm-1014i
+# code 5cc23595665cf38095528134450d61af7a3e5a29 · started 2026-10-14T20:00:47Z
+strategy  status   n    pnl    losses  last_entry                      
+--------  -------  ---  -----  ------  --------------------------------
+Rmmsell1  open     16   0.00   0       2026-10-14 19:54:10.258353+00:00
+Rmmsell1  settled  947  15.01  46      2026-10-14 18:51:25.963467+00:00
+Rmmsell2  open     12   0.00   0       2026-10-14 19:53:59.846265+00:00
+Rmmsell2  settled  620  5.87   34      2026-10-14 18:51:25.976079+00:00
+
+(4 rows)
