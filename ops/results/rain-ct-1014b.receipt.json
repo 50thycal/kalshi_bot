@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a241b182eabb86fd47d884fd7e3920ebf2885831",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-14T02:41:33Z",
+  "id": "rain-ct-1014b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rain-ct-1014b.receipt.json",
+  "result_file": "ops/results/rain-ct-1014b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38501064278",
+  "service": null,
+  "started_at": "2026-10-14T02:27:08Z",
+  "targets": [],
+  "type": "xos"
+}
