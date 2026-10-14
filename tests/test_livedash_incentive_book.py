@@ -212,6 +212,8 @@ def test_confirmed_reward_matches_the_rewards_page():
     assert confirmed_reward(330, oct11)            # $1.99 + $1.31 paid as one balance step
     assert confirmed_reward(131, oct11)
     assert not confirmed_reward(330, oct11 + timedelta(days=3))
+    # 2026-10-14 KXTRUMPMENTION-26OCT13, observed as a 331c residual at 10:29Z
+    assert confirmed_reward(331, datetime(2026, 10, 14, 10, 29, tzinfo=timezone.utc))
     assert not confirmed_reward(None, oct10)
 
 
