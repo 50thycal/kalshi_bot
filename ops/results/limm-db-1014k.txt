@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=limm-db-1014k
+# code d8ca07d70688d06f8606353787eae94a37658882 · started 2026-10-14T15:49:25Z
+market_ticker           side  limit_price  quantity  status    cr                         created_at                     bal                               
+----------------------  ----  -----------  --------  --------  -------------------------  -----------------------------  ----------------------------------
+KXAAAGASM-26OCT31-4.00  no    7            142       rejected  :"insufficient balance"}}  2026-10-14 15:44:41.527657+00  5855 2026-10-14 15:46:14.827381+00
+KXAAAGASM-26OCT31-3.90  no    5            200       rejected  :"insufficient balance"}}  2026-10-14 15:14:07.592901+00  5855 2026-10-14 15:46:14.827381+00
+
+(2 rows)
