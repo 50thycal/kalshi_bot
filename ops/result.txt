@@ -1,42 +1,29 @@
-  HTTP 404 for /events/KXRAIN-26JAN15?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
-  HTTP 404 for /events/KXRAIN-26FEB10?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
-  HTTP 404 for /events/KXRAIN-25DEC15?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
-  HTTP 404 for /events/KXRAIN-26MAR20?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
-  HTTP 404 for /events/KXRAIN-26MAY15?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
 # ops request [READ]
-# type=script  id=rain-hist-probe-1014
-# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:31:47Z
-
-=== EVENT KXRAIN-26JAN15 ===
-
-=== EVENT KXRAIN-26FEB10 ===
-
-=== EVENT KXRAIN-25DEC15 ===
-
-=== EVENT KXRAIN-26MAR20 ===
-
-=== EVENT KXRAIN-26MAY15 ===
-
-=== EVENT KXRAIN-26JUL15 ===
-event fields: {
-  "event_ticker": "KXRAIN-26JUL15",
-  "series_ticker": "KXRAIN",
-  "title": "Where will it rain on Jul 15, 2026?",
-  "mutually_exclusive": false,
-  "category": "Climate and Weather",
-  "strike_period": ""
+# type=xos  id=rl46b-rcpt
+# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:32:21Z
+{
+  "command_id": "rl46-20261014-link-pr",
+  "action": "ADD_LINK",
+  "actor": "claude-code-for-calvin",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000046",
+  "schema_version": 1,
+  "payload_hash": "3abf7967a643d56de7905e96fa542e07bd1f5986f4ec87459db09df1b5c794d0",
+  "payload_fields": [
+    "issue",
+    "label",
+    "link_type",
+    "reference"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-10-14 02:30:55.841201+00:00",
+  "started_at": "2026-10-14 02:30:55.841201+00:00",
+  "completed_at": "2026-10-14 02:30:56.064309+00:00",
+  "result": {
+    "kind": "ExperimentIssueLink",
+    "row_id": 42,
+    "issue_key": "XOS-000046"
+  },
+  "error": null
 }
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'mutually_exclusive', 'series_ticker', 'settlement_sources', 'strike_date', 'strike_period', 'sub_title', 'title']
-nested markets: 0
-
-=== EVENT KXRAIN-26AUG01 ===
-event fields: {
-  "event_ticker": "KXRAIN-26AUG01",
-  "series_ticker": "KXRAIN",
-  "title": "Where will it rain on Aug 1, 2026?",
-  "mutually_exclusive": false,
-  "category": "Climate and Weather",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'mutually_exclusive', 'series_ticker', 'settlement_sources', 'strike_date', 'strike_period', 'sub_title', 'title']
-nested markets: 0
