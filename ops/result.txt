@@ -1,35 +1,67 @@
 # ops request [READ]
-# type=db  id=nflitf-q6b
-# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:44:58Z
-dim               cell             mkts  be_pct  loss_pct  n_lost  c_per_mkt  games  mean_g   se_g    games_lost
-----------------  ---------------  ----  ------  --------  ------  ---------  -----  -------  ------  ----------
-band.phase        b6-7.pre         96    6.61    4.17      4       2.86       40     0.0687   0.0446  4         
-band.phase        b6-7.reg         124   6.51    2.42      3       3.99       66     0.0749   0.0280  3         
-band.phase        c8-10.pre        101   8.38    3.96      4       4.24       49     0.0875   0.0495  3         
-band.phase        c8-10.reg        89    8.36    8.99      8       -0.76      54     -0.0125  0.0669  5         
-band.phase        d11-20.pre       52    13.37   7.69      4       5.38       32     0.0875   0.0794  3         
-band.phase        d11-20.reg       64    13.59   21.88     14      -8.48      45     -0.1207  0.0793  11        
-band.phase        e>20.pre         77    32.11   27.27     21      4.45       36     0.0952   0.1567  10        
-band.phase        e>20.reg         97    32.76   41.24     40      -8.86      45     -0.1909  0.1581  21        
-clk(<=10c)        a>24h pre        91    7.53    4.40      4       2.96       53     0.0508   0.0461  3         
-clk(<=10c)        b2-24h pre       71    7.53    7.04      5       1.07       39     0.0195   0.0624  4         
-clk(<=10c)        c0-2h pre        29    7.59    0.00      0       7.47       17     0.1274   0.0145  0         
-clk(<=10c)        d in 0-1.5h      132   7.25    5.30      7       1.84       72     0.0337   0.0501  4         
-clk(<=10c)        e in 1.5-3h      77    7.27    1.30      1       5.86       53     0.0851   0.0217  1         
-clk(<=10c)        f in >3h         10    7.60    20.00     2       -12.52     7      -0.1789  0.2745  1         
-clk.phase(<=10c)  a>24h pre.pre    29    7.84    6.90      2       0.66       18     0.0106   0.0781  2         
-clk.phase(<=10c)  a>24h pre.reg    62    7.38    3.23      2       4.04       35     0.0715   0.0576  1         
-clk.phase(<=10c)  b2-24h pre.pre   33    7.54    6.06      2       2.87       15     0.0632   0.0735  2         
-clk.phase(<=10c)  b2-24h pre.reg   38    7.52    7.89      3       -0.49      24     -0.0078  0.0912  2         
-clk.phase(<=10c)  c0-2h pre.pre    23    7.54    0.00      0       7.42       12     0.1421   0.0160  0         
-clk.phase(<=10c)  c0-2h pre.reg    6     7.79    0.00      0       7.66       5      0.0919   0.0264  0         
-clk.phase(<=10c)  d in 0-1.5h.pre  69    7.36    5.80      4       1.45       30     0.0333   0.0761  3         
-clk.phase(<=10c)  d in 0-1.5h.reg  63    7.13    4.76      3       2.26       42     0.0339   0.0673  1         
-clk.phase(<=10c)  e in 1.5-3h.pre  40    7.60    0.00      0       7.48       24     0.1247   0.0188  0         
-clk.phase(<=10c)  e in 1.5-3h.reg  37    6.92    2.70      1       4.11       29     0.0524   0.0356  1         
-clk.phase(<=10c)  f in >3h.pre     3     6.67    0.00      0       6.56       2      0.0984   0.0394  0         
-clk.phase(<=10c)  f in >3h.reg     7     8.00    28.57     2       -20.70     5      -0.2898  0.3838  1         
-phase(<=10c)      pre              197   7.52    4.06      8       3.57       50     0.1407   0.0716  6         
-phase(<=10c)      reg              213   7.29    5.16      11      2.00       75     0.0569   0.0625  6         
+# type=db  id=nflitf-q7
+# code 9d868f749239617708cb3c341f5545d700b35cca · started 2026-10-14T02:45:38Z
+dim         ser                   cell                 mkts  be_pct  loss_pct  n_lost  n_half  c_per_mkt  games  mean_g   se_g  
+----------  --------------------  -------------------  ----  ------  --------  ------  ------  ---------  -----  -------  ------
+clk(<=10c)  KXATPCHALLENGERMATCH  c1-3h                161   7.66    10.56     17      0       -0.69      143    -0.0077  0.0258
+clk(<=10c)  KXATPCHALLENGERMATCH  d0-1h                106   7.58    2.83      3       0       4.57       100    0.0485   0.0173
+clk(<=10c)  KXATPCHALLENGERMATCH  e-1-0h               79    7.29    2.53      2       0       4.59       67     0.0541   0.0210
+clk(<=10c)  KXATPCHALLENGERMATCH  f<-1h                44    7.69    15.91     7       0       -7.98      41     -0.0856  0.0584
+clk(<=10c)  KXATPCHALLENGERMATCH  z?                   8     7.63    12.50     1       0       -5.88      8      -0.0588  0.1274
+clk(<=10c)  KXITFMATCH            b3-6h                264   7.37    5.68      15      0       1.87       214    0.0230   0.0193
+clk(<=10c)  KXITFMATCH            c1-3h                119   7.27    5.88      7       0       2.02       99     0.0243   0.0278
+clk(<=10c)  KXITFMATCH            d0-1h                17    7.26    5.88      1       0       6.84       13     0.0895   0.0078
+clk(<=10c)  KXITFMATCH            e-1-0h               8     6.96    12.50     1       0       -5.88      6      -0.0783  0.1729
+clk(<=10c)  KXITFMATCH            f<-1h                18    7.36    0.00      0       0       7.24       15     0.0869   0.0081
+clk(<=10c)  KXITFMATCH            z?                   25    8.11    8.00      2       0       -0.89      25     -0.0089  0.0543
+clk(<=10c)  KXITFWMATCH           b3-6h                269   7.43    6.69      18      0       1.24       239    0.0139   0.0163
+clk(<=10c)  KXITFWMATCH           c1-3h                101   7.36    7.92      8       0       -0.26      84     -0.0032  0.0363
+clk(<=10c)  KXITFWMATCH           d0-1h                10    7.30    0.00      0       0       7.01       8      0.0876   0.0081
+clk(<=10c)  KXITFWMATCH           e-1-0h               5     6.20    0.00      0       0       6.10       3      0.1016   0.0215
+clk(<=10c)  KXITFWMATCH           f<-1h                11    6.68    0.00      0       0       6.49       10     0.0714   0.0075
+clk(<=10c)  KXITFWMATCH           z?                   14    7.84    0.00      0       0       6.84       14     0.0684   0.0040
+clk(<=10c)  KXWTACHALLENGERMATCH  c1-3h                34    7.66    5.88      2       0       1.66       34     0.0166   0.0409
+clk(<=10c)  KXWTACHALLENGERMATCH  d0-1h                21    7.43    0.00      0       0       7.31       21     0.0731   0.0024
+clk(<=10c)  KXWTACHALLENGERMATCH  e-1-0h               8     8.50    0.00      0       0       8.37       8      0.0837   0.0031
+clk(<=10c)  KXWTACHALLENGERMATCH  f<-1h                24    7.52    8.33      2       0       -0.93      24     -0.0093  0.0576
+clk(<=10c)  KXWTACHALLENGERMATCH  z?                   3     6.67    0.00      0       0       5.67       3      0.0567   0.0067
+clk(>10c)   KXATPCHALLENGERMATCH  c1-3h                478   25.84   28.66     137     0       -3.23      451    -0.0343  0.0203
+clk(>10c)   KXATPCHALLENGERMATCH  d0-1h                285   26.20   23.16     66      0       2.79       277    0.0287   0.0241
+clk(>10c)   KXATPCHALLENGERMATCH  e-1-0h               144   25.80   29.17     42      0       -3.75      138    -0.0391  0.0357
+clk(>10c)   KXATPCHALLENGERMATCH  f<-1h                180   26.45   30.56     55      0       -3.44      153    -0.0404  0.0322
+clk(>10c)   KXATPCHALLENGERMATCH  z?                   120   26.27   32.50     39      0       -7.98      106    -0.0903  0.0410
+clk(>10c)   KXITFMATCH            b3-6h                413   25.36   26.63     110     0       -1.52      373    -0.0168  0.0207
+clk(>10c)   KXITFMATCH            c1-3h                196   26.29   23.47     46      0       2.62       184    0.0279   0.0287
+clk(>10c)   KXITFMATCH            d0-1h                21    25.26   33.33     7       0       -8.66      20     -0.0909  0.0998
+clk(>10c)   KXITFMATCH            e-1-0h               10    27.80   10.00     1       0       17.29      10     0.1729   0.0938
+clk(>10c)   KXITFMATCH            f<-1h                35    26.34   20.00     7       0       5.98       31     0.0675   0.0596
+clk(>10c)   KXITFMATCH            z?                   94    25.05   22.34     21      0       0.97       85     0.0108   0.0400
+clk(>10c)   KXITFWMATCH           b3-6h                453   25.29   25.61     116     0       -0.50      416    -0.0054  0.0198
+clk(>10c)   KXITFWMATCH           c1-3h                196   26.14   31.12     61      0       -4.82      182    -0.0520  0.0328
+clk(>10c)   KXITFWMATCH           d0-1h                20    27.29   15.00     3       0       12.63      20     0.1263   0.0850
+clk(>10c)   KXITFWMATCH           e-1-0h               10    26.20   20.00     2       0       5.32       10     0.0532   0.1218
+clk(>10c)   KXITFWMATCH           f<-1h                23    28.18   21.74     5       0       5.70       19     0.0690   0.0748
+clk(>10c)   KXITFWMATCH           z?                   84    24.35   23.81     20      0       -1.16      74     -0.0132  0.0470
+clk(>10c)   KXWTACHALLENGERMATCH  c1-3h                106   24.38   26.42     28      0       -2.34      99     -0.0251  0.0408
+clk(>10c)   KXWTACHALLENGERMATCH  d0-1h                79    25.93   34.18     27      0       -8.57      74     -0.0915  0.0520
+clk(>10c)   KXWTACHALLENGERMATCH  e-1-0h               35    23.77   22.86     8       0       0.61       35     0.0061   0.0750
+clk(>10c)   KXWTACHALLENGERMATCH  f<-1h                73    27.47   34.25     25      0       -7.11      60     -0.0865  0.0536
+clk(>10c)   KXWTACHALLENGERMATCH  z?                   29    25.16   17.24     5       0       6.09       25     0.0707   0.0692
+rv/status   KXATPCHALLENGERMATCH  closed_sl rv=null    10                                      -22.50                           
+rv/status   KXATPCHALLENGERMATCH  closed_void rv=null  2                                       -1.09                            
+rv/status   KXATPCHALLENGERMATCH  open rv=null         1                                                                        
+rv/status   KXATPCHALLENGERMATCH  settled rv=0         505                                     -77.23                           
+rv/status   KXATPCHALLENGERMATCH  settled rv=100       3139                                    12.66                            
+rv/status   KXITFMATCH            closed_sl rv=null    5                                       -15.60                           
+rv/status   KXITFMATCH            closed_void rv=null  1                                       -0.41                            
+rv/status   KXITFMATCH            settled rv=0         312                                     -78.78                           
+rv/status   KXITFMATCH            settled rv=100       2838                                    10.90                            
+rv/status   KXITFWMATCH           closed_sl rv=null    7                                       -28.14                           
+rv/status   KXITFWMATCH           open rv=null         10                                                                       
+rv/status   KXITFWMATCH           settled rv=0         369                                     -80.19                           
+rv/status   KXITFWMATCH           settled rv=100       2698                                    11.15                            
+rv/status   KXWTACHALLENGERMATCH  closed_void rv=null  10                                      -0.10                            
+rv/status   KXWTACHALLENGERMATCH  settled rv=0         125                                     -76.66                           
+rv/status   KXWTACHALLENGERMATCH  settled rv=100       735                                     12.58                            
 
-(28 rows)
+(60 rows)
