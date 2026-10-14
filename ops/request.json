@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "rain-q9-1014", "max_rows": 50, "sql": "select strategy, status, count(*) n, count(distinct market_ticker) mkts, min(created_at) first, max(created_at) last, round(avg(assumed_price),1) px, min(market_ticker) ex\nfrom paper_trades where strategy in ('Rainmmsell1','Rainmmsell2') or (strategy='mmsell10' and market_ticker like 'KXRAIN-%' and created_at > '2026-10-14 03:30')\ngroup by 1,2 order by 1,2\n"}
