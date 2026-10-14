@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1014i", "sql": "select strategy, status, count(*) n, min(created_at)::text first, max(created_at)::text last from live_orders where created_at > '2026-10-13 12:00' group by strategy, status order by strategy, status"}
