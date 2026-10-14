@@ -87,5 +87,28 @@ These thresholds are fixed now and are not revised after seeing results.
 
 ## 4. Results
 
-Pending the first run (ops `lookalike-probe-20261014a`). Results are appended here when
-available.
+### Run log (2026-10-14); the gate itself is unchanged
+
+| ops id | what | outcome |
+|---|---|---|
+| `lookalike-probe-20261014a` | category discovery, 60 series, 90 priced each | **Void.** The category lists about 60 retired, pre-`KX` series first, so the cap truncated before today's series. The control was priced on 88 markets, 12 entries. |
+| `lookalike-listing-20261014b`/`c` | listing passes, `KX` only | Found the current families listed below. |
+| `lookalike-control-20261014d` | KXRAIN, 700 priced | 84 entries, +0.67¢, t 0.25. Not reproduced at this sample. |
+| `lookalike-control-20261014e` | KXRAIN, all 1,701 priceable | **Reproduced.** 248 entries over 57 days, +3.73¢/contract, t 3.42, 3 of 3 months positive (Aug +6.6, Sep +1.8, Oct +0.8). This matches the rain cell's own replay (+4.28¢, 264 markets) and its fading trend. |
+| `lookalike-khigh-20261014f` | KXHIGH, 8 cities × 600 priced | **Void, parsing defect.** Entries appeared only in Aug–Oct 2026 although markets back to Oct 2024 were priced. The archive endpoint returns prices as dollar strings, which the probe read as cents, so no archived market could pass the cell. Fixed in the follow-up PR, which reads every candle shape the backfill code reads. |
+
+Disclosure: the control's sample size was raised after the 700-market run came back weak. The
+pre-registration fixed the gate, not the sample. The full sample is the like-for-like
+replication of the rain cell's own replay, and every reading is recorded above.
+
+### Families found (listing passes)
+
+- **Daily high:** KXHIGH (8 cities, 2024-10..2026-10, about 4,300 markets each) and KXHIGHT (16
+  cities, since 2026-01/02).
+- **Daily low:** KXLOWT (24 cities, since 2025-12/2026-04).
+- **Average temperature:** KXAVGTK (Aug–Oct 2026).
+- **Monthly rain:** 12 cities, `KXRAIN<city>M`.
+- **Older daily NYC rain:** KXRAINNYC, 2025-01..2026-07. This is a possible winter check for rain.
+- **Other:** hourly temperature (KXTEMP*H), monthly snow, tornado, hurricane and earthquake series.
+
+Gate readings are appended after the corrected runs.
