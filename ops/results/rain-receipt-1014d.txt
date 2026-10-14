@@ -1,0 +1,30 @@
+# ops request [READ]
+# type=xos  id=rain-receipt-1014d
+# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:29:44Z
+{
+  "command_id": "mmsell-rain-season-register-202610140320",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "payload_hash": "b0e47d4ca1191b844d92f05052c53664adbc2578b436ea2d5187dec3a451fddd",
+  "completed_at": "2026-10-14 03:20:41.826091+00:00",
+  "result": {
+    "kind": "register",
+    "package": "mmsell-rain-season",
+    "version": 1,
+    "epoch_number": 1,
+    "epoch_started_at": "2026-10-14 03:20:41.640884+00:00",
+    "probe_deployment": "mmsell-rain-probe-1",
+    "probe_started_at": "2026-10-14 03:20:41.640884+00:00",
+    "fields_unreadable": [
+      "gates"
+    ],
+    "version_frozen_at": "2026-10-14 03:20:41.640884+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-rain-season"
+}
