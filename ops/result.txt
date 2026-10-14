@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code d8ca07d70688d06f8606353787eae94a37658882 · started 2026-10-14T16:23:29Z
-(noop — nothing to do)
+# type=db  id=limm-db-1014m
+# code d8ca07d70688d06f8606353787eae94a37658882 · started 2026-10-14T17:51:40Z
+market_ticker              side  action  limit_price  quantity  status   cr  created_at                     credits     bal   tswif   
+-------------------------  ----  ------  -----------  --------  -------  --  -----------------------------  ----------  ----  --------
+KXAAAGASMINM-26OCT31-4.10  yes   buy     8            125       resting      2026-10-14 16:54:34.926577+00  15:52 2940  8615  499.0000
+
+(1 row)
