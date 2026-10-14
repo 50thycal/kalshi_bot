@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "4ebace0cbde70ec74a54e1993b920540a5261200",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-14T03:16:23Z",
+  "id": "rain-probe-run-1014",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rain-probe-run-1014.receipt.json",
+  "result_file": "ops/results/rain-probe-run-1014.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38505096578",
+  "service": null,
+  "started_at": "2026-10-14T03:13:17Z",
+  "targets": [],
+  "type": "script"
+}
