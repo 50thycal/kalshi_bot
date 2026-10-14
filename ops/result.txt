@@ -1,318 +1,75 @@
 # ops request [READ]
-# type=xos  id=rain-show-1014
-# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:30:48Z
-{
-  "key": "mmsell-rain-season",
-  "title": "mmsell rain season \u2014 does the KXRAIN cheap-tail edge survive winter",
-  "state": "PAPER",
-  "paused_from_state": null,
-  "origin": "operator",
-  "family": "maker",
-  "hypothesis": "On Kalshi's daily rain markets the cheap YES tail (YES <= 7c) settles YES far less often than its price implies, in winter as in summer; the adjacent band (YES 8-12c) carries a smaller edge of the same kind.",
-  "legacy_class": null,
-  "migration_integrity": null,
-  "platform_snapshot_id": 2,
-  "predecessor_experiment_id": null,
-  "retired_at": null,
-  "docs": {
-    "probe": "scripts/kxrain_season_probe.py",
-    "rules": "kalshi_bot/catalog/approved_reviews.json (KXRAIN-series-approval)",
-    "thesis": "docs/KXRAIN_MMSELL_CELL.md"
-  },
-  "versions": [
-    {
-      "version": 1,
-      "frozen_at": "2026-10-14 03:20:41.640884+00:00",
-      "fingerprint": "2cf4a4e3d29e77374448d4d80328bd7b5e6de273dea04a1a94e96f4d5408ddfe",
-      "pre_registration_hash": "7bccf6385462d5adb2225e061655688336e595347ea490f24ed4be738ccf62c7",
-      "independent_variable": "the price band (cell versus adjacent)",
-      "held_constant": [
-        "both arms trade KXRAIN only, by EXACT series match (`onlyx=KXRAIN`)",
-        "entry is the mmsell maker entry on both arms: buy NO at the no-bid, 1 contract, paper",
-        "exit is hold to settlement on both arms: no stop, take-profit, volatility gate or strangle",
-        "neither arm carries a contest cap or a size rule; the global caps (open positions, settlement date, three rungs per non-exclusive event) apply unchanged, so at most three cities per settlement date per arm",
-        "the two price bands are disjoint, so no market can be in both arms at one instant",
-        "the GLOBAL mmsell knobs stay as they are for the life of this version; both books opt in through their own specs and no other book's selection moves",
-        "both tags are PAPER and appear in no live arm set, so no live mirror fires for either"
-      ],
-      "change_reason": null,
-      "arms": [
-        {
-          "arm_key": "rain_adjacent",
-          "role": "treatment",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Rainmmsell2",
-            "band": "mid 8-14, yes<=12",
-            "book": "lo=8,hi=14,maxyes=12,onlyx=KXRAIN",
-            "series": "KXRAIN"
-          }
-        },
-        {
-          "arm_key": "rain_cell",
-          "role": "control",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Rainmmsell1",
-            "band": "mid 5-10, yes<=7",
-            "book": "lo=5,hi=10,maxyes=7,onlyx=KXRAIN",
-            "series": "KXRAIN"
-          }
-        }
-      ],
-      "gates": [
-        {
-          "gate_key": "adjacent_winter_keep",
-          "kind": "kill",
-          "from_state": null,
-          "to_state": null,
-          "spec": {
-            "sample": {
-              "rain_adjacent": {
-                "op": ">=",
-                "value": 120,
-                "metric": "settled_days"
-              }
-            },
-            "fail_any": [
-              {
-                "op": "<",
-                "arm": "rain_adjacent",
-                "value": 0.0,
-                "metric": "pnl_cents_per_contract",
-                "min_evidence": {
-                  "op": ">=",
-                  "value": 45,
-                  "metric": "settled_days"
-                }
-              },
-              {
-                "op": "<",
-                "arm": "rain_adjacent",
-                "value": 1.0,
-                "metric": "pnl_cents_per_contract"
-              },
-              {
-                "op": "<",
-                "arm": "rain_adjacent",
-                "value": 0.0,
-                "metric": "daily_pnl_stability"
-              }
-            ],
-            "pass_all": [
-              {
-                "op": ">=",
-                "arm": "rain_adjacent",
-                "value": 2.0,
-                "metric": "pnl_cents_per_contract"
-              },
-              {
-                "op": ">=",
-                "arm": "rain_adjacent",
-                "value": 0.15,
-                "metric": "daily_pnl_stability"
-              }
-            ],
-            "description": "Keep/kill for the adjacent KXRAIN band (YES 8-12c) through winter \u2014 the capacity lever. Same floor, horizon and bars as the cell, judged on its own arm; the two are not pooled.",
-            "max_evidence_horizon": {
-              "arms": [
-                "rain_adjacent"
-              ],
-              "value": 180,
-              "metric": "settled_days"
-            }
-          },
-          "spec_hash": "05cd26108a5f71e6975718ba36600eec1d89459f32edda3d2e74f28ec6aed32e",
-          "evidence_started_at": null,
-          "results": []
-        },
-        {
-          "gate_key": "cell_winter_keep",
-          "kind": "kill",
-          "from_state": null,
-          "to_state": null,
-          "spec": {
-            "sample": {
-              "rain_cell": {
-                "op": ">=",
-                "value": 120,
-                "metric": "settled_days"
-              }
-            },
-            "fail_any": [
-              {
-                "op": "<",
-                "arm": "rain_cell",
-                "value": 0.0,
-                "metric": "pnl_cents_per_contract",
-                "min_evidence": {
-                  "op": ">=",
-                  "value": 45,
-                  "metric": "settled_days"
-                }
-              },
-              {
-                "op": "<",
-                "arm": "rain_cell",
-                "value": 1.0,
-                "metric": "pnl_cents_per_contract"
-              },
-              {
-                "op": "<",
-                "arm": "rain_cell",
-                "value": 0.0,
-                "metric": "daily_pnl_stability"
-              }
-            ],
-            "pass_all": [
-              {
-                "op": ">=",
-                "arm": "rain_cell",
-                "value": 2.0,
-                "metric": "pnl_cents_per_contract"
-              },
-              {
-                "op": ">=",
-                "arm": "rain_cell",
-                "value": 0.15,
-                "metric": "daily_pnl_stability"
-              }
-            ],
-            "description": "Keep/kill for the KXRAIN cheap-tail cell through winter. The floor is in settlement days and cannot be reached before mid-February, so the evidence spans December-February by construction. PASS keeps the cell and makes it eligible for a sizing proposal on its own Version (a Live Ops canary); it authorizes no live change by itself. FAIL ends the rain cell for this rule.",
-            "max_evidence_horizon": {
-              "arms": [
-                "rain_cell"
-              ],
-              "value": 180,
-              "metric": "settled_days"
-            }
-          },
-          "spec_hash": "5b27788d358c9b1a02d2045c2841230f5ebe4e4bd357986be54de19c0b5f8a46",
-          "evidence_started_at": null,
-          "results": []
-        }
-      ],
-      "epochs": [
-        {
-          "epoch_number": 1,
-          "started_at": "2026-10-14 03:20:41.640884+00:00",
-          "ended_at": null,
-          "reason": "v1's first operating interval, pinned to the platform snapshot active at registration. Both arms open together, so the season they see is the same.",
-          "impact_class": null,
-          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
-          "platform_snapshot": [
-            [
-              "DATA_PROVENANCE",
-              "live_vs_backfill_2026_08"
-            ],
-            [
-              "EXECUTION_ENGINE",
-              "live_executor_2026_08"
-            ],
-            [
-              "EXPERIMENT_ENGINE",
-              "foundation_pr1"
-            ],
-            [
-              "FEE_MODEL",
-              "maker_rate_2026_08_11"
-            ],
-            [
-              "FILL_MODEL",
-              "assumed_fill_plus_mmsell3_calibration"
-            ],
-            [
-              "KALSHI_API_SCHEMA",
-              "advanced_tier_2026_08_12"
-            ],
-            [
-              "MARKET_TAXONOMY",
-              "settlement_repair_2026_08_24"
-            ],
-            [
-              "METRICS_ENGINE",
-              "pnl_scripts_2026_08"
-            ],
-            [
-              "RISK_ENGINE",
-              "caps_2026_08"
-            ],
-            [
-              "SETTLEMENT_ENGINE",
-              "hold_to_settlement_2026_08"
-            ]
-          ],
-          "deployments": [
-            {
-              "deployment_key": "mmsell-rain-paper-1",
-              "stage": "PAPER",
-              "kind": "paper",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-10-14 03:20:41.640884+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "rain_adjacent",
-                  "strategy_tag": "Rainmmsell2"
-                },
-                {
-                  "arm_key": "rain_cell",
-                  "strategy_tag": "Rainmmsell1"
-                }
-              ]
-            },
-            {
-              "deployment_key": "mmsell-rain-probe-1",
-              "stage": "PROBE",
-              "kind": "probe",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-10-14 03:20:41.640884+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "rain_adjacent",
-                  "strategy_tag": null
-                },
-                {
-                  "arm_key": "rain_cell",
-                  "strategy_tag": null
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "transitions": [
-    {
-      "from": null,
-      "to": "IDEA",
-      "occurred_at": "2026-10-14 03:20:41.640884+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "experiment created",
-      "gate_result_id": null
-    },
-    {
-      "from": "IDEA",
-      "to": "PROBE",
-      "occurred_at": "2026-10-14 03:20:41.640884+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "the retrospective read is recorded on v1 with its confound (one season); it authorizes nothing beyond fixing the bands and the winter floor",
-      "gate_result_id": null
-    },
-    {
-      "from": "PROBE",
-      "to": "PAPER",
-      "occurred_at": "2026-10-14 03:20:41.640884+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "pre-registration merged (docs/KXRAIN_MMSELL_CELL.md); the forward winter tape is the evidence that decides",
-      "gate_result_id": null
-    }
-  ],
-  "integrity_events": [],
-  "legacy_evidence": []
-}
+# type=env  service=main  id=rain-env-read-1014b
+# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:31:41Z
+# target service: main
+# current allowlisted env vars (secrets hidden):
+  BOT_MODE=live
+  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
+  EVO_WEEKLY_LLM_CEILING_USD=8
+  EVO_WEEKLY_TOKEN_BUDGET=6000000
+  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
+  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
+  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
+  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
+  EXPERIMENT_OS_EVALUATE_GATES=true
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 209 bytes, sha256:018374c09a7c2915>
+  EXPERIMENT_OS_IMPORT_ON_BOOT=false
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 3051 bytes, sha256:7ec508b3eab12ca1>
+  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
+  KALSHI_UPGRADE_API_TIER=true
+  KILL_SWITCH=false
+  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
+  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
+  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
+  LIVE_CELLS=
+  LIVE_CITIES=
+  LIVE_ENABLED=true
+  LIVE_ENTRY_GRACE_HOURS=2
+  LIVE_ENTRY_STYLE=marketable
+  LIVE_EXIT_MAX_ATTEMPTS=3
+  LIVE_EXIT_MODE=tp_sl
+  LIVE_EXIT_SLIPPAGE_CENTS=1
+  LIVE_EXIT_USE_MARKET_FALLBACK=false
+  LIVE_FRACTIONAL=true
+  LIVE_KILL_ON_DAILY_LOSS=true
+  LIVE_MAX_ORDER_DOLLARS=3.0
+  LIVE_ONE_POSITION_PER_EVENT=true
+  LIVE_ORDER_TIMEOUT_SECONDS=14400
+  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
+  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
+  LIVE_PAPER_TWIN_SUFFIX=_pt4
+  LIVE_PROBE=
+  LIVE_QUEUE_CANCEL_MODE=off
+  LIVE_SHAPE_PROBE=false
+  LIVE_STOP_LOSS_CENTS=
+  LIVE_STRATEGIES=Kmmsell10,Alimm1
+  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
+  LIVE_TAKE_PROFIT_CENTS=1
+  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
+  LIVE_WINDOWS=
+  LOG_LEVEL=INFO
+  MAX_DAILY_LOSS=50.0
+  MAX_MARKET_EXPOSURE=25.0
+  MAX_ORDER_SIZE=2
+  MAX_SPREAD_CENTS=30
+  MAX_TOTAL_EXPOSURE=125
+  MIN_HOURS_TO_CLOSE=1
+  MIN_OPEN_INTEREST=10
+  MIN_VOLUME=25
+  MMSELL_EVENT_RUNG_CAP=3
+  MMSELL_EVENT_RUNG_CAP_ENABLED=true
+  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
+  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
+  MMSELL_LIVE_OFFSET_AB_ARMS=
+  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
+  MMSELL_PREFILTER_ENABLED=false
+  MMSELL_SETTLEMENT_CAP_ENABLED=true
+  MMSELL_SETTLEMENT_CAP_PCT=0.25
+  MMSELL_SETTLEMENT_EVENT_CAP=5
+  MMSELL_TWIN_APPLIES_LIVE_BARS=true
+  MMSELL_VARIANTS=mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Jmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3;Kmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3
+  PERPS_COLLECTOR_ENABLED=false
+  RUN_ONCE=false
+  SCAN_INTERVAL_SECONDS=60
+  WEATHER_ENTRY_HOURS=20,14,8,17
