@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1014k", "sql": "select market_ticker, side, limit_price, quantity, status, right(coalesce(cancel_reason,''),25) cr, created_at::text, (select balance_cents::text || chr(32) || at::text from incentive_balance_observations order by at desc limit 1) bal from live_orders where strategy='Alimm1' and created_at > '2026-10-14 15:00' order by created_at desc limit 5"}
