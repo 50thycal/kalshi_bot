@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "nflitf-q3", "max_rows": 100, "sql": "select lo.strategy, fl.market_ticker, fl.filled_at, fl.side, fl.action, fl.price, fl.quantity, fl.fee,  fl.raw_fill_json->>'is_taker' taker, fl.raw_fill_json->>'fee_cost' fee_cost,  round((100*fl.fee/nullif(fl.quantity,0))::numeric,4) fee_c_ct,  round((1.75*fl.price*(100-fl.price)/10000.0)::numeric,4) pub_maker_c_ct from fills fl join live_orders lo on lo.kalshi_order_id=fl.kalshi_order_id where split_part(fl.market_ticker,'-',1)='KXNFLTOTAL' order by fl.filled_at"}
