@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=script  id=lookalike-control-20261014h
+# code c14245a0a147f8f91da72df51ea3d9f9f9671903 · started 2026-10-14T22:47:25Z
+=== MMSELL look-alike probe — 1 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced
+  KXRAIN                   2078    2010  2026-07..2026-10   1701
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXRAIN                   300    68    6.54    2.33     7   +4.21   +18.56   4.53 4/4   PROMOTE
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXRAIN                   300    68    6.54    2.33     7   +4.21   +18.56   4.53 4/4   PROMOTE
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXRAIN                 2026-07: 42 @ +6.5, 2026-08: 117 @ +6.6, 2026-09: 107 @ +1.8, 2026-10: 34 @ +0.8
+
+  CONTROL KXRAIN: REPRODUCED (needs >= +2 c/ct and t >= 2). Gate readings stand.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
