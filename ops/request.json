@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["rl46-20261014-link-pr"],"id":"rl46b-rcpt"}
+{"type":"xos","command":"issue-show","args":["XOS-000046"],"id":"rl46b-show2"}
