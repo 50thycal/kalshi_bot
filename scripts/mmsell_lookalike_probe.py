@@ -50,13 +50,34 @@ def _ts(iso: str) -> int:
         return 0
 
 
-def _cents(side: dict | None) -> float | None:
-    if not side:
+def _price(value) -> float | None:
+    """One price in cents: integer or float cents, or a dollar string ("0.05" -> 5.0). The live
+    endpoint returns cents; the historical archive returns dollar strings (same rule as
+    kalshi_bot.scanner.metrics.price_to_cents)."""
+    if value is None or isinstance(value, bool):
         return None
-    if side.get("close") is not None:
-        return xl._num(side.get("close"))
-    if side.get("close_dollars") is not None:
-        return round(100.0 * xl._num(side.get("close_dollars")), 2)
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return round(100.0 * float(value), 2)
+    except (TypeError, ValueError):
+        return None
+
+
+def _close(candle: dict, base: str) -> float | None:
+    """Close of one candle side across the API's shapes: nested {close|close_dollars}, a nested
+    `<base>_dollars` object, or flat `<base>_close[_dollars]` keys."""
+    node = candle.get(base) or candle.get(f"{base}_dollars")
+    if isinstance(node, dict):
+        if node.get("close") is not None:
+            return _price(node["close"])
+        if node.get("close_dollars") is not None:
+            return _price(str(node["close_dollars"]))
+        return None
+    for key in (f"{base}_close", f"{base}_close_dollars"):
+        if candle.get(key) is not None:
+            value = candle[key]
+            return _price(str(value) if key.endswith("_dollars") else value)
     return None
 
 
@@ -121,7 +142,7 @@ def quote_at(cs: list[dict], target_ts: int, tol_s: int = 3 * 3600):
         end = int(c.get("end_period_ts") or 0)
         if not end or end > target_ts or target_ts - end > tol_s:
             continue
-        yb, ya = _cents(c.get("yes_bid")), _cents(c.get("yes_ask"))
+        yb, ya = _close(c, "yes_bid"), _close(c, "yes_ask")
         if yb is None or ya is None or not (0 < yb <= ya < 100):
             continue
         if best is None or end > best[0]:

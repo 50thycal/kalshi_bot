@@ -41,6 +41,21 @@ def test_first_entry_is_the_earliest_in_cell_hour_and_never_looks_ahead():
     assert lp.first_entry(cs, close, 5, 10, 7) is None
 
 
+def test_quotes_read_every_candle_shape_including_archive_dollar_strings():
+    close = 100_000
+    shapes = [
+        {"yes_bid": {"close": 5}, "yes_ask": {"close": 7}},
+        {"yes_bid": {"close": "0.05"}, "yes_ask": {"close": "0.07"}},
+        {"yes_bid": {"close_dollars": "0.05"}, "yes_ask": {"close_dollars": "0.07"}},
+        {"yes_bid_dollars": {"close": "0.05"}, "yes_ask_dollars": {"close": "0.07"}},
+        {"yes_bid_close": 5, "yes_ask_close": 7},
+        {"yes_bid_close_dollars": "0.05", "yes_ask_close_dollars": "0.07"},
+    ]
+    for shape in shapes:
+        cs = [{"end_period_ts": close - 12 * 3600, **shape}]
+        assert lp.first_entry(cs, close, 5, 10, 7) == (12, 7.0), shape
+
+
 def test_gate_promotes_kills_and_holds():
     def rows(n, days, pnl, loss_every=0):
         out = []
