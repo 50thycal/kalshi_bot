@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## NFL totals and ITF men 2026-10-14 — KEEP, no growth; forward test pre-registered
+
+Research Lab read of the two positive WS-023 scorecard leads ([doc](MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md)).
+**KXNFLTOTAL:** paper includes the real maker fee (live billed 0.09–0.16¢/contract, the same as
+paper). Counted once per market, the regular season is +2.0¢ (0.9 s.e. by game). The pooled
++2.76¢ comes mostly from the August preseason. Live has 0 losses in 31 markets, which happens 10%
+of the time with no edge. KEEP at 1 contract on `Kmmsell10`. **KXITFMATCH:** `mmsell10` paper
++2.6¢ (2.0 s.e.), but in the traded band ITF men and women do not differ (+2.05 vs +1.09¢ per
+market). No walkover ever settled at $0.50 (entries are in play). The women's live loss is book J.
+Live tennis stays paused. Both are what the best of 13 series looks like with no edge (z ≥ 2.1
+21% of the time). Forward test on `mmsell10` paper from 2026-10-15: NFL floor 100 games, ITF floor
+200 matches with ITF women as a control. No new tape: `mmsell10` is already the live rule's paper
+control.
+
 ## MLB live loss is the live fill, not the market 2026-10-14 (XOS-000046 addendum)
 
 [Addendum §5](MMSELL_MLB_TOTALS_SPREADS_CELL.md). Live picks MLB spreads with the same band,
