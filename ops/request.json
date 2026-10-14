@@ -1,1 +1,1 @@
-{"type":"db","id":"rain-q1-bystrat","max_rows":200,"sql":"select strategy, status, count(*) n, count(distinct split_part(market_ticker,chr(45),2)) dates, sum(quantity) qty, round(sum(pnl)::numeric,2) pnl, round(sum(fees)::numeric,2) fees, round(avg(assumed_price)::numeric,1) avg_px, min(created_at)::date first, max(created_at)::date last, min(market_ticker) ex from paper_trades where market_ticker like $$KXRAIN-%$$ group by 1,2 order by 1,2"}
+{"type":"xos","command":"control-tower","id":"nflitf-ct-1"}
