@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:34:39Z
-(noop — nothing to do)
+# type=db  id=limm-db-1014c
+# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:42:09Z
+market_ticker                side  action  limit_price  quantity  status    cr                              created_at                     credits  bal   tswif   
+---------------------------  ----  ------  -----------  --------  --------  ------------------------------  -----------------------------  -------  ----  --------
+KXTRUMPMENTION-26OCT17-NQE   yes   buy     1            500       canceled                                  2026-10-14 02:14:32.49429+00            5651  499.0000
+KXTRUMPMENTION-26OCT17-SUPR  yes   buy     7            142       rejected  sage":"insufficient balance"}}  2026-10-14 01:43:20.005029+00           5651  499.0000
+
+(2 rows)
