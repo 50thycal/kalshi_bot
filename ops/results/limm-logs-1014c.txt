@@ -1,0 +1,11 @@
+# latest deployment 183347be-e2a6-4768-9e41-eb114d2a5f08 (status=SUCCESS, created=2026-10-14T03:32:30.439Z)
+# ops request [READ]
+# type=logs  service=main  id=limm-logs-1014c
+# code 3da91dbbe627113b58dac97605997f4b08c0ed63 · started 2026-10-14T03:43:06Z
+# target service: main
+2026-10-14T03:42:35.443224776Z WARN  incentive book: Kalshi reports insufficient balance; no entries for 30 min
+2026-10-14T03:42:35.443227986Z INFO  incentive smoke cycle
+    considered| 1074
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":4,"too_expensive":5,"rejected:insufficient_balance":1}
