@@ -93,6 +93,10 @@ this list is the bare register, not the argument.
 - Attribute `live_book_truth`'s never-ordered bucket to the specific gate that refused each
   market, by joining the skip counters per ticker — turning "what the caps cost" into "what the
   contest cap cost".
+- NFL preseason overs: MMSELL paper on KXNFLTOTAL was positive in every price band in August 2026
+  only (`docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md` §5); pre-register an August 2027 cell before then.
+- ITF men tour-level split (M15 vs M25) from catalog event titles; worth reading only if the
+  KXITFMATCH forward test in the same document passes.
 
 ## Recently completed
 
