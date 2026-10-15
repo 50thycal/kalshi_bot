@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
@@ -166,7 +166,7 @@ def test_strategy_budget_is_enforced_from_the_database(settings):
     _live_settings(settings)
     ex = _exec(settings)
     with db.session_scope() as s:
-        for i in range(12):
+        for i in range(25):
             s.add(m.LiveOrder(
                 market_ticker=f"KXOTHER-{i}", event_ticker="KXOTHER", strategy=TAG, side="no",
                 action="buy", limit_price=99, quantity=5, status="resting",
@@ -301,19 +301,18 @@ def test_a_transient_error_is_never_read_as_not_placed(settings):
 
 def test_the_whole_book_cannot_exceed_its_budget(settings):
     """End to end: place until the strategy's own caps stop it, and prove the total committed is
-    bounded by the registered budget — the property the operator is actually relying on."""
+    bounded by the registered budget — the property the operator is actually relying on. Pairs
+    here cost ~$20 each, so with the §9.56 caps the dollar budget binds before the market count."""
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    codes = [_place(ex, settings, ticker=f"KXTEST-{i}") for i in range(10)]
-    assert codes.count("placed") == limm.MAX_OPEN_ORDERS
-    assert all(c == "gate:open_cap" for c in codes[limm.MAX_OPEN_ORDERS:])
+    codes = [_place(ex, settings, ticker=f"KXTEST-{i}") for i in range(15)]
+    placed = codes.count("placed")
+    assert 0 < placed <= limm.MAX_OPEN_ORDERS
+    assert all(c in ("gate:open_cap", "gate:strategy_exposure") for c in codes[placed:])
     with db.session_scope() as s:
         spent = repo.live_strategy_exposure(s, TAG)
-        n = s.scalar(select(func.count()).select_from(m.LiveOrder))
-    assert n == 2 * limm.MAX_OPEN_ORDERS
     assert spent <= limm.MAX_STRATEGY_EXPOSURE_USD
-    assert spent <= limm.MAX_OPEN_ORDERS * 2 * limm.MAX_ORDER_DOLLARS
 
 
 # ------------------------------------------------------------------ the book's own exits

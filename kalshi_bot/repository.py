@@ -1708,6 +1708,16 @@ def live_book_open_events(session, strategy: str) -> set[str]:
     return {ev for ev in _open_live_tickers(session, strategy).values() if ev}
 
 
+def live_book_open_event_counts(session, strategy: str) -> dict[str, int]:
+    """How many open markets this book has on each event (same definition of open as
+    `live_book_open_events`), for the per-event market cap (§9.56)."""
+    out: dict[str, int] = {}
+    for ev in _open_live_tickers(session, strategy).values():
+        if ev:
+            out[ev] = out.get(ev, 0) + 1
+    return out
+
+
 def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None) -> bool:
     """True if any committed live BUY on this event still holds an open position (Kalshi-truth:
     its latest position snapshot is net non-zero). Used to cap exposure to one position per

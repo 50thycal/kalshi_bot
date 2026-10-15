@@ -231,9 +231,11 @@ def test_caps_are_the_ones_the_risk_envelope_will_name():
     # Pinned so a silent edit fails. History: MAX_OPEN_ORDERS 3 -> 5 (§9.34); 1 -> 500 contracts,
     # $1 -> $20, 5 -> 2 markets, $10 -> $50 budget (§9.36); two-sided at $10 a leg with a per-leg
     # price cap of 90c replacing the one-sided 25c cheap-side cap (§9.37); leg cap 90c -> 5c
-    # (§9.41); close window 3–72h -> 7–60 days (§9.42); leg cap 5c -> 10c (§9.46).
+    # (§9.41); close window 3–72h -> 7–60 days (§9.42); leg cap 5c -> 10c (§9.46); 2 -> 10
+    # markets, $50 -> $100 budget, 1 -> 3 markets per event (§9.56).
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
-            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 2, 50.00, 10)
+            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 10, 100.00, 10)
+    assert lv.MAX_MARKETS_PER_EVENT == 3
     assert (lv.MIN_HOURS_TO_CLOSE, lv.MAX_HOURS_TO_CLOSE, lv.FLATTEN_HOURS_BEFORE_CLOSE) == (
         168.0, 1440.0, 1.0)
     assert (lv.MIN_PROGRAM_HOURS_REMAINING, lv.QUOTE_TICKS_BEHIND_TOUCH) == (24.0, 1)

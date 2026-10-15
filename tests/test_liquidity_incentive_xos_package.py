@@ -50,20 +50,24 @@ def test_the_registered_envelope_equals_the_running_constants():
 
 
 def test_the_operator_guardrails_are_not_exceeded():
-    """The operator authorized: under $50 total, at most 2 markets at a time, $10 a side.
+    """The operator authorized: $100 total, at most 10 markets at a time, ~$10 a bid, at most 3
+    markets of one event (§9.56, 2026-10-15: "go full send and do the 100 dollar limit").
 
     History: $10 / 3-at-a-time / $1 per trade originally; 5-at-a-time on 2026-09-24 (thesis
     §9.34); $50 / 2 / $20 per trade on 2026-09-25 (§9.36); then two-sided the same day (§9.37) —
-    "make each side $10, so each position is still $20". Every raise was edited straight into
-    the running constants rather than through a re-arm (see `liquidity_incentive/live.py`). This
-    is the authorization on record for the CODE; the XOS-registered envelope on the live
-    deployment still reads the original numbers and is not updated by this test."""
-    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 50.00
-    assert limm.MAX_OPEN_ORDERS <= 2
+    "make each side $10, so each position is still $20"; one-sided since §9.48. Every raise was
+    edited straight into the running constants rather than through a re-arm (see
+    `liquidity_incentive/live.py`). This is the authorization on record for the CODE; the
+    XOS-registered envelope on the live deployment still reads the original numbers and is not
+    updated by this test."""
+    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 100.00
+    assert limm.MAX_OPEN_ORDERS <= 10
     assert limm.MAX_ORDER_DOLLARS <= 10.00
-    # Mutually consistent: every open market carrying BOTH legs at the per-leg cap stays inside
-    # the book budget, so no combination of allowed orders can breach it.
-    assert limm.MAX_OPEN_ORDERS * 2 * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
+    assert limm.MAX_MARKETS_PER_EVENT <= 3
+    # Mutually consistent: the book quotes ONE side per market (§9.48), so every open market
+    # carrying its one bid at the cap stays inside the book budget.
+    assert limm.QUOTE_MODE == "cheap_side"
+    assert limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
 
 
 # ------------------------------------------------------- tags

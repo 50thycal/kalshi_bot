@@ -340,7 +340,11 @@ class IncentiveLiveRunner:
         # One event, one commitment. Two sources of a block, and both are needed: events this
         # book already holds (its own stacking, which is what happened on 2026-09-18), and events
         # any live book holds a position on (the fleet's concentration).
-        blocked_events = repo.live_book_open_events(session, limm.LIVE_TAG)
+        # §9.56: this book may rest in up to MAX_MARKETS_PER_EVENT markets of one event; an event
+        # is blocked once it reaches that, or once any live book HOLDS a position on it.
+        own_per_event = repo.live_book_open_event_counts(session, limm.LIVE_TAG)
+        blocked_events = {ev for ev, n in own_per_event.items()
+                          if n >= limm.MAX_MARKETS_PER_EVENT}
         for c in built:
             ev = c.get("event_ticker")
             if ev and ev not in blocked_events and repo.event_has_open_live_position(session, ev):
@@ -414,7 +418,9 @@ class IncentiveLiveRunner:
             slots -= 1
             placed_event = candidate.get("event_ticker")
             if placed_event:
-                blocked_events.add(placed_event)
+                own_per_event[placed_event] = own_per_event.get(placed_event, 0) + 1
+                if own_per_event[placed_event] >= limm.MAX_MARKETS_PER_EVENT:
+                    blocked_events.add(placed_event)
             for leg in legs:
                 exposure_now += leg.collateral_usd
                 if self._open_twin(session, leg):

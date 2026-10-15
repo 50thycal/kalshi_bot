@@ -60,6 +60,11 @@ def _generic_universe(monkeypatch):
     """Most tests here exercise mechanics on generic KXTEST markets; the §9.55 event-mention
     universe has its own tests below, which switch it back on."""
     monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", False)
+    # The slot/budget/event mechanics below are written against a two-market book; §9.56's
+    # raised caps have their own tests at the end of this file.
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 2)
+    monkeypatch.setattr(limm, "MAX_STRATEGY_EXPOSURE_USD", 50.0)
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 1)
 
 
 def _book(yes, no):
@@ -1536,3 +1541,20 @@ def test_a_held_position_is_not_touched_by_the_pre_event_step(live_db, settings,
                           created_at=NOW - timedelta(hours=2)))
         s.flush()
         assert runner._retire_before_event(s, _exec(settings, runner.client), NOW) == {}
+
+
+# --- §9.56: up to MAX_MARKETS_PER_EVENT markets of one event ------------------------------------
+
+def test_up_to_three_markets_of_one_event_are_quoted(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 10)
+    monkeypatch.setattr(limm, "MAX_STRATEGY_EXPOSURE_USD", 100.0)
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    tickers = [f"KXTEST-EV-{i}" for i in range(5)]
+    client = FakeClient({t: book for t in tickers})
+    with db.session_scope() as s:
+        for t in tickers:
+            _program(s, t, event="KXTEST-EV")
+        out = _cycle(client, settings, s)
+    assert out["placed"] == 3
+    assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 2
