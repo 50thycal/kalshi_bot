@@ -502,3 +502,28 @@ once the outcome is mostly visible, and it is nowhere near the +4¢ that unmodel
 would need. As pre-registered, **hourly temperature is closed**: no per-book entry-floor exception
 is proposed. The first run's −4.6¢ (§11) was 5 days of noise, in the same direction as July and
 August here.
+
+## 15. Mentions test — result: HOLD (2026-10-15)
+
+Code `e4c13df8`; 33 hold-out series, 4,525 markets priced, pooled `MENTIONS`, day-stratified.
+
+| run | entries | days | implied → realized | ¢/contract | t | months + |
+|---|---|---|---|---|---|---|
+| **primary** cell, `mentions-cell-20261015a` | 119 | 77 | 6.69% → 2.52% | **+4.17** | **2.94** | 4/5 |
+| secondary ultra, `mentions-ultra-20261015a` (information only) | 303 | 129 | 2.84% → 0.66% | +2.18 | 4.25 | 9/11 |
+
+**Reading against §13.**
+- The primary run is a §3 PROMOTE but fails the CANDIDATE bar on both extra conditions:
+  - t 2.94 is below 3.0;
+  - the earlier half of its months is negative. Jun 2025 – Jan 2026 had 33 entries at about
+    −2.4¢ (Oct −5.6, Dec −6.0, Jan −1.8). Feb–Sep 2026 had 86 entries at about +6.6¢.
+- **Verdict: HOLD.** No paper tape is nominated. As pre-registered, the test is not retried at a
+  larger size without a new pre-registration.
+- The ultra run would pass §3 easily, but it was declared information-only before the run and
+  is not promoted after it.
+
+**What this means in practice.** The broad MMSELL books already trade mention markets when they
+reach the volume cut. `mmsell10` and its live twins show settled mention trades at about
++4.5–6.5¢ (ops read `mention-paper-20261015a`; Experiment OS holds the standings). Nothing here
+argues for stopping that, and nothing argues for a dedicated mentions book. The recent months are
+strong, but the earlier months are not, and the gate was set to catch exactly that.
