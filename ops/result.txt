@@ -1,4 +1,11 @@
 # ops request [READ]
-# type=noop
-# code 5a81b555fc084a60dbfa93f02fe51e06a174dff6 · started 2026-10-15T17:40:25Z
-(noop — nothing to do)
+# type=db  id=cc-rmm-1015g
+# code 1e02fa11b25ada843aaf18f6b4131bd941cfada4 · started 2026-10-15T22:14:19Z
+strategy  status   n    pnl    losses  last_entry                      
+--------  -------  ---  -----  ------  --------------------------------
+Rmmsell1  open     9    0.00   0       2026-10-15 18:27:17.064630+00:00
+Rmmsell1  settled  984  16.43  47      2026-10-15 19:28:06.015794+00:00
+Rmmsell2  open     9    0.00   0       2026-10-15 18:27:17.083048+00:00
+Rmmsell2  settled  648  6.71   35      2026-10-15 18:58:53.891517+00:00
+
+(4 rows)
