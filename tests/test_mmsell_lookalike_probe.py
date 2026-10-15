@@ -112,6 +112,74 @@ def test_end_to_end_with_mocked_api(monkeypatch, capsys):
     assert "NOT REPRODUCED" in out  # one control market cannot meet the control bar
 
 
+def test_a_window_restricts_entry_to_its_own_hours():
+    """`--timing` replays a POLICY that only buys inside the window: an early in-cell quote does
+    not count for the late window, and a late one is found even when an early one exists."""
+    close = 100_000
+    cs = [
+        {"end_period_ts": close - 36 * 3600, "yes_bid": {"close": 5}, "yes_ask": {"close": 7}},
+        {"end_period_ts": close - 3 * 3600, "yes_bid": {"close": 4}, "yes_ask": {"close": 6}},
+    ]
+    assert lp.first_entry(cs, close, 4, 10, 7) == (36, 7)               # the shipped rule
+    assert lp.first_entry(cs, close, 4, 10, 7, (24, 48)) == (36, 7)     # early
+    assert lp.first_entry(cs, close, 4, 10, 7, (6, 24)) is None          # mid: nothing there
+    assert lp.first_entry(cs, close, 4, 10, 7, (0, 6)) == (3, 6)        # late
+
+
+def test_windows_are_disjoint_and_cover_the_replay_hours():
+    covered = [h for h in lp.HOURS for _n, lo, hi in lp.WINDOWS if lo < h <= hi]
+    assert sorted(covered) == sorted(lp.HOURS)
+
+
+def test_day_paired_difference_and_reading():
+    base = [lp._row(6.0, False, f"d{i}") for i in range(40)]
+    better = [lp._row(6.0, False, f"d{i}") for i in range(40)]
+    better = [(r[0], r[1], r[2] + 1.5 + (0.1 if i % 2 else -0.1), r[3], r[4])
+              for i, r in enumerate(better)]
+    d = lp.day_paired(better, base)
+    assert d["days"] == 40 and abs(d["diff"] - 1.5) < 1e-9
+    assert lp.timing_reading(d) == "BETTER"
+    worse = [(r[0], r[1], r[2] - 3.0 + (0.1 if i % 2 else -0.1), r[3], r[4])
+             for i, r in enumerate(base)]
+    assert lp.timing_reading(lp.day_paired(worse, base)) == "WORSE"
+    assert lp.timing_reading(lp.day_paired(base[:10], base)) == "THIN"
+    # Only shared days are compared: a policy that bets on other days says nothing.
+    assert lp.day_paired([lp._row(6.0, False, "x")], base)["days"] == 0
+
+
+def test_feasibility_needs_a_quote_an_hour_before_close():
+    close = 100_000
+    late_only = [{"end_period_ts": close - 1800, "yes_bid": {"close": 5}, "yes_ask": {"close": 7}}]
+    early = [{"end_period_ts": close - 5 * 3600, "yes_bid": {"close": 5},
+              "yes_ask": {"close": 7}}]
+    assert not lp.has_quote_by(late_only, close)
+    assert lp.has_quote_by(early, close)
+
+
+def test_timing_run_prints_windows_and_lifetime(monkeypatch, capsys):
+    close_iso = "2026-01-15T23:00:00Z"
+    close = lp._ts(close_iso)
+    mkts = [{"ticker": "KXRAIN-26JAN15-NYC", "close_time": close_iso, "result": "no",
+             "open_time": "2026-01-13T00:00:00Z"}]
+    cs = [{"end_period_ts": close - h * 3600, "yes_bid": {"close": 5}, "yes_ask": {"close": 7}}
+          for h in (3, 36)]
+
+    def fake_get(url: str):
+        if "/candlesticks" in url:
+            return {"candlesticks": cs} if "/series/" in url else {"candlesticks": []}
+        if "series_ticker=KXRAIN&" in url and "/historical/" not in url:
+            return {"markets": mkts, "cursor": ""}
+        return {"markets": [], "cursor": ""}
+
+    monkeypatch.setattr(lp.xl, "_get", fake_get)
+    assert lp.main(["--series", "KXRAIN", "--timing"]) == 0
+    out = capsys.readouterr().out
+    assert "D. LIFETIME" in out and "KXRAIN" in out and "FEASIBLE" in out
+    assert "E. TIMING" in out
+    for name in ("first", "early", "mid", "late"):
+        assert f"KXRAIN {name}" in out
+
+
 def test_probe_is_allowlisted_on_the_ops_channel():
     ops_runner = _load("ops_runner")
     assert "mmsell_lookalike_probe" in ops_runner.ALLOWED_SCRIPTS
