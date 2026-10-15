@@ -1,1 +1,1 @@
-{"type":"env","action":"get","id":"bands-envget-20261015a"}
+{"type":"xos","command":"show","args":["mmsell-weather-bands"],"id":"bands-show-20261015a"}
