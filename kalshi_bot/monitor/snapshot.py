@@ -85,7 +85,9 @@ def build_snapshot(session, *, evaluate: bool = True, environ=None,
     now = now or rep.generated_at
     tower = json.loads(json.dumps(dataclasses.asdict(rep), default=str))
     extras = _read_extras(session, rep, now)
-    external = sources.run_probes(session, now, environ=environ)
+    # Probes are timed at the moment they run, not at the report's start: the
+    # Tower takes a while, and rows written meanwhile would read as negative ages.
+    external = sources.run_probes(session, _now(), environ=environ)
     return assemble(tower, extras, external, now)
 
 

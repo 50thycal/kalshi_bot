@@ -100,6 +100,9 @@ def test_freshness_rule():
     stale = sources._freshness(now, now - timedelta(hours=2), 0.5, what="cycle")
     never = sources._freshness(now, None, 0.5, what="cycle")
     assert (ok["health"], stale["health"], never["health"]) == ("OK", "STALE", "ERROR")
+    # A row stamped a moment after `now` (clock skew) is "just now", never negative.
+    ahead = sources._freshness(now, now + timedelta(minutes=5), 0.5, what="cycle")
+    assert ahead["health"] == "OK" and ahead["age_hours"] == 0.0
 
 
 # ---------------------------------------------------------------------------
