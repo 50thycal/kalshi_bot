@@ -1,1 +1,1 @@
-{"type": "db", "id": "paper-mmsell10-nolive-20261015a", "sql": "SELECT p.market_ticker, p.created_at, p.closed_at, p.pnl, p.quantity, p.assumed_price, m.series_ticker, m.close_time FROM paper_trades p LEFT JOIN mmsell_settlement_meta m USING (market_ticker) WHERE p.strategy='mmsell10' AND p.status <> 'open' AND p.closed_at IS NOT NULL AND p.pnl IS NOT NULL AND p.market_ticker NOT IN (SELECT DISTINCT market_ticker FROM live_orders WHERE strategy IS NOT NULL) ORDER BY p.created_at", "max_rows": 40000}
+{"type": "noop", "id": "patterns-noop-20261015a"}
