@@ -144,6 +144,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_flb",
     "kxrain_season_probe",
     "mmsell_lookalike_probe",
+    "event_timing_study",
     "kalshi_mm",
     "kalshi_mm_exits",
     "xvenue_game",
