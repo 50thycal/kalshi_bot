@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "d3ac7bb53429140bc418dce206ab76b9dc1cf9bc",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-15T10:51:07Z",
+  "id": "d-deep-fin-20261015a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/d-deep-fin-20261015a.receipt.json",
+  "result_file": "ops/results/d-deep-fin-20261015a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38722330243",
+  "service": null,
+  "started_at": "2026-10-15T10:44:00Z",
+  "targets": [],
+  "type": "script"
+}
