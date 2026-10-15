@@ -1,1 +1,1 @@
-{"type": "noop", "id": "patterns-noop-20261015a"}
+{"type":"xos","command":"monitor-snapshot","id":"mon-20261015-1150","actor":"claude","purpose":"WS-026 first end-to-end check-in (acceptance 5)","workstream":"WS-026"}
