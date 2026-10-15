@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=mention-paper-month-20261015a
+# code 99df37919f59d3134ecd5b0f14f7d3c88629eb08 · started 2026-10-15T16:22:25Z
+strategy  mon      n    losses  c_per_ct  px  
+--------  -------  ---  ------  --------  ----
+mmsell    2026-07  358  63      4.95      75.8
+mmsell    2026-08  3    0       24.70     75.0
+mmsell    2026-09  18   4       0.66      76.8
+mmsell    2026-10  42   11      -0.30     73.8
+mmsell1   2026-07  209  14      5.87      86.1
+mmsell10  2026-07  22   0       5.55      93.5
+mmsell10  2026-08  2    0       6.40      93.5
+mmsell10  2026-09  21   1       1.56      93.6
+mmsell10  2026-10  34   0       6.40      93.5
+mmsell2   2026-07  152  14      5.56      83.8
+mmsell3   2026-07  80   1       6.10      91.7
+mmsell6   2026-07  30   0       5.93      93.1
+mmsell6   2026-08  2    0       6.89      93.0
+mmsell6   2026-09  33   0       9.04      90.8
+mmsell6   2026-10  36   2       2.07      92.3
+
+(15 rows)
