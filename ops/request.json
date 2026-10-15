@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-temperature-season"],"id":"temp-show-20261015a"}
+{"type":"env","action":"get","id":"temp-envget-20261015a"}
