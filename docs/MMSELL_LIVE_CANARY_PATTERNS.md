@@ -118,3 +118,10 @@ explicit confirmation, and nothing is armed from here.
   3-lot used by `Kmmsell10`.
 - **What it buys:** mainly it stops the live book from paying the sports and crypto fill gap. It
   is not a route to $100/month on its own.
+
+**Correction (2026-10-15, docs/MMSELL_EVENT_TIMING.md §6.4).**
+- The live "fills 12–24h before close" cell in §1 (115 markets, −5.6¢) contains only 2 sports
+  markets.
+- It is mostly crypto (44 markets, −13.2¢), plus oil, gas and other. Weather is positive in it.
+- It is not evidence about sports entry timing.
+- Measured against the real game start, sports timing shows **NO SIGNAL**.
