@@ -104,7 +104,7 @@ DEC-001, DEC-011, DEC-012, DEC-018, DEC-036.
 
 ## Related PRs
 
-This branch's PR.
+[#637](https://github.com/50thycal/kalshi_bot/pull/637)
 
 ## Parked
 
