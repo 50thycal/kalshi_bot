@@ -247,3 +247,47 @@ is used only where a market settles many times a day.
 - Hourly candles: a window is scanned at the replay's fixed hours.
 - In-play adverse selection late in the day is only as visible as the candle closes allow.
 - Everything is gross, and assumes the maker fill.
+
+## 7. Next round — C and D, pre-registration (2026-10-15, written before either run)
+
+Calvin queued these behind A and B. They start once A's and B's replay verdicts are recorded;
+A's 7-day forward check, if it runs, does not hold them back. Both are read-only replays with
+the same probe, cell convention, bet unit (one bet per family-day) and §3 family gate, unless
+stated otherwise.
+
+### C — other price bands
+
+- **Question:** is the cheap tail overpriced outside the shipped cell?
+- **Bands**, each disjoint from the cell (mid 5–10, YES ask ≤ 7):
+  - **ultra:** `--lo 1 --hi 5 --maxyes 4`. YES ask ≤ 4 puts the mid ≤ 4, below the cell.
+  - **upper:** `--lo 10 --hi 16 --maxyes 15`. A mid ≥ 10 is above the cell's ceiling of 7.
+- **Families:** KXRAIN, KXHIGH, KXHIGHT, KXLOWT, plus KXTEMP if A was FEASIBLE. Each family uses
+  the same series and sample sizes as its §4/§6 run.
+- **Reading:** the §3 gate, unchanged, including the +2¢ bar. In the ultra band the most a
+  contract can earn is the YES ask (≤ 4¢), so +2¢ is a hard bar there. It is kept on purpose,
+  because it is the paper-to-live maker gap.
+- **Consequence:** a PROMOTE band becomes a proposed treatment arm on a new Version of the rain
+  or temperature contract. It is never an edit to a running book.
+
+### D — the same replay outside weather
+
+- **Universe:** each Kalshi category except Climate and Weather, `KX` tickers only, in this order:
+  Economics, Financials, Crypto, Companies, Entertainment, Mentions, Science and Technology,
+  Politics, Elections, World, then Sports last (Sports is already most of the paper evidence).
+- **Bet unit:** a series not named in `FAMILIES` is its own family, so one bet per series-day.
+- **Reading, stricter than §3 because tens of families are screened at once.** A family is a
+  **CANDIDATE** only if all of these hold:
+  1. it reads PROMOTE under §3;
+  2. its per-day t is ≥ 3.0, not 2.5;
+  3. its per-month means (section C of the output), split into earlier and later halves by
+     calendar month, are positive in both halves.
+- **Consequence, by whether paper already reaches the series:**
+  - Already traded by MMSELL paper (≥ 30 settled trades in the 2026-10-14 option-A rank): a
+    CANDIDATE confirms the existing book, and no new tape is created.
+  - Not reached by paper today (skipped, or never in the top-150 volume cut): a CANDIDATE
+    nominates one paper book, registered like `Tempmmsell1`.
+  - Only the CANDIDATE with the highest t per category is nominated, so a flood of marginal
+    series cannot each become a book.
+- **KILL:** at least 100 entries and ≤ 0¢, recorded so the series is not retried.
+- **Disclosure:** every category run is logged, including empty discoveries (a category name
+  Kalshi does not use returns nothing, which is not a result).
