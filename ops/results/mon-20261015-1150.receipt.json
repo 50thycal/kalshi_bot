@@ -1,0 +1,23 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c1993c62b922151d44fa7844460606f8ddc6db4b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-15T16:55:53Z",
+  "id": "mon-20261015-1150",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude",
+    "purpose": "WS-026 first end-to-end check-in (acceptance 5)",
+    "workstream": "WS-026"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mon-20261015-1150.receipt.json",
+  "result_file": "ops/results/mon-20261015-1150.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38772065567",
+  "service": null,
+  "started_at": "2026-10-15T16:48:47Z",
+  "targets": [],
+  "type": "xos"
+}
