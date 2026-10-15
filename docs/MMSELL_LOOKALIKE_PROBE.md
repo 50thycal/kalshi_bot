@@ -448,3 +448,57 @@ nothing. A confirmatory test would need its own pre-registration:
 - the cell and the ultra band.
 
 It is put to the operator as a decision, not started.
+
+## 13. Mentions confirmatory test — pre-registration (2026-10-15, before the run)
+
+Calvin approved testing the §12 lead: across the 12 exploratory mention series, 74 entries with
+1 loss, +5.33¢. That pooling was chosen after looking, so this test runs **out of sample**, on
+mention series that §12 never priced.
+
+**Hold-out universe.** The 33 `KX…MENTION` series in the Mentions listing pass
+(`d-list-6-20261015a`) with at least 150 settled markets. Excluded: the 12 series of
+`d-deep-men-20261015a`, `KXMVE…` (globally skipped parlays), and `KXLASTWORDCOUNT` (not a
+mention market). The series:
+
+KXPERSONMENTION, KXMENTION, KXPSAKIMENTION, KXNCAAMENTION, KXHOCHULMENTION, KXFEDMENTION,
+KXLOVEISLMENTION, KXLATENIGHTMENTION, KXMRBEASTMENTION, KXBESSENTMTPMENTION, KXMADDOWMENTION,
+KXNHLMENTION, KXCARNEYMENTION, KXATHLETEMENTION, KXCONGRESSMENTION, KXPRESMENTION, KXMTPMENTION,
+KXGOVERNORMENTION, KXHEGSETHMENTION, KXSNFMENTION, KXNEWSOMMENTION, KXFTNMENTION,
+KXDEBATEMENTION, KXSNLMENTION, KXMELANIAMENTION, KXCANDACEMENTION, KXALLINMENTION,
+KXRUBIOMENTION, KXPOWELLMENTION, KXNYCMAYORDEBATEMENTION, KXKIMMELMENTION, KXFNSMENTION,
+KXAOCMENTION.
+
+**Run.**
+- **Primary:** the shipped cell (5 ≤ mid ≤ 10, YES ≤ 7), `--family MENTIONS --stratify day
+  --per-series 150`, hourly offsets as §3.
+- **Secondary, information only:** the same sample in the ultra band (`--lo 1 --hi 5 --maxyes 4`).
+- **Bet unit:** one bet per day across all mention series, which is conservative.
+
+**Reading** (primary run only; D's CANDIDATE bar, because the lead came from a screen):
+- **PASS** needs all three:
+  1. §3 PROMOTE: ≥ 100 entries, ≥ 30 days, ≥ +2¢, t ≥ 2.5, ≥ 2/3 of months positive;
+  2. t ≥ 3.0;
+  3. positive means in both the earlier and later halves of its months.
+- **KILL:** ≥ 100 entries and ≤ 0¢.
+- **HOLD:** anything else, including fewer than 100 entries, which is recorded as too thin and
+  not retried at a bigger size without a new pre-registration.
+
+**Consequence of PASS:** a nomination for one paper book on mention series. Mention series are
+not on the skip list, and an existing paper book already selects mentions by market type
+(`Tmmsell2`, `mtype=mention`). Its paper record is read first: if it already covers this cell,
+PASS confirms it, and no new tape is created.
+
+## 14. Last-hour test — result: HOLD, hourly temperature closed (2026-10-15)
+
+`lasthour-temp-20261015b`, code `2580f36b`. The run was day-stratified, with the §9 universe,
+cell, offsets (45…5 min) and +4¢ bar:
+- **Sample:** 8,638 markets priced.
+- **Result:** 229 first entries over **80** family-days, implied 6.60%, realized 5.24%,
+  **+1.36¢/contract**, t 0.78, 2 of 4 months positive → **HOLD**.
+- **By month:** Jul −2.9¢, Aug −3.8¢, Sep +5.5¢, Oct +2.6¢.
+
+**Reading.** In the final hour the cheap tail is priced close to fair. That is what §9 expected
+once the outcome is mostly visible, and it is nowhere near the +4¢ that unmodelled last-hour fills
+would need. As pre-registered, **hourly temperature is closed**: no per-book entry-floor exception
+is proposed. The first run's −4.6¢ (§11) was 5 days of noise, in the same direction as July and
+August here.
