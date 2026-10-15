@@ -1,11 +1,24 @@
 # ops request [READ]
-# type=db  id=bands-early-20261015a
-# code d3ac7bb53429140bc418dce206ab76b9dc1cf9bc · started 2026-10-15T11:32:28Z
-strategy     entries  settled  pnl     series                                                                                                                                                                                                    first_at                        
------------  -------  -------  ------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  --------------------------------
-Rainmmsell3  3        0        0       KXRAIN                                                                                                                                                                                                    2026-10-15 10:01:31.598056+00:00
-Tempmmsell1  30       2        0.1279  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHNY,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTEWR,KXHIGHTHOU,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSAN,KXHIGHTSATX,KXHIGHTSEA,KXHIGHTSFO,KXHIGHTTTN,KXLOWTCHI,KXLOWTEW…  2026-10-15 02:57:52.331647+00:00
-Tempmmsell2  11       0        0       KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHTATL,KXHIGHTBOS,KXHIGHTDAL,KXHIGHTMIN,KXHIGHTSDF,KXHIGHTSEA,KXHIGHTSFO,KXHIGHTTTN                                                                                     2026-10-15 10:02:06.312963+00:00
-Tempmmsell3  29       0        0       KXHIGHTATL,KXHIGHTBOS,KXHIGHTDAL,KXHIGHTEWR,KXHIGHTHOU,KXHIGHTLV,KXHIGHTMIN,KXHIGHTNOLA,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSAN,KXHIGHTSATX,KXHIGHTSDF,KXHIGHTSEA,KXHIGHTSFO,KXHIGHTTTN                          2026-10-15 10:02:06.107997+00:00
+# type=db  id=mention-paper-20261015a
+# code 2580f36bedab9e8bf61b485f103502fd9a50fa0a · started 2026-10-15T12:22:50Z
+strategy     trades  series  avg_px  c_per_ct  pnl    win_pct
+-----------  ------  ------  ------  --------  -----  -------
+mmsell       421     9       75.6    4.38      18.44  81.5   
+mmsell1      209     2       86.1    5.87      12.27  93.3   
+mmsell2      152     2       83.8    5.56      8.45   90.8   
+mmsell6      101     9       92.0    5.59      5.65   98.0   
+mmsell3      80      2       91.7    6.10      4.88   98.8   
+mmsell10     78      8       93.5    4.85      3.78   98.7   
+Cmmsell10    54      6       93.5    4.51      2.43   98.1   
+Gmmsell0     54      6       93.5    4.51      2.43   98.1   
+Dmmsell10    54      6       93.5    4.51      2.43   98.1   
+mmsell11     32      2       92.2    6.78      2.17   100.0  
+Fmmsell10    28      6       93.5    6.36      1.78   100.0  
+Gmmsell1     28      6       93.5    6.40      1.79   100.0  
+mmsell7      23      2       92.6    6.62      1.52   100.0  
+mmsell4      17      1       92.8    6.18      1.05   100.0  
+Jmmsell10    14      4       93.4    6.54      0.92   100.0  
+mmsell10_pt  13      1       93.5    6.04      1.57   100.0  
+Alimm1_pt3   12      3       5.3     2.26      78.62  58.3   
 
-(4 rows)
+(17 rows)
