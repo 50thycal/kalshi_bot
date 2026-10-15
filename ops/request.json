@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "limm-db-1015d", "sql": "select market_ticker, at::text, book_valid, best_yes_bid, best_no_bid, left(yes_levels_json::text,60) y, left(no_levels_json::text,60) n from incentive_market_snapshots where market_ticker in ('KXTOP10BBSPOTS-26OCT24-TSWIF-10','KXBIGGESTQUAKE-21SEP26-6.4','KXAAAGASMINM-26OCT31-3.90') order by at desc limit 6"}
