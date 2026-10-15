@@ -180,6 +180,55 @@ def test_timing_run_prints_windows_and_lifetime(monkeypatch, capsys):
         assert f"KXRAIN {name}" in out
 
 
+def test_minute_offsets_find_a_last_hour_entry_the_hourly_replay_cannot():
+    """`--minutes`: a market listed 40 min before close has no hourly entry but a 30-minute one."""
+    close = 100_000
+    cs = [{"end_period_ts": close - m * 60, "yes_bid": {"close": 5}, "yes_ask": {"close": 7}}
+          for m in (40, 30, 10)]
+    assert lp.first_entry(cs, close, 5, 10, 7) is None
+    hit = lp.first_entry(cs, close, 5, 10, 7, offsets=(10 / 60, 30 / 60), tol_s=600)
+    assert hit is not None and abs(hit[0] - 0.5) < 1e-9 and hit[1] == 7
+    # The tolerance is minutes-scale: a quote older than tol_s before the target never counts.
+    stale = [{"end_period_ts": close - 50 * 60, "yes_bid": {"close": 5},
+              "yes_ask": {"close": 7}}]
+    assert lp.first_entry(stale, close, 5, 10, 7, offsets=(30 / 60,), tol_s=600) is None
+
+
+def test_min_cents_raises_only_the_per_contract_bar():
+    rows = [(6.0, i % 50 == 0, -94.0 if i % 50 == 0 else 6.0, f"d{i % 40}", f"2026-0{1 + i % 3}")
+            for i in range(150)]
+    s = lp.summarize(rows)
+    assert s["cents"] > 2.0
+    assert lp.verdict(s) == "PROMOTE"
+    assert lp.verdict(s, min_cents=s["cents"] + 0.5) == "HOLD"
+
+
+def test_minutes_mode_end_to_end(monkeypatch, capsys):
+    close_iso = "2026-08-15T18:00:00Z"
+    close = lp._ts(close_iso)
+    mkts = [{"ticker": "KXTEMPNYCH-26AUG1514-T80", "close_time": close_iso, "result": "no",
+             "open_time": "2026-08-15T17:20:00Z"}]
+    seen = []
+
+    def fake_get(url: str):
+        if "/candlesticks" in url:
+            seen.append(url)
+            cs = [{"end_period_ts": close - m * 60, "yes_bid": {"close": 5},
+                   "yes_ask": {"close": 7}} for m in (35, 15)]
+            return {"candlesticks": cs} if "/series/" in url else {"candlesticks": []}
+        if "series_ticker=KXTEMPNYCH&" in url and "/historical/" not in url:
+            return {"markets": mkts, "cursor": ""}
+        return {"markets": [], "cursor": ""}
+
+    monkeypatch.setattr(lp.xl, "_get", fake_get)
+    assert lp.main(["--series", "KXTEMPNYCH", "--no-control", "--minutes", "30,15,5",
+                    "--min-cents", "4"]) == 0
+    out = capsys.readouterr().out
+    assert "LAST-HOUR MODE" in out and "period_interval=1" in seen[0]
+    fam = [ln for ln in out.splitlines() if ln.strip().startswith("KXTEMP ")][0]
+    assert " 1 " in fam and "+7.00" in fam
+
+
 def test_probe_is_allowlisted_on_the_ops_channel():
     ops_runner = _load("ops_runner")
     assert "mmsell_lookalike_probe" in ops_runner.ALLOWED_SCRIPTS

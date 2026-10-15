@@ -333,3 +333,26 @@ its timing. Timing is not a lever for these books.
 
 Rain and all three daily temperature families are quoted at least 1h before close on 94–99% of
 markets, so every nominated daily book is tradeable under the floor.
+
+## 9. Last-hour test on hourly temperature — pre-registration (2026-10-15, before the run)
+
+Calvin asked for this after A read NOT FEASIBLE. Hourly temperature markets list inside the
+final hour, and every MMSELL book is barred from entering then (`mmsell_min_hours_to_close` = 1h).
+The bar exists because in the last hour the answer is largely known, and a resting maker order
+mostly fills when it is about to lose.
+
+- **Run:** `--minutes 45,30,20,15,10,5` replays the cell on 1-minute candles. Entry is at the
+  earliest of those offsets at which the cell passes; quotes are no older than 10 minutes.
+- **Scope:** the 10 hourly series of `fast-a-hourly-20261015a`, `--per-series 400`, bet unit one
+  family-day.
+- **Gate:** §3 with the per-contract bar raised to **+4¢** (`--min-cents 4`), twice the measured
+  paper-to-live maker gap.
+  - The raise is fixed now, because last-hour adverse selection is exactly what neither paper nor
+    replay can see: both assume the resting order fills.
+  - KILL as in §3 (≥ 100 entries and ≤ 0¢).
+- **Consequence of PROMOTE:** a *proposal* for one paper book with a per-book entry-floor exception
+  (a code change, the same shape as `optin=`). The global floor is not lowered.
+  - No live step without a live twin, because only real fills can measure this risk.
+  - The bot scans about every 30 minutes, so it would see each market at most once or twice in its
+    life. A PROMOTE says the price is wrong, not that the bot can catch it often.
+- **HOLD or KILL:** recorded, and hourly temperature is closed.
