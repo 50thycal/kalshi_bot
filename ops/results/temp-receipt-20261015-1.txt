@@ -1,0 +1,30 @@
+# ops request [READ]
+# type=xos  id=temp-receipt-20261015-1
+# code 7f005f8b981ed8be50c0b6d2de6df34f11f3a937 · started 2026-10-15T02:52:22Z
+{
+  "command_id": "mmsell-temperature-season-register-202610150248",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "payload_hash": "8c4efbb023c20bd0cdcb6735f70259294fc65517d2cd422184e390346bfd49c0",
+  "completed_at": "2026-10-15 02:50:08.681146+00:00",
+  "result": {
+    "kind": "register",
+    "package": "mmsell-temperature-season",
+    "version": 1,
+    "epoch_number": 1,
+    "epoch_started_at": "2026-10-15 02:50:08.433875+00:00",
+    "probe_deployment": "mmsell-temperature-probe-1",
+    "probe_started_at": "2026-10-15 02:50:08.433875+00:00",
+    "fields_unreadable": [
+      "gates"
+    ],
+    "version_frozen_at": "2026-10-15 02:50:08.433875+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-temperature-season"
+}

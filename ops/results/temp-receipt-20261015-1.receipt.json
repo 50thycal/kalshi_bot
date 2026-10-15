@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "7f005f8b981ed8be50c0b6d2de6df34f11f3a937",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-15T02:52:25Z",
+  "id": "temp-receipt-20261015-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/temp-receipt-20261015-1.receipt.json",
+  "result_file": "ops/results/temp-receipt-20261015-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/38673255584",
+  "service": null,
+  "started_at": "2026-10-15T02:52:22Z",
+  "targets": [],
+  "type": "xos"
+}
