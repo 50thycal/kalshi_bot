@@ -1,45 +1,4 @@
 # ops request [READ]
-# type=script  id=lasthour-temp-20261015b
-# code 2580f36bedab9e8bf61b485f103502fd9a50fa0a · started 2026-10-15T11:45:48Z
-=== MMSELL look-alike probe — 10 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
-
-  LAST-HOUR MODE: 1-minute candles, entries at 45,30,20,15,10,5 min before close; LIFETIME below reads 'quoted >= 45 min before close'
-
-  series                 listed settled              span priced   >=1h
-  KXTEMPAUSH              15364   15234  2026-07..2026-09    970    77%
-  KXTEMPBOSH                294     222  2026-04..2026-04     26     0%
-  KXTEMPCHIH              15553   15533  2026-04..2026-09    930    65%
-  KXTEMPCHIHS              8260    8240  2026-09..2026-10    972    54%
-  KXTEMPDCH               15565   15530  2026-04..2026-09    923    58%
-  KXTEMPLAXH              15418   15325  2026-07..2026-09    975    70%
-  KXTEMPLAXHS              8230    8200  2026-09..2026-10    972    58%
-  KXTEMPMIAH              10315   10305  2026-04..2026-10    908    66%
-  KXTEMPNYCH              16160   16136  2026-07..2026-09    990    73%
-  KXTEMPNYCHS              8130    8120  2026-09..2026-10    972    47%
-
-  A. PER SERIES (first in-cell entry)
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXTEMPAUSH                24    16    6.67   16.67     4  -10.00   -15.00  -1.33 0/2   HOLD
-  KXTEMPBOSH                 0
-  KXTEMPCHIH                25    20    6.76    8.00     2   -1.24    -1.55  -0.22 0/2   HOLD
-  KXTEMPCHIHS               34    21    6.65    0.00     0   +6.65   +10.76   9.18 2/2   HOLD
-  KXTEMPDCH                  2     2    6.50   50.00     1  -43.50   -43.50  -0.88 0/0   HOLD
-  KXTEMPLAXH                24    21    6.54    8.33     2   -1.79    -2.05  -0.32 1/1   HOLD
-  KXTEMPLAXHS               38    21    6.55    2.63     1   +3.92    +7.10   1.35 2/2   HOLD
-  KXTEMPMIAH                40    27    6.55    0.00     0   +6.55    +9.70  11.94 2/2   HOLD
-  KXTEMPNYCH                21    18    6.52    4.76     1   +1.76    +2.06   0.37 1/1   HOLD
-  KXTEMPNYCHS               21    18    6.62    4.76     1   +1.86    +2.17   0.38 1/2   HOLD
-
-  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXTEMP                   229    80    6.60    5.24    12   +1.36    +3.90   0.78 2/4   HOLD
-
-  C. PER FAMILY BY MONTH (n, c/ct)
-  KXTEMP                 2026-07: 42 @ -2.9, 2026-08: 48 @ -3.8, 2026-09: 88 @ +5.5, 2026-10: 51 @ +2.6
-
-  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXTEMP                  5450/8638     63% FEASIBLE
-
-  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
-
-  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+# type=noop  id=lasthour-noop-20261015b
+# code 2580f36bedab9e8bf61b485f103502fd9a50fa0a · started 2026-10-15T12:36:07Z
+(noop — nothing to do)
