@@ -211,7 +211,8 @@ c/contract at the pre-registered bar. Priority 3 (wider paper history) is not ru
     [−4.40, +3.91], no worse than the rest.
   - Resting orders being picked off as the game starts is **not** visible here.
 - **The paper-to-live gap is not a timing effect.**
-  - Live trails paper by 1.47¢ in-play and by about 0.6¢ to 7¢ elsewhere, with wide intervals.
+  - Live trails paper by 1.47¢ in-play. The pre-game windows are thin and mixed (+3.1, −7.2
+    and +0.6¢).
   - The gap sits where the volume is (in-play), not in a timing window.
 - **The "12–24h before close" premise was a crypto cell, not a sports one.**
   - Re-reading ops `live-canary-markets-20261015a`, the 115-market cell (−5.6¢) holds
