@@ -139,12 +139,13 @@ def fetch_markets(series: str, max_pages: int) -> list[dict]:
     return list(seen.values())
 
 
-def candles(series: str, ticker: str, start: int, end: int) -> list[dict]:
+def candles(series: str, ticker: str, start: int, end: int, period: int = 60) -> list[dict]:
+    """Candles at `period` minutes (60 = hourly; 1 = the `--minutes` last-hour mode)."""
     for url in (
         f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-        f"?start_ts={start}&end_ts={end}&period_interval=60",
+        f"?start_ts={start}&end_ts={end}&period_interval={period}",
         f"{KALSHI}/historical/markets/{ticker}/candlesticks"
-        f"?start_ts={start}&end_ts={end}&period_interval=60",
+        f"?start_ts={start}&end_ts={end}&period_interval={period}",
     ):
         cs = (xl._get(url) or {}).get("candlesticks") or []
         if cs:
@@ -168,14 +169,16 @@ def quote_at(cs: list[dict], target_ts: int, tol_s: int = 3 * 3600):
 
 
 def first_entry(cs: list[dict], close: int, lo: float, hi: float, maxyes: float,
-                window: tuple[float, float] | None = None):
-    """The earliest pre-close hour at which the market passes the cell: (hour, yes_ask).
-    `window` = (low, high] restricts the hours considered — an entry policy that only buys in
-    that window, not a filter applied after the fact."""
-    for h in sorted(HOURS, reverse=True):
+                window: tuple[float, float] | None = None,
+                offsets: tuple[float, ...] = HOURS, tol_s: int = 3 * 3600):
+    """The earliest pre-close offset (hours) at which the market passes the cell:
+    (hours, yes_ask). `window` = (low, high] restricts the offsets considered — an entry policy
+    that only buys in that window, not a filter applied after the fact. `offsets`/`tol_s` default
+    to the hourly replay; `--minutes` passes fractions of an hour and a minutes-scale tolerance."""
+    for h in sorted(offsets, reverse=True):
         if window is not None and not (window[0] < h <= window[1]):
             continue
-        q = quote_at(cs, close - h * 3600)
+        q = quote_at(cs, close - int(round(h * 3600)), tol_s)
         if q and lo <= (q[0] + q[1]) / 2.0 <= hi and q[1] <= maxyes:
             return h, q[1]
     return None
@@ -250,24 +253,27 @@ def summarize(rows: list[tuple]) -> dict:
     }
 
 
-def verdict(s: dict) -> str:
+def verdict(s: dict, min_cents: float | None = None) -> str:
+    """The §3 gate. `min_cents` raises the per-contract bar where a run pre-registered a stricter
+    one (`--min-cents`; the last-hour mode, §9)."""
+    bar = MIN_CENTS if min_cents is None else min_cents
     if not s.get("n"):
         return "NO-DATA"
     if s["n"] >= MIN_ENTRIES and s["cents"] <= 0:
         return "KILL"
     share_ok = s["months_counted"] and s["months_positive"] / s["months_counted"] >= MONTH_SHARE
-    if (s["n"] >= MIN_ENTRIES and s["days"] >= MIN_DAYS and s["cents"] >= MIN_CENTS
+    if (s["n"] >= MIN_ENTRIES and s["days"] >= MIN_DAYS and s["cents"] >= bar
             and s["t"] == s["t"] and s["t"] >= MIN_T and share_ok):
         return "PROMOTE"
     return "HOLD"
 
 
-def line(label: str, s: dict) -> str:
+def line(label: str, s: dict, min_cents: float | None = None) -> str:
     if not s.get("n"):
         return f"  {label:<22} {0:>5}"
     return (f"  {label:<22} {s['n']:>5} {s['days']:>5} {s['implied']:>7.2f} {s['realized']:>7.2f} "
             f"{s['losses']:>5} {s['cents']:>+7.2f} {s['per_day']:>+8.2f} {s['t']:>6.2f} "
-            f"{s['months_positive']}/{s['months_counted']:<3} {verdict(s)}")
+            f"{s['months_positive']}/{s['months_counted']:<3} {verdict(s, min_cents)}")
 
 
 HDR = (f"  {'':<22} {'n':>5} {'days':>5} {'impl':>7} {'real':>7} {'loss':>5} {'c/ct':>7} "
@@ -287,6 +293,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--hi", type=float, default=10.0)
     ap.add_argument("--maxyes", type=float, default=7.0)
     ap.add_argument("--no-control", action="store_true", help="do not add KXRAIN")
+    ap.add_argument("--minutes", default="",
+                    help="comma list of MINUTES before close: replay the final hour on 1-minute "
+                         "candles instead of the hourly offsets (docs §9)")
+    ap.add_argument("--min-cents", type=float, default=None,
+                    help="stricter per-contract PROMOTE bar for this run (pre-registered)")
     ap.add_argument("--timing", action="store_true",
                     help="also replay early/mid/late entry windows against the first-entry rule")
     args = ap.parse_args(argv)
@@ -302,6 +313,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"=== MMSELL look-alike probe — {len(series)} series; cell {args.lo:g}<=mid<={args.hi:g}"
           f", yes_ask<={args.maxyes:g}; first in-cell entry, gross, 1 contract ===\n")
 
+    if args.minutes:
+        offsets = tuple(sorted(float(m) / 60.0 for m in args.minutes.split(",") if m.strip()))
+        period, tol_s, floor_h = 1, 10 * 60, max(offsets)
+        print(f"  LAST-HOUR MODE: 1-minute candles, entries at {args.minutes} min before close; "
+              f"LIFETIME below reads 'quoted >= {max(offsets) * 60:g} min before close'\n")
+    else:
+        offsets, period, tol_s, floor_h = HOURS, 60, 3 * 3600, 1.0
     per_series: dict[str, list] = {}
     per_window: dict[str, dict[str, list]] = {w[0]: {} for w in WINDOWS}
     feasible: dict[str, tuple[int, int]] = {}
@@ -320,20 +338,24 @@ def main(argv: list[str] | None = None) -> int:
         for m in sample:
             close = _ts(m.get("close_time"))
             opened = _ts(m.get("open_time")) or close - 72 * 3600
-            cs = candles(s, m["ticker"], max(opened, close - (max(HOURS) + 4) * 3600), close)
+            cs = candles(s, m["ticker"],
+                         max(opened, close - int((max(offsets) + (0.5 if args.minutes else 4))
+                                                 * 3600)), close, period)
             if not cs:
                 continue
             priced += 1
-            early_enough += has_quote_by(cs, close)
+            early_enough += has_quote_by(cs, close, floor_h)
             yes = m["result"].lower() == "yes"
             day = time.strftime("%Y-%m-%d", time.gmtime(close))
 
-            hit = first_entry(cs, close, args.lo, args.hi, args.maxyes)
+            hit = first_entry(cs, close, args.lo, args.hi, args.maxyes,
+                              offsets=offsets, tol_s=tol_s)
             if hit:
                 rows.append(_row(hit[1], yes, day))
             if args.timing:
                 for name, low, high in WINDOWS:
-                    whit = first_entry(cs, close, args.lo, args.hi, args.maxyes, (low, high))
+                    whit = first_entry(cs, close, args.lo, args.hi, args.maxyes, (low, high),
+                                       offsets=offsets, tol_s=tol_s)
                     if whit:
                         wrows[name].append(_row(whit[1], yes, day))
         per_series[s] = rows
@@ -347,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     print("\n  A. PER SERIES (first in-cell entry)")
     print(HDR)
     for s in series:
-        print(line(s, summarize(per_series[s])))
+        print(line(s, summarize(per_series[s]), args.min_cents))
 
     families: dict[str, list] = defaultdict(list)
     for s, rows in per_series.items():
@@ -361,7 +383,7 @@ def main(argv: list[str] | None = None) -> int:
         summary = summarize(families[fam])
         if fam == CONTROL:
             control = summary
-        print(line(fam, summary))
+        print(line(fam, summary, args.min_cents))
 
     print("\n  C. PER FAMILY BY MONTH (n, c/ct)")
     for fam in sorted(families):

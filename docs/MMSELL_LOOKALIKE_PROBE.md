@@ -291,3 +291,101 @@ stated otherwise.
 - **KILL:** at least 100 entries and ≤ 0¢, recorded so the series is not retried.
 - **Disclosure:** every category run is logged, including empty discoveries (a category name
   Kalshi does not use returns nothing, which is not a result).
+
+## 8. Results — fast-verdict round (2026-10-15, code `c2767929`)
+
+### A — hourly temperature: NOT FEASIBLE
+
+`fast-a-hourly-20261015a`, 10 series (`KXTEMP<city>H` / `…HS`), 3,381 markets priced:
+- **0%** of markets were quoted at least 1h before close, so no in-cell entry exists inside the bot's
+  entry window.
+- These markets list inside the final hour. No MMSELL book can trade them under the global 1h
+  floor.
+- The edge itself is **unmeasured**: this is not a KILL.
+- Lowering the floor would be a shared, global change (and in-play entry carries the adverse
+  selection the 1h floor exists to avoid). It is recorded here, not proposed.
+- No paper book. The 7-day forward check does not apply.
+
+### B — entry timing: SAME almost everywhere
+
+| family | ops id | early (T−48..−24h) | mid (T−24..−6h) | late (T−6..−1h) |
+|---|---|---|---|---|
+| KXRAIN | `fast-b-rain-20261015a` | −0.27¢, t −0.2 → SAME | −0.12¢ → SAME | +0.94¢, t 1.2 → SAME |
+| KXHIGH | `fast-b-khigh-20261015a` | **+2.29¢, t 2.11, 69 days → BETTER** | −0.99¢ → SAME | +0.18¢ (29 days) → THIN |
+| KXHIGHT | `fast-b-khight-20261015a` | −1.76¢, t −1.1 → SAME | +0.69¢ → SAME | −3.21¢, t −0.8 → SAME |
+| KXLOWT | `fast-b-klowt-20261015a` | +1.13¢, t 1.1 → SAME | −0.83¢ → SAME | +0.96¢ → SAME |
+
+Each difference is day-paired against the shipped first-entry rule. The KXRAIN control reproduced
+on this code (+4.21¢, t 4.53, the same as §4).
+
+**Reading.** One BETTER in twelve comparisons, at t 2.11, close to what chance alone produces at
+a two-sided |t| ≥ 2 across twelve tests. The sister family KXHIGHT points the other way (−1.76¢),
+and KXLOWT is flat.
+
+The pre-registered consequence of a BETTER is a *proposal*. It is recorded here with the
+recommendation **not to act**: an early-only arm on KXHIGH alone would halve the entries (137 vs
+564) on evidence that does not replicate within the temperature family.
+
+**Practical conclusion:** the shipped first-entry rule is not leaving money on the table through
+its timing. Timing is not a lever for these books.
+
+### Lifetime, as a by-product
+
+Rain and all three daily temperature families are quoted at least 1h before close on 94–99% of
+markets, so every nominated daily book is tradeable under the floor.
+
+## 9. Last-hour test on hourly temperature — pre-registration (2026-10-15, before the run)
+
+Calvin asked for this after A read NOT FEASIBLE. Hourly temperature markets list inside the
+final hour, and every MMSELL book is barred from entering then (`mmsell_min_hours_to_close` = 1h).
+The bar exists because in the last hour the answer is largely known, and a resting maker order
+mostly fills when it is about to lose.
+
+- **Run:** `--minutes 45,30,20,15,10,5` replays the cell on 1-minute candles. Entry is at the
+  earliest of those offsets at which the cell passes; quotes are no older than 10 minutes.
+- **Scope:** the 10 hourly series of `fast-a-hourly-20261015a`, `--per-series 400`, bet unit one
+  family-day.
+- **Gate:** §3 with the per-contract bar raised to **+4¢** (`--min-cents 4`), twice the measured
+  paper-to-live maker gap.
+  - The raise is fixed now, because last-hour adverse selection is exactly what neither paper nor
+    replay can see: both assume the resting order fills.
+  - KILL as in §3 (≥ 100 entries and ≤ 0¢).
+- **Consequence of PROMOTE:** a *proposal* for one paper book with a per-book entry-floor exception
+  (a code change, the same shape as `optin=`). The global floor is not lowered.
+  - No live step without a live twin, because only real fills can measure this risk.
+  - The bot scans about every 30 minutes, so it would see each market at most once or twice in its
+    life. A PROMOTE says the price is wrong, not that the bot can catch it often.
+- **HOLD or KILL:** recorded, and hourly temperature is closed.
+
+## 10. Results — C, other price bands (2026-10-15)
+
+Ops ids `c-<band>-<family>-20261015a`, same series and samples as §4 and §6. The KXRAIN rows are
+the rain family itself, not the control.
+
+| family | ultra (1–5 mid, YES ≤ 4) | upper (10–16 mid, YES ≤ 15) |
+|---|---|---|
+| KXRAIN | 1,070 entries, **+2.10¢**, t 7.81, 4/4 months → **PROMOTE** | 309, **+4.73¢**, t 2.91, 3/4 → **PROMOTE** (Oct −5.2¢) |
+| KXHIGH | 1,908, +1.77¢, t 6.21, 21/24 → HOLD (under +2¢) | 910, **+2.41¢**, t 2.72, 19/24 → **PROMOTE** |
+| KXHIGHT | 2,458, **+2.04¢**, t 7.66, 10/10 → **PROMOTE** | 896, **+3.60¢**, t 3.46, 10/10 → **PROMOTE** |
+| KXLOWT | 1,788, +1.84¢, t 5.29, 10/11 → HOLD (under +2¢) | 463, +2.36¢, t 1.89, 5/10 → HOLD |
+
+**Reading.**
+- **The overpricing covers the whole cheap tail, not just the shipped cell.** Realized YES runs about
+  a third to two-thirds below implied from 1¢ to 15¢.
+- **Ultra band:** the effect is the most certain anywhere (t 5–8), and the smallest in cents. It
+  sits right at the +2¢ fill-gap bar, so it is real but thin.
+- **Upper band:** the edge in cents is larger, and so is the noise.
+
+**Consequence**, per §7: each PROMOTE band becomes a paper arm on the families that PROMOTEd it.
+That is `mmsell-weather-bands` (`kalshi_bot/experiment_os/weather_bands.py`):
+
+| arm | tag | book |
+|---|---|---|
+| `temp_upper` | `Tempmmsell2` | `lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH` (KXHIGH and KXHIGHT) |
+| `hight_ultra` | `Tempmmsell3` | `lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT` |
+| `rain_ultra` | `Rainmmsell3` | `lo=1,hi=5,maxyes=4,onlyx=KXRAIN` |
+
+- **Gates:** each arm has its own gate, with the same floor, horizon and bars as the rain and
+  temperature contracts (120 settlement days, +2¢ pass, < +1¢ fail).
+- **Left out:** rain in the upper band, because `Rainmmsell2` (8–12¢) already tests it.
+- **Paper only.** None of these running books is edited.
