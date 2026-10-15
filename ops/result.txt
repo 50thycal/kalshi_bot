@@ -1,30 +1,236 @@
 # ops request [READ]
-# type=xos  id=temp-receipt-20261015-1
-# code 7f005f8b981ed8be50c0b6d2de6df34f11f3a937 · started 2026-10-15T02:52:22Z
+# type=xos  id=temp-show-20261015a
+# code 7f005f8b981ed8be50c0b6d2de6df34f11f3a937 · started 2026-10-15T02:53:19Z
 {
-  "command_id": "mmsell-temperature-season-register-202610150248",
-  "action": "REGISTER_PACKAGE",
-  "actor": "claude-code",
-  "actor_role": "RESEARCH_LAB",
-  "status": "SUCCEEDED",
-  "payload_hash": "8c4efbb023c20bd0cdcb6735f70259294fc65517d2cd422184e390346bfd49c0",
-  "completed_at": "2026-10-15 02:50:08.681146+00:00",
-  "result": {
-    "kind": "register",
-    "package": "mmsell-temperature-season",
-    "version": 1,
-    "epoch_number": 1,
-    "epoch_started_at": "2026-10-15 02:50:08.433875+00:00",
-    "probe_deployment": "mmsell-temperature-probe-1",
-    "probe_started_at": "2026-10-15 02:50:08.433875+00:00",
-    "fields_unreadable": [
-      "gates"
-    ],
-    "version_frozen_at": "2026-10-15 02:50:08.433875+00:00"
+  "key": "mmsell-temperature-season",
+  "title": "mmsell temperature season \u2014 does the cheap-tail cell work on daily temperature",
+  "state": "PAPER",
+  "paused_from_state": null,
+  "origin": "operator",
+  "family": "maker",
+  "hypothesis": "On Kalshi's daily temperature ladders the cheap YES tail (YES <= 7c) settles YES less often than its price implies, as it does on daily rain, and the maker NO at the no-bid captures it through winter.",
+  "legacy_class": null,
+  "migration_integrity": null,
+  "platform_snapshot_id": 2,
+  "predecessor_experiment_id": null,
+  "retired_at": null,
+  "docs": {
+    "probe": "scripts/mmsell_lookalike_probe.py",
+    "thesis": "docs/MMSELL_LOOKALIKE_PROBE.md",
+    "sibling": "kalshi_bot/experiment_os/rain_season.py"
   },
-  "error": null,
-  "replayed": false,
-  "collision": false,
-  "executed": true,
-  "experiment": "mmsell-temperature-season"
+  "versions": [
+    {
+      "version": 1,
+      "frozen_at": "2026-10-15 02:50:08.433875+00:00",
+      "fingerprint": "e833cb31b37bd9a10bdeebf05413db6e8e87932f0fead44f7e9310d6e5366630",
+      "pre_registration_hash": "dc7f4a69725d437b9a70edfceb56fc606b74c98a1056fa457d46f83b2b643970",
+      "independent_variable": "none \u2014 one absolute arm judged on its own gate",
+      "held_constant": [
+        "the book trades only series starting KXHIGH or KXLOW (`only=`), reached through its own `optin=`; the GLOBAL skip list is unchanged, so every other book still never sees them",
+        "opted-in events are ranked in their own list after the normal ones, so no other book's candidate set or rank moves",
+        "entry is the mmsell maker entry: buy NO at the no-bid, 1 contract, paper",
+        "exit is hold to settlement: no stop, take-profit, volatility gate or strangle",
+        "no contest cap or size rule; the global caps (open positions, settlement date, rungs per non-exclusive event) apply unchanged and bound how many cities one weather day can add",
+        "the tag is PAPER and appears in no live arm set; the tracker also refuses every live mirror on a globally skipped series, so no live order can fire for it"
+      ],
+      "change_reason": null,
+      "arms": [
+        {
+          "arm_key": "temp_cell",
+          "role": "control",
+          "strategy_tag": null,
+          "params": {
+            "tag": "Tempmmsell1",
+            "band": "mid 5-10, yes<=7",
+            "book": "lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW",
+            "series": [
+              "KXHIGH",
+              "KXLOW"
+            ]
+          }
+        }
+      ],
+      "gates": [
+        {
+          "gate_key": "temp_cell_winter_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "temp_cell": {
+                "op": ">=",
+                "value": 120,
+                "metric": "settled_days"
+              }
+            },
+            "fail_any": [
+              {
+                "op": "<",
+                "arm": "temp_cell",
+                "value": 0.0,
+                "metric": "pnl_cents_per_contract",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 45,
+                  "metric": "settled_days"
+                }
+              },
+              {
+                "op": "<",
+                "arm": "temp_cell",
+                "value": 1.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": "<",
+                "arm": "temp_cell",
+                "value": 0.0,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">=",
+                "arm": "temp_cell",
+                "value": 2.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": ">=",
+                "arm": "temp_cell",
+                "value": 0.15,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "description": "Keep/kill for the MMSELL cheap-tail cell on daily temperature ladders through winter. The floor is in settlement days and cannot be reached before mid-February, so the evidence spans December-February by construction. PASS keeps the cell and makes it eligible for a live-twin proposal on its own Version (a Live Ops canary); it authorizes no live change by itself. FAIL ends the temperature cell for this rule.",
+            "max_evidence_horizon": {
+              "arms": [
+                "temp_cell"
+              ],
+              "value": 180,
+              "metric": "settled_days"
+            }
+          },
+          "spec_hash": "057dffa501f6d65ee73d9785955447865fc750a5e06a4991e396cfa26c07ad97",
+          "evidence_started_at": null,
+          "results": []
+        }
+      ],
+      "epochs": [
+        {
+          "epoch_number": 1,
+          "started_at": "2026-10-15 02:50:08.433875+00:00",
+          "ended_at": null,
+          "reason": "v1's first operating interval, pinned to the platform snapshot active at registration.",
+          "impact_class": null,
+          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
+          "platform_snapshot": [
+            [
+              "DATA_PROVENANCE",
+              "live_vs_backfill_2026_08"
+            ],
+            [
+              "EXECUTION_ENGINE",
+              "live_executor_2026_08"
+            ],
+            [
+              "EXPERIMENT_ENGINE",
+              "foundation_pr1"
+            ],
+            [
+              "FEE_MODEL",
+              "maker_rate_2026_08_11"
+            ],
+            [
+              "FILL_MODEL",
+              "assumed_fill_plus_mmsell3_calibration"
+            ],
+            [
+              "KALSHI_API_SCHEMA",
+              "advanced_tier_2026_08_12"
+            ],
+            [
+              "MARKET_TAXONOMY",
+              "settlement_repair_2026_08_24"
+            ],
+            [
+              "METRICS_ENGINE",
+              "pnl_scripts_2026_08"
+            ],
+            [
+              "RISK_ENGINE",
+              "caps_2026_08"
+            ],
+            [
+              "SETTLEMENT_ENGINE",
+              "hold_to_settlement_2026_08"
+            ]
+          ],
+          "deployments": [
+            {
+              "deployment_key": "mmsell-temperature-paper-1",
+              "stage": "PAPER",
+              "kind": "paper",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-10-15 02:50:08.433875+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "temp_cell",
+                  "strategy_tag": "Tempmmsell1"
+                }
+              ]
+            },
+            {
+              "deployment_key": "mmsell-temperature-probe-1",
+              "stage": "PROBE",
+              "kind": "probe",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-10-15 02:50:08.433875+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "temp_cell",
+                  "strategy_tag": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": null,
+      "to": "IDEA",
+      "occurred_at": "2026-10-15 02:50:08.433875+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "experiment created",
+      "gate_result_id": null
+    },
+    {
+      "from": "IDEA",
+      "to": "PROBE",
+      "occurred_at": "2026-10-15 02:50:08.433875+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "the historical replay is recorded on v1 with its confounds (gross, assumed fills, one bad winter); it authorizes nothing beyond fixing the cell",
+      "gate_result_id": null
+    },
+    {
+      "from": "PROBE",
+      "to": "PAPER",
+      "occurred_at": "2026-10-15 02:50:08.433875+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "pre-registration merged (docs/MMSELL_LOOKALIKE_PROBE.md); the forward winter tape is the evidence that decides",
+      "gate_result_id": null
+    }
+  ],
+  "integrity_events": [],
+  "legacy_evidence": []
 }
