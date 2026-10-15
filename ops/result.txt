@@ -1,46 +1,79 @@
 # ops request [READ]
-# type=script  id=d-deep-ent-20261015a
-# code d3ac7bb53429140bc418dce206ab76b9dc1cf9bc · started 2026-10-15T10:51:38Z
-=== MMSELL look-alike probe — 6 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+# type=script  id=d-deep-men-20261015a
+# code d3ac7bb53429140bc418dce206ab76b9dc1cf9bc · started 2026-10-15T11:05:29Z
+=== MMSELL look-alike probe — 12 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
   series                 listed settled              span priced   >=1h
-  KXBILLBOARDRUNNERUPSONG   1413    1372  2025-05..2026-10    196    16%
-  KXBILLBOARDRUNNERUPALBUM   1307    1268  2025-05..2026-10    248    10%
-  KXBBCHARTPOSITIONALBUM   2740    2740  2026-04..2026-09    207     2%
-  KXBBCHARTPOSITIONSONG    2240    2240  2026-04..2026-09    277    14%
-  KXAPPRANKFREE            1541    1541  2024-11..2025-11    264    47%
-  KXARTISTSTREAMS          4733    4733  2026-04..2026-07    229    56%
+  KXNBAMENTION             6545    6493  2025-11..2026-06    230    97%
+  KXMLBMENTION             3568    3531  2025-10..2026-08    233    97%
+  KXNCAABMENTION           2266    2234  2026-01..2026-04    210    97%
+  KXMAMDANIMENTION         2176    2142  2025-09..2026-09    240    88%
+  KXSECPRESSMENTION        1590    1549  2025-01..2026-10    234    97%
+  KXNFLMENTION             1543    1543  2025-09..2026-04    217   100%
+  KXFIGHTMENTION           1419    1419  2025-12..2026-07    212    99%
+  KXPOLITICSMENTION        1142    1116  2026-02..2026-09    248   100%
+  KXFOXNEWSMENTION          852     852  2026-01..2026-10    230   100%
+  KXHEARINGMENTION          849     849  2026-04..2026-09    213   100%
+  KXLASTWORDMENTION         795     784  2026-01..2026-10    249   100%
+  KXBERNIEMENTION          1091     906  2025-08..2026-10    240    92%
 
   A. PER SERIES (first in-cell entry)
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXBILLBOARDRUNNERUPSONG     1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXBILLBOARDRUNNERUPALBUM     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXBBCHARTPOSITIONALBUM     0
-  KXBBCHARTPOSITIONSONG      0
-  KXAPPRANKFREE              9     7    6.67    0.00     0   +6.67    +8.57   6.07 0/0   HOLD
-  KXARTISTSTREAMS            0
+  KXNBAMENTION               5     2    6.60    0.00     0   +6.60   +16.50   1.57 0/0   HOLD
+  KXMLBMENTION               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXNCAABMENTION             2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXMAMDANIMENTION           2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXSECPRESSMENTION         20     6    6.45    0.00     0   +6.45   +21.50   1.93 1/1   HOLD
+  KXNFLMENTION               4     3    6.50    0.00     0   +6.50    +8.67   3.96 0/0   HOLD
+  KXFIGHTMENTION             9     5    6.78    0.00     0   +6.78   +12.20   4.50 0/0   HOLD
+  KXPOLITICSMENTION          2     1    6.00   50.00     1  -44.00   -88.00    nan 0/0   HOLD
+  KXFOXNEWSMENTION           5     4    6.80    0.00     0   +6.80    +8.50   4.60 0/0   HOLD
+  KXHEARINGMENTION          13     4    6.85    0.00     0   +6.85   +22.25   1.96 0/0   HOLD
+  KXLASTWORDMENTION          1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXBERNIEMENTION           10     4    7.00    0.00     0   +7.00   +17.50   8.66 0/0   HOLD
 
   B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXAPPRANKFREE              9     7    6.67    0.00     0   +6.67    +8.57   6.07 0/0   HOLD
-  KXBILLBOARDRUNNERUPSONG     1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXBILLBOARDRUNNERUPALBUM     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXBBCHARTPOSITIONALBUM     0
-  KXBBCHARTPOSITIONSONG      0
-  KXARTISTSTREAMS            0
+  KXSECPRESSMENTION         20     6    6.45    0.00     0   +6.45   +21.50   1.93 1/1   HOLD
+  KXHEARINGMENTION          13     4    6.85    0.00     0   +6.85   +22.25   1.96 0/0   HOLD
+  KXBERNIEMENTION           10     4    7.00    0.00     0   +7.00   +17.50   8.66 0/0   HOLD
+  KXFIGHTMENTION             9     5    6.78    0.00     0   +6.78   +12.20   4.50 0/0   HOLD
+  KXNBAMENTION               5     2    6.60    0.00     0   +6.60   +16.50   1.57 0/0   HOLD
+  KXFOXNEWSMENTION           5     4    6.80    0.00     0   +6.80    +8.50   4.60 0/0   HOLD
+  KXNFLMENTION               4     3    6.50    0.00     0   +6.50    +8.67   3.96 0/0   HOLD
+  KXNCAABMENTION             2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXMAMDANIMENTION           2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXPOLITICSMENTION          2     1    6.00   50.00     1  -44.00   -88.00    nan 0/0   HOLD
+  KXMLBMENTION               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXLASTWORDMENTION          1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
 
   C. PER FAMILY BY MONTH (n, c/ct)
-  KXAPPRANKFREE          2024-11: 1 @ +6.0, 2025-01: 1 @ +6.0, 2025-02: 3 @ +7.0, 2025-03: 3 @ +6.7, 2025-04: 1 @ +7.0
-  KXBILLBOARDRUNNERUPALBUM 2026-02: 1 @ +7.0
-  KXBILLBOARDRUNNERUPSONG 2025-10: 1 @ +6.0
+  KXBERNIEMENTION        2026-04: 2 @ +7.0, 2026-05: 3 @ +7.0, 2026-06: 2 @ +7.0, 2026-10: 3 @ +7.0
+  KXFIGHTMENTION         2026-02: 2 @ +6.5, 2026-03: 3 @ +7.0, 2026-04: 1 @ +6.0, 2026-05: 2 @ +7.0, 2026-07: 1 @ +7.0
+  KXFOXNEWSMENTION       2026-03: 3 @ +6.7, 2026-04: 1 @ +7.0, 2026-08: 1 @ +7.0
+  KXHEARINGMENTION       2026-05: 8 @ +6.9, 2026-06: 1 @ +7.0, 2026-07: 3 @ +6.7, 2026-08: 1 @ +7.0
+  KXLASTWORDMENTION      2026-07: 1 @ +7.0
+  KXMAMDANIMENTION       2026-07: 1 @ +7.0, 2026-09: 1 @ +6.0
+  KXMLBMENTION           2026-03: 1 @ +7.0
+  KXNBAMENTION           2026-04: 4 @ +6.8, 2026-06: 1 @ +6.0
+  KXNCAABMENTION         2026-02: 1 @ +6.0, 2026-04: 1 @ +7.0
+  KXNFLMENTION           2026-01: 1 @ +7.0, 2026-02: 2 @ +6.5, 2026-04: 1 @ +6.0
+  KXPOLITICSMENTION      2026-05: 2 @ -44.0
+  KXSECPRESSMENTION      2025-03: 1 @ +7.0, 2025-04: 1 @ +6.0, 2026-01: 2 @ +7.0, 2026-02: 3 @ +6.7, 2026-07: 1 @ +6.0, 2026-09: 12 @ +6.3
 
   D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXAPPRANKFREE            124/264      47% NOT FEASIBLE
-  KXARTISTSTREAMS          128/229      56% FEASIBLE
-  KXBBCHARTPOSITIONALBUM     5/207       2% NOT FEASIBLE
-  KXBBCHARTPOSITIONSONG     39/277      14% NOT FEASIBLE
-  KXBILLBOARDRUNNERUPALBUM    24/248      10% NOT FEASIBLE
-  KXBILLBOARDRUNNERUPSONG    32/196      16% NOT FEASIBLE
+  KXBERNIEMENTION          220/240      92% FEASIBLE
+  KXFIGHTMENTION           210/212      99% FEASIBLE
+  KXFOXNEWSMENTION         229/230     100% FEASIBLE
+  KXHEARINGMENTION         212/213     100% FEASIBLE
+  KXLASTWORDMENTION        248/249     100% FEASIBLE
+  KXMAMDANIMENTION         211/240      88% FEASIBLE
+  KXMLBMENTION             226/233      97% FEASIBLE
+  KXNBAMENTION             224/230      97% FEASIBLE
+  KXNCAABMENTION           203/210      97% FEASIBLE
+  KXNFLMENTION             216/217     100% FEASIBLE
+  KXPOLITICSMENTION        248/248     100% FEASIBLE
+  KXSECPRESSMENTION        226/234      97% FEASIBLE
 
   CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
 
