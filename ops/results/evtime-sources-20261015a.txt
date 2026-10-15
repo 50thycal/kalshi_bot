@@ -1,0 +1,27 @@
+# ops request [READ]
+# type=script  id=evtime-sources-20261015a
+# code 5a81b555fc084a60dbfa93f02fe51e06a174dff6 · started 2026-10-15T17:30:52Z
+# event_timing_study  live sports markets 2323, paper mmsell10 sports entries on the same event days 8576, sports series 401
+# Kalshi market objects found 9151/9151
+
+STEP 1 — START-TIME SOURCES (per sport family; no P&L)
+  rule (Amendment A): ticker HHMM ET -> external schedule (MLB StatsAPI, ESPN NFL/NCAAF/MLS) -> occurrence_datetime - D (family-calibrated, else pooled + internal test) -> uncovered
+  family        mkts events  occ% occ=eexp  ext match   hhmm~ext  D (h)  coverage
+  MLB           3257   1495  100%      56%  1474/1495  1444/1474  +3.00  ticker-hhmm 99%, occurrence-D(family) 1%
+               offsets occ-start (h): p10 +3.00  median +3.00  p90 +3.00  n=1486
+               family D +3.00h, 98% of 1486 within 30m
+  other-sports  1499   1041  100%      88%          -          -  +3.00  occurrence-D(pooled) 85%, ticker-hhmm 15%
+               offsets occ-start (h): p10 +3.00  median +4.00  p90 +8.00  n=219
+               scattered: family D +4.00h, 74% of 219 within 30m; pooled (family D +3.00h, 88% of 2660 within 30m): early-closed after derived start 1428/1498, median lag 2.2h -> accepted
+  soccer        1319    917  100%      92%     63/917          -  +3.00  occurrence-D(pooled) 94%, external 6%
+               offsets occ-start (h): p10 +3.00  median +4.00  p90 +4.00  n=63
+               scattered: family D +4.00h, 52% of 63 within 30m; pooled (family D +3.00h, 88% of 2660 within 30m): early-closed after derived start 1286/1319, median lag 1.8h -> accepted
+  NFL           1202    536  100%      77%    534/536          -  +3.00  external 100%, occurrence-D(family) 0%
+               offsets occ-start (h): p10 +3.00  median +3.00  p90 +3.00  n=534
+               family D +3.00h, 100% of 534 within 30m
+  NCAAF          938    471  100%      92%    340/471          -  +3.00  external 72%, occurrence-D(family) 28%
+               offsets occ-start (h): p10 +3.00  median +3.00  p90 +3.00  n=340
+               family D +3.00h, 89% of 340 within 30m
+  tennis         936    920  100%      99%          -          -      -  none 98%, ticker-hhmm 2%
+               offsets occ-start (h): p10 +4.00  median +4.00  p90 +8.00  n=18
+               18 checkable < 20; pooled (family D +3.00h, 88% of 2660 within 30m): early-closed after derived start 741/936, median lag 2.3h -> rejected
