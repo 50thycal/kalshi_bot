@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-temperature-season-register-202610150248"],"id":"temp-receipt-20261015-1"}
+{"type":"xos","command":"show","args":["mmsell-temperature-season"],"id":"temp-show-20261015a"}
