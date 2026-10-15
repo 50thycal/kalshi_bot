@@ -291,3 +291,45 @@ stated otherwise.
 - **KILL:** at least 100 entries and ≤ 0¢, recorded so the series is not retried.
 - **Disclosure:** every category run is logged, including empty discoveries (a category name
   Kalshi does not use returns nothing, which is not a result).
+
+## 8. Results — fast-verdict round (2026-10-15, code `c2767929`)
+
+### A — hourly temperature: NOT FEASIBLE
+
+`fast-a-hourly-20261015a`, 10 series (`KXTEMP<city>H` / `…HS`), 3,381 markets priced:
+- **0%** of markets were quoted at least 1h before close, so no in-cell entry exists inside the bot's
+  entry window.
+- These markets list inside the final hour. No MMSELL book can trade them under the global 1h
+  floor.
+- The edge itself is **unmeasured**: this is not a KILL.
+- Lowering the floor would be a shared, global change (and in-play entry carries the adverse
+  selection the 1h floor exists to avoid). It is recorded here, not proposed.
+- No paper book. The 7-day forward check does not apply.
+
+### B — entry timing: SAME almost everywhere
+
+| family | ops id | early (T−48..−24h) | mid (T−24..−6h) | late (T−6..−1h) |
+|---|---|---|---|---|
+| KXRAIN | `fast-b-rain-20261015a` | −0.27¢, t −0.2 → SAME | −0.12¢ → SAME | +0.94¢, t 1.2 → SAME |
+| KXHIGH | `fast-b-khigh-20261015a` | **+2.29¢, t 2.11, 69 days → BETTER** | −0.99¢ → SAME | +0.18¢ (29 days) → THIN |
+| KXHIGHT | `fast-b-khight-20261015a` | −1.76¢, t −1.1 → SAME | +0.69¢ → SAME | −3.21¢, t −0.8 → SAME |
+| KXLOWT | `fast-b-klowt-20261015a` | +1.13¢, t 1.1 → SAME | −0.83¢ → SAME | +0.96¢ → SAME |
+
+Each difference is day-paired against the shipped first-entry rule. The KXRAIN control reproduced
+on this code (+4.21¢, t 4.53, the same as §4).
+
+**Reading.** One BETTER in twelve comparisons, at t 2.11, close to what chance alone produces at
+a two-sided |t| ≥ 2 across twelve tests. The sister family KXHIGHT points the other way (−1.76¢),
+and KXLOWT is flat.
+
+The pre-registered consequence of a BETTER is a *proposal*. It is recorded here with the
+recommendation **not to act**: an early-only arm on KXHIGH alone would halve the entries (137 vs
+564) on evidence that does not replicate within the temperature family.
+
+**Practical conclusion:** the shipped first-entry rule is not leaving money on the table through
+its timing. Timing is not a lever for these books.
+
+### Lifetime, as a by-product
+
+Rain and all three daily temperature families are quoted at least 1h before close on 94–99% of
+markets, so every nominated daily book is tradeable under the floor.
