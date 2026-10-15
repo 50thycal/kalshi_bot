@@ -111,4 +111,43 @@ replication of the rain cell's own replay, and every reading is recorded above.
 - **Older daily NYC rain:** KXRAINNYC, 2025-01..2026-07. This is a possible winter check for rain.
 - **Other:** hourly temperature (KXTEMP*H), monthly snow, tornado, hurricane and earthquake series.
 
-Gate readings are appended after the corrected runs.
+### Gate readings (corrected code `c14245a0`, 2026-10-14)
+
+**Control.** `lookalike-control-20261014h` re-ran KXRAIN on the corrected code. It **reproduced**:
+300 first entries over 68 days, +4.21¢/contract, t 4.53, 4 of 4 months positive. The archive
+fix let July into the sample.
+
+| Family | ops id | entries | family-days | implied YES | realized YES | ¢/contract | t | months + | Gate |
+|---|---|---|---|---|---|---|---|---|---|
+| KXHIGH (8 cities, 2024-10..2026-10) | `lookalike-khigh-20261014g` | 564 | 120 | 6.54% | 4.08% | **+2.47** | 2.94 | 18/23 | **PROMOTE** |
+| KXHIGHT (17 cities, 2026-01..10) | `lookalike-khight-20261014i` | 744 | 70 | 6.57% | 4.03% | **+2.54** | 3.72 | 9/10 | **PROMOTE** |
+| KXLOWT (24 cities, 2025-12..2026-10) | `lookalike-klowt-20261014j` | 390 | 48 | 6.65% | 3.59% | **+3.06** | 3.21 | 8/10 | **PROMOTE** |
+
+These runs used `--no-control` to keep each ops job short. The control ran separately on the same
+code and the same day. The "control not reproduced" line printed inside each family run reflects
+only that flag.
+
+**Reading.** Across about 1,700 historical first entries in three independent temperature families,
+the cheap YES side (≤7¢) settles YES roughly 4% of the time against about 6.6% implied. This is the
+same overpricing as rain, about 2.5–3¢ per contract gross, and it replicates across families and
+cities.
+
+**Risks to carry into the paper tape:**
+- **Winter 2024–25 was bad in KXHIGH:** Dec −10.2¢, Jan −9.4¢. Winter 2025–26 was positive (Dec
+  +3.2, Jan +4.3; KXHIGHT Jan +6.4, Feb +3.1; KXLOWT Jan +2.6, Feb −1.4). Losses cluster in winter
+  without being reliable, so the tape must read winter separately.
+- **Correlation:** the three families share weather days. Treat them as one book, with one bet per
+  calendar day across all temperature series, not three.
+- **Fills:** both the replay and paper assume the maker no bid fills. Temperature has a recorded
+  history of maker adverse selection (`docs/edge_research.md`), so only a paper tape followed by a
+  live twin can test this. Fees are not included; the paper books record them.
+- **City dispersion is mostly noise at about 50 entries per city.** For example, NYC KXHIGH had no
+  losses in 72 entries while Philadelphia was −0.7¢. Do not select cities from this table.
+
+**Recommendation.** Nominate one paper tape: the mmsell10 cell (lo 5, hi 10, maxyes 7) on
+KXHIGH + KXHIGHT + KXLOWT, paper only, with the gate below.
+- **Floor:** 120 settled weather days, including at least 30 from Dec–Feb.
+- **Kill:** if mean ≤ 0 at the floor, or if the Dec–Feb half is ≤ −3¢/contract.
+
+Opening the temperature series to this one paper book must not open them to any other book,
+and above all not to a live book (`mmsell_skip_series` is global today).
