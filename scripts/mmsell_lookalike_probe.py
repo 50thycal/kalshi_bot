@@ -20,6 +20,14 @@ on historical prices for other series and reports, per series and per family:
 Usage (via the ops channel):
     {"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather"]}
     {"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN,KXHIGHNY"]}
+    {"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN,KXHIGHNY","--timing"]}
+
+`--timing` (option B, 2026-10-15) adds the ENTRY-WINDOW read: the same markets replayed under
+"enter only early (T-48..T-24h)", "only mid (T-24..T-6h)" and "only late (T-6..T-1h)", each
+compared with the shipped first-entry rule day by day. Every run also prints LIFETIME: the share
+of settled markets that had a quote at least 1h before close, which is the bot's global entry
+floor (`mmsell_min_hours_to_close`) — a series listed later than that cannot be traded by any
+book without changing the floor (option A, hourly temperature).
 """
 
 from __future__ import annotations
@@ -35,6 +43,15 @@ import xvenue_leadlag as xl  # _get (browser-UA fetch with retry), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 HOURS = (1, 2, 3, 4, 6, 9, 12, 18, 24, 36, 48)
+#: Entry windows for `--timing`, in hours before close (exclusive low, inclusive high), and the
+#: pre-registered reading against the shipped first-entry rule (docs/MMSELL_LOOKALIKE_PROBE.md
+#: section 6): BETTER/WORSE needs a day-paired difference of at least 1c with |t| >= 2 on
+#: >= 30 shared family-days; anything else is SAME.
+WINDOWS = (("early", 24, 48), ("mid", 6, 24), ("late", 0, 6))
+TIMING_CENTS, TIMING_T, TIMING_DAYS = 1.0, 2.0, 30
+#: Option A feasibility: at least this share of settled markets must carry a quote >= 1h before
+#: close, or the series is untradeable under the global entry floor whatever its edge.
+FEASIBLE_SHARE = 0.5
 # Families pool per-city series into one bet per day. Longest prefix wins.
 FAMILIES = ("KXRAINWKND", "KXRAIN", "KXHIGHT", "KXHIGH", "KXLOWT", "KXLOW", "KXSNOW",
             "KXTEMP", "KXHMONTH", "KXHURR", "KXTORNADO", "KXWIND")
@@ -150,13 +167,56 @@ def quote_at(cs: list[dict], target_ts: int, tol_s: int = 3 * 3600):
     return (best[1], best[2]) if best else None
 
 
-def first_entry(cs: list[dict], close: int, lo: float, hi: float, maxyes: float):
-    """The earliest pre-close hour at which the market passes the cell: (hour, yes_ask)."""
+def first_entry(cs: list[dict], close: int, lo: float, hi: float, maxyes: float,
+                window: tuple[float, float] | None = None):
+    """The earliest pre-close hour at which the market passes the cell: (hour, yes_ask).
+    `window` = (low, high] restricts the hours considered — an entry policy that only buys in
+    that window, not a filter applied after the fact."""
     for h in sorted(HOURS, reverse=True):
+        if window is not None and not (window[0] < h <= window[1]):
+            continue
         q = quote_at(cs, close - h * 3600)
         if q and lo <= (q[0] + q[1]) / 2.0 <= hi and q[1] <= maxyes:
             return h, q[1]
     return None
+
+
+def _row(yes_ask: float, yes: bool, day: str) -> tuple:
+    """(yes_ask, settled_yes, pnl_c, day, month) for a maker NO bought at 100 - yes_ask."""
+    return (yes_ask, yes, -(100.0 - yes_ask) if yes else yes_ask, day, day[:7])
+
+
+def has_quote_by(cs: list[dict], close: int, hours: float = 1.0) -> bool:
+    """Did the market carry a two-sided quote at or before `hours` before close? (feasibility)"""
+    return quote_at(cs, close - int(hours * 3600), tol_s=10 ** 9) is not None
+
+
+def day_paired(policy: list[tuple], base: list[tuple]) -> dict:
+    """Day-paired difference of mean c/contract, policy minus base, over the family-days on which
+    both policies placed a bet. One observation per day, so correlated cities are one bet."""
+    def by_day(rows):
+        acc = defaultdict(list)
+        for r in rows:
+            acc[r[3]].append(r[2])
+        return {d: sum(v) / len(v) for d, v in acc.items()}
+    p, b = by_day(policy), by_day(base)
+    diffs = [p[d] - b[d] for d in p.keys() & b.keys()]
+    n = len(diffs)
+    if n < 2:
+        return {"days": n, "diff": float("nan"), "t": float("nan")}
+    m = sum(diffs) / n
+    sd = math.sqrt(sum((x - m) ** 2 for x in diffs) / (n - 1))
+    return {"days": n, "diff": m, "t": m / (sd / math.sqrt(n)) if sd > 0 else float("nan")}
+
+
+def timing_reading(d: dict) -> str:
+    if d["days"] < TIMING_DAYS or d["t"] != d["t"]:
+        return "THIN"
+    if d["diff"] >= TIMING_CENTS and d["t"] >= TIMING_T:
+        return "BETTER"
+    if d["diff"] <= -TIMING_CENTS and d["t"] <= -TIMING_T:
+        return "WORSE"
+    return "SAME"
 
 
 def summarize(rows: list[tuple]) -> dict:
@@ -227,6 +287,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--hi", type=float, default=10.0)
     ap.add_argument("--maxyes", type=float, default=7.0)
     ap.add_argument("--no-control", action="store_true", help="do not add KXRAIN")
+    ap.add_argument("--timing", action="store_true",
+                    help="also replay early/mid/late entry windows against the first-entry rule")
     args = ap.parse_args(argv)
 
     if args.series:
@@ -241,7 +303,10 @@ def main(argv: list[str] | None = None) -> int:
           f", yes_ask<={args.maxyes:g}; first in-cell entry, gross, 1 contract ===\n")
 
     per_series: dict[str, list] = {}
-    print(f"  {'series':<22} {'listed':>6} {'settled':>7} {'span':>17} {'priced':>6}")
+    per_window: dict[str, dict[str, list]] = {w[0]: {} for w in WINDOWS}
+    feasible: dict[str, tuple[int, int]] = {}
+    print(f"  {'series':<22} {'listed':>6} {'settled':>7} {'span':>17} {'priced':>6} "
+          f"{'>=1h':>6}")
     for s in series:
         mkts = fetch_markets(s, args.max_pages)
         settled = [m for m in mkts if (m.get("result") or "").lower() in ("yes", "no")]
@@ -250,7 +315,8 @@ def main(argv: list[str] | None = None) -> int:
             by_mon[time.strftime("%Y-%m", time.gmtime(_ts(m.get("close_time"))))].append(m)
         cap = max(1, args.per_series // max(1, len(by_mon)))
         sample = [m for mon in sorted(by_mon) for m in by_mon[mon][:cap]]
-        rows, priced = [], 0
+        rows, priced, early_enough = [], 0, 0
+        wrows: dict[str, list] = {w[0]: [] for w in WINDOWS}
         for m in sample:
             close = _ts(m.get("close_time"))
             opened = _ts(m.get("open_time")) or close - 72 * 3600
@@ -258,16 +324,25 @@ def main(argv: list[str] | None = None) -> int:
             if not cs:
                 continue
             priced += 1
-            hit = first_entry(cs, close, args.lo, args.hi, args.maxyes)
-            if not hit:
-                continue
-            ya = hit[1]
+            early_enough += has_quote_by(cs, close)
             yes = m["result"].lower() == "yes"
             day = time.strftime("%Y-%m-%d", time.gmtime(close))
-            rows.append((ya, yes, -(100.0 - ya) if yes else ya, day, day[:7]))
+
+            hit = first_entry(cs, close, args.lo, args.hi, args.maxyes)
+            if hit:
+                rows.append(_row(hit[1], yes, day))
+            if args.timing:
+                for name, low, high in WINDOWS:
+                    whit = first_entry(cs, close, args.lo, args.hi, args.maxyes, (low, high))
+                    if whit:
+                        wrows[name].append(_row(whit[1], yes, day))
         per_series[s] = rows
+        for name in wrows:
+            per_window[name][s] = wrows[name]
+        feasible[s] = (early_enough, priced)
         span = f"{min(by_mon)}..{max(by_mon)}" if by_mon else "-"
-        print(f"  {s:<22} {len(mkts):>6} {len(settled):>7} {span:>17} {priced:>6}")
+        share = f"{early_enough / priced:.0%}" if priced else "-"
+        print(f"  {s:<22} {len(mkts):>6} {len(settled):>7} {span:>17} {priced:>6} {share:>6}")
 
     print("\n  A. PER SERIES (first in-cell entry)")
     print(HDR)
@@ -294,6 +369,33 @@ def main(argv: list[str] | None = None) -> int:
         if summary.get("n"):
             cells = ", ".join(f"{m}: {n} @ {c:+.1f}" for m, (n, c) in summary["by_month"].items())
             print(f"  {fam:<22} {cells}")
+
+    print(f"\n  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry "
+          f"floor); below {FEASIBLE_SHARE:.0%} a family is untradeable without a global change")
+    fam_feas: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for s, (ok, n) in feasible.items():
+        fam_feas[family_of(s)][0] += ok
+        fam_feas[family_of(s)][1] += n
+    for fam, (ok, n) in sorted(fam_feas.items()):
+        share = ok / n if n else 0.0
+        print(f"  {fam:<22} {ok:>5}/{n:<5} {share:>6.0%} "
+              f"{'FEASIBLE' if n and share >= FEASIBLE_SHARE else 'NOT FEASIBLE'}")
+
+    if args.timing:
+        print("\n  E. TIMING — entry window vs the first-entry rule, day-paired per family "
+              f"(BETTER/WORSE: |diff| >= {TIMING_CENTS:g}c, |t| >= {TIMING_T:g}, "
+              f">= {TIMING_DAYS} shared days)")
+        print(HDR)
+        for fam in sorted(families, key=lambda f: -len(families[f])):
+            print(line(f"{fam} first", summarize(families[fam])))
+            for name, _low, _high in WINDOWS:
+                wf = [(r[0], r[1], r[2], f"{fam}:{r[3]}", r[4])
+                      for s, rows in per_window[name].items() if family_of(s) == fam
+                      for r in rows]
+                d = day_paired(wf, families[fam])
+                print(line(f"{fam} {name}", summarize(wf))
+                      + f"   vs first: {d['diff']:+.2f}c t {d['t']:.2f} on {d['days']} days "
+                        f"-> {timing_reading(d)}")
 
     valid = bool(control and control.get("n") and control["cents"] >= MIN_CENTS
                  and control["t"] == control["t"] and control["t"] >= 2.0)

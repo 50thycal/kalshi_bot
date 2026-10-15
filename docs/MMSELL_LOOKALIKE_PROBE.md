@@ -194,3 +194,56 @@ through its own `optin=` key.
 **Not gated:** size and promotion, as in the rain contract. A live step needs a gate PASS and then
 a Live Ops canary on its own Version. The global caps (open positions, settlement date, rungs)
 apply unchanged and bound how many cities one weather day can add.
+
+## 6. Fast-verdict round (2026-10-15) — pre-registration, written before either run
+
+Calvin asked for theses that can be decided within a week. Two were chosen, A and B; C (other
+price bands) and D (the same replay on non-weather categories) are **queued next**, to start once
+A and B have their verdicts.
+
+A daily market gives one bet per day, so a week of forward paper on it is 7 observations. Only
+history can decide that fast. The verdict therefore comes from the replay, and a forward week
+is used only where a market settles many times a day.
+
+### A — hourly temperature (`KXTEMP<city>H` / `…HS`)
+
+- **Question:** does the rain cell's overpricing exist on Kalshi's hourly temperature markets?
+- **Run:** the same probe and cell (5 ≤ mid ≤ 10, YES ask ≤ 7) on every hourly temperature series
+  found in the listing pass, with the KXRAIN control.
+- **Bet unit:** one bet per family-day. All hours and cities on one date count as one bet, because
+  one weather day drives them all.
+- **Gate:** the §3 family gate, unchanged.
+- **Feasibility, added and fixed now:** at least 50% of priced markets must carry a quote at
+  least 1h before close (printed as LIFETIME). The bot never enters inside its global 1h floor,
+  so a series listed later than that cannot be traded by any book. Below 50% the reading is
+  NOT FEASIBLE, whatever the edge; changing the floor would be a separate decision, never part
+  of this test.
+- **If PROMOTE and FEASIBLE:** one paper book, registered like `Tempmmsell1`. The hourly series
+  are not on the skip list, so the book needs only `only=`.
+- **Its 7-day forward check, fixed now:** after 7 calendar days the book must have
+  - at least 50 settled entries (the bot can actually trade it), and
+  - mean ≥ 0¢/contract (the fills are not worse than the replay assumed).
+  Failing either stops the book. Passing keeps it running toward its full gate.
+
+### B — entry timing (rain and daily temperature)
+
+- **Question:** does buying the cheap tail early, mid-way or late change the edge?
+- **Run:** `--timing` replays three entry policies on the same markets: early (T−48..T−24h),
+  mid (T−24..T−6h) and late (T−6..T−1h).
+- **Comparison:** each policy is compared with the shipped first-entry rule day by day, over the
+  family-days on which both policies bet.
+- **Reading per family:**
+  - **BETTER:** mean difference ≥ +1¢/contract with t ≥ 2 on ≥ 30 shared days;
+  - **WORSE:** ≤ −1¢ with t ≤ −2;
+  - **SAME:** anything else;
+  - **THIN:** under 30 days.
+- **Families:** KXRAIN, KXHIGH, KXHIGHT, KXLOWT.
+- **Consequence:** a BETTER window becomes a proposal for a new Version (or a treatment arm) of
+  the existing rain and temperature contracts. It is never an edit to a running book; a running
+  book's rule changes only through Experiment OS.
+
+### Known limits
+
+- Hourly candles: a window is scanned at the replay's fixed hours.
+- In-play adverse selection late in the day is only as visible as the candle closes allow.
+- Everything is gross, and assumes the maker fill.
