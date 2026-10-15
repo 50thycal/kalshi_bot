@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXTEMPAUSH,KXTEMPBOSH,KXTEMPCHIH,KXTEMPCHIHS,KXTEMPDCH,KXTEMPLAXH,KXTEMPLAXHS,KXTEMPMIAH,KXTEMPNYCH,KXTEMPNYCHS", "--per-series", "400", "--no-control", "--minutes", "45,30,20,15,10,5", "--min-cents", "4"], "id": "lasthour-temp-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXEURUSD", "--per-series", "900", "--no-control"], "id": "d-deep-fin-20261015a"}
