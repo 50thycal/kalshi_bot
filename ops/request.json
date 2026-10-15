@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["mmsell-temperature-season"],"id":"pp-temp-20261015a"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-temperature-season-register-202610150248\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-temperature-season\"}, \"schema_version\": 1}"}, "id": "mmsell-temperature-season-register-202610150248-send"}
