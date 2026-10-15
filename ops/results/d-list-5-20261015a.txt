@@ -1,0 +1,1627 @@
+# ops request [READ]
+# type=script  id=d-list-5-20261015a
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T09:32:43Z
+=== MMSELL look-alike probe — 400 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KX100MILLIONSTREAMS         0       0                 -      0      -
+  KX10SONG                  127      18  2026-01..2026-09      6    17%
+  KX1ALBUM                  126      23  2026-01..2026-09      9    22%
+  KX1DREUNION                 2       1  2026-01..2026-01      1     0%
+  KX1SONG                   124       9  2026-01..2026-06      6    50%
+  KX1SONG-DRAKE               1       1  2025-12..2025-12      1     0%
+  KX1SONG-KDOT                0       0                 -      0      -
+  KX1SONGARIANAGRANDE         1       1  2025-12..2025-12      1   100%
+  KX1SONGBADBUNNY             1       1  2025-12..2025-12      1     0%
+  KX1SONGBILLIEEILISH         0       0                 -      0      -
+  KX1SONGBLAKESHELTON         1       1  2025-12..2025-12      1     0%
+  KX1SONGCARDIB               1       1  2025-12..2025-12      1     0%
+  KX1SONGCHAPPELLROAN         1       1  2025-12..2025-12      1     0%
+  KX1SONGDOJACAT              1       1  2025-12..2025-12      1     0%
+  KX1SONGDUALIPA              1       1  2025-12..2025-12      1     0%
+  KX1SONGEDSHEERAN            1       1  2025-12..2025-12      1     0%
+  KX1SONGFRANKOCEAN           1       1  2025-12..2025-12      1     0%
+  KX1SONGFUTURE               1       1  2025-12..2025-12      1     0%
+  KX1SONGGUNNA                1       1  2025-12..2025-12      1     0%
+  KX1SONGJUSTINBIEBER         1       0                 -      0      -
+  KX1SONGKALIUCHIS            1       1  2025-12..2025-12      1     0%
+  KX1SONGKANYE                1       1  2025-12..2025-12      1     0%
+  KX1SONGKANYEWEST            0       0                 -      0      -
+  KX1SONGKESHA                1       1  2025-12..2025-12      1     0%
+  KX1SONGLILWAYNE             1       1  2025-12..2025-12      1     0%
+  KX1SONGLORDE                1       1  2025-12..2025-12      1     0%
+  KX1SONGMACKLEMORE           0       0                 -      0      -
+  KX1SONGMEGANTHEESTALLION      1       1  2025-12..2025-12      1     0%
+  KX1SONGMETROBOOMIN          1       1  2025-12..2025-12      1     0%
+  KX1SONGMILEYCYRUS           1       1  2025-12..2025-12      1     0%
+  KX1SONGMORGANWALLEN         1       1  2025-05..2025-05      1     0%
+  KX1SONGOLIVIARODRIGO        1       1  2025-12..2025-12      1     0%
+  KX1SONGPINKPANTHERESS       1       1  2025-12..2025-12      1     0%
+  KX1SONGPOSTMALONE           1       1  2025-12..2025-12      1     0%
+  KX1SONGRODDYRICCH           1       1  2025-12..2025-12      1     0%
+  KX1SONGSABRINACARPENTER      2       2  2025-06..2025-12      2    50%
+  KX1SONGSOMBER               0       0                 -      0      -
+  KX1SONGSOMBR                1       1  2025-12..2025-12      1     0%
+  KX1SONGTAYLORSWIFT          1       1  2025-10..2025-10      1   100%
+  KX1SONGTYLA                 1       1  2025-12..2025-12      1     0%
+  KX1SONGTYLERTHECREATOR      1       1  2025-12..2025-12      1     0%
+  KX1SONGYEAT                 1       1  2025-12..2025-12      1     0%
+  KX2014FHD                   2       0                 -      0      -
+  KX20SONG                  124      34  2026-01..2026-09      8    50%
+  KX28YEARSLATERTBT           0       0                 -      0      -
+  KX50CENTATTEND              1       1  2025-12..2025-12      1   100%
+  KX60MINUTES                 1       0                 -      0      -
+  KXACMAAOTY                  6       6  2025-05..2025-05      1     0%
+  KXACMAASWOTY               12      12  2025-05..2026-05      2     0%
+  KXACMADOTY                 12      12  2025-05..2026-05      2    50%
+  KXACMAEOTY                 16      16  2025-05..2026-05      2    50%
+  KXACMAFAOTY                12      12  2025-05..2026-05      2     0%
+  KXACMAGOTY                 12      12  2025-05..2026-05      2    50%
+  KXACMAMAOTY                12      12  2025-05..2026-05      2    50%
+  KXACMAMEOTY                12      12  2025-05..2026-05      2    50%
+  KXACMANDGOTY               10      10  2025-04..2026-05      2    50%
+  KXACMANFAOTY               12      12  2025-04..2026-05      2     0%
+  KXACMANMAOTY               12      12  2025-04..2026-05      2     0%
+  KXACMASINGOTY              18      12  2025-05..2026-05      2     0%
+  KXACMASOTY                 12      12  2025-05..2026-05      2    50%
+  KXACMASWOTY                12      12  2025-05..2026-05      2     0%
+  KXACMAVMOTY                12      12  2025-05..2026-05      2     0%
+  KXACTORAWARDSATTEND        10      10  2026-03..2026-03      1   100%
+  KXACTORBONDGIRL             0       0                 -      0      -
+  KXACTORELONMUSK             2       1  2025-12..2025-12      0      -
+  KXACTORRAMBO                0       0                 -      0      -
+  KXACTORSONNYCROCKETT       10       0                 -      0      -
+  KXACTORTOMCRUZ              1       0                 -      0      -
+  KXACTORWHITELOTUS          25       2  2026-01..2026-01      1   100%
+  KXACTORZELDA                8       8  2025-07..2025-07      1     0%
+  KXAGTELIMINATION          103      59  2026-08..2026-09      2    50%
+  KXAGTWINNER                44      44  2026-08..2026-09      2   100%
+  KXAIRLINEZYN               11      11  2026-01..2026-01      1     0%
+  KXAISONG                    2       2  2025-12..2026-08      2   100%
+  KXAJOSHUAWALKOUT           10      10  2025-12..2025-12      1     0%
+  KXALBUMCHARTDRAKE           0       0                 -      0      -
+  KXALBUMDEBUT               34      32  2026-02..2026-10      9    33%
+  KXALBUMEQUIV             1213     974  2026-05..2026-10      6    83%
+  KXALBUMLENGTH              77      77  2026-05..2026-09      3    67%
+  KXALBUMPEAKSWAG2            0       0                 -      0      -
+  KXALBUMRELEASE            127      54  2026-01..2026-10      7    57%
+  KXALBUMRELEASEDATE         83      46  2026-06..2026-10      5    40%
+  KXALBUMRELEASEDATEANOTR      0       0                 -      0      -
+  KXALBUMRELEASEDATEARIANA      5       5  2026-05..2026-07      3    33%
+  KXALBUMRELEASEDATEASAP      3       3  2025-11..2026-01      2    50%
+  KXALBUMRELEASEDATEBEY       4       4  2026-06..2026-09      2     0%
+  KXALBUMRELEASEDATEBRUNOMARS      5       5  2026-02..2026-02      1     0%
+  KXALBUMRELEASEDATEDUALIPA      5       4  2026-05..2026-10      3    33%
+  KXALBUMRELEASEDATEFO        0       0                 -      0      -
+  KXALBUMRELEASEDATEFRANK      5       0                 -      0      -
+  KXALBUMRELEASEDATEJB        3       3  2026-06..2026-10      3     0%
+  KXALBUMRELEASEDATEJCOLE      1       1  2026-04..2026-04      1   100%
+  KXALBUMRELEASEDATELUCKI      1       1  2026-04..2026-04      1   100%
+  KXALBUMRELEASEDATENBAYOUNGBOY      1       1  2025-07..2025-07      1   100%
+  KXALBUMRELEASEDATETRAVIS      4       3  2026-04..2026-10      3    33%
+  KXALBUMRELEASEDATETRIPPIE      7       6  2026-04..2026-08      3    33%
+  KXALBUMRELEASEDATETRIPPY      0       0                 -      0      -
+  KXALBUMRELEASEDATEUZI       8       8  2026-04..2026-08      3   100%
+  KXALBUMRELEASEDATEYEAT      4       4  2026-03..2026-04      1   100%
+  KXALBUMRELEASELANA          0       0                 -      0      -
+  KXALBUMRELEASENBAYB         1       0                 -      0      -
+  KXALBUMRELEASETRAVYE        1       0                 -      0      -
+  KXALBUMSALES              711     686  2026-01..2026-06      6    83%
+  KXALBUMSALESCARDIB         11      11  2025-09..2025-09      1   100%
+  KXALBUMSALESCHAMP           0       0                 -      0      -
+  KXALBUMSALESDOJACAT        16      16  2025-10..2025-10      1   100%
+  KXALBUMSALESJUSTINBIEBER     13      13  2025-09..2025-09      1   100%
+  KXALBUMSALESKPOPDH         12      12  2025-09..2025-09      1     0%
+  KXALBUMSALESSCARPENTER     19      19  2025-09..2025-09      1     0%
+  KXALBUMSALESSHEERAN        19      19  2025-09..2025-09      1     0%
+  KXALBUMSALESSWIFT          61      61  2025-10..2025-11      2    50%
+  KXALBUMSALESWICKED          9       9  2025-11..2025-11      1   100%
+  KXALBUMSTREAMS            631     309  2026-09..2026-10      2     0%
+  KXALBUMSTREAMSU          1036    1036  2026-04..2026-07      4    75%
+  KXALBUMTRACKS              39      39  2026-05..2026-05      1   100%
+  KXALBUMTRACKSBRUNO          6       6  2026-02..2026-02      1     0%
+  KXALBUMTRACKSHARRY          9       9  2026-03..2026-03      1     0%
+  KXALBUMTRACKSJCOLE         19      19  2026-02..2026-02      1   100%
+  KXALBUMVS                   4       4  2026-08..2026-08      1     0%
+  KXALBVS                     0       0                 -      0      -
+  KXALEXWARREN                0       0                 -      0      -
+  KXALLINGUEST                2       2  2025-09..2025-10      2   100%
+  KXAMA                     311     305  2026-05..2026-05      1   100%
+  KXAMAALBOTY                11      11  2025-05..2025-05      1   100%
+  KXAMAAOTY                  11      11  2025-05..2025-05      1     0%
+  KXAMACOTY                   7       7  2025-05..2025-05      1     0%
+  KXAMAFAA                    6       6  2025-05..2025-05      1     0%
+  KXAMAFCA                    6       6  2025-05..2025-05      1     0%
+  KXAMAFCDOG                  6       6  2025-05..2025-05      1     0%
+  KXAMAFCS                    6       6  2025-05..2025-05      1     0%
+  KXAMAFDEA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFFCA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFFHHA                  6       6  2025-05..2025-05      1     0%
+  KXAMAFFLA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFFPA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFFRNBA                 6       6  2025-05..2025-05      1     0%
+  KXAMAFHHA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFHHS                   6       6  2025-05..2025-05      1     0%
+  KXAMAFKPA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFLA                    6       6  2025-05..2025-05      1     0%
+  KXAMAFLDOG                  6       6  2025-05..2025-05      1     0%
+  KXAMAFLS                    6       6  2025-05..2025-05      1     0%
+  KXAMAFMCA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFMHHA                  6       6  2025-05..2025-05      1     0%
+  KXAMAFMLA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFMPA                   6       6  2025-05..2025-05      1     0%
+  KXAMAFMRNBA                 6       6  2025-05..2025-05      1     0%
+  KXAMAFMV                    6       6  2025-05..2025-05      1     0%
+  KXAMAFPA                    6       6  2025-05..2025-05      1     0%
+  KXAMAFPS                    6       6  2025-05..2025-05      1     0%
+  KXAMAFRA                    6       6  2025-05..2025-05      1     0%
+  KXAMAFRALB                  6       6  2025-05..2025-05      1     0%
+  KXAMAFRNBA                  6       6  2025-05..2025-05      1     0%
+  KXAMAFRNBS                  6       6  2025-05..2025-05      1     0%
+  KXAMAFRS                    6       6  2025-05..2025-05      1     0%
+  KXAMAFST                    6       6  2025-05..2025-05      1     0%
+  KXAMAFTA                    6       6  2025-05..2025-05      1     0%
+  KXAMANAOTY                  7       7  2025-05..2025-05      1     0%
+  KXAMASOTY                  11      11  2025-05..2025-05      1     0%
+  KXAMASSOTY                  7       7  2025-05..2025-05      1   100%
+  KXAMATEST                   0       0                 -      0      -
+  KXAMAZINGRACE               0       0                 -      0      -
+  KXAMERICANIDOL             30      30  2026-05..2026-05      1     0%
+  KXANDYBYRONCOLDPLAY         1       1  2026-01..2026-01      1     0%
+  KXANIMEAOTY                14      14  2025-05..2026-05      2     0%
+  KXANIMEBA                  14      14  2025-05..2026-05      2     0%
+  KXANIMEBAC                  7       7  2026-05..2026-05      1     0%
+  KXANIMEBAS                 14      14  2025-05..2026-05      2     0%
+  KXANIMEBBAC                 7       7  2026-05..2026-05      1     0%
+  KXANIMEBC                   7       7  2026-05..2026-05      1   100%
+  KXANIMEBCD                  7       7  2026-05..2026-05      1     0%
+  KXANIMEBCS                 14      14  2025-05..2026-05      2     0%
+  KXANIMEBD                   7       7  2026-05..2026-05      1     0%
+  KXANIMEBDIR                 7       7  2026-05..2026-05      1     0%
+  KXANIMEBES                  7       7  2026-05..2026-05      1   100%
+  KXANIMEBF                  14      14  2025-05..2026-05      2     0%
+  KXANIMEBIA                 14      14  2025-05..2026-05      2     0%
+  KXANIMEBMC                 14      14  2025-05..2026-05      2     0%
+  KXANIMEBNS                 14      14  2025-05..2026-05      2     0%
+  KXANIMEBOA                 14      14  2025-05..2026-05      2   100%
+  KXANIMEBOS                  7       7  2026-05..2026-05      1   100%
+  KXANIMEBR                   7       7  2026-05..2026-05      1     0%
+  KXANIMEBS                   7       7  2026-05..2026-05      1     0%
+  KXANIMEBSA                  7       7  2026-05..2026-05      1   100%
+  KXANIMEBSC                  7       7  2025-05..2025-05      1     0%
+  KXANIMEBSOL                 0       0                 -      0      -
+  KXANIMEBVAPA                7       7  2026-05..2026-05      1   100%
+  KXANIMEBVAPB                7       7  2026-05..2026-05      1   100%
+  KXANIMEBVAPC                7       7  2026-05..2026-05      1     0%
+  KXANIMEBVAPE                7       7  2026-05..2026-05      1     0%
+  KXANIMEBVAPF                7       7  2026-05..2026-05      1   100%
+  KXANIMEBVAPG                7       7  2026-05..2026-05      1     0%
+  KXANIMEBVAPJ                7       7  2026-05..2026-05      1     0%
+  KXANIMEMPAACC               7       7  2026-05..2026-05      1     0%
+  KXANIMEVAPH                 7       7  2026-05..2026-05      1     0%
+  KXANIMEVAPI                 7       7  2026-05..2026-05      1     0%
+  KXANIMEVAPL                 7       7  2026-05..2026-05      1     0%
+  KXAPPRANK                   0       0                 -      0      -
+  KXAPPRANKFINANCE            1       1  2024-11..2024-11      1   100%
+  KXAPPRANKFREE            1541    1541  2024-11..2025-11     13    54%
+  KXAPPRANKFREE2           1115    1105  2025-04..2025-11      8    88%
+  KXAPPRANKFREE3              5       0                 -      0      -
+  KXAPPRANKFREESECOND         0       0                 -      0      -
+  KXAPPRANKPAID               0       0                 -      0      -
+  KXAPPRANKSPORTS             1       1  2024-11..2024-11      1   100%
+  KXAPPRANKUTILITIES          1       1  2025-01..2025-01      1   100%
+  KXAPPSTOREARCADE            0       0                 -      0      -
+  KXAPPSTORECULTURE           0       0                 -      0      -
+  KXAPPSTOREIPADAPP           3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREIPADGAME          3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREIPHONEAPP         3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREIPHONEGAME        3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREMACAPP            3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREMACGAME           3       3  2025-12..2025-12      1   100%
+  KXAPPSTORETVAPP             3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREVISIONAPP         3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREVISIONGAME        3       3  2025-12..2025-12      1   100%
+  KXAPPSTOREWATCHAPP          3       3  2025-12..2025-12      1   100%
+  KXARRESTD4VD                1       0                 -      0      -
+  KXARRESTMIKEYSHELTON        0       0                 -      0      -
+  KXARRESTSHOHEI              1       1  2025-12..2025-12      0      -
+  KXARRESTWELCH               0       0                 -      0      -
+  KXART                     286     215  2026-05..2026-10      3   100%
+  KXARTCOLLECTION             5       0                 -      0      -
+  KXARTISTCOLLABBILLIEYEAT      1       0                 -      0      -
+  KXARTISTCOLLABCARPENTERMINAJ      0       0                 -      0      -
+  KXARTISTCOLLABDRAKEKENDRICK      1       0                 -      0      -
+  KXARTISTCOLLABDRAKEMETRO      1       0                 -      0      -
+  KXARTISTCOLLABDRAKEMINAJ      1       1  2026-01..2026-01      1   100%
+  KXARTISTCOLLABDRAKEPLAYBOICARTI      2       1  2026-01..2026-01      1   100%
+  KXARTISTCOLLABSZANICKIMINAJ      1       1  2026-01..2026-01      1     0%
+  KXARTISTCOLLABTATEMCRAETHAKIDLAROI      1       1  2026-01..2026-01      1   100%
+  KXARTISTCOLLABTHUGANDGUNNA      5       1  2026-01..2026-01      1     0%
+  KXARTISTCOLLABYEMIKEDEAN      1       1  2026-01..2026-01      1   100%
+  KXARTISTPEAKCHAPPELL        0       0                 -      0      -
+  KXARTISTPEAKTAYLORSWIFT      0       0                 -      0      -
+  KXARTISTSTREAMS          3000    3000  2026-05..2026-07      2    50%
+  KXARTISTSTREAMSU          429     429  2026-04..2026-07      4   100%
+  KXARTISTSTREAMSUPDOWN       0       0                 -      0      -
+  KXARTISTSTREAMSY         1440     646  2026-05..2026-10      3    33%
+  KXARTISTVS                192     192  2026-05..2026-06      2   100%
+  KXASTRO                     0       0                 -      0      -
+  KXATTENDGRAMMYS            24      24  2026-02..2026-02      1   100%
+  KXATTENDMAFIATHON          10      10  2025-09..2025-10      2    50%
+  KXATTENDMLB                14      14  2025-10..2025-10      1     0%
+  KXAUCTIONRECORD             6       0                 -      0      -
+  KXAUSTINREAVESAPOLOGY       0       0                 -      0      -
+  KXAVATARS2                  0       0                 -      0      -
+  KXAVATARSEASON2             0       0                 -      0      -
+  KXAVENGERSDELAY             0       0                 -      0      -
+  KXAWARDCOUNTBADBUNNY        0       0                 -      0      -
+  KXAWARDCOUNTGAGA            8       8  2025-12..2025-12      0      -
+  KXAWARDCOUNTKENDRICK       10      10  2025-12..2025-12      0      -
+  KXAWARDCOUNTSABRINAC        7       7  2025-12..2025-12      0      -
+  KXAWARDSCMAAOTY             6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAEOTY             6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAFVOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAMEOTY            6       6  2025-11..2025-11      1     0%
+  KXAWARDSCMAMOTY             6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAMVOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMANAOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMASOOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMASOTY             6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAVDOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAVGOTY            6       6  2025-11..2025-11      1   100%
+  KXAWARDSCMAVIDOTY           6       6  2025-11..2025-11      1   100%
+  KXAWARDSCOUNTLAS           16      16  2025-09..2025-09      1     0%
+  KXAWARDSCOUNTPEN           24      24  2025-09..2025-09      1     0%
+  KXAWARDSCOUNTSEV           27      27  2025-09..2025-09      1     0%
+  KXAWARDSCOUNTSTU           23      23  2025-09..2025-09      1     0%
+  KXAWARDSCOUNTWHI           23      23  2025-09..2025-09      1     0%
+  KXBABYNAMEBOY              10      10  2026-05..2026-05      1     0%
+  KXBABYNAMEGIRL             10      10  2026-05..2026-05      1     0%
+  KXBACHELORETTE             22      22  2026-03..2026-03      1     0%
+  KXBACHELORETTEELIMINATION     22      22  2026-03..2026-03      1     0%
+  KXBAFTAACTO                21      21  2025-02..2026-02      2   100%
+  KXBAFTAACTR                23      23  2025-02..2026-02      1     0%
+  KXBAFTAASPLAY              18      18  2025-02..2026-02      2    50%
+  KXBAFTACINE                 6       6  2026-02..2026-02      1   100%
+  KXBAFTADIR                 22      22  2025-02..2026-02      1     0%
+  KXBAFTAEDIT                 0       0                 -      0      -
+  KXBAFTAFILM                23      23  2025-02..2026-02      2     0%
+  KXBAFTAHAIR                 0       0                 -      0      -
+  KXBAFTAOSPLAY              23      23  2025-02..2026-02      2    50%
+  KXBAFTAPRODDES              0       0                 -      0      -
+  KXBAFTASUPACTO             22      22  2025-02..2026-02      1     0%
+  KXBAFTASUPACTR             24      24  2025-02..2026-02      2    50%
+  KXBALDONILIVELY             2       2  2026-05..2026-05      1   100%
+  KXBBARTIST                  5       5  2024-12..2024-12      1   100%
+  KXBBCHARTDRAKE              2       2  2026-05..2026-06      2    50%
+  KXBBCHARTPOSITION           0       0                 -      0      -
+  KXBBCHARTPOSITIONALBUM   2740    2740  2026-04..2026-09      4     0%
+  KXBBCHARTPOSITIONALBUMS      0       0                 -      0      -
+  KXBBCHARTPOSITIONSONG    2240    2240  2026-04..2026-09      6    17%
+  KXBBCHARTTOP3               1       0                 -      0      -
+  KXBBFARTIST                 5       5  2024-12..2024-12      1   100%
+  KXBBG200                    0       0                 -      0      -
+  KXBBGROUP                   0       0                 -      0      -
+  KXBBMARTIST                 5       5  2024-12..2024-12      1   100%
+  KXBBNEWARTIST               5       5  2024-12..2024-12      1   100%
+  KXBBSINGLE                 22       0                 -      0      -
+  KXBBTEST                    0       0                 -      0      -
+  KXBBTEST100NUMBER1          0       0                 -      0      -
+  KXBBTEST100RUNNERUP         0       0                 -      0      -
+  KXBBTEST200NUMBER1          0       0                 -      0      -
+  KXBBTEST200RUNNERUP         0       0                 -      0      -
+  KXBBTESTTOP10100            0       0                 -      0      -
+  KXBBTOP200                  5       5  2024-12..2024-12      1   100%
+  KXBDS3PTSO                  0       0                 -      0      -
+  KXBEASTWATER                3       3  2025-08..2025-09      2   100%
+  KXBEATLES                   0       0                 -      0      -
+  KXBEATLESRECORD             1       0                 -      0      -
+  KXBELICHICK                 0       0                 -      0      -
+  KXBESTACRESSTONYS           6       6  2025-06..2025-06      1     0%
+  KXBESTACTORMUS              7       7  2025-06..2025-06      1     0%
+  KXBESTACTORTONYAWARDS       7       7  2025-06..2025-06      1     0%
+  KXBESTACTRMUS               6       6  2025-06..2025-06      1     0%
+  KXBESTMUSICAL              10      10  2025-06..2025-06      1   100%
+  KXBESTPLAY                 12      12  2025-06..2025-06      1   100%
+  KXBESTREVIVAL               8       8  2025-06..2025-06      1     0%
+  KXBESTREVIVALMUS            7       7  2025-06..2025-06      1   100%
+  KXBET                      28      28  2026-06..2026-06      1   100%
+  KXBETAOTY                   9       9  2025-06..2025-06      1   100%
+  KXBETAWARDS                 0       0                 -      0      -
+  KXBETBACT                  11      11  2025-06..2025-06      1     0%
+  KXBETBACTR                 10      10  2025-06..2025-06      1     0%
+  KXBETBC                    10      10  2025-06..2025-06      1     0%
+  KXBETBFHHA                 10      10  2025-06..2025-06      1     0%
+  KXBETBFRNBPA                9       9  2025-06..2025-06      1     0%
+  KXBETBG                     9       9  2025-06..2025-06      1     0%
+  KXBETBIA                   12      12  2025-06..2025-06      1     0%
+  KXBETBM                     9       9  2025-06..2025-06      1     0%
+  KXBETBMHHA                 10      10  2025-06..2025-06      1     0%
+  KXBETBMRNBPA                9       9  2025-06..2025-06      1     0%
+  KXBETBNA                   10      10  2025-06..2025-06      1     0%
+  KXBETBNIA                  12      12  2025-06..2025-06      1   100%
+  KXBETDBJBGIA                9       9  2025-06..2025-06      1   100%
+  KXBETHER                    9       9  2025-06..2025-06      1   100%
+  KXBETSMOTY                  0       0                 -      0      -
+  KXBETSMOTYA                 9       9  2025-06..2025-06      1     0%
+  KXBETSWOTYA                10      10  2025-06..2025-06      1     0%
+  KXBETVCA                    9       9  2025-06..2025-06      1     0%
+  KXBETVDOTY                 10      10  2025-06..2025-06      1     0%
+  KXBETVOTY                   9       9  2025-06..2025-06      1     0%
+  KXBETYSA                    9       9  2025-06..2025-06      1     0%
+  KXBEYONCE                   0       0                 -      0      -
+  KXBEYONCEGENRE              0       0                 -      0      -
+  KXBGTRANK                  20      20  2026-05..2026-05      1   100%
+  KXBIGARCH                   1       1  2026-04..2026-04      1   100%
+  KXBIGBROTHER               17      17  2026-09..2026-10      2   100%
+  KXBIGBROTHER27              3       3  2025-09..2025-09      1   100%
+  KXBIGBROTHERBRAZIL         22      22  2026-04..2026-04      1     0%
+  KXBIGBROTHERELIMINATION    143     143  2026-07..2026-09      3    33%
+  KXBIGBROTHERRANK           34      34  2026-09..2026-10      2   100%
+  KXBILLBOARDALBUMSWAG2       1       1  2025-09..2025-09      1     0%
+  KXBILLBOARDGENRE            0       0                 -      0      -
+  KXBILLBOARDPEAK             0       0                 -      0      -
+  KXBILLBOARDPEAK-E           0       0                 -      0      -
+  KXBILLBOARDPEAK-ESPRESSO      0       0                 -      0      -
+  KXBILLBOARDPEAKCHIHIRO      0       0                 -      0      -
+  KXBILLBOARDPEAKFRIENDOFMINE      0       0                 -      0      -
+  KXBILLBOARDPEAKGLB          0       0                 -      0      -
+  KXBILLBOARDPEAKGOL          0       0                 -      0      -
+  KXBILLBOARDPEAKHOUDINI      0       0                 -      0      -
+  KXBILLBOARDPEAKIHSH         0       0                 -      0      -
+  KXBILLBOARDPEAKLLL          0       0                 -      0      -
+  KXBILLBOARDPEAKNEVERLETGO      0       0                 -      0      -
+  KXBILLBOARDPEAKNLG          0       0                 -      0      -
+  KXBILLBOARDPEAKPMAD         0       0                 -      0      -
+  KXBILLBOARDPEAKPPP          0       0                 -      0      -
+  KXBILLBOARDPEAKTASTE        0       0                 -      0      -
+  KXBILLBOARDPEAKTGIF         0       0                 -      0      -
+  KXBILLBOARDPEAKUS           0       0                 -      0      -
+  KXBILLBOARDPEAKWW           0       0                 -      0      -
+  KXBILLBOARDRUNNERUP         0       0                 -      0      -
+  KXBILLBOARDRUNNERUPALBUM   1307    1268  2025-05..2026-10     17    12%
+  KXBILLBOARDRUNNERUPSONG   1413    1372  2025-05..2026-10     12    42%
+  KXBILLIEEILISHAPOLOGY       1       1  2026-03..2026-03      1   100%
+  KXBLACKPHONE2               4       4  2025-10..2025-10      0      -
+  KXBLONDE                    0       0                 -      0      -
+  KXBMARS                     0       0                 -      0      -
+  KXBMHHA                     0       0                 -      0      -
+  KXBMPNEL                    0       0                 -      0      -
+  KXBMRP                      0       0                 -      0      -
+  KXBOATSTRIKERELEASE         1       1  2026-03..2026-03      1     0%
+  KXBOND                     33       2  2025-12..2025-12      0      -
+  KXBONDBRITISH               0       0                 -      0      -
+  KXBOOKAWARDSFIC            11      11  2025-11..2025-11      1     0%
+  KXBOOKAWARDSNONF           11      11  2025-11..2025-11      1   100%
+  KXBOOKAWARDSPOETRY         11      11  2025-11..2025-11      1     0%
+  KXBOOKAWARDSTLIT           11      11  2025-11..2025-11      1     0%
+  KXBOOKAWARDSYPLIT          11      11  2025-11..2025-11      1   100%
+  KXBOOKERPRIZE               7       0                 -      0      -
+  KXBRADY                     0       0                 -      0      -
+  KXBRIANBAUMGARTNER         24      24  2025-10..2025-10      1   100%
+  KXBRITAINSGOTTALENT        10      10  2026-05..2026-05      1   100%
+  KXBROADCAST                 0       0                 -      0      -
+  KXBROADCASTBACHELORETTE      1       0                 -      0      -
+  KXBROADCASTNBCYTTV          0       0                 -      0      -
+  KXBROADWAYEVITA             1       1  2026-01..2026-01      1   100%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KX100MILLIONSTREAMS        0
+  KX10SONG                   0
+  KX1ALBUM                   0
+  KX1DREUNION                0
+  KX1SONG                    0
+  KX1SONG-DRAKE              0
+  KX1SONG-KDOT               0
+  KX1SONGARIANAGRANDE        0
+  KX1SONGBADBUNNY            0
+  KX1SONGBILLIEEILISH        0
+  KX1SONGBLAKESHELTON        0
+  KX1SONGCARDIB              0
+  KX1SONGCHAPPELLROAN        0
+  KX1SONGDOJACAT             0
+  KX1SONGDUALIPA             0
+  KX1SONGEDSHEERAN           0
+  KX1SONGFRANKOCEAN          0
+  KX1SONGFUTURE              0
+  KX1SONGGUNNA               0
+  KX1SONGJUSTINBIEBER        0
+  KX1SONGKALIUCHIS           0
+  KX1SONGKANYE               0
+  KX1SONGKANYEWEST           0
+  KX1SONGKESHA               0
+  KX1SONGLILWAYNE            0
+  KX1SONGLORDE               0
+  KX1SONGMACKLEMORE          0
+  KX1SONGMEGANTHEESTALLION     0
+  KX1SONGMETROBOOMIN         0
+  KX1SONGMILEYCYRUS          0
+  KX1SONGMORGANWALLEN        0
+  KX1SONGOLIVIARODRIGO       0
+  KX1SONGPINKPANTHERESS      0
+  KX1SONGPOSTMALONE          0
+  KX1SONGRODDYRICCH          0
+  KX1SONGSABRINACARPENTER     0
+  KX1SONGSOMBER              0
+  KX1SONGSOMBR               0
+  KX1SONGTAYLORSWIFT         0
+  KX1SONGTYLA                0
+  KX1SONGTYLERTHECREATOR     0
+  KX1SONGYEAT                0
+  KX2014FHD                  0
+  KX20SONG                   0
+  KX28YEARSLATERTBT          0
+  KX50CENTATTEND             0
+  KX60MINUTES                0
+  KXACMAAOTY                 0
+  KXACMAASWOTY               0
+  KXACMADOTY                 0
+  KXACMAEOTY                 0
+  KXACMAFAOTY                0
+  KXACMAGOTY                 0
+  KXACMAMAOTY                0
+  KXACMAMEOTY                0
+  KXACMANDGOTY               0
+  KXACMANFAOTY               0
+  KXACMANMAOTY               0
+  KXACMASINGOTY              0
+  KXACMASOTY                 0
+  KXACMASWOTY                0
+  KXACMAVMOTY                0
+  KXACTORAWARDSATTEND        0
+  KXACTORBONDGIRL            0
+  KXACTORELONMUSK            0
+  KXACTORRAMBO               0
+  KXACTORSONNYCROCKETT       0
+  KXACTORTOMCRUZ             0
+  KXACTORWHITELOTUS          0
+  KXACTORZELDA               0
+  KXAGTELIMINATION           0
+  KXAGTWINNER                0
+  KXAIRLINEZYN               0
+  KXAISONG                   1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXAJOSHUAWALKOUT           0
+  KXALBUMCHARTDRAKE          0
+  KXALBUMDEBUT               0
+  KXALBUMEQUIV               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXALBUMLENGTH              0
+  KXALBUMPEAKSWAG2           0
+  KXALBUMRELEASE             0
+  KXALBUMRELEASEDATE         0
+  KXALBUMRELEASEDATEANOTR     0
+  KXALBUMRELEASEDATEARIANA     0
+  KXALBUMRELEASEDATEASAP     0
+  KXALBUMRELEASEDATEBEY      0
+  KXALBUMRELEASEDATEBRUNOMARS     0
+  KXALBUMRELEASEDATEDUALIPA     0
+  KXALBUMRELEASEDATEFO       0
+  KXALBUMRELEASEDATEFRANK     0
+  KXALBUMRELEASEDATEJB       0
+  KXALBUMRELEASEDATEJCOLE     0
+  KXALBUMRELEASEDATELUCKI     0
+  KXALBUMRELEASEDATENBAYOUNGBOY     0
+  KXALBUMRELEASEDATETRAVIS     0
+  KXALBUMRELEASEDATETRIPPIE     0
+  KXALBUMRELEASEDATETRIPPY     0
+  KXALBUMRELEASEDATEUZI      2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXALBUMRELEASEDATEYEAT     0
+  KXALBUMRELEASELANA         0
+  KXALBUMRELEASENBAYB        0
+  KXALBUMRELEASETRAVYE       0
+  KXALBUMSALES               2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXALBUMSALESCARDIB         0
+  KXALBUMSALESCHAMP          0
+  KXALBUMSALESDOJACAT        0
+  KXALBUMSALESJUSTINBIEBER     0
+  KXALBUMSALESKPOPDH         0
+  KXALBUMSALESSCARPENTER     0
+  KXALBUMSALESSHEERAN        0
+  KXALBUMSALESSWIFT          0
+  KXALBUMSALESWICKED         0
+  KXALBUMSTREAMS             0
+  KXALBUMSTREAMSU            0
+  KXALBUMTRACKS              0
+  KXALBUMTRACKSBRUNO         0
+  KXALBUMTRACKSHARRY         0
+  KXALBUMTRACKSJCOLE         0
+  KXALBUMVS                  0
+  KXALBVS                    0
+  KXALEXWARREN               0
+  KXALLINGUEST               0
+  KXAMA                      0
+  KXAMAALBOTY                0
+  KXAMAAOTY                  0
+  KXAMACOTY                  0
+  KXAMAFAA                   0
+  KXAMAFCA                   0
+  KXAMAFCDOG                 0
+  KXAMAFCS                   0
+  KXAMAFDEA                  0
+  KXAMAFFCA                  0
+  KXAMAFFHHA                 0
+  KXAMAFFLA                  0
+  KXAMAFFPA                  0
+  KXAMAFFRNBA                0
+  KXAMAFHHA                  0
+  KXAMAFHHS                  0
+  KXAMAFKPA                  0
+  KXAMAFLA                   0
+  KXAMAFLDOG                 0
+  KXAMAFLS                   0
+  KXAMAFMCA                  0
+  KXAMAFMHHA                 0
+  KXAMAFMLA                  0
+  KXAMAFMPA                  0
+  KXAMAFMRNBA                0
+  KXAMAFMV                   0
+  KXAMAFPA                   0
+  KXAMAFPS                   0
+  KXAMAFRA                   0
+  KXAMAFRALB                 0
+  KXAMAFRNBA                 0
+  KXAMAFRNBS                 0
+  KXAMAFRS                   0
+  KXAMAFST                   0
+  KXAMAFTA                   0
+  KXAMANAOTY                 0
+  KXAMASOTY                  0
+  KXAMASSOTY                 0
+  KXAMATEST                  0
+  KXAMAZINGRACE              0
+  KXAMERICANIDOL             0
+  KXANDYBYRONCOLDPLAY        0
+  KXANIMEAOTY                0
+  KXANIMEBA                  0
+  KXANIMEBAC                 0
+  KXANIMEBAS                 0
+  KXANIMEBBAC                0
+  KXANIMEBC                  0
+  KXANIMEBCD                 0
+  KXANIMEBCS                 0
+  KXANIMEBD                  0
+  KXANIMEBDIR                0
+  KXANIMEBES                 0
+  KXANIMEBF                  0
+  KXANIMEBIA                 0
+  KXANIMEBMC                 0
+  KXANIMEBNS                 0
+  KXANIMEBOA                 0
+  KXANIMEBOS                 0
+  KXANIMEBR                  0
+  KXANIMEBS                  0
+  KXANIMEBSA                 0
+  KXANIMEBSC                 0
+  KXANIMEBSOL                0
+  KXANIMEBVAPA               0
+  KXANIMEBVAPB               0
+  KXANIMEBVAPC               0
+  KXANIMEBVAPE               0
+  KXANIMEBVAPF               0
+  KXANIMEBVAPG               0
+  KXANIMEBVAPJ               0
+  KXANIMEMPAACC              0
+  KXANIMEVAPH                0
+  KXANIMEVAPI                0
+  KXANIMEVAPL                0
+  KXAPPRANK                  0
+  KXAPPRANKFINANCE           0
+  KXAPPRANKFREE              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXAPPRANKFREE2             0
+  KXAPPRANKFREE3             0
+  KXAPPRANKFREESECOND        0
+  KXAPPRANKPAID              0
+  KXAPPRANKSPORTS            0
+  KXAPPRANKUTILITIES         0
+  KXAPPSTOREARCADE           0
+  KXAPPSTORECULTURE          0
+  KXAPPSTOREIPADAPP          0
+  KXAPPSTOREIPADGAME         0
+  KXAPPSTOREIPHONEAPP        0
+  KXAPPSTOREIPHONEGAME       0
+  KXAPPSTOREMACAPP           0
+  KXAPPSTOREMACGAME          0
+  KXAPPSTORETVAPP            0
+  KXAPPSTOREVISIONAPP        0
+  KXAPPSTOREVISIONGAME       0
+  KXAPPSTOREWATCHAPP         0
+  KXARRESTD4VD               0
+  KXARRESTMIKEYSHELTON       0
+  KXARRESTSHOHEI             0
+  KXARRESTWELCH              0
+  KXART                      0
+  KXARTCOLLECTION            0
+  KXARTISTCOLLABBILLIEYEAT     0
+  KXARTISTCOLLABCARPENTERMINAJ     0
+  KXARTISTCOLLABDRAKEKENDRICK     0
+  KXARTISTCOLLABDRAKEMETRO     0
+  KXARTISTCOLLABDRAKEMINAJ     0
+  KXARTISTCOLLABDRAKEPLAYBOICARTI     0
+  KXARTISTCOLLABSZANICKIMINAJ     0
+  KXARTISTCOLLABTATEMCRAETHAKIDLAROI     0
+  KXARTISTCOLLABTHUGANDGUNNA     0
+  KXARTISTCOLLABYEMIKEDEAN     0
+  KXARTISTPEAKCHAPPELL       0
+  KXARTISTPEAKTAYLORSWIFT     0
+  KXARTISTSTREAMS            0
+  KXARTISTSTREAMSU           0
+  KXARTISTSTREAMSUPDOWN      0
+  KXARTISTSTREAMSY           0
+  KXARTISTVS                 0
+  KXASTRO                    0
+  KXATTENDGRAMMYS            0
+  KXATTENDMAFIATHON          0
+  KXATTENDMLB                0
+  KXAUCTIONRECORD            0
+  KXAUSTINREAVESAPOLOGY      0
+  KXAVATARS2                 0
+  KXAVATARSEASON2            0
+  KXAVENGERSDELAY            0
+  KXAWARDCOUNTBADBUNNY       0
+  KXAWARDCOUNTGAGA           0
+  KXAWARDCOUNTKENDRICK       0
+  KXAWARDCOUNTSABRINAC       0
+  KXAWARDSCMAAOTY            0
+  KXAWARDSCMAEOTY            0
+  KXAWARDSCMAFVOTY           0
+  KXAWARDSCMAMEOTY           0
+  KXAWARDSCMAMOTY            0
+  KXAWARDSCMAMVOTY           0
+  KXAWARDSCMANAOTY           0
+  KXAWARDSCMASOOTY           0
+  KXAWARDSCMASOTY            0
+  KXAWARDSCMAVDOTY           0
+  KXAWARDSCMAVGOTY           0
+  KXAWARDSCMAVIDOTY          0
+  KXAWARDSCOUNTLAS           0
+  KXAWARDSCOUNTPEN           0
+  KXAWARDSCOUNTSEV           0
+  KXAWARDSCOUNTSTU           0
+  KXAWARDSCOUNTWHI           0
+  KXBABYNAMEBOY              0
+  KXBABYNAMEGIRL             0
+  KXBACHELORETTE             0
+  KXBACHELORETTEELIMINATION     0
+  KXBAFTAACTO                0
+  KXBAFTAACTR                0
+  KXBAFTAASPLAY              0
+  KXBAFTACINE                0
+  KXBAFTADIR                 0
+  KXBAFTAEDIT                0
+  KXBAFTAFILM                0
+  KXBAFTAHAIR                0
+  KXBAFTAOSPLAY              0
+  KXBAFTAPRODDES             0
+  KXBAFTASUPACTO             0
+  KXBAFTASUPACTR             0
+  KXBALDONILIVELY            0
+  KXBBARTIST                 0
+  KXBBCHARTDRAKE             0
+  KXBBCHARTPOSITION          0
+  KXBBCHARTPOSITIONALBUM     0
+  KXBBCHARTPOSITIONALBUMS     0
+  KXBBCHARTPOSITIONSONG      0
+  KXBBCHARTTOP3              0
+  KXBBFARTIST                0
+  KXBBG200                   0
+  KXBBGROUP                  0
+  KXBBMARTIST                0
+  KXBBNEWARTIST              0
+  KXBBSINGLE                 0
+  KXBBTEST                   0
+  KXBBTEST100NUMBER1         0
+  KXBBTEST100RUNNERUP        0
+  KXBBTEST200NUMBER1         0
+  KXBBTEST200RUNNERUP        0
+  KXBBTESTTOP10100           0
+  KXBBTOP200                 0
+  KXBDS3PTSO                 0
+  KXBEASTWATER               0
+  KXBEATLES                  0
+  KXBEATLESRECORD            0
+  KXBELICHICK                0
+  KXBESTACRESSTONYS          0
+  KXBESTACTORMUS             0
+  KXBESTACTORTONYAWARDS      0
+  KXBESTACTRMUS              0
+  KXBESTMUSICAL              0
+  KXBESTPLAY                 0
+  KXBESTREVIVAL              0
+  KXBESTREVIVALMUS           0
+  KXBET                      0
+  KXBETAOTY                  0
+  KXBETAWARDS                0
+  KXBETBACT                  0
+  KXBETBACTR                 0
+  KXBETBC                    0
+  KXBETBFHHA                 0
+  KXBETBFRNBPA               0
+  KXBETBG                    0
+  KXBETBIA                   0
+  KXBETBM                    0
+  KXBETBMHHA                 0
+  KXBETBMRNBPA               0
+  KXBETBNA                   0
+  KXBETBNIA                  0
+  KXBETDBJBGIA               0
+  KXBETHER                   0
+  KXBETSMOTY                 0
+  KXBETSMOTYA                0
+  KXBETSWOTYA                0
+  KXBETVCA                   0
+  KXBETVDOTY                 0
+  KXBETVOTY                  0
+  KXBETYSA                   0
+  KXBEYONCE                  0
+  KXBEYONCEGENRE             0
+  KXBGTRANK                  0
+  KXBIGARCH                  0
+  KXBIGBROTHER               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXBIGBROTHER27             0
+  KXBIGBROTHERBRAZIL         0
+  KXBIGBROTHERELIMINATION     0
+  KXBIGBROTHERRANK           1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXBILLBOARDALBUMSWAG2      0
+  KXBILLBOARDGENRE           0
+  KXBILLBOARDPEAK            0
+  KXBILLBOARDPEAK-E          0
+  KXBILLBOARDPEAK-ESPRESSO     0
+  KXBILLBOARDPEAKCHIHIRO     0
+  KXBILLBOARDPEAKFRIENDOFMINE     0
+  KXBILLBOARDPEAKGLB         0
+  KXBILLBOARDPEAKGOL         0
+  KXBILLBOARDPEAKHOUDINI     0
+  KXBILLBOARDPEAKIHSH        0
+  KXBILLBOARDPEAKLLL         0
+  KXBILLBOARDPEAKNEVERLETGO     0
+  KXBILLBOARDPEAKNLG         0
+  KXBILLBOARDPEAKPMAD        0
+  KXBILLBOARDPEAKPPP         0
+  KXBILLBOARDPEAKTASTE       0
+  KXBILLBOARDPEAKTGIF        0
+  KXBILLBOARDPEAKUS          0
+  KXBILLBOARDPEAKWW          0
+  KXBILLBOARDRUNNERUP        0
+  KXBILLBOARDRUNNERUPALBUM     0
+  KXBILLBOARDRUNNERUPSONG     0
+  KXBILLIEEILISHAPOLOGY      0
+  KXBLACKPHONE2              0
+  KXBLONDE                   0
+  KXBMARS                    0
+  KXBMHHA                    0
+  KXBMPNEL                   0
+  KXBMRP                     0
+  KXBOATSTRIKERELEASE        0
+  KXBOND                     0
+  KXBONDBRITISH              0
+  KXBOOKAWARDSFIC            0
+  KXBOOKAWARDSNONF           0
+  KXBOOKAWARDSPOETRY         0
+  KXBOOKAWARDSTLIT           0
+  KXBOOKAWARDSYPLIT          0
+  KXBOOKERPRIZE              0
+  KXBRADY                    0
+  KXBRIANBAUMGARTNER         0
+  KXBRITAINSGOTTALENT        0
+  KXBROADCAST                0
+  KXBROADCASTBACHELORETTE     0
+  KXBROADCASTNBCYTTV         0
+  KXBROADWAYEVITA            0
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXALBUMRELEASEDATEUZI      2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
+  KXALBUMSALES               2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXAISONG                   1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXALBUMEQUIV               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXAPPRANKFREE              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXBIGBROTHER               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXBIGBROTHERRANK           1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KX100MILLIONSTREAMS        0
+  KX10SONG                   0
+  KX1ALBUM                   0
+  KX1DREUNION                0
+  KX1SONG                    0
+  KX1SONG-DRAKE              0
+  KX1SONG-KDOT               0
+  KX1SONGARIANAGRANDE        0
+  KX1SONGBADBUNNY            0
+  KX1SONGBILLIEEILISH        0
+  KX1SONGBLAKESHELTON        0
+  KX1SONGCARDIB              0
+  KX1SONGCHAPPELLROAN        0
+  KX1SONGDOJACAT             0
+  KX1SONGDUALIPA             0
+  KX1SONGEDSHEERAN           0
+  KX1SONGFRANKOCEAN          0
+  KX1SONGFUTURE              0
+  KX1SONGGUNNA               0
+  KX1SONGJUSTINBIEBER        0
+  KX1SONGKALIUCHIS           0
+  KX1SONGKANYE               0
+  KX1SONGKANYEWEST           0
+  KX1SONGKESHA               0
+  KX1SONGLILWAYNE            0
+  KX1SONGLORDE               0
+  KX1SONGMACKLEMORE          0
+  KX1SONGMEGANTHEESTALLION     0
+  KX1SONGMETROBOOMIN         0
+  KX1SONGMILEYCYRUS          0
+  KX1SONGMORGANWALLEN        0
+  KX1SONGOLIVIARODRIGO       0
+  KX1SONGPINKPANTHERESS      0
+  KX1SONGPOSTMALONE          0
+  KX1SONGRODDYRICCH          0
+  KX1SONGSABRINACARPENTER     0
+  KX1SONGSOMBER              0
+  KX1SONGSOMBR               0
+  KX1SONGTAYLORSWIFT         0
+  KX1SONGTYLA                0
+  KX1SONGTYLERTHECREATOR     0
+  KX1SONGYEAT                0
+  KX2014FHD                  0
+  KX20SONG                   0
+  KX28YEARSLATERTBT          0
+  KX50CENTATTEND             0
+  KX60MINUTES                0
+  KXACMAAOTY                 0
+  KXACMAASWOTY               0
+  KXACMADOTY                 0
+  KXACMAEOTY                 0
+  KXACMAFAOTY                0
+  KXACMAGOTY                 0
+  KXACMAMAOTY                0
+  KXACMAMEOTY                0
+  KXACMANDGOTY               0
+  KXACMANFAOTY               0
+  KXACMANMAOTY               0
+  KXACMASINGOTY              0
+  KXACMASOTY                 0
+  KXACMASWOTY                0
+  KXACMAVMOTY                0
+  KXACTORAWARDSATTEND        0
+  KXACTORBONDGIRL            0
+  KXACTORELONMUSK            0
+  KXACTORRAMBO               0
+  KXACTORSONNYCROCKETT       0
+  KXACTORTOMCRUZ             0
+  KXACTORWHITELOTUS          0
+  KXACTORZELDA               0
+  KXAGTELIMINATION           0
+  KXAGTWINNER                0
+  KXAIRLINEZYN               0
+  KXAJOSHUAWALKOUT           0
+  KXALBUMCHARTDRAKE          0
+  KXALBUMDEBUT               0
+  KXALBUMLENGTH              0
+  KXALBUMPEAKSWAG2           0
+  KXALBUMRELEASE             0
+  KXALBUMRELEASEDATE         0
+  KXALBUMRELEASEDATEANOTR     0
+  KXALBUMRELEASEDATEARIANA     0
+  KXALBUMRELEASEDATEASAP     0
+  KXALBUMRELEASEDATEBEY      0
+  KXALBUMRELEASEDATEBRUNOMARS     0
+  KXALBUMRELEASEDATEDUALIPA     0
+  KXALBUMRELEASEDATEFO       0
+  KXALBUMRELEASEDATEFRANK     0
+  KXALBUMRELEASEDATEJB       0
+  KXALBUMRELEASEDATEJCOLE     0
+  KXALBUMRELEASEDATELUCKI     0
+  KXALBUMRELEASEDATENBAYOUNGBOY     0
+  KXALBUMRELEASEDATETRAVIS     0
+  KXALBUMRELEASEDATETRIPPIE     0
+  KXALBUMRELEASEDATETRIPPY     0
+  KXALBUMRELEASEDATEYEAT     0
+  KXALBUMRELEASELANA         0
+  KXALBUMRELEASENBAYB        0
+  KXALBUMRELEASETRAVYE       0
+  KXALBUMSALESCARDIB         0
+  KXALBUMSALESCHAMP          0
+  KXALBUMSALESDOJACAT        0
+  KXALBUMSALESJUSTINBIEBER     0
+  KXALBUMSALESKPOPDH         0
+  KXALBUMSALESSCARPENTER     0
+  KXALBUMSALESSHEERAN        0
+  KXALBUMSALESSWIFT          0
+  KXALBUMSALESWICKED         0
+  KXALBUMSTREAMS             0
+  KXALBUMSTREAMSU            0
+  KXALBUMTRACKS              0
+  KXALBUMTRACKSBRUNO         0
+  KXALBUMTRACKSHARRY         0
+  KXALBUMTRACKSJCOLE         0
+  KXALBUMVS                  0
+  KXALBVS                    0
+  KXALEXWARREN               0
+  KXALLINGUEST               0
+  KXAMA                      0
+  KXAMAALBOTY                0
+  KXAMAAOTY                  0
+  KXAMACOTY                  0
+  KXAMAFAA                   0
+  KXAMAFCA                   0
+  KXAMAFCDOG                 0
+  KXAMAFCS                   0
+  KXAMAFDEA                  0
+  KXAMAFFCA                  0
+  KXAMAFFHHA                 0
+  KXAMAFFLA                  0
+  KXAMAFFPA                  0
+  KXAMAFFRNBA                0
+  KXAMAFHHA                  0
+  KXAMAFHHS                  0
+  KXAMAFKPA                  0
+  KXAMAFLA                   0
+  KXAMAFLDOG                 0
+  KXAMAFLS                   0
+  KXAMAFMCA                  0
+  KXAMAFMHHA                 0
+  KXAMAFMLA                  0
+  KXAMAFMPA                  0
+  KXAMAFMRNBA                0
+  KXAMAFMV                   0
+  KXAMAFPA                   0
+  KXAMAFPS                   0
+  KXAMAFRA                   0
+  KXAMAFRALB                 0
+  KXAMAFRNBA                 0
+  KXAMAFRNBS                 0
+  KXAMAFRS                   0
+  KXAMAFST                   0
+  KXAMAFTA                   0
+  KXAMANAOTY                 0
+  KXAMASOTY                  0
+  KXAMASSOTY                 0
+  KXAMATEST                  0
+  KXAMAZINGRACE              0
+  KXAMERICANIDOL             0
+  KXANDYBYRONCOLDPLAY        0
+  KXANIMEAOTY                0
+  KXANIMEBA                  0
+  KXANIMEBAC                 0
+  KXANIMEBAS                 0
+  KXANIMEBBAC                0
+  KXANIMEBC                  0
+  KXANIMEBCD                 0
+  KXANIMEBCS                 0
+  KXANIMEBD                  0
+  KXANIMEBDIR                0
+  KXANIMEBES                 0
+  KXANIMEBF                  0
+  KXANIMEBIA                 0
+  KXANIMEBMC                 0
+  KXANIMEBNS                 0
+  KXANIMEBOA                 0
+  KXANIMEBOS                 0
+  KXANIMEBR                  0
+  KXANIMEBS                  0
+  KXANIMEBSA                 0
+  KXANIMEBSC                 0
+  KXANIMEBSOL                0
+  KXANIMEBVAPA               0
+  KXANIMEBVAPB               0
+  KXANIMEBVAPC               0
+  KXANIMEBVAPE               0
+  KXANIMEBVAPF               0
+  KXANIMEBVAPG               0
+  KXANIMEBVAPJ               0
+  KXANIMEMPAACC              0
+  KXANIMEVAPH                0
+  KXANIMEVAPI                0
+  KXANIMEVAPL                0
+  KXAPPRANK                  0
+  KXAPPRANKFINANCE           0
+  KXAPPRANKFREE2             0
+  KXAPPRANKFREE3             0
+  KXAPPRANKFREESECOND        0
+  KXAPPRANKPAID              0
+  KXAPPRANKSPORTS            0
+  KXAPPRANKUTILITIES         0
+  KXAPPSTOREARCADE           0
+  KXAPPSTORECULTURE          0
+  KXAPPSTOREIPADAPP          0
+  KXAPPSTOREIPADGAME         0
+  KXAPPSTOREIPHONEAPP        0
+  KXAPPSTOREIPHONEGAME       0
+  KXAPPSTOREMACAPP           0
+  KXAPPSTOREMACGAME          0
+  KXAPPSTORETVAPP            0
+  KXAPPSTOREVISIONAPP        0
+  KXAPPSTOREVISIONGAME       0
+  KXAPPSTOREWATCHAPP         0
+  KXARRESTD4VD               0
+  KXARRESTMIKEYSHELTON       0
+  KXARRESTSHOHEI             0
+  KXARRESTWELCH              0
+  KXART                      0
+  KXARTCOLLECTION            0
+  KXARTISTCOLLABBILLIEYEAT     0
+  KXARTISTCOLLABCARPENTERMINAJ     0
+  KXARTISTCOLLABDRAKEKENDRICK     0
+  KXARTISTCOLLABDRAKEMETRO     0
+  KXARTISTCOLLABDRAKEMINAJ     0
+  KXARTISTCOLLABDRAKEPLAYBOICARTI     0
+  KXARTISTCOLLABSZANICKIMINAJ     0
+  KXARTISTCOLLABTATEMCRAETHAKIDLAROI     0
+  KXARTISTCOLLABTHUGANDGUNNA     0
+  KXARTISTCOLLABYEMIKEDEAN     0
+  KXARTISTPEAKCHAPPELL       0
+  KXARTISTPEAKTAYLORSWIFT     0
+  KXARTISTSTREAMS            0
+  KXARTISTSTREAMSU           0
+  KXARTISTSTREAMSUPDOWN      0
+  KXARTISTSTREAMSY           0
+  KXARTISTVS                 0
+  KXASTRO                    0
+  KXATTENDGRAMMYS            0
+  KXATTENDMAFIATHON          0
+  KXATTENDMLB                0
+  KXAUCTIONRECORD            0
+  KXAUSTINREAVESAPOLOGY      0
+  KXAVATARS2                 0
+  KXAVATARSEASON2            0
+  KXAVENGERSDELAY            0
+  KXAWARDCOUNTBADBUNNY       0
+  KXAWARDCOUNTGAGA           0
+  KXAWARDCOUNTKENDRICK       0
+  KXAWARDCOUNTSABRINAC       0
+  KXAWARDSCMAAOTY            0
+  KXAWARDSCMAEOTY            0
+  KXAWARDSCMAFVOTY           0
+  KXAWARDSCMAMEOTY           0
+  KXAWARDSCMAMOTY            0
+  KXAWARDSCMAMVOTY           0
+  KXAWARDSCMANAOTY           0
+  KXAWARDSCMASOOTY           0
+  KXAWARDSCMASOTY            0
+  KXAWARDSCMAVDOTY           0
+  KXAWARDSCMAVGOTY           0
+  KXAWARDSCMAVIDOTY          0
+  KXAWARDSCOUNTLAS           0
+  KXAWARDSCOUNTPEN           0
+  KXAWARDSCOUNTSEV           0
+  KXAWARDSCOUNTSTU           0
+  KXAWARDSCOUNTWHI           0
+  KXBABYNAMEBOY              0
+  KXBABYNAMEGIRL             0
+  KXBACHELORETTE             0
+  KXBACHELORETTEELIMINATION     0
+  KXBAFTAACTO                0
+  KXBAFTAACTR                0
+  KXBAFTAASPLAY              0
+  KXBAFTACINE                0
+  KXBAFTADIR                 0
+  KXBAFTAEDIT                0
+  KXBAFTAFILM                0
+  KXBAFTAHAIR                0
+  KXBAFTAOSPLAY              0
+  KXBAFTAPRODDES             0
+  KXBAFTASUPACTO             0
+  KXBAFTASUPACTR             0
+  KXBALDONILIVELY            0
+  KXBBARTIST                 0
+  KXBBCHARTDRAKE             0
+  KXBBCHARTPOSITION          0
+  KXBBCHARTPOSITIONALBUM     0
+  KXBBCHARTPOSITIONALBUMS     0
+  KXBBCHARTPOSITIONSONG      0
+  KXBBCHARTTOP3              0
+  KXBBFARTIST                0
+  KXBBG200                   0
+  KXBBGROUP                  0
+  KXBBMARTIST                0
+  KXBBNEWARTIST              0
+  KXBBSINGLE                 0
+  KXBBTEST                   0
+  KXBBTEST100NUMBER1         0
+  KXBBTEST100RUNNERUP        0
+  KXBBTEST200NUMBER1         0
+  KXBBTEST200RUNNERUP        0
+  KXBBTESTTOP10100           0
+  KXBBTOP200                 0
+  KXBDS3PTSO                 0
+  KXBEASTWATER               0
+  KXBEATLES                  0
+  KXBEATLESRECORD            0
+  KXBELICHICK                0
+  KXBESTACRESSTONYS          0
+  KXBESTACTORMUS             0
+  KXBESTACTORTONYAWARDS      0
+  KXBESTACTRMUS              0
+  KXBESTMUSICAL              0
+  KXBESTPLAY                 0
+  KXBESTREVIVAL              0
+  KXBESTREVIVALMUS           0
+  KXBET                      0
+  KXBETAOTY                  0
+  KXBETAWARDS                0
+  KXBETBACT                  0
+  KXBETBACTR                 0
+  KXBETBC                    0
+  KXBETBFHHA                 0
+  KXBETBFRNBPA               0
+  KXBETBG                    0
+  KXBETBIA                   0
+  KXBETBM                    0
+  KXBETBMHHA                 0
+  KXBETBMRNBPA               0
+  KXBETBNA                   0
+  KXBETBNIA                  0
+  KXBETDBJBGIA               0
+  KXBETHER                   0
+  KXBETSMOTY                 0
+  KXBETSMOTYA                0
+  KXBETSWOTYA                0
+  KXBETVCA                   0
+  KXBETVDOTY                 0
+  KXBETVOTY                  0
+  KXBETYSA                   0
+  KXBEYONCE                  0
+  KXBEYONCEGENRE             0
+  KXBGTRANK                  0
+  KXBIGARCH                  0
+  KXBIGBROTHER27             0
+  KXBIGBROTHERBRAZIL         0
+  KXBIGBROTHERELIMINATION     0
+  KXBILLBOARDALBUMSWAG2      0
+  KXBILLBOARDGENRE           0
+  KXBILLBOARDPEAK            0
+  KXBILLBOARDPEAK-E          0
+  KXBILLBOARDPEAK-ESPRESSO     0
+  KXBILLBOARDPEAKCHIHIRO     0
+  KXBILLBOARDPEAKFRIENDOFMINE     0
+  KXBILLBOARDPEAKGLB         0
+  KXBILLBOARDPEAKGOL         0
+  KXBILLBOARDPEAKHOUDINI     0
+  KXBILLBOARDPEAKIHSH        0
+  KXBILLBOARDPEAKLLL         0
+  KXBILLBOARDPEAKNEVERLETGO     0
+  KXBILLBOARDPEAKNLG         0
+  KXBILLBOARDPEAKPMAD        0
+  KXBILLBOARDPEAKPPP         0
+  KXBILLBOARDPEAKTASTE       0
+  KXBILLBOARDPEAKTGIF        0
+  KXBILLBOARDPEAKUS          0
+  KXBILLBOARDPEAKWW          0
+  KXBILLBOARDRUNNERUP        0
+  KXBILLBOARDRUNNERUPALBUM     0
+  KXBILLBOARDRUNNERUPSONG     0
+  KXBILLIEEILISHAPOLOGY      0
+  KXBLACKPHONE2              0
+  KXBLONDE                   0
+  KXBMARS                    0
+  KXBMHHA                    0
+  KXBMPNEL                   0
+  KXBMRP                     0
+  KXBOATSTRIKERELEASE        0
+  KXBOND                     0
+  KXBONDBRITISH              0
+  KXBOOKAWARDSFIC            0
+  KXBOOKAWARDSNONF           0
+  KXBOOKAWARDSPOETRY         0
+  KXBOOKAWARDSTLIT           0
+  KXBOOKAWARDSYPLIT          0
+  KXBOOKERPRIZE              0
+  KXBRADY                    0
+  KXBRIANBAUMGARTNER         0
+  KXBRITAINSGOTTALENT        0
+  KXBROADCAST                0
+  KXBROADCASTBACHELORETTE     0
+  KXBROADCASTNBCYTTV         0
+  KXBROADWAYEVITA            0
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXAISONG               2025-12: 1 @ +6.0
+  KXALBUMEQUIV           2026-09: 1 @ +7.0
+  KXALBUMRELEASEDATEUZI  2026-04: 1 @ +6.0, 2026-06: 1 @ +7.0
+  KXALBUMSALES           2026-03: 1 @ +7.0, 2026-06: 1 @ +7.0
+  KXAPPRANKFREE          2025-03: 1 @ +6.0
+  KXBIGBROTHER           2026-09: 1 @ +7.0
+  KXBIGBROTHERRANK       2026-09: 1 @ +7.0
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KX100MILLIONSTREAMS        0/0         0% NOT FEASIBLE
+  KX10SONG                   1/6        17% NOT FEASIBLE
+  KX1ALBUM                   2/9        22% NOT FEASIBLE
+  KX1DREUNION                0/1         0% NOT FEASIBLE
+  KX1SONG                    3/6        50% FEASIBLE
+  KX1SONG-DRAKE              0/1         0% NOT FEASIBLE
+  KX1SONG-KDOT               0/0         0% NOT FEASIBLE
+  KX1SONGARIANAGRANDE        1/1       100% FEASIBLE
+  KX1SONGBADBUNNY            0/1         0% NOT FEASIBLE
+  KX1SONGBILLIEEILISH        0/0         0% NOT FEASIBLE
+  KX1SONGBLAKESHELTON        0/1         0% NOT FEASIBLE
+  KX1SONGCARDIB              0/1         0% NOT FEASIBLE
+  KX1SONGCHAPPELLROAN        0/1         0% NOT FEASIBLE
+  KX1SONGDOJACAT             0/1         0% NOT FEASIBLE
+  KX1SONGDUALIPA             0/1         0% NOT FEASIBLE
+  KX1SONGEDSHEERAN           0/1         0% NOT FEASIBLE
+  KX1SONGFRANKOCEAN          0/1         0% NOT FEASIBLE
+  KX1SONGFUTURE              0/1         0% NOT FEASIBLE
+  KX1SONGGUNNA               0/1         0% NOT FEASIBLE
+  KX1SONGJUSTINBIEBER        0/0         0% NOT FEASIBLE
+  KX1SONGKALIUCHIS           0/1         0% NOT FEASIBLE
+  KX1SONGKANYE               0/1         0% NOT FEASIBLE
+  KX1SONGKANYEWEST           0/0         0% NOT FEASIBLE
+  KX1SONGKESHA               0/1         0% NOT FEASIBLE
+  KX1SONGLILWAYNE            0/1         0% NOT FEASIBLE
+  KX1SONGLORDE               0/1         0% NOT FEASIBLE
+  KX1SONGMACKLEMORE          0/0         0% NOT FEASIBLE
+  KX1SONGMEGANTHEESTALLION     0/1         0% NOT FEASIBLE
+  KX1SONGMETROBOOMIN         0/1         0% NOT FEASIBLE
+  KX1SONGMILEYCYRUS          0/1         0% NOT FEASIBLE
+  KX1SONGMORGANWALLEN        0/1         0% NOT FEASIBLE
+  KX1SONGOLIVIARODRIGO       0/1         0% NOT FEASIBLE
+  KX1SONGPINKPANTHERESS      0/1         0% NOT FEASIBLE
+  KX1SONGPOSTMALONE          0/1         0% NOT FEASIBLE
+  KX1SONGRODDYRICCH          0/1         0% NOT FEASIBLE
+  KX1SONGSABRINACARPENTER     1/2        50% FEASIBLE
+  KX1SONGSOMBER              0/0         0% NOT FEASIBLE
+  KX1SONGSOMBR               0/1         0% NOT FEASIBLE
+  KX1SONGTAYLORSWIFT         1/1       100% FEASIBLE
+  KX1SONGTYLA                0/1         0% NOT FEASIBLE
+  KX1SONGTYLERTHECREATOR     0/1         0% NOT FEASIBLE
+  KX1SONGYEAT                0/1         0% NOT FEASIBLE
+  KX2014FHD                  0/0         0% NOT FEASIBLE
+  KX20SONG                   4/8        50% FEASIBLE
+  KX28YEARSLATERTBT          0/0         0% NOT FEASIBLE
+  KX50CENTATTEND             1/1       100% FEASIBLE
+  KX60MINUTES                0/0         0% NOT FEASIBLE
+  KXACMAAOTY                 0/1         0% NOT FEASIBLE
+  KXACMAASWOTY               0/2         0% NOT FEASIBLE
+  KXACMADOTY                 1/2        50% FEASIBLE
+  KXACMAEOTY                 1/2        50% FEASIBLE
+  KXACMAFAOTY                0/2         0% NOT FEASIBLE
+  KXACMAGOTY                 1/2        50% FEASIBLE
+  KXACMAMAOTY                1/2        50% FEASIBLE
+  KXACMAMEOTY                1/2        50% FEASIBLE
+  KXACMANDGOTY               1/2        50% FEASIBLE
+  KXACMANFAOTY               0/2         0% NOT FEASIBLE
+  KXACMANMAOTY               0/2         0% NOT FEASIBLE
+  KXACMASINGOTY              0/2         0% NOT FEASIBLE
+  KXACMASOTY                 1/2        50% FEASIBLE
+  KXACMASWOTY                0/2         0% NOT FEASIBLE
+  KXACMAVMOTY                0/2         0% NOT FEASIBLE
+  KXACTORAWARDSATTEND        1/1       100% FEASIBLE
+  KXACTORBONDGIRL            0/0         0% NOT FEASIBLE
+  KXACTORELONMUSK            0/0         0% NOT FEASIBLE
+  KXACTORRAMBO               0/0         0% NOT FEASIBLE
+  KXACTORSONNYCROCKETT       0/0         0% NOT FEASIBLE
+  KXACTORTOMCRUZ             0/0         0% NOT FEASIBLE
+  KXACTORWHITELOTUS          1/1       100% FEASIBLE
+  KXACTORZELDA               0/1         0% NOT FEASIBLE
+  KXAGTELIMINATION           1/2        50% FEASIBLE
+  KXAGTWINNER                2/2       100% FEASIBLE
+  KXAIRLINEZYN               0/1         0% NOT FEASIBLE
+  KXAISONG                   2/2       100% FEASIBLE
+  KXAJOSHUAWALKOUT           0/1         0% NOT FEASIBLE
+  KXALBUMCHARTDRAKE          0/0         0% NOT FEASIBLE
+  KXALBUMDEBUT               3/9        33% NOT FEASIBLE
+  KXALBUMEQUIV               5/6        83% FEASIBLE
+  KXALBUMLENGTH              2/3        67% FEASIBLE
+  KXALBUMPEAKSWAG2           0/0         0% NOT FEASIBLE
+  KXALBUMRELEASE             4/7        57% FEASIBLE
+  KXALBUMRELEASEDATE         2/5        40% NOT FEASIBLE
+  KXALBUMRELEASEDATEANOTR     0/0         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEARIANA     1/3        33% NOT FEASIBLE
+  KXALBUMRELEASEDATEASAP     1/2        50% FEASIBLE
+  KXALBUMRELEASEDATEBEY      0/2         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEBRUNOMARS     0/1         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEDUALIPA     1/3        33% NOT FEASIBLE
+  KXALBUMRELEASEDATEFO       0/0         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEFRANK     0/0         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEJB       0/3         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEJCOLE     1/1       100% FEASIBLE
+  KXALBUMRELEASEDATELUCKI     1/1       100% FEASIBLE
+  KXALBUMRELEASEDATENBAYOUNGBOY     1/1       100% FEASIBLE
+  KXALBUMRELEASEDATETRAVIS     1/3        33% NOT FEASIBLE
+  KXALBUMRELEASEDATETRIPPIE     1/3        33% NOT FEASIBLE
+  KXALBUMRELEASEDATETRIPPY     0/0         0% NOT FEASIBLE
+  KXALBUMRELEASEDATEUZI      3/3       100% FEASIBLE
+  KXALBUMRELEASEDATEYEAT     1/1       100% FEASIBLE
+  KXALBUMRELEASELANA         0/0         0% NOT FEASIBLE
+  KXALBUMRELEASENBAYB        0/0         0% NOT FEASIBLE
+  KXALBUMRELEASETRAVYE       0/0         0% NOT FEASIBLE
+  KXALBUMSALES               5/6        83% FEASIBLE
+  KXALBUMSALESCARDIB         1/1       100% FEASIBLE
+  KXALBUMSALESCHAMP          0/0         0% NOT FEASIBLE
+  KXALBUMSALESDOJACAT        1/1       100% FEASIBLE
+  KXALBUMSALESJUSTINBIEBER     1/1       100% FEASIBLE
+  KXALBUMSALESKPOPDH         0/1         0% NOT FEASIBLE
+  KXALBUMSALESSCARPENTER     0/1         0% NOT FEASIBLE
+  KXALBUMSALESSHEERAN        0/1         0% NOT FEASIBLE
+  KXALBUMSALESSWIFT          1/2        50% FEASIBLE
+  KXALBUMSALESWICKED         1/1       100% FEASIBLE
+  KXALBUMSTREAMS             0/2         0% NOT FEASIBLE
+  KXALBUMSTREAMSU            3/4        75% FEASIBLE
+  KXALBUMTRACKS              1/1       100% FEASIBLE
+  KXALBUMTRACKSBRUNO         0/1         0% NOT FEASIBLE
+  KXALBUMTRACKSHARRY         0/1         0% NOT FEASIBLE
+  KXALBUMTRACKSJCOLE         1/1       100% FEASIBLE
+  KXALBUMVS                  0/1         0% NOT FEASIBLE
+  KXALBVS                    0/0         0% NOT FEASIBLE
+  KXALEXWARREN               0/0         0% NOT FEASIBLE
+  KXALLINGUEST               2/2       100% FEASIBLE
+  KXAMA                      1/1       100% FEASIBLE
+  KXAMAALBOTY                1/1       100% FEASIBLE
+  KXAMAAOTY                  0/1         0% NOT FEASIBLE
+  KXAMACOTY                  0/1         0% NOT FEASIBLE
+  KXAMAFAA                   0/1         0% NOT FEASIBLE
+  KXAMAFCA                   0/1         0% NOT FEASIBLE
+  KXAMAFCDOG                 0/1         0% NOT FEASIBLE
+  KXAMAFCS                   0/1         0% NOT FEASIBLE
+  KXAMAFDEA                  0/1         0% NOT FEASIBLE
+  KXAMAFFCA                  0/1         0% NOT FEASIBLE
+  KXAMAFFHHA                 0/1         0% NOT FEASIBLE
+  KXAMAFFLA                  0/1         0% NOT FEASIBLE
+  KXAMAFFPA                  0/1         0% NOT FEASIBLE
+  KXAMAFFRNBA                0/1         0% NOT FEASIBLE
+  KXAMAFHHA                  0/1         0% NOT FEASIBLE
+  KXAMAFHHS                  0/1         0% NOT FEASIBLE
+  KXAMAFKPA                  0/1         0% NOT FEASIBLE
+  KXAMAFLA                   0/1         0% NOT FEASIBLE
+  KXAMAFLDOG                 0/1         0% NOT FEASIBLE
+  KXAMAFLS                   0/1         0% NOT FEASIBLE
+  KXAMAFMCA                  0/1         0% NOT FEASIBLE
+  KXAMAFMHHA                 0/1         0% NOT FEASIBLE
+  KXAMAFMLA                  0/1         0% NOT FEASIBLE
+  KXAMAFMPA                  0/1         0% NOT FEASIBLE
+  KXAMAFMRNBA                0/1         0% NOT FEASIBLE
+  KXAMAFMV                   0/1         0% NOT FEASIBLE
+  KXAMAFPA                   0/1         0% NOT FEASIBLE
+  KXAMAFPS                   0/1         0% NOT FEASIBLE
+  KXAMAFRA                   0/1         0% NOT FEASIBLE
+  KXAMAFRALB                 0/1         0% NOT FEASIBLE
+  KXAMAFRNBA                 0/1         0% NOT FEASIBLE
+  KXAMAFRNBS                 0/1         0% NOT FEASIBLE
+  KXAMAFRS                   0/1         0% NOT FEASIBLE
+  KXAMAFST                   0/1         0% NOT FEASIBLE
+  KXAMAFTA                   0/1         0% NOT FEASIBLE
+  KXAMANAOTY                 0/1         0% NOT FEASIBLE
+  KXAMASOTY                  0/1         0% NOT FEASIBLE
+  KXAMASSOTY                 1/1       100% FEASIBLE
+  KXAMATEST                  0/0         0% NOT FEASIBLE
+  KXAMAZINGRACE              0/0         0% NOT FEASIBLE
+  KXAMERICANIDOL             0/1         0% NOT FEASIBLE
+  KXANDYBYRONCOLDPLAY        0/1         0% NOT FEASIBLE
+  KXANIMEAOTY                0/2         0% NOT FEASIBLE
+  KXANIMEBA                  0/2         0% NOT FEASIBLE
+  KXANIMEBAC                 0/1         0% NOT FEASIBLE
+  KXANIMEBAS                 0/2         0% NOT FEASIBLE
+  KXANIMEBBAC                0/1         0% NOT FEASIBLE
+  KXANIMEBC                  1/1       100% FEASIBLE
+  KXANIMEBCD                 0/1         0% NOT FEASIBLE
+  KXANIMEBCS                 0/2         0% NOT FEASIBLE
+  KXANIMEBD                  0/1         0% NOT FEASIBLE
+  KXANIMEBDIR                0/1         0% NOT FEASIBLE
+  KXANIMEBES                 1/1       100% FEASIBLE
+  KXANIMEBF                  0/2         0% NOT FEASIBLE
+  KXANIMEBIA                 0/2         0% NOT FEASIBLE
+  KXANIMEBMC                 0/2         0% NOT FEASIBLE
+  KXANIMEBNS                 0/2         0% NOT FEASIBLE
+  KXANIMEBOA                 2/2       100% FEASIBLE
+  KXANIMEBOS                 1/1       100% FEASIBLE
+  KXANIMEBR                  0/1         0% NOT FEASIBLE
+  KXANIMEBS                  0/1         0% NOT FEASIBLE
+  KXANIMEBSA                 1/1       100% FEASIBLE
+  KXANIMEBSC                 0/1         0% NOT FEASIBLE
+  KXANIMEBSOL                0/0         0% NOT FEASIBLE
+  KXANIMEBVAPA               1/1       100% FEASIBLE
+  KXANIMEBVAPB               1/1       100% FEASIBLE
+  KXANIMEBVAPC               0/1         0% NOT FEASIBLE
+  KXANIMEBVAPE               0/1         0% NOT FEASIBLE
+  KXANIMEBVAPF               1/1       100% FEASIBLE
+  KXANIMEBVAPG               0/1         0% NOT FEASIBLE
+  KXANIMEBVAPJ               0/1         0% NOT FEASIBLE
+  KXANIMEMPAACC              0/1         0% NOT FEASIBLE
+  KXANIMEVAPH                0/1         0% NOT FEASIBLE
+  KXANIMEVAPI                0/1         0% NOT FEASIBLE
+  KXANIMEVAPL                0/1         0% NOT FEASIBLE
+  KXAPPRANK                  0/0         0% NOT FEASIBLE
+  KXAPPRANKFINANCE           1/1       100% FEASIBLE
+  KXAPPRANKFREE              7/13       54% FEASIBLE
+  KXAPPRANKFREE2             7/8        88% FEASIBLE
+  KXAPPRANKFREE3             0/0         0% NOT FEASIBLE
+  KXAPPRANKFREESECOND        0/0         0% NOT FEASIBLE
+  KXAPPRANKPAID              0/0         0% NOT FEASIBLE
+  KXAPPRANKSPORTS            1/1       100% FEASIBLE
+  KXAPPRANKUTILITIES         1/1       100% FEASIBLE
+  KXAPPSTOREARCADE           0/0         0% NOT FEASIBLE
+  KXAPPSTORECULTURE          0/0         0% NOT FEASIBLE
+  KXAPPSTOREIPADAPP          1/1       100% FEASIBLE
+  KXAPPSTOREIPADGAME         1/1       100% FEASIBLE
+  KXAPPSTOREIPHONEAPP        1/1       100% FEASIBLE
+  KXAPPSTOREIPHONEGAME       1/1       100% FEASIBLE
+  KXAPPSTOREMACAPP           1/1       100% FEASIBLE
+  KXAPPSTOREMACGAME          1/1       100% FEASIBLE
+  KXAPPSTORETVAPP            1/1       100% FEASIBLE
+  KXAPPSTOREVISIONAPP        1/1       100% FEASIBLE
+  KXAPPSTOREVISIONGAME       1/1       100% FEASIBLE
+  KXAPPSTOREWATCHAPP         1/1       100% FEASIBLE
+  KXARRESTD4VD               0/0         0% NOT FEASIBLE
+  KXARRESTMIKEYSHELTON       0/0         0% NOT FEASIBLE
+  KXARRESTSHOHEI             0/0         0% NOT FEASIBLE
+  KXARRESTWELCH              0/0         0% NOT FEASIBLE
+  KXART                      3/3       100% FEASIBLE
+  KXARTCOLLECTION            0/0         0% NOT FEASIBLE
+  KXARTISTCOLLABBILLIEYEAT     0/0         0% NOT FEASIBLE
+  KXARTISTCOLLABCARPENTERMINAJ     0/0         0% NOT FEASIBLE
+  KXARTISTCOLLABDRAKEKENDRICK     0/0         0% NOT FEASIBLE
+  KXARTISTCOLLABDRAKEMETRO     0/0         0% NOT FEASIBLE
+  KXARTISTCOLLABDRAKEMINAJ     1/1       100% FEASIBLE
+  KXARTISTCOLLABDRAKEPLAYBOICARTI     1/1       100% FEASIBLE
+  KXARTISTCOLLABSZANICKIMINAJ     0/1         0% NOT FEASIBLE
+  KXARTISTCOLLABTATEMCRAETHAKIDLAROI     1/1       100% FEASIBLE
+  KXARTISTCOLLABTHUGANDGUNNA     0/1         0% NOT FEASIBLE
+  KXARTISTCOLLABYEMIKEDEAN     1/1       100% FEASIBLE
+  KXARTISTPEAKCHAPPELL       0/0         0% NOT FEASIBLE
+  KXARTISTPEAKTAYLORSWIFT     0/0         0% NOT FEASIBLE
+  KXARTISTSTREAMS            1/2        50% FEASIBLE
+  KXARTISTSTREAMSU           4/4       100% FEASIBLE
+  KXARTISTSTREAMSUPDOWN      0/0         0% NOT FEASIBLE
+  KXARTISTSTREAMSY           1/3        33% NOT FEASIBLE
+  KXARTISTVS                 2/2       100% FEASIBLE
+  KXASTRO                    0/0         0% NOT FEASIBLE
+  KXATTENDGRAMMYS            1/1       100% FEASIBLE
+  KXATTENDMAFIATHON          1/2        50% FEASIBLE
+  KXATTENDMLB                0/1         0% NOT FEASIBLE
+  KXAUCTIONRECORD            0/0         0% NOT FEASIBLE
+  KXAUSTINREAVESAPOLOGY      0/0         0% NOT FEASIBLE
+  KXAVATARS2                 0/0         0% NOT FEASIBLE
+  KXAVATARSEASON2            0/0         0% NOT FEASIBLE
+  KXAVENGERSDELAY            0/0         0% NOT FEASIBLE
+  KXAWARDCOUNTBADBUNNY       0/0         0% NOT FEASIBLE
+  KXAWARDCOUNTGAGA           0/0         0% NOT FEASIBLE
+  KXAWARDCOUNTKENDRICK       0/0         0% NOT FEASIBLE
+  KXAWARDCOUNTSABRINAC       0/0         0% NOT FEASIBLE
+  KXAWARDSCMAAOTY            1/1       100% FEASIBLE
+  KXAWARDSCMAEOTY            1/1       100% FEASIBLE
+  KXAWARDSCMAFVOTY           1/1       100% FEASIBLE
+  KXAWARDSCMAMEOTY           0/1         0% NOT FEASIBLE
+  KXAWARDSCMAMOTY            1/1       100% FEASIBLE
+  KXAWARDSCMAMVOTY           1/1       100% FEASIBLE
+  KXAWARDSCMANAOTY           1/1       100% FEASIBLE
+  KXAWARDSCMASOOTY           1/1       100% FEASIBLE
+  KXAWARDSCMASOTY            1/1       100% FEASIBLE
+  KXAWARDSCMAVDOTY           1/1       100% FEASIBLE
+  KXAWARDSCMAVGOTY           1/1       100% FEASIBLE
+  KXAWARDSCMAVIDOTY          1/1       100% FEASIBLE
+  KXAWARDSCOUNTLAS           0/1         0% NOT FEASIBLE
+  KXAWARDSCOUNTPEN           0/1         0% NOT FEASIBLE
+  KXAWARDSCOUNTSEV           0/1         0% NOT FEASIBLE
+  KXAWARDSCOUNTSTU           0/1         0% NOT FEASIBLE
+  KXAWARDSCOUNTWHI           0/1         0% NOT FEASIBLE
+  KXBABYNAMEBOY              0/1         0% NOT FEASIBLE
+  KXBABYNAMEGIRL             0/1         0% NOT FEASIBLE
+  KXBACHELORETTE             0/1         0% NOT FEASIBLE
+  KXBACHELORETTEELIMINATION     0/1         0% NOT FEASIBLE
+  KXBAFTAACTO                2/2       100% FEASIBLE
+  KXBAFTAACTR                0/1         0% NOT FEASIBLE
+  KXBAFTAASPLAY              1/2        50% FEASIBLE
+  KXBAFTACINE                1/1       100% FEASIBLE
+  KXBAFTADIR                 0/1         0% NOT FEASIBLE
+  KXBAFTAEDIT                0/0         0% NOT FEASIBLE
+  KXBAFTAFILM                0/2         0% NOT FEASIBLE
+  KXBAFTAHAIR                0/0         0% NOT FEASIBLE
+  KXBAFTAOSPLAY              1/2        50% FEASIBLE
+  KXBAFTAPRODDES             0/0         0% NOT FEASIBLE
+  KXBAFTASUPACTO             0/1         0% NOT FEASIBLE
+  KXBAFTASUPACTR             1/2        50% FEASIBLE
+  KXBALDONILIVELY            1/1       100% FEASIBLE
+  KXBBARTIST                 1/1       100% FEASIBLE
+  KXBBCHARTDRAKE             1/2        50% FEASIBLE
+  KXBBCHARTPOSITION          0/0         0% NOT FEASIBLE
+  KXBBCHARTPOSITIONALBUM     0/4         0% NOT FEASIBLE
+  KXBBCHARTPOSITIONALBUMS     0/0         0% NOT FEASIBLE
+  KXBBCHARTPOSITIONSONG      1/6        17% NOT FEASIBLE
+  KXBBCHARTTOP3              0/0         0% NOT FEASIBLE
+  KXBBFARTIST                1/1       100% FEASIBLE
+  KXBBG200                   0/0         0% NOT FEASIBLE
+  KXBBGROUP                  0/0         0% NOT FEASIBLE
+  KXBBMARTIST                1/1       100% FEASIBLE
+  KXBBNEWARTIST              1/1       100% FEASIBLE
+  KXBBSINGLE                 0/0         0% NOT FEASIBLE
+  KXBBTEST                   0/0         0% NOT FEASIBLE
+  KXBBTEST100NUMBER1         0/0         0% NOT FEASIBLE
+  KXBBTEST100RUNNERUP        0/0         0% NOT FEASIBLE
+  KXBBTEST200NUMBER1         0/0         0% NOT FEASIBLE
+  KXBBTEST200RUNNERUP        0/0         0% NOT FEASIBLE
+  KXBBTESTTOP10100           0/0         0% NOT FEASIBLE
+  KXBBTOP200                 1/1       100% FEASIBLE
+  KXBDS3PTSO                 0/0         0% NOT FEASIBLE
+  KXBEASTWATER               2/2       100% FEASIBLE
+  KXBEATLES                  0/0         0% NOT FEASIBLE
+  KXBEATLESRECORD            0/0         0% NOT FEASIBLE
+  KXBELICHICK                0/0         0% NOT FEASIBLE
+  KXBESTACRESSTONYS          0/1         0% NOT FEASIBLE
+  KXBESTACTORMUS             0/1         0% NOT FEASIBLE
+  KXBESTACTORTONYAWARDS      0/1         0% NOT FEASIBLE
+  KXBESTACTRMUS              0/1         0% NOT FEASIBLE
+  KXBESTMUSICAL              1/1       100% FEASIBLE
+  KXBESTPLAY                 1/1       100% FEASIBLE
+  KXBESTREVIVAL              0/1         0% NOT FEASIBLE
+  KXBESTREVIVALMUS           1/1       100% FEASIBLE
+  KXBET                      1/1       100% FEASIBLE
+  KXBETAOTY                  1/1       100% FEASIBLE
+  KXBETAWARDS                0/0         0% NOT FEASIBLE
+  KXBETBACT                  0/1         0% NOT FEASIBLE
+  KXBETBACTR                 0/1         0% NOT FEASIBLE
+  KXBETBC                    0/1         0% NOT FEASIBLE
+  KXBETBFHHA                 0/1         0% NOT FEASIBLE
+  KXBETBFRNBPA               0/1         0% NOT FEASIBLE
+  KXBETBG                    0/1         0% NOT FEASIBLE
+  KXBETBIA                   0/1         0% NOT FEASIBLE
+  KXBETBM                    0/1         0% NOT FEASIBLE
+  KXBETBMHHA                 0/1         0% NOT FEASIBLE
+  KXBETBMRNBPA               0/1         0% NOT FEASIBLE
+  KXBETBNA                   0/1         0% NOT FEASIBLE
+  KXBETBNIA                  1/1       100% FEASIBLE
+  KXBETDBJBGIA               1/1       100% FEASIBLE
+  KXBETHER                   1/1       100% FEASIBLE
+  KXBETSMOTY                 0/0         0% NOT FEASIBLE
+  KXBETSMOTYA                0/1         0% NOT FEASIBLE
+  KXBETSWOTYA                0/1         0% NOT FEASIBLE
+  KXBETVCA                   0/1         0% NOT FEASIBLE
+  KXBETVDOTY                 0/1         0% NOT FEASIBLE
+  KXBETVOTY                  0/1         0% NOT FEASIBLE
+  KXBETYSA                   0/1         0% NOT FEASIBLE
+  KXBEYONCE                  0/0         0% NOT FEASIBLE
+  KXBEYONCEGENRE             0/0         0% NOT FEASIBLE
+  KXBGTRANK                  1/1       100% FEASIBLE
+  KXBIGARCH                  1/1       100% FEASIBLE
+  KXBIGBROTHER               2/2       100% FEASIBLE
+  KXBIGBROTHER27             1/1       100% FEASIBLE
+  KXBIGBROTHERBRAZIL         0/1         0% NOT FEASIBLE
+  KXBIGBROTHERELIMINATION     1/3        33% NOT FEASIBLE
+  KXBIGBROTHERRANK           2/2       100% FEASIBLE
+  KXBILLBOARDALBUMSWAG2      0/1         0% NOT FEASIBLE
+  KXBILLBOARDGENRE           0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAK            0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAK-E          0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAK-ESPRESSO     0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKCHIHIRO     0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKFRIENDOFMINE     0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKGLB         0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKGOL         0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKHOUDINI     0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKIHSH        0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKLLL         0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKNEVERLETGO     0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKNLG         0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKPMAD        0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKPPP         0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKTASTE       0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKTGIF        0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKUS          0/0         0% NOT FEASIBLE
+  KXBILLBOARDPEAKWW          0/0         0% NOT FEASIBLE
+  KXBILLBOARDRUNNERUP        0/0         0% NOT FEASIBLE
+  KXBILLBOARDRUNNERUPALBUM     2/17       12% NOT FEASIBLE
+  KXBILLBOARDRUNNERUPSONG     5/12       42% NOT FEASIBLE
+  KXBILLIEEILISHAPOLOGY      1/1       100% FEASIBLE
+  KXBLACKPHONE2              0/0         0% NOT FEASIBLE
+  KXBLONDE                   0/0         0% NOT FEASIBLE
+  KXBMARS                    0/0         0% NOT FEASIBLE
+  KXBMHHA                    0/0         0% NOT FEASIBLE
+  KXBMPNEL                   0/0         0% NOT FEASIBLE
+  KXBMRP                     0/0         0% NOT FEASIBLE
+  KXBOATSTRIKERELEASE        0/1         0% NOT FEASIBLE
+  KXBOND                     0/0         0% NOT FEASIBLE
+  KXBONDBRITISH              0/0         0% NOT FEASIBLE
+  KXBOOKAWARDSFIC            0/1         0% NOT FEASIBLE
+  KXBOOKAWARDSNONF           1/1       100% FEASIBLE
+  KXBOOKAWARDSPOETRY         0/1         0% NOT FEASIBLE
+  KXBOOKAWARDSTLIT           0/1         0% NOT FEASIBLE
+  KXBOOKAWARDSYPLIT          1/1       100% FEASIBLE
+  KXBOOKERPRIZE              0/0         0% NOT FEASIBLE
+  KXBRADY                    0/0         0% NOT FEASIBLE
+  KXBRIANBAUMGARTNER         1/1       100% FEASIBLE
+  KXBRITAINSGOTTALENT        1/1       100% FEASIBLE
+  KXBROADCAST                0/0         0% NOT FEASIBLE
+  KXBROADCASTBACHELORETTE     0/0         0% NOT FEASIBLE
+  KXBROADCASTNBCYTTV         0/0         0% NOT FEASIBLE
+  KXBROADWAYEVITA            1/1       100% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
