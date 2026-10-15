@@ -1,0 +1,30 @@
+# ops request [READ]
+# type=xos  id=bands-receipt-20261015a
+# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T09:57:23Z
+{
+  "command_id": "mmsell-weather-bands-register-202610150953",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "payload_hash": "7800982824f509f21db0469aee35a343a6c6472878b24df49595214a51d68d26",
+  "completed_at": "2026-10-15 09:55:19.028554+00:00",
+  "result": {
+    "kind": "register",
+    "package": "mmsell-weather-bands",
+    "version": 1,
+    "epoch_number": 1,
+    "epoch_started_at": "2026-10-15 09:55:18.815540+00:00",
+    "probe_deployment": "mmsell-weather-bands-probe-1",
+    "probe_started_at": "2026-10-15 09:55:18.815540+00:00",
+    "fields_unreadable": [
+      "gates"
+    ],
+    "version_frozen_at": "2026-10-15 09:55:18.815540+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-weather-bands"
+}
