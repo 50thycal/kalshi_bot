@@ -1,24 +1,140 @@
-# ops request [READ]
-# type=xos  id=pp-bands-20261015a
-# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T09:53:44Z
-PACKAGE PREFLIGHT — mmsell-weather-bands  (2026-10-15T09:53:45.475808+00:00)
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=mmsell-weather-bands-register-202610150953-send
+# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T09:54:35Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 223 bytes, sha256:c8577b1f451ba1ef>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 213 bytes, sha256:9f641ecb1914eb4d>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 213 bytes, sha256:9f641ecb1914eb4d>
+# VERDICT: VERIFIED
 
-  [ok  ] package_known: The contract for `Tempmmsell2`/`Tempmmsell3`/`Rainmmsell3`: three PAPER books selling the cheap tail in the price bands either side of the shipped cell, each on
-  [ok  ] package_registers: has a `register` verb
-  [info] enforcement_mode: NEW_ONLY
-         a tag trades only under an active deployment arm
-  [ok  ] platform_snapshot_complete: active snapshot 4f9adf15daa6
-  [ok  ] experiment: 'mmsell-weather-bands' not registered — a fresh registration
-  [ok  ] tag_collisions: no declared tag is carried by another experiment
-  [ok  ] transport_idle: no experiment command is mid-execution
-
-VERDICT: GO
-
-envelope (ops request, one line):
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-weather-bands-register-202610150953\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-weather-bands\"}, \"schema_version\": 1}"}, "id": "mmsell-weather-bands-register-202610150953-send"}
-
-then:
-  1. send env_request as printed (record approved_by/reason from `audit` in the PR)
-  2. read the receipt: xos experiment-command-show mmsell-weather-bands-register-202610150953
-  3. xos show mmsell-weather-bands — every declared tag on an ACTIVE arm
-  4. xos control-tower after SILENT_ARM_HOURS — no silent arm
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 56,
+#       "grandfathered": 12,
+#       "native": 44
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-sizesplit-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-sizesplit-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 7,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-10-15 09:54:39.343249+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "40 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10",
+#             "Jmmsell10",
+#             "Kmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 56,
+#           "grandfathered": 12,
+#           "native": 44
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "5 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
