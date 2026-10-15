@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=db  id=limm-db-1015l
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T09:32:38Z
+series_ticker             events  mkts  first_seen  last_seen 
+------------------------  ------  ----  ----------  ----------
+KXTRUMPMENTION            26      1476  2026-09-10  2026-10-13
+KXWORLDNEWSMENTION        24      666   2026-09-10  2026-10-14
+KXTRUMPMENTIONB           9       524   2026-09-11  2026-10-14
+KXMAMDANIMENTION          2       25    2026-09-10  2026-09-14
+KXEARNINGSMENTIONDPZ      1       158   2026-09-14  2026-10-12
+KXEARNINGSMENTIONARITZIA  1       112   2026-09-14  2026-10-05
+KXEARNINGSMENTIONNKE      1       100   2026-09-14  2026-10-01
+KXEARNINGSMENTIONAZO      1       56    2026-09-14  2026-09-22
+KXEARNINGSMENTIONCCL      1       120   2026-09-14  2026-09-28
+KXEARNINGSMENTIONCOST     1       84    2026-09-14  2026-09-24
+
+(10 rows)
