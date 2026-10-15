@@ -487,3 +487,18 @@ KXAOCMENTION.
 not on the skip list, and an existing paper book already selects mentions by market type
 (`Tmmsell2`, `mtype=mention`). Its paper record is read first: if it already covers this cell,
 PASS confirms it, and no new tape is created.
+
+## 14. Last-hour test — result: HOLD, hourly temperature closed (2026-10-15)
+
+`lasthour-temp-20261015b`, code `2580f36b`. The run was day-stratified, with the §9 universe,
+cell, offsets (45…5 min) and +4¢ bar:
+- **Sample:** 8,638 markets priced.
+- **Result:** 229 first entries over **80** family-days, implied 6.60%, realized 5.24%,
+  **+1.36¢/contract**, t 0.78, 2 of 4 months positive → **HOLD**.
+- **By month:** Jul −2.9¢, Aug −3.8¢, Sep +5.5¢, Oct +2.6¢.
+
+**Reading.** In the final hour the cheap tail is priced close to fair. That is what §9 expected
+once the outcome is mostly visible, and it is nowhere near the +4¢ that unmodelled last-hour fills
+would need. As pre-registered, **hourly temperature is closed**: no per-book entry-floor exception
+is proposed. The first run's −4.6¢ (§11) was 5 days of noise, in the same direction as July and
+August here.
