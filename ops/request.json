@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Mentions", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-6-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Science and Technology", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-7-20261015a"}
