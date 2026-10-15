@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1015c", "sql": "select side, action, limit_price, quantity, status, left(coalesce(cancel_reason,''),30) cr, created_at::text, left(client_order_id,14) coid from live_orders where market_ticker='KXTOP10BBSPOTS-26OCT24-TSWIF-10' order by created_at"}
+{"type":"noop"}
