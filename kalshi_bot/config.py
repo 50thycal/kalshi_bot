@@ -2094,6 +2094,15 @@ class Settings(BaseSettings):
                 # A separate key rather than a fix in place, because the arm under test has to
                 # be measurable against the one already running.
                 "contestkey": None,
+                # Per-book OPT-IN to series the GLOBAL `mmsell_skip_series` drops, written
+                # `optin=KXHIGH+KXLOW`. Each entry must name a prefix that is on the skip list
+                # (anything else is a typo or a no-op). Empty = the book never sees a skipped
+                # series, which is every existing book: the skip list keeps applying to them
+                # exactly as before, and the opted-in events are ranked in their own list so
+                # they cannot displace anything from another book's top-N
+                # (docs/MMSELL_LOOKALIKE_PROBE.md, the temperature paper tape). Opt-in is a
+                # PAPER-only reach: the tracker refuses every live mirror on a skipped series.
+                "optin": [],
             }
             ok = True
             for kv in body.split(","):
@@ -2126,7 +2135,7 @@ class Settings(BaseSettings):
                         v[key] = tuple(int(t) for t in str(val).split("+") if t.strip())
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
-                    elif key in ("skip", "only", "onlyx"):
+                    elif key in ("skip", "only", "onlyx", "optin"):
                         # Series filter: '+'-joined substrings (can't use , ; : which the
                         # variant/spec grammar already claims). Matched against the series prefix.
                         v[key] = [t.strip().upper() for t in val.split("+") if t.strip()]
@@ -2169,6 +2178,11 @@ class Settings(BaseSettings):
             # its spec reads — a quiet narrowing, which is the same invisible no-op the type
             # validation above exists to prevent.
             if any(not t.isalnum() for t in v["onlyx"]):
+                ok = False
+            # An opt-in must name a prefix the global skip list actually drops: anything else
+            # admits nothing new while the spec reads as reaching a skipped family.
+            skipped = self.mmsell_skip_series_list
+            if any(t not in skipped for t in v["optin"]):
                 ok = False
             # A partition outside 0 <= i < n, or n < 2, admits either nothing or everything
             # while the spec still reads as a split — the same invisible no-op as above, but

@@ -91,6 +91,10 @@ class MmSellCycleSummary:
     # the scan recovering rather than as an experiment being added. These carry the extra reach.
     events_scanned_deep: int = 0       # events actually fetched, incl. beyond the control cap
     markets_considered_deep: int = 0   # markets seen ONLY because a book asked to scan deeper
+    #: Events / markets of globally SKIPPED series, scanned only for books that opted in
+    #: (`optin=`); counted apart so the control's funnel means what it always meant.
+    events_optin: int = 0
+    markets_considered_optin: int = 0
     markets_considered: int = 0
     in_band: int = 0        # control-book scoped (stable across releases)
     opened: int = 0         # across control + revision books (twins excluded)
@@ -148,6 +152,22 @@ class MmSellTracker:
     def _skip_series(self, series: str) -> bool:
         s = (series or "").upper()
         return any(s.startswith(p) for p in self.settings.mmsell_skip_series_list)
+
+    @staticmethod
+    def _book_opted_into(book: dict, series: str) -> bool:
+        """Does this book opt in (`optin=`) to a series the global skip list drops?"""
+        s = (series or "").upper()
+        return any(s.startswith(p) for p in book.get("optin") or [])
+
+    def _book_sees(self, book: dict, rank: int, series: str, optin_rank: int | None) -> bool:
+        """The rank gate. A normal event: inside the book's scan depth, exactly as before.
+        An opted-in event (a globally skipped series, ranked in its own list after the normal
+        ones): only a book that opted into that series sees it, within its own depth. Every
+        book without `optin` therefore sees byte-identical candidates."""
+        depth = book.get("scanmax") or self.settings.mmsell_top_events
+        if optin_rank is None:
+            return rank < depth
+        return self._book_opted_into(book, series) and optin_rank < depth
 
     @staticmethod
     def _event_has_window_market(event: dict, s: Settings) -> bool:
@@ -865,6 +885,8 @@ class MmSellTracker:
                     "events_dropped_by_cap": summ.events_dropped_by_cap,
                     "events_scanned_deep": summ.events_scanned_deep,
                     "markets_considered_deep": summ.markets_considered_deep,
+                    "events_optin": summ.events_optin,
+                    "markets_considered_optin": summ.markets_considered_optin,
                     "events_seen": summ.events_seen,
                     "markets_considered": summ.markets_considered,
                     "in_band": summ.in_band,
@@ -1053,6 +1075,9 @@ class MmSellTracker:
         # comment warns about ("a hook placed there silently never runs"), and the `markets`
         # table frozen at 77 rows since 2026-06-08 is what it looks like from the outside.
         observer = SeriesObserver()
+        # Books that opt into a globally skipped series, and the events only they may see.
+        optin_books = [b for b in s.mmsell_variant_list if b.get("optin")]
+        optin_events: list[tuple[float, dict]] = []
         for _ in range(s.mmsell_event_pages):
             page = self.client.get_events(status="open", with_nested_markets=True,
                                           limit=200, cursor=cursor or None)
@@ -1065,15 +1090,22 @@ class MmSellTracker:
                 # revisit would never surface the series we are declining to look at.
                 for raw_market in e.get("markets") or []:
                     observer.observe(raw_market, e)
+                target = events
                 if self._skip_series(e.get("series_ticker") or ""):
-                    continue
+                    # Dropped for every book, as always, unless a book opted into it — then it
+                    # goes to a separate list no other book can see (`_book_sees`).
+                    if not any(self._book_opted_into(b, e.get("series_ticker") or "")
+                               for b in optin_books):
+                        continue
+                    target = optin_events
                 vol = sum(market_volume(m) for m in e.get("markets") or [])
                 if vol <= 0:
                     continue
                 if not self._event_has_window_market(e, s):
-                    summ.events_out_of_window += 1
+                    if target is events:
+                        summ.events_out_of_window += 1
                     continue
-                events.append((vol, e))
+                target.append((vol, e))
             cursor = (page or {}).get("cursor") or ""
             if not cursor or not evs:
                 summ.pagination_exhausted = True
@@ -1102,6 +1134,12 @@ class MmSellTracker:
         # Did the top-N cut bind? If eligible > seen we are leaving tradeable events unscanned,
         # which is a capacity signal rather than a fault — but it must be visible either way.
         summ.events_dropped_by_cap = max(0, summ.events_eligible - summ.events_seen)
+        # Opted-in events go AFTER the normal list, ranked among themselves, so no normal
+        # event's rank — and therefore no other book's candidate set — moves.
+        optin_events.sort(key=lambda ev: -ev[0])
+        optin_start = len(events)
+        events = events + optin_events
+        summ.events_optin = len(optin_events)
 
         # Drop books whose tag has no active Experiment OS deployment arm, ONCE per cycle,
         # before any entry. Under NEW_ONLY such a tag is fail-closed at the write path, and
@@ -1137,9 +1175,12 @@ class MmSellTracker:
             # An event past the control's depth exists only for books that asked to see deeper.
             # Counted separately so the extra reach is visible as its own number rather than
             # inflating markets_considered, which the funnel telemetry is read against.
-            deep = rank >= s.mmsell_top_events
+            optin_rank = rank - optin_start if rank >= optin_start else None
+            deep = optin_rank is None and rank >= s.mmsell_top_events
             for market in event.get("markets") or []:
-                if deep:
+                if optin_rank is not None:
+                    summ.markets_considered_optin += 1
+                elif deep:
                     summ.markets_considered_deep += 1
                 else:
                     summ.markets_considered += 1
@@ -1190,7 +1231,7 @@ class MmSellTracker:
                     # reaches this market, not whichever one happens to be first.
                     interested = [
                         b for b in books
-                        if rank < (b.get("scanmax") or s.mmsell_top_events)
+                        if self._book_sees(b, rank, series, optin_rank)
                         and b["htcmin"] <= htc <= b["htcmax"]
                         and self._book_admits_series(b, series)
                         and self._book_admits_ticker(b, ticker)
@@ -1204,7 +1245,7 @@ class MmSellTracker:
                     # Rank gate: a book only sees events inside its own scan depth. Without a
                     # `scanmax` that depth is the global cap, so every existing book's candidate
                     # stream is byte-identical to what it was before deep scanning existed.
-                    if rank >= (book.get("scanmax") or s.mmsell_top_events):
+                    if not self._book_sees(book, rank, series, optin_rank):
                         continue
                     if not (book["htcmin"] <= htc <= book["htcmax"]):
                         continue
@@ -1466,7 +1507,8 @@ class MmSellTracker:
                     # (inert unless LIVE_STRATEGIES lists this tag). Self-guarded; a live failure
                     # never rolls back the paper record above (the paper book is the shadow).
                     if self.live_executor is not None \
-                            and (self._live_paused_blocks(s, series, tag, summ, recorder, ticker)
+                            and (self._skip_series(series)
+                                 or self._live_paused_blocks(s, series, tag, summ, recorder, ticker)
                                  or self._live_tier_blocks(s, series, tag, summ, recorder,
                                                            ticker)):
                         pass          # refused live; the PAPER position above still stands
