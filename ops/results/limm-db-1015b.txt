@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=limm-db-1015b
+# code 9500b2df821afbde5548c4ad15dd80149a35eef4 · started 2026-10-15T01:58:43Z
+market_ticker              side  action  limit_price  quantity  status   cr  created_at                    credits  bal   tswif   
+-------------------------  ----  ------  -----------  --------  -------  --  ----------------------------  -------  ----  --------
+KXAAAGASMINM-26OCT31-3.90  yes   buy     2            500       resting      2026-10-14 21:32:17.63709+00           8316  499.0000
+
+(1 row)
