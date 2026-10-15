@@ -205,9 +205,18 @@ def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -
         exit_order = {"side": leg.side, "price_cents": int(leg.limit_price), "quantity": lq,
                       "locks_usd": _r((100 - entry - int(leg.limit_price)) * lq / 100.0)}
     book = _latest_book(session, ticker, now)
-    mark = None
+    mark = ask = None
+    no_bid = False
     if book is not None:
         mark = book.best_yes_bid if side == limm.SIDE_YES else book.best_no_bid
+        other = book.best_no_bid if side == limm.SIDE_YES else book.best_yes_bid
+        # The cheapest our side can be bought for: the other side's best bid, mirrored.
+        ask = 100 - int(other) if other is not None else None
+        if mark is None and book.book_valid:
+            # A live book with nobody bidding our side: it cannot be sold right now, so it is
+            # worth 0, not "unpriced" (TSWIF, 2026-10-15: no YES bids, NO bid 99).
+            mark, no_bid = 0, True
+    close = repo.market_close_time(session, ticker)
     return {
         "market": ticker,
         "title": (prog.market_title if prog else None) or ticker,
@@ -219,6 +228,10 @@ def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -
         "value_usd": _r(mark * qty / 100.0) if mark is not None else None,
         "unrealized_usd": _r((mark - entry) * qty / 100.0) if mark is not None else None,
         "marked_at": _iso(book.at) if book is not None else None,
+        "no_bid": no_bid,
+        "ask_cents": ask,
+        # Closed and waiting for settlement: no book to price it, and none is coming.
+        "awaiting_settlement": book is None and close is not None and close <= now,
         "at_risk_usd": _r(entry * qty / 100.0),
         "take_profit_cents": tp,
         "take_profit_usd": _r((tp - entry) * qty / 100.0),
