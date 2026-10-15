@@ -1,24 +1,45 @@
 # ops request [READ]
-# type=db  id=mention-paper-20261015a
-# code 2580f36bedab9e8bf61b485f103502fd9a50fa0a · started 2026-10-15T12:22:50Z
-strategy     trades  series  avg_px  c_per_ct  pnl    win_pct
------------  ------  ------  ------  --------  -----  -------
-mmsell       421     9       75.6    4.38      18.44  81.5   
-mmsell1      209     2       86.1    5.87      12.27  93.3   
-mmsell2      152     2       83.8    5.56      8.45   90.8   
-mmsell6      101     9       92.0    5.59      5.65   98.0   
-mmsell3      80      2       91.7    6.10      4.88   98.8   
-mmsell10     78      8       93.5    4.85      3.78   98.7   
-Cmmsell10    54      6       93.5    4.51      2.43   98.1   
-Gmmsell0     54      6       93.5    4.51      2.43   98.1   
-Dmmsell10    54      6       93.5    4.51      2.43   98.1   
-mmsell11     32      2       92.2    6.78      2.17   100.0  
-Fmmsell10    28      6       93.5    6.36      1.78   100.0  
-Gmmsell1     28      6       93.5    6.40      1.79   100.0  
-mmsell7      23      2       92.6    6.62      1.52   100.0  
-mmsell4      17      1       92.8    6.18      1.05   100.0  
-Jmmsell10    14      4       93.4    6.54      0.92   100.0  
-mmsell10_pt  13      1       93.5    6.04      1.57   100.0  
-Alimm1_pt3   12      3       5.3     2.26      78.62  58.3   
+# type=script  id=lasthour-temp-20261015b
+# code 2580f36bedab9e8bf61b485f103502fd9a50fa0a · started 2026-10-15T11:45:48Z
+=== MMSELL look-alike probe — 10 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
-(17 rows)
+  LAST-HOUR MODE: 1-minute candles, entries at 45,30,20,15,10,5 min before close; LIFETIME below reads 'quoted >= 45 min before close'
+
+  series                 listed settled              span priced   >=1h
+  KXTEMPAUSH              15364   15234  2026-07..2026-09    970    77%
+  KXTEMPBOSH                294     222  2026-04..2026-04     26     0%
+  KXTEMPCHIH              15553   15533  2026-04..2026-09    930    65%
+  KXTEMPCHIHS              8260    8240  2026-09..2026-10    972    54%
+  KXTEMPDCH               15565   15530  2026-04..2026-09    923    58%
+  KXTEMPLAXH              15418   15325  2026-07..2026-09    975    70%
+  KXTEMPLAXHS              8230    8200  2026-09..2026-10    972    58%
+  KXTEMPMIAH              10315   10305  2026-04..2026-10    908    66%
+  KXTEMPNYCH              16160   16136  2026-07..2026-09    990    73%
+  KXTEMPNYCHS              8130    8120  2026-09..2026-10    972    47%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXTEMPAUSH                24    16    6.67   16.67     4  -10.00   -15.00  -1.33 0/2   HOLD
+  KXTEMPBOSH                 0
+  KXTEMPCHIH                25    20    6.76    8.00     2   -1.24    -1.55  -0.22 0/2   HOLD
+  KXTEMPCHIHS               34    21    6.65    0.00     0   +6.65   +10.76   9.18 2/2   HOLD
+  KXTEMPDCH                  2     2    6.50   50.00     1  -43.50   -43.50  -0.88 0/0   HOLD
+  KXTEMPLAXH                24    21    6.54    8.33     2   -1.79    -2.05  -0.32 1/1   HOLD
+  KXTEMPLAXHS               38    21    6.55    2.63     1   +3.92    +7.10   1.35 2/2   HOLD
+  KXTEMPMIAH                40    27    6.55    0.00     0   +6.55    +9.70  11.94 2/2   HOLD
+  KXTEMPNYCH                21    18    6.52    4.76     1   +1.76    +2.06   0.37 1/1   HOLD
+  KXTEMPNYCHS               21    18    6.62    4.76     1   +1.86    +2.17   0.38 1/2   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXTEMP                   229    80    6.60    5.24    12   +1.36    +3.90   0.78 2/4   HOLD
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXTEMP                 2026-07: 42 @ -2.9, 2026-08: 48 @ -3.8, 2026-09: 88 @ +5.5, 2026-10: 51 @ +2.6
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXTEMP                  5450/8638     63% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
