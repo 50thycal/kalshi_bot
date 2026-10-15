@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=db  id=limm-db-1015k
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T09:24:04Z
+series_ticker       event_ticker                mkts  pool_usd  closes                  prog_end                       title                                                                 
+------------------  --------------------------  ----  --------  ----------------------  -----------------------------  ----------------------------------------------------------------------
+KXACTBLUETOP        KXACTBLUETOP-26OCT16        1     100       2026-10-16 13:59:00+00  2026-10-15 17:31:31.148035+00  Will Abdul El-Sayed be the top ActBlue fundraiser on Oct 16 at 10:00 A
+KXTRUMPSAY          KXTRUMPSAY-26OCT19          41    4100      2026-10-19 14:00:00+00  2026-10-19 14:00:00+00         Will Trump say "Zohran / Mamdani" before Oct 19, 2026?                
+KXTRUMPMENTION      KXTRUMPMENTION-26OCT13      37    3700      2026-10-27 14:00:00+00  2026-10-27 14:00:00+00         What will Donald Trump say during Midterm Rally in Wasilla, Alaska ori
+KXWORLDNEWSMENTION  KXWORLDNEWSMENTION-26OCT14  16    1600      2026-10-28 14:00:00+00  2026-10-28 14:00:00+00         What will any host or reporter say during ABC World News Tonight origi
+KXTRUMPMENTION      KXTRUMPMENTION-26OCT14      39    3900      2026-10-28 14:00:00+00  2026-10-28 14:00:00+00         What will Donald Trump say during Midterm Rally in Bullhead City, Ariz
+KXTRUMPMENTION      KXTRUMPMENTION-26OCT16      36    3600      2026-10-30 14:00:00+00  2026-10-16 22:00:00+00         What will Donald Trump say during Midterm Rally at Dalton, Georgia ori
+KXTRUMPMENTION      KXTRUMPMENTION-26OCT17      38    3800      2026-10-31 14:00:00+00  2026-10-17 21:00:00+00         What will Donald Trump say during Midterm Rally in Highland Heights, K
+KXTRUMPSAYCOMPANY   KXTRUMPSAYCOMPANY-26NOV01   41    4100      2026-11-01 15:00:00+00  2026-10-15 14:02:11.551952+00  Will Trump say "X / Twitter" before Nov 1, 2026?                      
+KXTRUMPSAYMONTH     KXTRUMPSAYMONTH-26NOV01     15    1500      2026-11-01 15:00:00+00  2026-10-15 14:02:11.551952+00  Will Trump say "UFO / UAP" before Nov 1, 2026?                        
+KXMIBENSONELSAYED   KXMIBENSONELSAYED-26DEC01   8     600       2026-12-01 14:59:00+00  2026-10-18 03:59:59.999999+00  Will the difference between Jocelyn Benson's governor margin and Abdul
+
+(10 rows)
