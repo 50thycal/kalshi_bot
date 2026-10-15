@@ -151,6 +151,16 @@ def test_a_one_cent_leg_has_no_stop_and_can_lose_only_its_cost(session):
     session.flush()
     (p,) = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)["positions"]
     assert (p["stop_cents"], p["stop_usd"], p["exit_order"]) == (None, -5.0, None)
+    # A live book with nobody bidding our side marks it at 0, not "unpriced" (TSWIF, Oct 15).
+    session.add(m.IncentiveMarketSnapshot(market_ticker=held, at=NOW - timedelta(minutes=5),
+                                          book_valid=True, best_yes_bid=None, best_no_bid=99))
+    session.flush()
+    x = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
+    (p,) = x["positions"]
+    assert (p["mark_cents"], p["no_bid"], p["ask_cents"]) == (0, True, 1)
+    assert (p["value_usd"], p["unrealized_usd"]) == (0.0, -5.0)
+    assert x["positions_unrealized_usd"] == -5.0
+    assert p["awaiting_settlement"] is False
 
 
 def test_a_book_that_does_not_qualify_estimates_zero_and_a_stale_book_unknown(session):

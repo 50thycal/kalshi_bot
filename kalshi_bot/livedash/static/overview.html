@@ -271,9 +271,12 @@ function renderIncentive(x){
         ${p.closing ? `<span class="neg">closing now</span>` : ""}
       </div>
       <div class="stats">${has(p.mark_cents)
-        ? `<span title="Best bid on our side — what it could be sold for now">now <b>${p.mark_cents}¢</b> · worth ${usd(p.value_usd)}</span>
+        ? `<span title="Best bid on our side — what it could be sold for now">${p.no_bid
+              ? `now <b>no buyers</b> · worth ${usd(p.value_usd)}`
+              : `now <b>${p.mark_cents}¢</b> · worth ${usd(p.value_usd)}`}</span>
+           ${has(p.ask_cents) ? `<span class="dim" title="Cheapest it can be bought for now">ask ${p.ask_cents}¢</span>` : ""}
            <span>open P&amp;L <b class="${sgn(p.unrealized_usd)}">${usd(p.unrealized_usd)}</b></span>`
-        : `<span class="dim">no current price yet</span>`}</div>
+        : `<span class="dim">${p.awaiting_settlement ? "market closed · awaiting settlement" : "no current price yet"}</span>`}</div>
       <div class="plan">
         <div><div class="k">Take profit</div><b class="pos">sell at ${p.take_profit_cents}¢</b> · ${usd(p.take_profit_usd)}</div>
         <div><div class="k">Stop loss</div>${p.stop_cents
