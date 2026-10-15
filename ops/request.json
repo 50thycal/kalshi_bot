@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Elections", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-9-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "World", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-10-20261015a"}
