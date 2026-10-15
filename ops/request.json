@@ -1,1 +1,1 @@
-{"type": "db", "id": "limm-db-1015f", "sql": "select split_part(market_ticker,'-',1) series, count(*) n, sum(case when status in ('filled','partial') and client_order_id not like 'limmexit%' then 1 else 0 end) fills, sum(case when status='rejected' then 1 else 0 end) rej from live_orders where strategy='Alimm1' group by 1 order by n desc limit 20"}
+{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXHIGHAUS,KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHMIA,KXHIGHNY,KXHIGHPHIL,KXHIGHHOU","--per-series","600","--no-control","--timing"],"id":"fast-b-khigh-20261015a"}
