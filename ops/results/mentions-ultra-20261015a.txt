@@ -1,0 +1,89 @@
+# ops request [READ]
+# type=script  id=mentions-ultra-20261015a
+# code e4c13df8121dfb1e6ca3f029c915fd4822f3c8d4 · started 2026-10-15T13:25:47Z
+=== MMSELL look-alike probe — 33 series; cell 1<=mid<=5, yes_ask<=4; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXPERSONMENTION           949     915  2026-01..2026-09    111    95%
+  KXMENTION                 871     871  2026-03..2026-03    143    97%
+  KXPSAKIMENTION            625     600  2025-11..2026-09    132   100%
+  KXNCAAMENTION             598     598  2025-12..2026-01    144   100%
+  KXHOCHULMENTION           603     593  2026-01..2026-07    143    96%
+  KXFEDMENTION              592     545  2025-01..2026-09    140    99%
+  KXLOVEISLMENTION          537     537  2026-06..2026-07    150   100%
+  KXLATENIGHTMENTION        453     453  2025-10..2026-07    137   100%
+  KXMRBEASTMENTION          438     438  2025-08..2026-08    137    96%
+  KXBESSENTMTPMENTION       395     395  2025-03..2026-09    147   100%
+  KXMADDOWMENTION           375     375  2025-11..2026-08    139   100%
+  KXNHLMENTION              358     358  2026-04..2026-06    138    93%
+  KXCARNEYMENTION           371     338  2026-03..2026-09    146    96%
+  KXATHLETEMENTION          351     338  2026-04..2026-06    144    99%
+  KXCONGRESSMENTION         337     337  2025-10..2026-03    133   100%
+  KXPRESMENTION             331     331  2026-03..2026-03    128   100%
+  KXMTPMENTION              320     320  2026-01..2026-09    142   100%
+  KXGOVERNORMENTION         320     320  2026-01..2026-09    147    95%
+  KXHEGSETHMENTION          316     316  2025-06..2026-09    144   100%
+  KXSNFMENTION              311     311  2025-09..2025-12    123   100%
+  KXNEWSOMMENTION           299     299  2025-11..2026-05    140    99%
+  KXFTNMENTION              293     293  2026-01..2026-10    145   100%
+  KXDEBATEMENTION           314     293  2026-05..2026-10    132    98%
+  KXSNLMENTION              281     270  2025-10..2026-05    144    99%
+  KXMELANIAMENTION          239     239  2025-10..2026-09    136    99%
+  KXCANDACEMENTION          229     229  2026-04..2026-05    135   100%
+  KXALLINMENTION            198     198  2026-05..2026-10    141   100%
+  KXRUBIOMENTION            183     183  2026-01..2026-09    127    99%
+  KXPOWELLMENTION           182     182  2025-08..2026-06    127   100%
+  KXNYCMAYORDEBATEMENTION    166     166  2025-10..2026-06    133   100%
+  KXKIMMELMENTION           164     164  2025-09..2026-01    135   100%
+  KXFNSMENTION              157     157  2026-06..2026-10    134    98%
+  KXAOCMENTION              151     151  2025-10..2026-09    128   100%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXPERSONMENTION            5     4    3.00    0.00     0   +3.00    +3.75   4.39 0/0   HOLD
+  KXMENTION                 13     5    2.85    0.00     0   +2.85    +7.40   1.99 1/1   HOLD
+  KXPSAKIMENTION             2     1    3.00    0.00     0   +3.00    +6.00    nan 0/0   HOLD
+  KXNCAAMENTION              8     6    3.00    0.00     0   +3.00    +4.00   5.86 0/0   HOLD
+  KXHOCHULMENTION            3     3    3.33    0.00     0   +3.33    +3.33  10.00 0/0   HOLD
+  KXFEDMENTION              12     8    3.42    8.33     1   -4.92    -7.38  -0.65 0/0   HOLD
+  KXLOVEISLMENTION          16    11    3.19    0.00     0   +3.19    +4.64   3.60 1/1   HOLD
+  KXLATENIGHTMENTION        25    13    2.80    0.00     0   +2.80    +5.38   7.29 1/1   HOLD
+  KXMRBEASTMENTION           9     5    2.78    0.00     0   +2.78    +5.00   4.39 0/0   HOLD
+  KXBESSENTMTPMENTION       12     7    2.25    0.00     0   +2.25    +3.86   4.36 0/0   HOLD
+  KXMADDOWMENTION            9     4    2.56    0.00     0   +2.56    +5.75   1.86 0/0   HOLD
+  KXNHLMENTION              13     5    2.62    0.00     0   +2.62    +6.80   3.84 0/0   HOLD
+  KXCARNEYMENTION            2     2    3.50    0.00     0   +3.50    +3.50   7.00 0/0   HOLD
+  KXATHLETEMENTION          10     9    2.60    0.00     0   +2.60    +2.89   9.34 0/0   HOLD
+  KXCONGRESSMENTION          7     4    3.00    0.00     0   +3.00    +5.25   2.00 0/0   HOLD
+  KXPRESMENTION              6     4    3.00    0.00     0   +3.00    +4.50   2.43 0/0   HOLD
+  KXMTPMENTION               6     6    3.17    0.00     0   +3.17    +3.17  10.30 0/0   HOLD
+  KXGOVERNORMENTION          4     4    3.25    0.00     0   +3.25    +3.25   6.79 0/0   HOLD
+  KXHEGSETHMENTION          13     6    2.85    7.69     1   -4.85   -10.50  -0.60 0/0   HOLD
+  KXSNFMENTION              19     9    2.79    0.00     0   +2.79    +5.89   4.66 0/0   HOLD
+  KXNEWSOMMENTION            7     2    2.86    0.00     0   +2.86   +10.00   2.50 0/0   HOLD
+  KXFTNMENTION              13     7    2.38    0.00     0   +2.38    +4.43   4.44 0/0   HOLD
+  KXDEBATEMENTION            2     2    3.00    0.00     0   +3.00    +3.00    nan 0/0   HOLD
+  KXSNLMENTION              13     7    2.77    0.00     0   +2.77    +5.14   3.32 0/0   HOLD
+  KXMELANIAMENTION           7     5    2.86    0.00     0   +2.86    +4.00   4.47 0/0   HOLD
+  KXCANDACEMENTION           8     1    2.25    0.00     0   +2.25   +18.00    nan 0/0   HOLD
+  KXALLINMENTION             1     1    2.00    0.00     0   +2.00    +2.00    nan 0/0   HOLD
+  KXRUBIOMENTION             2     2    3.50    0.00     0   +3.50    +3.50   7.00 0/0   HOLD
+  KXPOWELLMENTION           22     5    3.27    0.00     0   +3.27   +14.40   2.32 1/1   HOLD
+  KXNYCMAYORDEBATEMENTION     6     2    3.17    0.00     0   +3.17    +9.50   2.11 0/0   HOLD
+  KXKIMMELMENTION           14     4    2.29    0.00     0   +2.29    +8.00   4.38 0/0   HOLD
+  KXFNSMENTION               4     3    3.50    0.00     0   +3.50    +4.67   2.65 0/0   HOLD
+  KXAOCMENTION              10     6    2.80    0.00     0   +2.80    +4.67   2.67 0/0   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  MENTIONS                 303   129    2.84    0.66     2   +2.18    +5.13   4.25 9/11  PROMOTE
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  MENTIONS               2025-06: 2 @ +3.5, 2025-09: 13 @ +2.7, 2025-10: 25 @ +3.1, 2025-11: 16 @ +2.9, 2025-12: 41 @ +2.4, 2026-01: 25 @ -1.1, 2026-02: 10 @ +3.4, 2026-03: 29 @ +2.9, 2026-04: 17 @ -2.9, 2026-05: 34 @ +2.5, 2026-06: 37 @ +3.0, 2026-07: 37 @ +3.0, 2026-08: 7 @ +3.3, 2026-09: 9 @ +2.3, 2026-10: 1 @ +3.0
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  MENTIONS                4469/4525     99% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
