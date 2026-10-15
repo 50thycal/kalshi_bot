@@ -73,8 +73,18 @@ To run a request:
    so the operating layer can never drift from Experiment OS the way the retired
    status checkers drifted from each other. Allowlisted commands: `control-tower`,
    `list`, `show`, `transitions`, `platform`, `tag`, `scoreboard`, `enforcement`,
-   `readiness`, `evaluate-gates`, `metric`, `package-preflight`, `issue-list`,
-   `issue-show`, `issue-candidates`. Extra CLI flags go in `"args"`.
+   `readiness`, `evaluate-gates`, `metric`, `package-preflight`, `monitor-snapshot`,
+   `issue-list`, `issue-show`, `issue-candidates`. Extra CLI flags go in `"args"`.
+
+   `monitor-snapshot` is the global monitor's one read (WS-026,
+   `docs/MONITOR.md`): the Control Tower's report plus last evidence per arm, live
+   realized P&L, the declared `expect` contract and the systems outside Experiment
+   OS (worker, incentive poll, desks via their sanitized diagnostic), as one JSON
+   document. The daily check-in sends exactly one of these, with a unique id.
+
+   ```jsonc
+   {"type":"xos","command":"monitor-snapshot","id":"mon-20261016-0745"}
+   ```
 
    `package-preflight` is the mechanical half of "meets the criteria" for a
    paper-tape registration (`docs/STANDING_AUTHORIZATIONS.md`): package known and

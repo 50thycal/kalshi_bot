@@ -377,6 +377,19 @@ and its own initialization command; it does not extend the worker's migration he
 *Update this file in the same PR as any change that materially alters architecture,
 important flows, invariants, or system responsibilities. Do not add current standings.*
 
+## Global experiment monitor (WS-026, DEC-036)
+
+`kalshi_bot/monitor/` is a read-only view over everything that should be running. `xos
+monitor-snapshot` (ops-allowlisted) returns one JSON document: the Control Tower report plus
+per-arm last evidence and entries, canonical live realized P&L, each experiment's declared
+`expect` (package `MONITOR_EXPECT`, or `monitoring_json["expect"]` on new Versions) and
+probes of the systems outside Experiment OS (worker heartbeat, incentive poll, desks via their
+sanitized diagnostic, the catalog). Experiments are labelled ERROR, SILENT, STALE, BLOCKED or
+OK. `monitor/page.py` renders `dashboards/status.html`, whose top table is a config list.
+A daily Claude routine (`daily-checkin` skill) republishes it as a private Artifact and messages
+the owner only for broken or new items. It writes nothing: it opens no issues, makes no env
+changes and moves no lifecycle state. Details: [MONITOR.md](MONITOR.md).
+
 ## App-driven desk continuation (DEC-019)
 
 The isolated desk service supports explicit session and scheduled research modes. In

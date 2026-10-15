@@ -66,6 +66,11 @@ from .successor_mmsell10_size_split import RISK_ENVELOPE as _PREDECESSOR_ENVELOP
 PREDECESSOR_KEY = "mmsell-price-ceiling-size-split"
 SUCCESSOR_KEY = "mmsell-price-ceiling-cell-size"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24}
+
 ARM_KEY = "mmsell10"
 PAPER_TAG = "mmsell10"
 #: Fresh, per `arm_live_canary`'s no-inherited-state rule. `K` follows J (C ceiling, D

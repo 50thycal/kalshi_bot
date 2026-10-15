@@ -68,6 +68,11 @@ from .read import get_experiment
 
 EXPERIMENT_KEY = "perp-v1"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24, "note": "documentation-only research surface"}
+
 #: Arm keys. Kept short and prefix-distinct: `LIVE_STRATEGIES` matches by PREFIX,
 #: so a future live tag derived from one of these must not be a prefix of another.
 ARM_REVERT = "perprevert"

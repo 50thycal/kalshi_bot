@@ -1530,3 +1530,31 @@ wording is untouched. The partition of the previously captured listings is uncha
 listing whose surname Kalshi typed in lowercase stays unreviewed by design. The KXMLBHR approval
 is superseded by `-20261013b`, which adds a "game 1 of the double header" exemplar (strike type
 `greater` 0.5, i.e. 1+).
+
+## DEC-036 — The global monitor is a view that prepares work and never performs it
+
+**Date:** 2026-10-15 UTC. **Workstream:** WS-026. **Owner direction (2026-10-15):** daily check-in at
+07:45 America/Chicago; the page is a private Artifact; issues are prepared, not sent; WS-020
+pauses for the board slot.
+
+- **One read, reused.** `xos monitor-snapshot` wraps `control_tower.build_report` and adds only
+  what the Tower does not model: per-arm last evidence, canonical live realized, the `expect`
+  contract and external probes. A second implementation of any Tower number would be the second
+  source of truth that `DEC-001` forbids.
+- **STALE is new; SILENT stays the Tower's.** The Tower flags an arm with zero evidence ever. The
+  monitor adds the other case: an arm that traded and then stopped beyond its declared
+  `max_silence_hours`. Both are health labels on a view and change no lifecycle state.
+- **Experiments declare; they do not push.** `expect` is declared on the package
+  (`MONITOR_EXPECT`), and new packages also freeze it into the Version's `monitoring`. Frozen
+  Versions are not rewritten to add it.
+- **No issue writes from the routine.** The only production issue path is the
+  `EXPERIMENT_OS_ISSUE_COMMAND` env transport, which redeploys the live trading worker. A daily
+  automatic redeploy of a real-money worker to file paperwork is not worth it, and adoption
+  belongs to the owning role. The routine lists each new untracked problem with its owner role
+  and fingerprint.
+- **Notify on broken-or-new only.** Broken things (ERROR, SILENT, STALE, an external system
+  down) are repeated daily until fixed. Chronic BLOCKED gates and old decisions stay on the page.
+  A message that repeats unchanged every morning gets muted.
+
+**Revisit if** a second actor exists who could own issue adoption from the routine without a
+worker redeploy, or if the issue transport gains a path that does not restart the worker.

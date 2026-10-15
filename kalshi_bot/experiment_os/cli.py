@@ -6,6 +6,7 @@
     python -m kalshi_bot.experiment_os.cli platform [review <COMPONENT:version>]
     python -m kalshi_bot.experiment_os.cli tag <strategy-tag>
     python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
+    python -m kalshi_bot.experiment_os.cli monitor-snapshot [--no-evaluate]
     python -m kalshi_bot.experiment_os.cli evaluate-gates [--dry-run]
     python -m kalshi_bot.experiment_os.cli issue list|show|candidates      (read)
     python -m kalshi_bot.experiment_os.cli issue open-candidate <fp>       (write)
@@ -358,6 +359,19 @@ def cmd_control_tower(session: Session, args) -> int:
         return 0
     _ = (build_report, render)
     print(report_text(session, evaluate=not args.no_evaluate))
+    return 0
+
+
+def cmd_monitor_snapshot(session: Session, args) -> int:
+    """The global monitor snapshot (WS-026) as JSON — read-only by construction.
+
+    One document for everything running: the Control Tower's report plus last
+    evidence per arm, live realized P&L, the declared `expect` contract and the
+    systems outside Experiment OS (`kalshi_bot.monitor.sources`). A view, never a
+    ledger: it writes nothing and authorizes nothing."""
+    from ..monitor.snapshot import main_json
+
+    print(main_json(session, evaluate=not args.no_evaluate))
     return 0
 
 
@@ -827,6 +841,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="skip the DRY-RUN gate evaluation (faster; shows recorded verdicts only)",
     )
     p_ct.set_defaults(fn=cmd_control_tower)
+
+    p_ms = sub.add_parser(
+        "monitor-snapshot",
+        help="the global monitor snapshot (WS-026): every experiment plus external "
+        "systems, health-labelled, as JSON (read-only)",
+    )
+    p_ms.add_argument(
+        "--no-evaluate", action="store_true",
+        help="skip the DRY-RUN gate evaluation (faster; recorded verdicts only)",
+    )
+    p_ms.set_defaults(fn=cmd_monitor_snapshot)
 
     p_ev = sub.add_parser(
         "evaluate-gates",

@@ -44,6 +44,12 @@ from .read import get_experiment
 
 EXPERIMENT_KEY = "mmsell-rain-season"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 48,
+                  "note": "rain books fill sparsely on dry days; two quiet days is not yet a stop"}
+
 CELL_ARM = "rain_cell"
 ADJACENT_ARM = "rain_adjacent"
 

@@ -62,6 +62,11 @@ from .models import ExperimentDeployment, ExperimentEpoch, ExperimentGate, Exper
 from .read import arms_for, get_experiment, latest_version
 
 EXPERIMENT_KEY = "mmsell-price-ceiling"
+
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24}
 ARM_KEY = "mmsell10"
 PAPER_TAG = "mmsell10"
 
