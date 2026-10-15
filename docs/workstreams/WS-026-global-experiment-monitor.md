@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-10-15
-**Updated:** 2026-10-15
+**Updated:** 2026-10-15 (post-merge)
 **Build OS:** v0.12
 
 ## Goal
@@ -49,10 +49,14 @@ message the owner.
   variable through the ops maintenance procedure. Recommendation: hard-code the URL once the
   owner names it.
 
+- **D2.** The desks read UNKNOWN in production. The ops workflow passes
+  `DESKS_DIAGNOSTIC_TOKEN`, but the GitHub secret has never been added, and no `desks` request
+  has ever run. The owner adds the secret (`docs/desks/DIAGNOSTICS.md`). Nothing in code changes.
+
 ## Assumptions
 
-- The ops runner keeps passing `DESKS_DIAGNOSTIC_TOKEN` to every request (it does today), so the
-  desks probe works inside `monitor-snapshot`.
+- Once the secret exists, the ops runner passes `DESKS_DIAGNOSTIC_TOKEN` to every request,
+  `monitor-snapshot` included (verified in the workflow file).
 - `incentive_programs.last_seen_at` is still refreshed by a running poll. If it is not, the
   monitor reads STALE, which is the right answer.
 
@@ -86,8 +90,11 @@ D routine), with the deviations listed in the PR.
 
 ## Implementation State
 
-PR open on `claude/global-monitor-ws026`. Bootstrap page published from production
-control-tower output (fallback mode). Daily routine created; it is inert until the merge.
+#637 merged 2026-10-15. The first production `monitor-snapshot` (ops `mon-20261015-1150`) ran
+end to end through the skill's steps: snapshot, render against the previous page, republish to
+the same Artifact URL, notify=true. Two defects it surfaced are fixed in the follow-up PR:
+probe ages measured from the report's start, and misleading desk wording. The 07:45 CT routine
+runs from 2026-10-16.
 
 ## Review State
 
@@ -112,5 +119,5 @@ None.
 
 ## Next Step
 
-Owner merges the PR. Then the next 07:45 CT routine run (or "run the daily check-in") produces
-the first full snapshot, which is acceptance check 5.
+Owner merges the probe-fix PR. Guard: the 2026-10-16 07:45 CT routine run is the routine's own
+first run, and the last part of acceptance check 5.

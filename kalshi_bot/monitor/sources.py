@@ -48,7 +48,9 @@ def _utc(dt):
 
 def _age_hours(now: datetime, then) -> float | None:
     then = _utc(then)
-    return None if then is None else round((now - then).total_seconds() / 3600.0, 2)
+    # Clamped at zero: the database's clock and this process's can disagree by
+    # seconds, and "-0.1h ago" reads as a bug rather than as "just now".
+    return None if then is None else max(0.0, round((now - then).total_seconds() / 3600.0, 2))
 
 
 def _freshness(now: datetime, latest, max_hours: float, *, what: str) -> dict:
@@ -98,8 +100,9 @@ def probe_desks(session, now, environ, expect) -> dict:
     outside the ops runner) the answer is UNKNOWN, never a guess."""
     token = (environ.get("DESKS_DIAGNOSTIC_TOKEN") or "").strip()
     if not token:
-        return {"health": UNKNOWN, "detail": "DESKS_DIAGNOSTIC_TOKEN not available here "
-                "(the ops runner has it; a local run does not)"}
+        return {"health": UNKNOWN, "detail": "DESKS_DIAGNOSTIC_TOKEN is not set for this run "
+                "(the ops runner receives it only once the operator adds the GitHub secret; "
+                "docs/desks/DIAGNOSTICS.md)"}
     try:
         desk_diag = _import_desk_diag()
         url = desk_diag.endpoint(
