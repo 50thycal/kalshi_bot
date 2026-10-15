@@ -75,3 +75,46 @@ the hypothesis.
   - ≤ 0¢ → mentions are dropped from it;
   - in between → HOLD until 120.
 - Nothing in the existing books changes while it accrues.
+
+## 7. Results (2026-10-15; ops `paper-mmsell10-nolive-20261015a`, `scripts/live_canary_patterns.py`)
+
+**Sample.** 8,351 settled `mmsell10` paper trades on markets no live canary traded, over 81 event
+days. All trades: +1.12¢/contract, 90% interval [+0.77, +1.47].
+
+| check | result | reading |
+|---|---|---|
+| 1. WIN set (weather, index, Politics, mentions) | WIN n=277: **+4.67¢** [+3.10, +6.09]. LOSE n=3,613: +1.13¢ [+0.46, +1.77]. **WIN − LOSE +3.53¢ [+1.81, +5.14]** | **PASS** |
+| 2. Bad-day brake (entries ≤ 6h after a realized loss) | after − others **+0.81¢** [−0.10, +1.74] | **NO EFFECT** (post-loss entries were not worse) |
+| 3. Sports 12–24h window | 4,305 sports entries; only 3 fall in 12–24h | **NOT MEASURABLE** |
+
+**Category detail (paper, independent markets):**
+- index +4.77¢, weather +4.64¢, mentions +4.53¢: every interval is above zero;
+- sports totals +1.94¢, tennis/match +2.22¢, sports games +1.44¢;
+- sports spreads +0.45¢ and crypto +0.26¢: both intervals include zero.
+
+**Readings.**
+- **Check 1** passes on evidence independent of the live data that suggested it. The WIN
+  categories are positive in paper (+4.7¢) **and** in live (weather +3.8¢, index +4.2¢,
+  Politics +5.5¢, mentions +3.0¢ on 16).
+- **The new finding is the paper-to-live gap.** Sports totals earn +1.9¢ on paper and −2.4¢ live.
+  Crypto earns +0.3¢ on paper and −8.3¢ live. The fill gap is concentrated in liquid sports and
+  crypto, where informed flow is plausible, and is small where the WIN categories trade. That is
+  a mechanism, and it is consistent with the +2¢ average maker gap
+  (docs/MMSELL_FILL_MODEL.md) being an average of two very different populations.
+- **Check 2:** no evidence that losses predict further losses within six hours. No brake is
+  proposed.
+- **Check 3** cannot be answered from this data. For sports, `close_time` is a far-future
+  fallback rather than game time, so `mmsell10`'s sports entries almost never sit 12–24h before
+  it. The live 12–24h result (115 markets) is therefore unexplained, not refuted. A real test
+  needs the expected-expiration time, which paper rows do not carry. This is recorded, not
+  proposed.
+- **Mentions forward read:** 3 of 60 so far (+6.6¢).
+
+**Consequence of check 1, a Live Ops proposal.** This is a hard stop: it needs the owner's
+explicit confirmation, and nothing is armed from here.
+- **What:** a successor to the running live canary, restricted to the WIN categories.
+- **Scale:** WIN-set flow is small, about 3–4 qualifying paper markets a day on markets live has
+  not touched. At +4.7¢ that is about $5/month per contract of size, or about $15/month at the
+  3-lot used by `Kmmsell10`.
+- **What it buys:** mainly it stops the live book from paying the sports and crypto fill gap. It
+  is not a route to $100/month on its own.
