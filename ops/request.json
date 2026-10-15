@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"control-tower","args":["--json"],"id":"ws026-ctjson-1015a","actor":"claude","purpose":"WS-026 monitor bootstrap: control tower JSON shape","workstream":"WS-026"}
