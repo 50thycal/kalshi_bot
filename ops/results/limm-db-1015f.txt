@@ -1,0 +1,27 @@
+# ops request [READ]
+# type=db  id=limm-db-1015f
+# code c276792977129df1c474eb0d0ba72ffeb592c34b · started 2026-10-15T03:55:22Z
+series            n   fills  rej
+----------------  --  -----  ---
+KXTRUMPMENTION    48  1      36 
+KXYTVIEWSHIGH     10  0      0  
+KXNEXTMANAGERMLB  9   0      8  
+KXMILLERLITEPOS   8   1      0  
+KXVHGCB           7   2      0  
+KXC4POS           6   0      1  
+KXCELSIUSPOS      6   0      3  
+KXMSFTPERM        5   0      0  
+KXROGUEPOS        5   0      3  
+KXAAAGASDCO       5   1      0  
+KXAAAGASM         5   0      3  
+KXANTHVREQ        4   1      0  
+KXAAAGASMINM      4   0      0  
+KXGOOGVREQ        4   1      0  
+KXHORMUZPEAK      4   0      0  
+KXTRUMPAPPROVE    4   2      0  
+KXAAAGASMTX       4   0      0  
+KXTOP10BBSPOTS    4   1      0  
+KXFEAR            4   0      0  
+KXUSDJPY          3   1      0  
+
+(20 rows)
