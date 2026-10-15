@@ -154,4 +154,88 @@ default run prints everything.
 
 ## 6. Results
 
-Pending: filled in after the run, below this line, without editing §1–5.
+Runs: ops `evtime-fields-20261015a` (raw fields), `evtime-sources-20261015a` (STEP 1, no P&L),
+`evtime-study-20261015a` (STEP 1–3), all on default-branch code `5a81b555`.
+
+### 6.1 Sources and coverage (STEP 1)
+
+| family | markets* | start source used | agreement with a reference | D = occurrence − start |
+|---|---|---|---|---|
+| MLB | 3,257 | ticker HHMM 99% | HHMM vs MLB StatsAPI: 1,444/1,474 within 15 min (98%) | +3.00h, 98% within 30 min |
+| NFL | 1,202 | ESPN 100% | 534/536 events matched | +3.00h, 100% |
+| NCAAF | 938 | ESPN 72%, occurrence − D 28% | 340/471 matched | +3.00h, 89% |
+| soccer | 1,319 | occurrence − pooled D 94%, ESPN (MLS) 6% | 63 MLS events, offsets split between 3h and 4h | pooled 3h; internal test 1,286/1,319 resolved after the derived start |
+| other sports (cricket, esports, UFC, WNBA, KBO …) | 1,499 | occurrence − pooled D 85%, HHMM 15% | — | pooled 3h; internal 1,428/1,498 |
+| tennis | 936 | **uncovered 98%** | 18 HHMM events only | pooled 3h **rejected**: 741/936 (79%) resolved after the derived start |
+
+\* Live and paper markets combined.
+
+**What the sources are:**
+- `occurrence_datetime` = `expected_expiration_time` = scheduled start + 3h on MLB, NFL and
+  NCAAF. Precision is to the minute.
+- The ticker HHMM is a reliable ET start for MLB.
+- **Tennis has no usable start time** in Kalshi's data under the pre-registered test. Its
+  expected end is not a fixed offset from the real start. It was not rescued with a second
+  amendment.
+
+### 6.2 Sample (STEP 2)
+
+| | markets | with a start | event days |
+|---|---|---|---|
+| live (priority 1) | 2,323 | 1,823 (78%) | 71 |
+| paper `mmsell10`, same days (priority 2) | 8,540 | 7,661 (90%) | 64 |
+
+Tennis is most of the 22% of live markets without a start.
+
+### 6.3 Result (STEP 3)
+
+| window | live n (share) | live c/ct [90%] | paper n (share) | paper c/ct [90%] | live − paper |
+|---|---|---|---|---|---|
+| pre-game > 24h | 40 (2%) | +2.38 [−5.17, +7.43] | 509 (7%) | −0.72 [−3.44, +1.62] | +3.10 |
+| pre-game 6–24h | 39 (2%) | −6.43 [−13.65, +1.99] | 451 (6%) | +0.78 [−1.15, +2.49] | −7.21 |
+| pre-game < 6h | 189 (10%) | +1.58 [−1.79, +4.27] | 1,558 (20%) | +1.00 [−0.10, +2.10] | +0.58 |
+| in-play | 1,555 (85%) | −0.66 [−2.12, +0.78] | 5,143 (67%) | +0.81 [+0.12, +1.45] | −1.47 |
+| all | 1,823 | −0.49 [−1.99, +0.83] | 7,661 | +0.74 [+0.26, +1.21] | −1.23 |
+
+Each window minus the rest, live: +2.93, −6.07, +2.32 and −1.17¢. Every 90% interval
+includes zero.
+
+**VERDICT: NO SIGNAL.** Entry timing relative to the real start does not predict live
+c/contract at the pre-registered bar. Priority 3 (wider paper history) is not run, per §3.
+
+### 6.4 Readings
+
+- **The sports book is an in-play book.**
+  - 85% of live sports fills, and 67% of paper entries, happen after the start.
+  - 177 live orders rested before the start and filled in-play. They earned +0.04¢
+    [−4.40, +3.91], no worse than the rest.
+  - Resting orders being picked off as the game starts is **not** visible here.
+- **The paper-to-live gap is not a timing effect.**
+  - Live trails paper by 1.47¢ in-play and by about 0.6¢ to 7¢ elsewhere, with wide intervals.
+  - The gap sits where the volume is (in-play), not in a timing window.
+- **The "12–24h before close" premise was a crypto cell, not a sports one.**
+  - Re-reading ops `live-canary-markets-20261015a`, the 115-market cell (−5.6¢) holds
+    **2 sports markets**.
+  - The rest are crypto (44, −13.2¢), oil (9), gas (7), other (14), and weather (30, +7.4¢).
+  - Sports markets mostly lack a stored close time before 2026-08-08, so they barely entered
+    that cell. The handoff's "live sports entries filled 12–24h before close" was a misreading,
+    corrected here and in docs/MMSELL_LIVE_CANARY_PATTERNS.md §7.
+- **Descriptive only, not a finding:**
+  - MLB live in-play is −2.1¢ (763) against pre-game < 6h +2.5¢ (76).
+  - This is one family out of six, picked after looking. It is recorded, not tested, and is
+    not a basis for an arm without its own pre-registration.
+- **Boundary sensitivity:** 387 live fills sit within 30 minutes of the start. A start error
+  could move those across the in-play line. Soccer's MLS offsets split between 3h and 4h, so
+  soccer's derived start may be up to an hour late on some games. This affects only which
+  in-play bucket a fill lands in, and no window came near the bar.
+
+### 6.5 Consequence
+
+- **No paper arm is proposed.**
+- **No live change.**
+- **For a future timing study:**
+  - For MLB, NFL and NCAAF the start is reliable: `occurrence_datetime − 3h`, or the ticker
+    HHMM, or ESPN / MLB StatsAPI.
+  - Tennis needs a different source.
+- The open question about the sports paper-to-live gap stays with fill quality (who takes our
+  resting orders and when, `docs/MMSELL_QUEUE_FILL_TELEMETRY.md`), not with the clock.
