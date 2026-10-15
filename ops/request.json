@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXLLM1", "--per-series", "400", "--no-control"], "id": "d-deep-sci-20261015a"}
+{"type":"db","id":"bands-early-20261015a","sql":"SELECT p.strategy, count(*) AS entries, count(*) FILTER (WHERE p.status <> 'open') AS settled, coalesce(sum(p.pnl),0) AS pnl, string_agg(DISTINCT split_part(p.market_ticker,'-',1), ',') AS series, min(p.created_at) AS first_at FROM paper_trades p WHERE p.strategy IN ('Tempmmsell1','Tempmmsell2','Tempmmsell3','Rainmmsell3') GROUP BY p.strategy ORDER BY p.strategy"}
