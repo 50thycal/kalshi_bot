@@ -128,6 +128,14 @@ RISK_ENVELOPE: dict = {
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,
     "close_window_hours": [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE],
+    # §9.55: event-tied mention markets only; a resting bid steps aside before its event.
+    "universe": {
+        "event_mention_only": limm.EVENT_MENTION_ONLY,
+        "pre_event_cutoff_minutes": limm.PRE_EVENT_CUTOFF_MINUTES,
+        "event_date_fallback_hour_utc": limm.EVENT_DATE_FALLBACK_HOUR_UTC,
+        "min_hours_before_event": limm.MIN_HOURS_BEFORE_EVENT,
+        "min_hold_hours": limm.MIN_HOLD_SECONDS / 3600.0,
+    },
     "exit_policy": {
         "stop_loss_fraction_of_entry": limm.STOP_LOSS_FRACTION,
         "take_profit_cents": limm.TAKE_PROFIT_CENTS,

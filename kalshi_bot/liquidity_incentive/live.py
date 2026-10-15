@@ -43,7 +43,9 @@ that cannot resolve within days.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
 
 # --- the strategy's own caps. The XOS risk envelope names these; a test asserts they match. ---
 #:
@@ -114,6 +116,72 @@ DEAD_QUOTE_FRACTION = 0.10
 #: hour x hours remaining), and skip any whose projection is under this — a programme that cannot
 #: plausibly clear Kalshi's $1.00 minimum pays nothing however long we rest there (§9.49).
 MIN_PROJECTED_PROGRAM_USD = 1.00
+
+#: §9.55 (operator decision 2026-10-15): the universe is MENTION markets tied to ONE scheduled
+#: event (a rally, a broadcast, an earnings call) — "will X be said during <event>". Over the
+#: book's life they paid $5.40 of $10.91 confirmed and filled once in 48 orders, while the
+#: markets that track a moving number (gas, FX, approval, Billboard) filled ~7 times and paid
+#: nothing. "Will Trump say X before <date>" windows are OUT: the word can come at any moment, so
+#: there is no "right before" to step aside. Supply is ample (~66 event-tied mention events, ~3,000
+#: markets in the 35 days to 2026-10-15) for a two-slot book.
+EVENT_MENTION_ONLY = True
+#: A resting bid is cancelled this long before its event starts, so the event cannot fill it.
+PRE_EVENT_CUTOFF_MINUTES = 15
+#: When the programme does not end at the event (it runs to market close), the event's hour is
+#: unknown; step aside at 07:00 ET (11:00Z) on the event's date — before a pre-market earnings call
+#: and well before an evening rally or broadcast.
+EVENT_DATE_FALLBACK_HOUR_UTC = 11
+#: A programme ending at least this long before the market closes is taken to end AT the event
+#: (Kalshi stops paying when the event starts; the market stays open for resolution).
+PROGRAM_ENDS_AT_EVENT_MIN_GAP_HOURS = 1.0
+#: No new entry with less than this left before its pre-event cutoff: too little time to earn.
+MIN_HOURS_BEFORE_EVENT = 6.0
+#: A held quote is never swapped for a better market before it has rested this long (§9.55; the
+#: book swapped gas -> IASAND -> gas inside two hours on 2026-10-14, resetting time-in-book).
+MIN_HOLD_SECONDS = 24 * 3600.0
+
+_EVENT_DATE_RE = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
+_MONTHS = {m: i for i, m in enumerate(
+    ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"), 1)}
+
+
+def event_date(event_ticker: str | None):
+    """The event's date from a Kalshi event ticker ending in YYMMMDD (KXTRUMPMENTION-26OCT16 ->
+    2026-10-16), else None."""
+    m = _EVENT_DATE_RE.search((event_ticker or "").upper())
+    if not m or m.group(2) not in _MONTHS:
+        return None
+    try:
+        return datetime(2000 + int(m.group(1)), _MONTHS[m.group(2)], int(m.group(3)),
+                        tzinfo=timezone.utc).date()
+    except ValueError:
+        return None
+
+
+def is_event_mention(series: str | None, event_ticker: str | None, title: str | None) -> bool:
+    """A mention market tied to one dated event — not a "say X before <date>" window."""
+    if "MENTION" not in (series or "").upper():
+        return False
+    if " before " in f" {(title or '').lower()} ":
+        return False
+    return event_date(event_ticker) is not None
+
+
+def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str | None,
+                     program_end: datetime | None, close_time: datetime | None):
+    """When a resting bid in this market must be gone, or None when it is not an event-tied
+    mention market (and so is outside the §9.55 universe).
+
+    A programme that ends well before the market closes ends AT the event: cut off
+    PRE_EVENT_CUTOFF_MINUTES before it. Otherwise the event's hour is unknown and the cutoff is
+    EVENT_DATE_FALLBACK_HOUR_UTC on the date in the event ticker."""
+    if not is_event_mention(series, event_ticker, title):
+        return None
+    if program_end is not None and close_time is not None and (
+            close_time - program_end) >= timedelta(hours=PROGRAM_ENDS_AT_EVENT_MIN_GAP_HOURS):
+        return program_end - timedelta(minutes=PRE_EVENT_CUTOFF_MINUTES)
+    d = event_date(event_ticker)
+    return datetime(d.year, d.month, d.day, EVENT_DATE_FALLBACK_HOUR_UTC, tzinfo=timezone.utc)
 
 #: How an entry is quoted (§9.48, operator decision 2026-10-04, probe LIMM-PLACEMENT P1):
 #:   "cheap_side" — ONE bid, on the side whose reference price is <= MAX_PRICE_CENTS (the

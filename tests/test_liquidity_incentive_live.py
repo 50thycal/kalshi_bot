@@ -329,3 +329,41 @@ def test_side_ranking_prefers_fresher_then_thinner_then_cheaper():
     ranked = lv.rank_candidates([c("OLD", 1100.0, 100.0, 2), c("NEW_DEEP", 2900.0, 2.0, 2),
                                  c("NEW_THIN_5", 1100.0, 3.0, 5), c("NEW_THIN_2", 1100.0, 4.0, 2)])
     assert [x["market_ticker"] for x, _ in ranked] == ["NEW_THIN_2", "NEW_THIN_5", "NEW_DEEP", "OLD"]
+
+
+# --- §9.55: the event-mention universe and its pre-event cutoff ---------------------------------
+
+def test_pre_event_cutoff_is_15_minutes_before_a_programme_that_ends_at_the_event():
+    from datetime import datetime, timezone
+    u = timezone.utc
+    cut = lv.pre_event_cutoff(
+        series="KXTRUMPMENTION", event_ticker="KXTRUMPMENTION-26OCT16",
+        title="What will Donald Trump say during Midterm Rally at Dalton, Georgia?",
+        program_end=datetime(2026, 10, 16, 22, tzinfo=u),
+        close_time=datetime(2026, 10, 30, 14, tzinfo=u))
+    assert cut == datetime(2026, 10, 16, 21, 45, tzinfo=u)
+
+
+def test_pre_event_cutoff_falls_back_to_the_event_date_morning():
+    # The programme runs to market close, so its end says nothing about the event's hour.
+    from datetime import datetime, timezone
+    u = timezone.utc
+    cut = lv.pre_event_cutoff(
+        series="KXWORLDNEWSMENTION", event_ticker="KXWORLDNEWSMENTION-26OCT14",
+        title="What will any host or reporter say during ABC World News Tonight?",
+        program_end=datetime(2026, 10, 28, 14, tzinfo=u),
+        close_time=datetime(2026, 10, 28, 14, tzinfo=u))
+    assert cut == datetime(2026, 10, 14, lv.EVENT_DATE_FALLBACK_HOUR_UTC, tzinfo=u)
+
+
+def test_say_before_a_date_windows_and_non_mention_markets_are_outside_the_universe():
+    assert not lv.is_event_mention("KXTRUMPSAY", "KXTRUMPSAY-26OCT19",
+                                     'Will Trump say "Mamdani" before Oct 19, 2026?')
+    assert not lv.is_event_mention("KXTRUMPSAYMONTH", "KXTRUMPSAYMONTH-26NOV01", "x")
+    assert not lv.is_event_mention("KXAAAGASMINM", "KXAAAGASMINM-26OCT31", "Gas price")
+    assert not lv.is_event_mention("KXTRUMPMENTION", "KXTRUMPMENTION", "no date")
+    assert lv.is_event_mention("KXEARNINGSMENTIONNKE", "KXEARNINGSMENTIONNKE-26SEP30",
+                                 "What will Nike say during its earnings call?")
+    assert lv.pre_event_cutoff(series="KXTRUMPSAY", event_ticker="KXTRUMPSAY-26OCT19",
+                                 title="Will Trump say X before Oct 19?", program_end=None,
+                                 close_time=None) is None

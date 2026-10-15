@@ -55,6 +55,13 @@ class FakeClient:
         return {"market": {"ticker": ticker}}
 
 
+@pytest.fixture(autouse=True)
+def _generic_universe(monkeypatch):
+    """Most tests here exercise mechanics on generic KXTEST markets; the §9.55 event-mention
+    universe has its own tests below, which switch it back on."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", False)
+
+
 def _book(yes, no):
     return {"orderbook": {"yes": [list(x) for x in yes], "no": [list(x) for x in no]}}
 
@@ -990,8 +997,8 @@ def test_a_live_quote_is_kept_even_when_another_market_is_better(live_db, settin
     # programme early forfeits what it accrued (paid at programme end, $1.00 minimum), so stay.
     client = FakeClient(_replace_books(500))
     with db.session_scope() as s:
-        _held_pair(s, "KXHELD-1", hours_old=5)
-        _held_pair(s, "KXHELD-2", hours_old=5)
+        _held_pair(s, "KXHELD-1", hours_old=25)
+        _held_pair(s, "KXHELD-2", hours_old=25)
         _program(s, "KXTEST-N")
         out = _cycle(client, settings, s)
     check = out["replace_check"]
@@ -1006,8 +1013,8 @@ def test_a_dead_quote_is_replaced(live_db, settings):
     books["KXHELD-1"] = _book([(3, 40000)], [(4, 40000)])             # our 250 is now ~nothing
     client = FakeClient(books)
     with db.session_scope() as s:
-        _held_pair(s, "KXHELD-1", hours_old=5)
-        _held_pair(s, "KXHELD-2", hours_old=5)
+        _held_pair(s, "KXHELD-1", hours_old=25)
+        _held_pair(s, "KXHELD-2", hours_old=25)
         _program(s, "KXTEST-N")
         out = _cycle(client, settings, s)
         statuses = _status_by_ticker(s)
@@ -1038,8 +1045,8 @@ def test_the_programme_list_is_read_once_a_cycle(live_db, settings, monkeypatch)
     client = FakeClient(books)
     r = run.IncentiveLiveRunner(client, settings)
     with db.session_scope() as s:
-        _held_pair(s, "KXHELD-1", hours_old=5)
-        _held_pair(s, "KXHELD-2", hours_old=5)
+        _held_pair(s, "KXHELD-1", hours_old=25)
+        _held_pair(s, "KXHELD-2", hours_old=25)
         _program(s, "KXTEST-N")
         out = r.cycle(s, _exec(settings, client), {"cash_balance": 500.0}, now=NOW)
     assert out["outcomes"].get("replaced") == 1 and out["placed"] == 1
@@ -1049,6 +1056,21 @@ def test_the_programme_list_is_read_once_a_cycle(live_db, settings, monkeypatch)
         r.cycle(s, _exec(settings, client), {"cash_balance": 500.0},
                 now=NOW + timedelta(seconds=60))
     assert reads == [NOW, NOW + timedelta(seconds=60)]
+
+
+def test_a_dead_quote_younger_than_the_minimum_hold_is_kept(live_db, settings):
+    # §9.55: a held quote is not swapped before MIN_HOLD_SECONDS, even when it is DEAD; the
+    # book swapped gas -> IASAND -> gas inside two hours on 2026-10-14.
+    books = _replace_books(500)
+    books["KXHELD-1"] = _book([(3, 40000)], [(4, 40000)])
+    client = FakeClient(books)
+    with db.session_scope() as s:
+        _held_pair(s, "KXHELD-1", hours_old=5)
+        _held_pair(s, "KXHELD-2", hours_old=5)
+        _program(s, "KXTEST-N")
+        out = _cycle(client, settings, s)
+    assert out["outcomes"] == {run.SKIP_NO_SLOTS: 1}
+    assert client.canceled == [] and client.placed == []
 
 
 def test_a_stale_pair_is_kept_when_nothing_is_better(live_db, settings):
@@ -1434,3 +1456,83 @@ def test_a_resting_exit_leg_over_the_cap_is_cancelled(live_db, settings):
 def test_exit_leg_cap_is_the_per_order_budget():
     assert limm.MAX_EXIT_LEG_DOLLARS == limm.MAX_ORDER_DOLLARS == 10.0
     assert limm.exit_leg_affordable(50, 20) and not limm.exit_leg_affordable(51, 499)
+
+
+# --- §9.55: event-tied mention markets only, and step aside before the event -------------------
+
+def _mention(s, ticker, *, event, hours=48.0, close_hours=240.0, series="KXTRUMPMENTION",
+             title="What will Donald Trump say during Midterm Rally?"):
+    row = _program(s, ticker, series=series, event=event, hours=hours, close_hours=close_hours)
+    row.market_title = title
+    s.flush()
+    return row
+
+
+def test_only_event_tied_mention_markets_are_quoted(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXTRUMPMENTION-26SEP20-PEAC": book, "KXTRUMPSAY-26SEP25-X": book,
+                         "KXTEST-A": book, "KXTRUMPMENTION-26SEP18-SOON": book})
+    with db.session_scope() as s:
+        _mention(s, "KXTRUMPMENTION-26SEP20-PEAC", event="KXTRUMPMENTION-26SEP20")
+        # A "say X before <date>" window: no event to step aside for.
+        _mention(s, "KXTRUMPSAY-26SEP25-X", event="KXTRUMPSAY-26SEP25", series="KXTRUMPSAY",
+                 title='Will Trump say "X" before Sep 25, 2026?')
+        _program(s, "KXTEST-A")                                  # not a mention market
+        # Event-tied, but its programme ends at the event 3h from now: under 6h to earn.
+        _mention(s, "KXTRUMPMENTION-26SEP18-SOON", event="KXTRUMPMENTION-26SEP18", hours=3.0)
+        out = _cycle(client, settings, s)
+    assert client.asked == ["KXTRUMPMENTION-26SEP20-PEAC"]
+    assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTRUMPMENTION-26SEP20-PEAC"
+
+
+def _resting(s, ticker, *, hours_old=2):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=ticker, strategy=limm.LIVE_TAG,
+                      side="no", action="buy", limit_price=3, quantity=300, status="resting",
+                      kalshi_order_id=f"K-{ticker}", client_order_id=f"K-{ticker}",
+                      created_at=NOW - timedelta(hours=hours_old)))
+    s.flush()
+
+
+def test_a_resting_bid_steps_aside_before_its_event(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    book = _book([(23, 100)], [(4, 30), (3, 300)])
+    client = FakeClient({"KXTRUMPMENTION-26SEP18-A": book, "KXTRUMPMENTION-26SEP25-B": book})
+    with db.session_scope() as s:
+        # The programme ends (the rally starts) in 10 minutes: inside the 15-minute cutoff.
+        _mention(s, "KXTRUMPMENTION-26SEP18-A", event="KXTRUMPMENTION-26SEP18",
+                 hours=10 / 60)
+        _resting(s, "KXTRUMPMENTION-26SEP18-A")
+        # A week away: stays.
+        _mention(s, "KXTRUMPMENTION-26SEP25-B", event="KXTRUMPMENTION-26SEP25", hours=168.0)
+        _resting(s, "KXTRUMPMENTION-26SEP25-B")
+        out = _cycle(client, settings, s)
+        statuses = _status_by_ticker(s)
+    assert out["outcomes"].get("pre_event") == 1
+    assert client.canceled == ["K-KXTRUMPMENTION-26SEP18-A"]
+    assert statuses["KXTRUMPMENTION-26SEP25-B"] == "resting"
+
+
+def test_a_resting_bid_outside_the_universe_is_cancelled(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    client = FakeClient({"KXAAAGASMINM-26OCT31-3.90": _book([(2, 500)], [(97, 500)])})
+    with db.session_scope() as s:
+        _program(s, "KXAAAGASMINM-26OCT31-3.90", series="KXAAAGASMINM")
+        _resting(s, "KXAAAGASMINM-26OCT31-3.90")
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("out_of_universe") == 1
+    assert client.canceled == ["K-KXAAAGASMINM-26OCT31-3.90"]
+
+
+def test_a_held_position_is_not_touched_by_the_pre_event_step(live_db, settings, monkeypatch):
+    # Only a purely resting bid steps aside; a filled leg belongs to the exit rules.
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    runner = run.IncentiveLiveRunner(FakeClient({}), settings)
+    with db.session_scope() as s:
+        _mention(s, "KXTRUMPMENTION-26SEP18-A", event="KXTRUMPMENTION-26SEP18", hours=0.1)
+        s.add(m.LiveOrder(market_ticker="KXTRUMPMENTION-26SEP18-A", strategy=limm.LIVE_TAG,
+                          side="no", action="buy", limit_price=3, quantity=300, status="filled",
+                          kalshi_order_id="K-f", client_order_id="K-f",
+                          created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        assert runner._retire_before_event(s, _exec(settings, runner.client), NOW) == {}
