@@ -1,0 +1,39 @@
+# ops request [READ]
+# type=script  id=c-ultra-khigh-20261015a
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T05:42:30Z
+=== MMSELL look-alike probe — 8 series; cell 1<=mid<=5, yes_ask<=4; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXHIGHAUS                4332    4320  2024-10..2026-10    600    97%
+  KXHIGHCHI                4332    4320  2024-10..2026-10    600    96%
+  KXHIGHDEN                4170    4158  2024-11..2026-10    600    99%
+  KXHIGHLAX                3894    3882  2025-01..2026-10    594    96%
+  KXHIGHMIA                4332    4318  2024-10..2026-10    600    89%
+  KXHIGHNY                 4332    4320  2024-10..2026-10    600    95%
+  KXHIGHPHIL               4170    4158  2024-11..2026-10    600    95%
+  KXHIGHHOU                 420     420  2024-11..2025-01    420    87%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXHIGHAUS                254    92    3.12    1.57     4   +1.55    +4.27   1.98 12/14  HOLD
+  KXHIGHCHI                248    90    3.15    1.21     3   +1.94    +5.34   2.79 11/13  HOLD
+  KXHIGHDEN                248   107    3.11    1.21     3   +1.90    +4.41   2.83 9/12  HOLD
+  KXHIGHLAX                267   101    3.01    0.37     1   +2.63    +6.96   6.84 15/16  PROMOTE
+  KXHIGHMIA                261    92    2.98    1.53     4   +1.45    +4.11   2.02 14/17  HOLD
+  KXHIGHNY                 290    94    2.96    1.38     4   +1.58    +4.87   2.30 15/18  HOLD
+  KXHIGHPHIL               242   103    3.17    1.65     4   +1.51    +3.55   1.90 9/13  HOLD
+  KXHIGHHOU                 98    58    3.36    2.04     2   +1.32    +2.22   0.91 3/3   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXHIGH                  1908   170    3.08    1.31    25   +1.77   +19.88   6.21 21/24  HOLD
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXHIGH                 2024-10: 9 @ +2.8, 2024-11: 48 @ +3.1, 2024-12: 97 @ -0.0, 2025-01: 81 @ +1.9, 2025-02: 55 @ +3.2, 2025-03: 70 @ -1.0, 2025-04: 37 @ +0.5, 2025-05: 54 @ +3.4, 2025-06: 53 @ +3.4, 2025-07: 40 @ +3.1, 2025-08: 51 @ +1.4, 2025-09: 48 @ +3.2, 2025-10: 84 @ +3.0, 2025-11: 79 @ +2.0, 2025-12: 106 @ -0.4, 2026-01: 87 @ +1.9, 2026-02: 103 @ +3.1, 2026-03: 95 @ +3.1, 2026-04: 111 @ +2.2, 2026-05: 104 @ +0.0, 2026-06: 100 @ +0.9, 2026-07: 102 @ +1.9, 2026-08: 90 @ +1.8, 2026-09: 100 @ +1.8, 2026-10: 104 @ +1.8
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXHIGH                  4357/4614     94% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
