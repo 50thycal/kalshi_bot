@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXHIGHAUS,KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHMIA,KXHIGHNY,KXHIGHPHIL,KXHIGHHOU","--per-series","600","--no-control","--timing"],"id":"fast-b-khigh-20261015a"}
+{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXHIGHTATL,KXHIGHTBOS,KXHIGHTDAL,KXHIGHTDC,KXHIGHTEWR,KXHIGHTHOU,KXHIGHTLV,KXHIGHTMIN,KXHIGHTNOLA,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSAN,KXHIGHTSATX,KXHIGHTSDF,KXHIGHTSEA,KXHIGHTSFO,KXHIGHTTTN","--per-series","300","--no-control","--timing"],"id":"fast-b-khight-20261015a"}
