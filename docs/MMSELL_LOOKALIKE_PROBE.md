@@ -151,3 +151,46 @@ KXHIGH + KXHIGHT + KXLOWT, paper only, with the gate below.
 
 Opening the temperature series to this one paper book must not open them to any other book,
 and above all not to a live book (`mmsell_skip_series` is global today).
+
+## 5. Paper tape — `mmsell-temperature-season` v1
+
+Package: `kalshi_bot/experiment_os/temperature_season.py`. It is registered in Experiment OS only
+after the owner merges. Until then this section is the proposal, not the contract.
+
+| Arm | Role | Tag | Book |
+|---|---|---|---|
+| `temp_cell` | control | `Tempmmsell1` | `lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW` |
+
+**The reach.** `KXHIGH` and `KXLOW` stay on the global skip list. The book reaches them only
+through its own `optin=` key.
+- The tracker ranks opted-in events in a separate list after the normal ones, so no other book's
+  candidates or ranks move. `tests/test_mmsell_optin.py` checks this.
+- The tracker refuses every live mirror on a skipped series. This holds even with the tag
+  allowlisted and the tier bar off.
+- `optin` must name a prefix the skip list actually drops, or the book is rejected.
+- Telemetry `events_optin` / `markets_considered_optin` count the reach apart from the control's
+  funnel.
+
+**Gate `temp_cell_winter_keep`** (kill gate, one arm; the same bars as the rain contract):
+- **Floor:** 120 settlement days. It cannot be reached before mid-February, so the sample holds
+  about 75 Dec–Feb days, against a pre-registered minimum of 30.
+- **Horizon:** 180 days.
+- **PASS:** ≥ +2.0¢/contract **and** daily stability ≥ 0.15.
+- **FAIL:** < 0¢ at any point after 45 days, < +1.0¢ at the floor, or stability < 0.
+
+**Changes from §4's nomination, made before any paper trade:**
+- **Kill at the floor:** tightened from ≤ 0¢ to < +1¢, because temperature has a history of maker
+  adverse selection and a sub-1¢ edge cannot pay for it.
+- **Daily stability:** added, because every city on one front settles together.
+- **Entry window:** `htcmax=48` mirrors the replay's T−48h…T−1h window.
+
+**Winter stop, a monitoring read.** Once at least 30 Dec–Feb settlement days exist, a Dec–Feb mean
+≤ −3¢/contract means stop the book.
+- The gate grammar has no seasonal subset, and adding one would be a shared-metric change
+  (Platform Change Review). So this stop is not a verdict.
+- When it trips, the result is an Experiment OS issue routed to Research Lab, recommending the
+  spec's removal from `MMSELL_VARIANTS`.
+
+**Not gated:** size and promotion, as in the rain contract. A live step needs a gate PASS and then
+a Live Ops canary on its own Version. The global caps (open positions, settlement date, rungs)
+apply unchanged and bound how many cities one weather day can add.

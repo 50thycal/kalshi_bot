@@ -1,5 +1,22 @@
 # Weather-markets research journal
 
+## Temperature look-alikes 2026-10-14/15 — the rain cell replicates; one paper tape proposed
+
+Research Lab look-alike screen and replay ([doc](MMSELL_LOOKALIKE_PROBE.md),
+`scripts/mmsell_lookalike_probe.py`).
+- **The probe:** replays the mmsell10 cell (YES ≤ 7¢, maker NO at the no-bid, held to
+  settlement) on Kalshi's public archive. The KXRAIN control reproduced (+4.21¢, t 4.53).
+- **Results:** all three daily temperature families PROMOTE under the pre-registered gate:
+  - KXHIGH: +2.47¢, t 2.94 (2024-10..2026-10);
+  - KXHIGHT: +2.54¢, t 3.72;
+  - KXLOWT: +3.06¢, t 3.21.
+  Implied YES is about 6.6% against about 4% realized.
+- **Risks:** winter 2024–25 KXHIGH was sharply negative (Dec −10¢, Jan −9¢), the replay is gross
+  of fees and assumes fills, and the families share weather days.
+- **Proposed tape:** `mmsell-temperature-season`, a paper book `Tempmmsell1` on KXHIGH*/KXLOW*,
+  reached through a new per-book `optin=` (the global skip list is unchanged and live is refused
+  on skipped series). It has a 120-settlement-day kill gate and a Dec–Feb ≤ −3¢ monitoring stop.
+
 ## KXRAIN rain cell 2026-10-14 — real, smaller than paper, fading; winter gate registered
 
 Research Lab read of [the cell](KXRAIN_MMSELL_CELL.md): MMSELL buying NO at YES ≤ 7¢ on Kalshi's

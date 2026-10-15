@@ -270,6 +270,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         successor_mmsell10_cell_size,
         successor_mmsell10_contest_cap,
         successor_mmsell10_size_split,
+        temperature_season,
     )
 
     return {
@@ -344,6 +345,21 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=rain_season.register,
             strategy_tags=(rain_season.CELL_TAG, rain_season.ADJACENT_TAG),
+        ),
+        "mmsell-temperature-season": ExperimentPackage(
+            name="mmsell-temperature-season",
+            experiment_key=temperature_season.EXPERIMENT_KEY,
+            description=(
+                "The contract for `Tempmmsell1`: one PAPER book running the rain cell (YES "
+                "<=7c, maker NO at the no-bid) on daily temperature ladders (KXHIGH*/KXLOW*), "
+                "which the global skip list still drops for every other book — this one "
+                "reaches them through its own `optin=`. One keep/kill gate whose floor is in "
+                "settlement DAYS and cannot be reached before mid-February; the Dec-Feb stop "
+                "is a pre-registered monitoring read. Arms nothing, trades nothing, no real "
+                "money: an operator-side env append to MMSELL_VARIANTS creates the book."
+            ),
+            register=temperature_season.register,
+            strategy_tags=(temperature_season.CELL_TAG,),
         ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",
