@@ -87,6 +87,14 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _pre_event_cutoff(row) -> datetime | None:
+    """`live.pre_event_cutoff` for a programme row (§9.55)."""
+    return limm.pre_event_cutoff(
+        series=row.series_ticker or (row.market_ticker or "").split("-", 1)[0],
+        event_ticker=row.event_ticker, title=row.market_title,
+        program_end=_aware(row.end_date), close_time=_aware(row.close_time))
+
+
 def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
     """One `rank_candidates` input built from a program row and its fresh book.
 
@@ -279,6 +287,9 @@ class IncentiveLiveRunner:
         retired = self._retire_unpaid_pairs(session, executor, now)
         if retired:
             summary["outcomes"]["program_ended"] = retired
+        stepped = self._retire_before_event(session, executor, now)
+        if stepped:
+            summary["outcomes"].update(stepped)
         snapped = self._snapshot_own_books(session, now)
         if snapped:
             summary["book_snapshots"] = snapped
@@ -295,7 +306,8 @@ class IncentiveLiveRunner:
         exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
         slots = limm.MAX_OPEN_ORDERS - int(open_now)
         # Full book: carry on only if a held pair is old enough to be swapped for a better one.
-        stale = self._stale_held_pairs(session, now) if slots <= 0 else {}
+        stale = (self._stale_held_pairs(session, now, min_age_seconds=limm.MIN_HOLD_SECONDS)
+                 if slots <= 0 else {})
         if slots <= 0 and not stale:
             summary["outcomes"][SKIP_NO_SLOTS] = 1
             return summary
@@ -555,6 +567,33 @@ class IncentiveLiveRunner:
                                                 reason="program_ended"):
                 n += 1
         return n
+
+    def _retire_before_event(self, session, executor, now: datetime) -> dict:
+        """§9.55: cancel a purely resting quote whose event is about to start (its pre-event
+        cutoff has passed), or that is outside the event-mention universe altogether. A fill
+        comes when the event happens — the word is said — so the bid steps aside before it.
+        Held POSITIONS are left to the exit rules; only resting bids go."""
+        if not limm.EVENT_MENTION_ONLY:
+            return {}
+        resting = self._stale_held_pairs(session, now, min_age_seconds=0.0)
+        if not resting:
+            return {}
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
+        out: dict = {}
+        for ticker in resting:
+            row = programs.get(ticker)
+            if row is None:
+                continue            # programme gone: `_retire_unpaid_pairs` owns that case
+            cutoff = _pre_event_cutoff(row)
+            if cutoff is not None and now < cutoff:
+                continue
+            reason = "pre_event" if cutoff is not None else "out_of_universe"
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason=reason):
+                out[reason] = out.get(reason, 0) + 1
+                logger.info(f"incentive book: {reason}: cancelled resting bid on {ticker}"
+                            + (f" (cutoff {cutoff.isoformat()})" if cutoff else ""))
+        return out
 
     def _reprice_held(self, session, executor, now: datetime, account_state=None) -> int:
         """§9.49: a held single-side quote that has fallen BELOW its own market's reference
@@ -918,6 +957,13 @@ class IncentiveLiveRunner:
                 continue
             if (row.market_ticker or "").split("-", 1)[0].upper() in excluded_series:
                 continue
+            if limm.EVENT_MENTION_ONLY:
+                # §9.55: event-tied mention markets only, and only with time left to earn
+                # before the bot must step aside for the event.
+                cutoff = _pre_event_cutoff(row)
+                if cutoff is None or (cutoff - now).total_seconds() / 3600.0 \
+                        < limm.MIN_HOURS_BEFORE_EVENT:
+                    continue
             end = _aware(row.end_date)
             if end is None:
                 continue

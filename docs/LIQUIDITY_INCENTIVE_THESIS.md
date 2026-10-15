@@ -2928,3 +2928,38 @@ reservation.
 and a resting one is cancelled (`exit_leg_over_cap:cancelled`). That leg is then closed only by
 the +5c take-profit sell, the stop, or the pre-close flatten; a 1c leg has no stop and can lose at
 most its cost. Entry caps and the $50 budget are unchanged.
+
+### 9.55 Event-tied mention markets only; a resting bid steps aside before its event (2026-10-15)
+
+**Evidence (live book, to 2026-10-15).** Trading P&L about −$42 against $10.91 of confirmed
+rewards. The loss is fills, not missing reward: Miller Lite −$5.33, Oil −$6.89, TSWIF −$4.99 open.
+By market type over the book's 200-odd orders:
+
+| type | orders | entry fills | confirmed reward |
+|---|---|---|---|
+| mention markets tied to one event (Trump rallies, ABC World News, …) | 48 Trump-mention (36 were `insufficient_balance` rejects) | 1 | $5.40 |
+| "say X before <date>" windows | — | — | $1.99 |
+| markets tracking a moving number (gas, FX, approval, Billboard, …) | ~40 | 7+ | ~$0 |
+
+Supply is ample: ~66 event-tied mention events (~3,000 markets) carried a liquidity programme in
+the 35 days to 2026-10-15 — about two a day — against a two-slot book.
+
+**Decision (operator, 2026-10-15):**
+1. **Universe** (`EVENT_MENTION_ONLY`): only mention markets whose series contains `MENTION`,
+   whose event ticker carries a date (`…-26OCT16`) and whose title is not a "before <date>"
+   window. "Will Trump say X before <date>" markets are OUT: the word can come at any moment, so
+   there is no point at which to step aside.
+2. **Step aside before the event** (`_retire_before_event`): a programme ending ≥1h before the
+   market closes ends AT the event (Kalshi stops paying when the event starts), so a resting bid
+   is cancelled `PRE_EVENT_CUTOFF_MINUTES` (15) before it ends — costing no reward. Otherwise the
+   event's hour is unknown and the cutoff is 07:00 ET (11:00Z) on the event date. No entry with
+   under `MIN_HOURS_BEFORE_EVENT` (6h) to its cutoff. A resting bid outside the universe is
+   cancelled (`out_of_universe`). Held positions are left to the exit rules.
+3. **Minimum hold** (`MIN_HOLD_SECONDS`, 24h): a held quote is not swapped for a "better" market
+   until it has rested 24h (2026-10-14: gas → IASAND → gas inside two hours). A programme that
+   ends still retires the quote at once.
+
+Size is unchanged (~$10 a bid, close to Kalshi's $1 payout floor per programme); the operator
+declined smaller bids. TSWIF is left as is (operator). The paper twin stays invalid (§9.52).
+This changes the book's universe: per Experiment OS it is a recorded change (new epoch) for the
+operator to register; this doc is the evidence, not the record.
