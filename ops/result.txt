@@ -1,124 +1,173 @@
-  HTTP 404 for /events/KXMLBTOTAL-26OCT141940?with_nested_markets=true: {"error":{"code":"not_found","message":"not found"}}
 # ops request [READ]
-# type=script  id=evtime-probe-20261015a
-# code c1993c62b922151d44fa7844460606f8ddc6db4b · started 2026-10-15T16:59:50Z
+# type=script  id=evtime-fields-20261015a
+# code 76113a376a5a67ba3e105eaefca021c72bbe63c2 · started 2026-10-15T17:21:49Z
 
-=== EVENT KXMLBTOTAL-26OCT141940 ===
+=== KXNFLTOTAL-26AUG13INDNE-60 ===
+  ticker                     KXNFLTOTAL-26AUG13INDNE-60
+  event_ticker               KXNFLTOTAL-26AUG13INDNE
+  status                     finalized
+  open_time                  2026-08-07T16:05:00Z
+  occurrence_datetime        2026-08-14T02:30:00Z
+  expected_expiration_time   2026-08-14T02:30:00Z
+  close_time                 2026-08-14T03:15:26Z
+  expiration_time            2026-08-15T23:30:00Z
+  latest_expiration_time     2026-08-15T23:30:00Z
+  settlement_ts              2026-08-14T03:17:34.395159Z
+  can_close_early            True
+  early_close_condition      This market will close and expire early if the event occurs.
+  event.sub_title            IND vs NE (Aug 13)
+  event.strike_date          None
+  event.product_metadata     {"competition": "Pro Football Preseason", "competition_scope": "Point Total"}
 
-=== EVENT KXMLBKS-26AUG081915CLECWS ===
-event fields: {
-  "event_ticker": "KXMLBKS-26AUG081915CLECWS",
-  "series_ticker": "KXMLBKS",
-  "title": "Cleveland vs Chicago WS: Strikeouts",
-  "mutually_exclusive": false,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'fee_multiplier_override', 'fee_type_override', 'last_updated_ts', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 0
+=== KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10 ===
+  ticker                     KXMLBKS-26AUG081915CLECWS-CLEGWILLIAMS32-10
+  event_ticker               KXMLBKS-26AUG081915CLECWS
+  status                     finalized
+  open_time                  2026-08-08T04:11:00Z
+  occurrence_datetime        2026-08-09T02:15:00Z
+  expected_expiration_time   2026-08-09T02:15:00Z
+  close_time                 2026-08-09T02:35:13Z
+  expiration_time            2026-08-11T23:15:00Z
+  latest_expiration_time     2026-08-11T23:15:00Z
+  settlement_ts              2026-08-09T02:41:15.839496Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after the event occurs.
+  event.sub_title            CLE vs CWS (Aug 8)
+  event.strike_date          None
+  event.product_metadata     {"competition": "Pro Baseball", "competition_scope": "Strikeouts"}
 
-=== EVENT KXNFLTOTAL-26AUG13INDNE ===
-event fields: {
-  "event_ticker": "KXNFLTOTAL-26AUG13INDNE",
-  "series_ticker": "KXNFLTOTAL",
-  "title": "Indianapolis vs New England: Total Points",
-  "mutually_exclusive": false,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'markets', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 19
-  market: {"ticker": "KXNFLTOTAL-26AUG13INDNE-18", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 17.5, "open_time": "2026-08-07T16:05:00Z", "close_time": "2026-08-14T02:29:41Z", "expiration_time": "2026-08-15T23:30:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Indianapolis and New England collectively score more than 17.5 points in the Indianapolis vs New England Pro Football game originally scheduled for Aug 13, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNFLTOTAL-26AUG13INDNE-21", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 20.5, "open_time": "2026-08-07T16:05:00Z", "close_time": "2026-08-14T02:33:23Z", "expiration_time": "2026-08-15T23:30:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Indianapolis and New England collectively score more than 20.5 points in the Indianapolis vs New England Pro Football game originally scheduled for Aug 13, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNFLTOTAL-26AUG13INDNE-24", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 23.5, "open_time": "2026-08-07T16:05:00Z", "close_time": "2026-08-14T03:15:23Z", "expiration_time": "2026-08-15T23:30:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Indianapolis and New England collectively score more than 23.5 points in the Indianapolis vs New England Pro Football game originally scheduled for Aug 13, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNFLTOTAL-26AUG13INDNE-27", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 26.5, "open_time": "2026-08-07T16:05:00Z", "close_time": "2026-08-14T03:15:24Z", "expiration_time": "2026-08-15T23:30:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Indianapolis and New England collectively score more than 26.5 points in the Indianapolis vs New England Pro Football game originally scheduled for Aug 13, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
+=== KXMLBHR-26JUL261920NYYPHI-PHITTURNER7-1 ===
+  ticker                     KXMLBHR-26JUL261920NYYPHI-PHITTURNER7-1
+  event_ticker               KXMLBHR-26JUL261920NYYPHI
+  status                     finalized
+  open_time                  2026-07-26T03:41:00Z
+  occurrence_datetime        2026-07-27T02:20:00Z
+  expected_expiration_time   2026-07-27T02:20:00Z
+  close_time                 2026-07-27T02:30:04Z
+  expiration_time            2026-07-29T23:20:00Z
+  latest_expiration_time     2026-07-29T23:20:00Z
+  settlement_ts              2026-07-27T02:36:06.025708Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after the event occurs.
+  event.sub_title            NYY vs PHI (Jul 26)
+  event.strike_date          None
+  event.product_metadata     {"competition": "Pro Baseball", "competition_scope": "Home Runs"}
 
-=== EVENT KXATPCHALLENGERMATCH-26JUL13KENSHE ===
-event fields: {
-  "event_ticker": "KXATPCHALLENGERMATCH-26JUL13KENSHE",
-  "series_ticker": "KXATPCHALLENGERMATCH",
-  "title": "Kennedy vs Shepp",
-  "mutually_exclusive": true,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 0
+=== KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN ===
+  ticker                     KXATPCHALLENGERMATCH-26JUL13KENSHE-KEN
+  event_ticker               KXATPCHALLENGERMATCH-26JUL13KENSHE
+  status                     finalized
+  open_time                  2026-07-13T10:40:00Z
+  occurrence_datetime        2026-07-14T01:30:00Z
+  expected_expiration_time   2026-07-14T01:30:00Z
+  close_time                 2026-07-14T00:40:16Z
+  expiration_time            2026-07-27T22:30:00Z
+  latest_expiration_time     2026-07-27T22:30:00Z
+  settlement_ts              2026-07-14T00:42:19.535994Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after a winner is declared.
+  event.sub_title            Kennedy vs Shepp (Jul 13)
+  event.strike_date          None
+  event.product_metadata     {"competition": "ATP Challenger Lincoln (NE)", "competition_scope": "Game"}
 
-=== EVENT KXMLSGAME-26AUG15COLSKC ===
-event fields: {
-  "event_ticker": "KXMLSGAME-26AUG15COLSKC",
-  "series_ticker": "KXMLSGAME",
-  "title": "Colorado vs Kansas City",
-  "mutually_exclusive": true,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'markets', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 3
-  market: {"ticker": "KXMLSGAME-26AUG15COLSKC-COL", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "structured", "open_time": "2026-08-03T18:59:00Z", "close_time": "2026-08-16T04:03:11Z", "expiration_time": "2026-08-18T07:30:00Z", "settlement_timer_seconds": 30, "rules_primary": "If Colorado wins the Colorado vs Kansas City professional MLS soccer game originally scheduled for Aug 15, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'custom_strike', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXMLSGAME-26AUG15COLSKC-SKC", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "structured", "open_time": "2026-08-03T18:59:00Z", "close_time": "2026-08-16T04:03:11Z", "expiration_time": "2026-08-18T07:30:00Z", "settlement_timer_seconds": 30, "rules_primary": "If Kansas City wins the Colorado vs Kansas City professional MLS soccer game originally scheduled for Aug 15, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'custom_strike', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXMLSGAME-26AUG15COLSKC-TIE", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "structured", "open_time": "2026-08-03T18:59:00Z", "close_time": "2026-08-16T04:03:11Z", "expiration_time": "2026-08-18T07:30:00Z", "settlement_timer_seconds": 30, "rules_primary": "If Tie is the result of the Colorado vs Kansas City professional MLS soccer game originally scheduled for Aug 15, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'custom_strike', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
+=== KXWTACHALLENGERMATCH-26SEP07ZELKUL-ZEL ===
+  ticker                     KXWTACHALLENGERMATCH-26SEP07ZELKUL-ZEL
+  event_ticker               KXWTACHALLENGERMATCH-26SEP07ZELKUL
+  status                     finalized
+  open_time                  2026-09-06T20:50:00Z
+  occurrence_datetime        2026-09-07T11:40:00Z
+  expected_expiration_time   2026-09-07T11:40:00Z
+  close_time                 2026-09-07T11:21:04Z
+  expiration_time            2026-09-21T08:40:00Z
+  latest_expiration_time     2026-09-21T08:40:00Z
+  settlement_ts              2026-09-07T11:23:05.483902Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after a winner is declared.
+  event.sub_title            Zelnickova vs Kulambayeva (Sep 7)
+  event.strike_date          None
+  event.product_metadata     {"competition": "WTA 125K Antalya 4", "competition_scope": "Game"}
 
-=== EVENT KXNCAAFTOTAL-26AUG29UNCTCU ===
-event fields: {
-  "event_ticker": "KXNCAAFTOTAL-26AUG29UNCTCU",
-  "series_ticker": "KXNCAAFTOTAL",
-  "title": "North Carolina vs TCU: Total Points",
-  "mutually_exclusive": false,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'markets', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 19
-  market: {"ticker": "KXNCAAFTOTAL-26AUG29UNCTCU-28", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 27.5, "open_time": "2026-08-11T00:47:00Z", "close_time": "2026-08-29T19:50:01Z", "expiration_time": "2026-08-31T16:00:00Z", "settlement_timer_seconds": 180, "rules_primary": "If the teams collectively score more than 27.5 points in the North Carolina vs TCU college football game originally scheduled for Aug 29, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNCAAFTOTAL-26AUG29UNCTCU-31", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 30.5, "open_time": "2026-08-11T00:47:00Z", "close_time": "2026-08-29T19:50:01Z", "expiration_time": "2026-08-31T16:00:00Z", "settlement_timer_seconds": 180, "rules_primary": "If the teams collectively score more than 30.5 points in the North Carolina vs TCU college football game originally scheduled for Aug 29, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNCAAFTOTAL-26AUG29UNCTCU-34", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 33.5, "open_time": "2026-08-11T00:47:00Z", "close_time": "2026-08-29T19:50:01Z", "expiration_time": "2026-08-31T16:00:00Z", "settlement_timer_seconds": 180, "rules_primary": "If the teams collectively score more than 33.5 points in the North Carolina vs TCU college football game originally scheduled for Aug 29, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXNCAAFTOTAL-26AUG29UNCTCU-37", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 36.5, "open_time": "2026-08-11T00:47:00Z", "close_time": "2026-08-29T19:50:02Z", "expiration_time": "2026-08-31T16:00:00Z", "settlement_timer_seconds": 180, "rules_primary": "If the teams collectively score more than 36.5 points in the North Carolina vs TCU college football game originally scheduled for Aug 29, 2026, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
+=== KXMLSGAME-26AUG15COLSKC-SKC ===
+  ticker                     KXMLSGAME-26AUG15COLSKC-SKC
+  event_ticker               KXMLSGAME-26AUG15COLSKC
+  status                     finalized
+  open_time                  2026-08-03T18:59:00Z
+  occurrence_datetime        2026-08-16T04:30:00Z
+  expected_expiration_time   2026-08-16T04:30:00Z
+  close_time                 2026-08-16T04:03:11Z
+  expiration_time            2026-08-18T07:30:00Z
+  latest_expiration_time     2026-08-18T07:30:00Z
+  settlement_ts              2026-08-16T04:04:42.436795Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after a winner is declared.
+  event.sub_title            COL vs SKC (Aug 15)
+  event.strike_date          None
+  event.product_metadata     {"competition": "MLS", "competition_scope": "Game"}
 
-=== EVENT KXUCLTOTAL-26AUG11ALMLEV ===
-event fields: {
-  "event_ticker": "KXUCLTOTAL-26AUG11ALMLEV",
-  "series_ticker": "KXUCLTOTAL",
-  "title": "Kairat vs Levski Sofia: Regulation Time Total Goals",
-  "mutually_exclusive": false,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'markets', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 6
-  market: {"ticker": "KXUCLTOTAL-26AUG11ALMLEV-1", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 0.5, "open_time": "2026-08-08T15:06:00Z", "close_time": "2026-08-11T17:33:44Z", "expiration_time": "2026-08-13T21:00:00Z", "settlement_timer_seconds": 30, "rules_primary": "If over 0.5 goals are scored in the Kairat vs Levski Sofia professional Champions League soccer game originally scheduled for Aug 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXUCLTOTAL-26AUG11ALMLEV-2", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 1.5, "open_time": "2026-08-08T15:06:00Z", "close_time": "2026-08-11T17:33:44Z", "expiration_time": "2026-08-13T21:00:00Z", "settlement_timer_seconds": 30, "rules_primary": "If over 1.5 goals are scored in the Kairat vs Levski Sofia professional Champions League soccer game originally scheduled for Aug 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXUCLTOTAL-26AUG11ALMLEV-3", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 2.5, "open_time": "2026-08-08T15:06:00Z", "close_time": "2026-08-11T17:33:44Z", "expiration_time": "2026-08-13T21:00:00Z", "settlement_timer_seconds": 30, "rules_primary": "If over 2.5 goals are scored in the Kairat vs Levski Sofia professional Champions League soccer game originally scheduled for Aug 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXUCLTOTAL-26AUG11ALMLEV-4", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "greater", "floor_strike": 3.5, "open_time": "2026-08-08T15:06:00Z", "close_time": "2026-08-11T17:33:45Z", "expiration_time": "2026-08-13T21:00:00Z", "settlement_timer_seconds": 30, "rules_primary": "If over 3.5 goals are scored in the Kairat vs Levski Sofia professional Champions League soccer game originally scheduled for Aug 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'floor_strike', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
+=== KXNCAAFTOTAL-26AUG29UNCTCU-70 ===
+  ticker                     KXNCAAFTOTAL-26AUG29UNCTCU-70
+  event_ticker               KXNCAAFTOTAL-26AUG29UNCTCU
+  status                     finalized
+  open_time                  2026-08-11T00:47:00Z
+  occurrence_datetime        2026-08-29T19:00:00Z
+  expected_expiration_time   2026-08-29T19:00:00Z
+  close_time                 2026-08-29T19:50:04Z
+  expiration_time            2026-08-31T16:00:00Z
+  latest_expiration_time     2026-08-31T16:00:00Z
+  settlement_ts              2026-08-29T19:54:11.115445Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after a winner is declared.
+  event.sub_title            UNC vs TCU (Aug 29)
+  event.strike_date          None
+  event.product_metadata     {"competition": "NCAA Football", "competition_scope": "Point Total"}
 
-=== EVENT KXWTACHALLENGERMATCH-26SEP07ZELKUL ===
-event fields: {
-  "event_ticker": "KXWTACHALLENGERMATCH-26SEP07ZELKUL",
-  "series_ticker": "KXWTACHALLENGERMATCH",
-  "title": "Zelnickova vs Kulambayeva",
-  "mutually_exclusive": true,
-  "category": "Sports",
-  "strike_period": ""
-}
-event all keys: ['category', 'collateral_return_type', 'event_ticker', 'exchange_index', 'last_updated_ts', 'markets', 'mutually_exclusive', 'product_metadata', 'series_ticker', 'settlement_sources', 'strike_period', 'sub_title', 'title']
-nested markets: 2
-  market: {"ticker": "KXWTACHALLENGERMATCH-26SEP07ZELKUL-ZEL", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "structured", "open_time": "2026-09-06T20:50:00Z", "close_time": "2026-09-07T11:21:04Z", "expiration_time": "2026-09-21T08:40:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Radka Zelnickova wins the Zelnickova vs Kulambayeva professional tennis match in the 2026 WTA 125K Antalya 4 Round Of 32 after a ball has been played, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'custom_strike', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
-  market: {"ticker": "KXWTACHALLENGERMATCH-26SEP07ZELKUL-KUL", "market_type": "binary", "status": "finalized", "can_close_early": true, "strike_type": "structured", "open_time": "2026-09-06T20:50:00Z", "close_time": "2026-09-07T11:21:04Z", "expiration_time": "2026-09-21T08:40:00Z", "settlement_timer_seconds": 60, "rules_primary": "If Zhibek Kulambayeva wins the Zelnickova vs Kulambayeva professional tennis match in the 2026 WTA 125K Antalya 4 Round Of 32 after a ball has been played, then the market resolves to Yes."}
-  market all keys: ['can_close_early', 'close_time', 'created_time', 'custom_strike', 'early_close_condition', 'event_ticker', 'exchange_index', 'expected_expiration_time', 'expiration_time', 'expiration_value', 'last_price_dollars', 'latest_expiration_time', 'market_type', 'no_ask_dollars', 'no_bid_dollars', 'no_sub_title', 'notional_value_dollars', 'occurrence_datetime', 'open_interest_fp', 'open_time', 'previous_price_dollars', 'previous_yes_ask_dollars', 'previous_yes_bid_dollars', 'price_level_structure', 'price_ranges', 'result', 'rules_primary', 'rules_secondary', 'settlement_bounds_type', 'settlement_timer_seconds', 'settlement_ts', 'settlement_value_dollars', 'status', 'strike_type', 'ticker', 'title', 'updated_time', 'volume_24h_fp', 'volume_fp', 'yes_ask_dollars', 'yes_ask_size_fp', 'yes_bid_dollars', 'yes_bid_size_fp', 'yes_sub_title']
+=== KXUCLTOTAL-26AUG11ALMLEV-5 ===
+  ticker                     KXUCLTOTAL-26AUG11ALMLEV-5
+  event_ticker               KXUCLTOTAL-26AUG11ALMLEV
+  status                     finalized
+  open_time                  2026-08-08T15:06:00Z
+  occurrence_datetime        2026-08-11T19:00:00Z
+  expected_expiration_time   2026-08-11T19:00:00Z
+  close_time                 2026-08-11T17:33:45Z
+  expiration_time            2026-08-13T21:00:00Z
+  latest_expiration_time     2026-08-13T21:00:00Z
+  settlement_ts              2026-08-11T17:35:20.006273Z
+  can_close_early            True
+  early_close_condition      This market will close and expire early if the event occurs.
+  event.sub_title            ALM vs LEV (Aug 11)
+  event.strike_date          None
+  event.product_metadata     {"competition": "Champions League", "competition_scope": "Point Total"}
+
+=== KXKBOGAME-26AUG110600LGKIW-KIW ===
+  ticker                     KXKBOGAME-26AUG110600LGKIW-KIW
+  event_ticker               KXKBOGAME-26AUG110600LGKIW
+  status                     finalized
+  open_time                  2026-08-08T04:11:00Z
+  occurrence_datetime        2026-08-11T14:00:00Z
+  expected_expiration_time   2026-08-11T14:00:00Z
+  close_time                 2026-08-11T13:19:45Z
+  expiration_time            2026-08-13T10:00:00Z
+  latest_expiration_time     2026-08-13T10:00:00Z
+  settlement_ts              2026-08-11T13:25:49.94001Z
+  can_close_early            True
+  early_close_condition      This market will close and expire after a winner is declared.
+  event.sub_title            LG vs KIW (Aug 11)
+  event.strike_date          None
+  event.product_metadata     {"competition": "Korea KBO", "competition_scope": "Game"}
+
+=== KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1 ===
+  ticker                     KXWCGOAL-26JUL14FRAESP-ESPPEDR8-1
+  event_ticker               KXWCGOAL-26JUL14FRAESP
+  status                     finalized
+  open_time                  2026-07-10T22:25:00Z
+  occurrence_datetime        2026-07-14T22:00:00Z
+  expected_expiration_time   2026-07-14T22:00:00Z
+  close_time                 2026-07-14T21:04:35Z
+  expiration_time            2026-07-28T19:00:00Z
+  latest_expiration_time     2026-07-28T19:00:00Z
+  settlement_ts              2026-07-14T21:10:40.951884Z
+  can_close_early            True
+  early_close_condition      This market will close and expire early if the event occurs.
+  event.sub_title            FRA vs ESP (Jul 14)
+  event.strike_date          None
+  event.product_metadata     {"competition": "FIFA World Cup", "competition_scope": "Goalscorer"}
