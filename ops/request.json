@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["mmsell-temperature-season"],"id":"pp-temp-20261015a"}
