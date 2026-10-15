@@ -1,1630 +1,1626 @@
 # ops request [READ]
-# type=script  id=d-list-8-20261015a
-# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T09:59:01Z
+# type=script  id=d-list-9-20261015a
+# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T10:05:51Z
 === MMSELL look-alike probe — 400 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
   series                 listed settled              span priced   >=1h
-  KX14AMENDCASE               2       2  2026-01..2026-06      2    50%
-  KX232ALUMCA                 3       0                 -      0      -
-  KX250DOLLARBILL             1       0                 -      0      -
-  KX30CRIME                   1       0                 -      0      -
-  KX3RDTERM                   1       1  2026-01..2026-01      1     0%
-  KX45X                       3       3  2025-12..2025-12      0      -
-  KX48ETAXCREDIT              1       0                 -      0      -
-  KX50YMORTGAGE               1       1  2026-01..2026-01      1   100%
-  KX538APPROVE              108      99  2024-10..2025-03      6    67%
-  KX538APPROVEMAX             3       3  2024-12..2024-12      0      -
-  KX538APPROVEMIN             3       3  2024-11..2024-12      2   100%
-  KX538APPROVEY               0       0                 -      0      -
-  KX60MCECOT                  3       3  2025-12..2026-01      2   100%
-  KXABAACCRED                 1       0                 -      0      -
-  KXABBASATTEND               0       0                 -      0      -
-  KXABCDISNEYSUE              1       1  2025-11..2025-11      1   100%
-  KXABORTION                  1       1  2025-01..2025-01      1   100%
-  KXABRAHAMINDO               0       0                 -      0      -
-  KXABRAHAMKAZ                0       0                 -      0      -
-  KXABRAHAMNEW                0       0                 -      0      -
-  KXABRAHAMQ                  2       0                 -      0      -
-  KXABRAHAMS                  2       2  2025-12..2025-12      0      -
-  KXABRAHAMSA                14       2  2025-12..2026-08      2    50%
-  KXABRAHAMSY                 2       1  2026-01..2026-01      1   100%
-  KXABRAHAMW                  1       1  2025-06..2025-06      1   100%
-  KXACAENROLLMENT             7       0                 -      0      -
-  KXACAEXT                    6       4  2026-01..2026-04      4     0%
-  KXACAHOUSEVOTE             10      10  2026-01..2026-01      1   100%
-  KXACAHSAFSA                 4       3  2026-01..2026-05      3     0%
-  KXACAREPEAL                 2       1  2026-01..2026-01      1     0%
-  KXACASUBSIDYBILL            3       3  2026-01..2026-01      1   100%
-  KXACCREDITCOLUMBIA          0       0                 -      0      -
-  KXACKMANLEAVE               1       1  2026-01..2026-01      1     0%
-  KXACTBLUETOP              108      94  2026-07..2026-10      4   100%
-  KXADAMSDLEAVE               1       1  2025-11..2025-11      1   100%
-  KXADJOURNRECESS             1       1  2026-08..2026-08      1     0%
-  KXADMINCMS                  5       5  2025-04..2025-04      0      -
-  KXADMINNASA                 8       8  2025-04..2025-12      5    20%
-  KXADMINWHD                  0       0                 -      0      -
-  KXADVOCATEBECERRA           0       0                 -      0      -
-  KXAFDBANREQUEST             1       1  2025-12..2025-12      1     0%
-  KXAFDSTATEGOV               5       0                 -      0      -
-  KXAGANNOUNCE               12      12  2026-04..2026-06      3    67%
-  KXAGCONF                   10      10  2026-05..2026-08      4    25%
-  KXAGENCIES                  7       7  2026-07..2026-07      1   100%
-  KXAGENCYCUTS                5       5  2025-04..2025-04      0      -
-  KXAGENCYELIM                4       0                 -      0      -
-  KXAIBILL                    1       0                 -      0      -
-  KXAIBIOSECURITY             3       0                 -      0      -
-  KXAICABINET                 3       0                 -      0      -
-  KXAIDEBATES                 0       0                 -      0      -
-  KXAIDIRECTOR                1       1  2025-02..2025-02      1   100%
-  KXAIDUTYOFCARE              3       0                 -      0      -
-  KXAIINCIDENTREPORT          3       0                 -      0      -
-  KXAIKILLSWITCH              3       0                 -      0      -
-  KXAILEGISLATION             1       0                 -      0      -
-  KXAIORDER                   1       1  2025-01..2025-01      1   100%
-  KXAIOVERSIGHT               0       0                 -      0      -
-  KXAIRCANADASTRIKE           4       4  2025-08..2025-12      1     0%
-  KXAIREVIEW                  5       4  2026-06..2026-09      2   100%
-  KXAISAFETY                  0       0                 -      0      -
-  KXAISAFETYAUDIT             3       0                 -      0      -
-  KXAISECURITY                1       1  2026-01..2026-01      1     0%
-  KXAJTOSSEO                  0       0                 -      0      -
-  KXALASKABACK                1       1  2026-01..2026-01      1     0%
-  KXALBERTAMINWAGE            1       0                 -      0      -
-  KXALCATRAZ                  1       1  2026-01..2026-01      1     0%
-  KXALIENACT                  1       1  2025-04..2025-04      0      -
-  KXALITOANNOUNCERETIRE      10       5  2026-07..2026-10      2   100%
-  KXALITOOUT                  5       3  2026-04..2026-09      3    33%
-  KXALLVOTE                   0       0                 -      0      -
-  KXALLVOTEHEGSETH            1       1  2025-01..2025-01      1   100%
-  KXALLVOTERFKJR              1       1  2025-02..2025-02      1   100%
-  KXALLVOTETG                 1       1  2025-02..2025-02      1   100%
-  KXAMAZONFTC                 0       0                 -      0      -
-  KXAMAZONPRIMEFTC            0       0                 -      0      -
-  KXAMBCN                     0       0                 -      0      -
-  KXAMBMALAY                  6       6  2025-09..2026-10      6    33%
-  KXAMEND22                   1       0                 -      0      -
-  KXAMEND25                   3       0                 -      0      -
-  KXAMENDVIOLATENYS2          1       1  2025-10..2025-10      1   100%
-  KXAMERICAPACSPEND           7       0                 -      0      -
-  KXAMESOHIO                  0       0                 -      0      -
-  KXANDREWSUCCESSION          3       0                 -      0      -
-  KXANONYMOUSDONOR            1       1  2025-10..2025-10      1   100%
-  KXANTHROPICDOD              1       1  2026-08..2026-08      1   100%
-  KXANTHROPICRESCIND          8       2  2026-07..2026-08      2   100%
-  KXANTHROPICRISK             1       1  2026-02..2026-02      1   100%
-  KXANTHROPICVATICAN          3       0                 -      0      -
-  KXANTIWEPTAX                1       1  2026-07..2026-07      1   100%
-  KXAOCENDORSE               22      22  2025-06..2025-06      1     0%
-  KXAPOVALOFFICE              1       0                 -      0      -
-  KXAPPLELAKE                 3       3  2026-09..2026-09      1   100%
-  KXAPPSTORE22JAN3            0       0                 -      0      -
-  KXAPRPOTUS                771     754  2024-10..2026-10     25    64%
-  KXAPRPOTUSD                90      90  2026-08..2026-08      1   100%
-  KXAPRPOTUSEOY              12      12  2026-01..2026-01      1     0%
-  KXAPSUIT                    1       1  2025-04..2025-04      1   100%
-  KXARCRYPTO                  1       0                 -      0      -
-  KXARGSTRIKE                 0       0                 -      0      -
-  KXARIMPEACH                 1       1  2026-01..2026-01      1     0%
-  KXARREST                   30       5  2025-09..2026-04      4    75%
-  KXARRESTFORBESU3            0       0                 -      0      -
-  KXARRESTGRETA               1       1  2025-10..2025-10      1   100%
-  KXARRESTJOHNBOLTON          1       1  2025-10..2025-10      1   100%
-  KXARRESTKWEON               1       1  2025-09..2025-09      1   100%
-  KXARRESTMAMDANI             1       1  2026-01..2026-01      1     0%
-  KXARRESTNETANYAHU           3       1  2026-10..2026-10      1     0%
-  KXARRESTNEWSOM              1       1  2025-07..2025-07      1     0%
-  KXARRESTPOWELL              1       1  2026-01..2026-01      1     0%
-  KXARRESTYOON                1       1  2025-12..2025-12      0      -
-  KXASIALEADERNEXT            9       9  2025-12..2025-12      0      -
-  KXASSOCAG                   0       0                 -      0      -
-  KXASSOCAGCIVIL              0       0                 -      0      -
-  KXASSTSECDEFHA              0       0                 -      0      -
-  KXASSTSECSTATEEAP           0       0                 -      0      -
-  KXASSTSECTREASURY           0       0                 -      0      -
-  KXASYLUMCASES              21      21  2024-12..2025-06      3    33%
-  KXATCZERO                   1       1  2025-12..2025-12      1     0%
-  KXATF                       9       9  2026-04..2026-04      1     0%
-  KXATLANTIC                  1       1  2025-07..2025-07      1     0%
-  KXATTENDMELANIA             0       0                 -      0      -
-  KXATTENDSOTU               46      46  2026-02..2026-02      1   100%
-  KXATTENDTRUMPCHINA         11      11  2026-05..2026-05      1     0%
-  KXATTENDUFC250             27      27  2026-06..2026-06      1   100%
-  KXAUGRECESSCAB              4       4  2026-08..2026-08      1   100%
-  KXAUKUS                     1       1  2025-12..2025-12      1     0%
-  KXAUMFVENEZUELA             4       3  2026-02..2026-04      0      -
-  KXAUSTRIANATO               1       1  2026-01..2026-01      1     0%
-  KXAUTOPENPARDON             1       1  2025-12..2025-12      0      -
-  KXAVGTARIFF                 6       6  2025-08..2025-08      1   100%
-  KXAXONFTC                   0       0                 -      0      -
-  KXAZPORNLAW                 1       1  2025-05..2025-05      1   100%
-  KXBABELMANDEBWEEKLY        70      59  2026-08..2026-10      3   100%
-  KXBADENOCHOUT               0       0                 -      0      -
-  KXBALANCE                   1       1  2026-04..2026-04      1   100%
-  KXBALLROOMHALT              1       1  2026-08..2026-08      1   100%
-  KXBALLROOMSCOTUS            0       0                 -      0      -
-  KXBANTRANS                  1       0                 -      0      -
-  KXBANXGER                   1       1  2026-01..2026-01      1     0%
-  KXBANXUK                    1       1  2026-01..2026-01      1     0%
-  KXBANXUS                    1       1  2026-01..2026-01      1     0%
-  KXBARNESFELIX               0       0                 -      0      -
-  KXBARR                      0       0                 -      0      -
-  KXBATHROOM                  1       1  2026-01..2026-01      1     0%
-  KXBBB                       0       0                 -      0      -
-  KXBECERRABRAIDWOOD          0       0                 -      0      -
-  KXBEDOYA                    0       0                 -      0      -
-  KXBEEFTARIFF                3       3  2026-06..2026-07      2    50%
-  KXBENGSROUNDSDEBATE         0       0                 -      0      -
-  KXBERNIEENDORSE            21      11  2026-01..2026-10      5   100%
-  KXBESSENTCOUNT             10      10  2025-01..2025-01      1   100%
-  KXBIDENAMBIEN               1       0                 -      0      -
-  KXBIDENBOOK                 3       1  2026-10..2026-10      1     0%
-  KXBIDENNEBRASKA             1       1  2025-11..2025-11      1   100%
-  KXBIDENPARDON              30      30  2024-12..2025-01      2   100%
-  KXBIDENRESIGN               0       0                 -      0      -
-  KXBIDENTAPES                2       2  2026-07..2026-07      1   100%
-  KXBIDENVNEBRASKA            0       0                 -      0      -
-  KXBIGBENDRESUME             5       2  2026-09..2026-10      2     0%
-  KXBILL                      0       0                 -      0      -
-  KXBILLCLINTONPUBLIC         1       1  2026-03..2026-03      1   100%
-  KXBILLCONTEMPT              1       1  2026-03..2026-03      1     0%
-  KXBILLCONTEMPTVOTE          9       9  2026-03..2026-03      1     0%
-  KXBILLCOUNTM                0       0                 -      0      -
-  KXBILLS                    45      15  2025-07..2026-07      5    40%
-  KXBILLSCOUNT               95      95  2025-01..2026-10     11    36%
-  KXBILLSCOUNTWEEKLY          1       1  2026-01..2026-01      1   100%
-  KXBILLSSIGNED              11       0                 -      0      -
-  KXBIRTHRIGHT                1       1  2025-01..2025-01      1   100%
-  KXBIRTHRIGHTEO              1       0                 -      0      -
-  KXBIRTHTOURISMVOTE          2       2  2026-08..2026-10      1     0%
-  KXBKLYNDEMCHAIR             1       0                 -      0      -
-  KXBLANCHECOUNT              5       5  2026-08..2026-08      1   100%
-  KXBLANCHEDISBAR             1       0                 -      0      -
-  KXBLANCHEJUDICIARY          4       4  2026-08..2026-08      1   100%
-  KXBLANCHEMAXWELL            1       1  2025-08..2025-08      1     0%
-  KXBLANCHEWITHDRAW           4       4  2026-08..2026-08      1     0%
-  KXBLCOKDCFED                0       0                 -      0      -
-  KXBLOCK75VISA               1       0                 -      0      -
-  KXBLOCKH1B                  1       1  2026-01..2026-01      1     0%
-  KXBLOCKITOUTSOURCING        1       1  2026-01..2026-01      1   100%
-  KXBLOCKPOCKETRESCISS        0       0                 -      0      -
-  KXBLOCKTARIFF               1       1  2025-05..2025-05      1   100%
-  KXBLOMHONICKMAN             0       0                 -      0      -
-  KXBLSCHEIF                  5       5  2025-12..2025-12      0      -
-  KXBLSCHIEF                  5       5  2026-01..2026-01      1     0%
-  KXBLSCOMM                   0       0                 -      0      -
-  KXBLSCOMMISSIONER           1       1  2025-10..2025-10      1   100%
-  KXBLUESLIP                  3       0                 -      0      -
-  KXBLUEWALL                  1       1  2025-01..2025-01      0      -
-  KXBNADOLLY                  1       1  2026-09..2026-09      1   100%
-  KXBNATRUMP                  0       0                 -      0      -
-  KXBOARD                     9       9  2026-01..2026-01      1     0%
-  KXBOLIBRARYOPEN             3       3  2026-01..2026-06      2     0%
-  KXBOLOJANOUT                3       3  2026-08..2026-10      2   100%
-  KXBOLSONAROLEAVE            1       1  2026-01..2026-01      1     0%
-  KXBOLSONAROPARDON           2       0                 -      0      -
-  KXBONDICOUNT               10      10  2025-02..2025-02      1   100%
-  KXBONDIEPSTEIN              0       0                 -      0      -
-  KXBONDIOUT                  9       9  2026-03..2026-04      2    50%
-  KXBONDITESTIFY              1       1  2026-05..2026-05      1   100%
-  KXBORDER                    1       1  2026-01..2026-01      1     0%
-  KXBORDERBILL                6       6  2025-02..2025-03      2    50%
-  KXBOUGAINVILLEIND           2       0                 -      0      -
-  KXBOYCOTTWC                 1       1  2026-06..2026-06      1   100%
-  KXBRAINARD                  0       0                 -      0      -
-  KXBRAZILDISCORD             0       0                 -      0      -
-  KXBRAZILTARIFFSIZE          0       0                 -      0      -
-  KXBRAZILX                   0       0                 -      0      -
-  KXBRAZILXBAN                0       0                 -      0      -
-  KXBRENNANCHARGE             1       1  2026-01..2026-01      1   100%
-  KXBRIANCONF                 4       2  2026-08..2026-09      1     0%
-  KXBRICS                     2       1  2025-07..2025-07      1   100%
-  KXBROWNHUSTEDDEBATE         1       0                 -      0      -
-  KXBTCRESERVE                2       1  2026-01..2026-01      1     0%
-  KXBTCRESERVESTATES         11      11  2025-06..2026-01      2    50%
-  KXBUDGETCUT                 4       4  2025-03..2025-07      2    50%
-  KXBUDGETRESH                8       8  2025-02..2025-02      1   100%
-  KXBUDGETRESS                3       3  2025-04..2025-04      1   100%
-  KXBURGUMCOUNT              10      10  2025-01..2025-01      1     0%
-  KXBURNHAMCAB                0       0                 -      0      -
-  KXBURNHAMJUL               29      29  2026-07..2026-08      2   100%
-  KXBURNHAMOUT                6       1  2026-09..2026-09      1     0%
-  KXBUYBTC                    1       1  2025-12..2025-12      1     0%
-  KXCAALPRLAW                 1       1  2026-10..2026-10      1   100%
-  KXCAATSA                    2       1  2026-10..2026-10      1   100%
-  KXCABCHANGE                26      26  2026-01..2026-01      1     0%
-  KXCABCOUNT                 19      19  2025-03..2025-03      1     0%
-  KXCABDATE                  12      12  2025-01..2025-01      1     0%
-  KXCABFAIL                   0       0                 -      0      -
-  KXCABFAILS                  0       0                 -      0      -
-  KXCABJAN20                  0       0                 -      0      -
-  KXCABLEAVE                 38      35  2025-07..2026-10     11    82%
-  KXCABOUT                  140     119  2026-02..2026-05      4   100%
-  KXCABSTAY                   0       0                 -      0      -
-  KXCAEUROPEMOBILITY          1       0                 -      0      -
-  KXCAFRAUD                   3       2  2026-03..2026-07      2   100%
-  KXCAGOAT                    1       1  2026-09..2026-09      1   100%
-  KXCAHOUSINGLAW              1       1  2025-10..2025-10      1     0%
-  KXCAHSR                     1       0                 -      0      -
-  KXCAJEWISH                  0       0                 -      0      -
-  KXCALCOLLEGEFUNDPULL        1       1  2025-07..2025-07      1   100%
-  KXCALIDJT                   1       1  2026-01..2026-01      1     0%
-  KXCALIFORNIALEAVE           8       1  2026-01..2026-01      1   100%
-  KXCALLIMPEACHRCONGRESS      5       1  2026-01..2026-01      1     0%
-  KXCAMDENYARDS               1       0                 -      0      -
-  KXCAN51                     0       0                 -      0      -
-  KXCANADABLOCK               1       1  2025-06..2025-06      1     0%
-  KXCANADACONFIDENCE          1       1  2025-01..2025-01      1     0%
-  KXCANADAUSTARIFFLOWER       5       1  2026-10..2026-10      1   100%
-  KXCANAL                     1       0                 -      0      -
-  KXCANAUTOSTEEL50            1       0                 -      0      -
-  KXCANCARBON                 1       0                 -      0      -
-  KXCANCOUNTERTARIFF          0       0                 -      0      -
-  KXCANCTRTARIFF              1       1  2026-09..2026-09      1   100%
-  KXCANELECTRICCHARGE         0       0                 -      0      -
-  KXCANELECTRICITY            1       1  2025-05..2025-05      1     0%
-  KXCANEUASSOC                2       0                 -      0      -
-  KXCANEUNEGOTIATE            3       0                 -      0      -
-  KXCANEVTARIFF               6       0                 -      0      -
-  KXCANEVTRTARIFF             6       0                 -      0      -
-  KXCANMIN19                  1       0                 -      0      -
-  KXCANREGISTER               1       0                 -      0      -
-  KXCANRESIGN                 1       1  2025-01..2025-01      1   100%
-  KXCANRESIGNCOUNT            7       7  2025-05..2025-05      1     0%
-  KXCANSAFETY                 1       1  2025-10..2025-10      1   100%
-  KXCANSNAP                   4       0                 -      0      -
-  KXCANSNAPPROV              10       1  2026-09..2026-09      1   100%
-  KXCANTARIFFSEFFECT          1       1  2026-08..2026-08      1   100%
-  KXCANTARIFFSIZE             0       0                 -      0      -
-  KXCANTERRITORY              1       0                 -      0      -
-  KXCANUSDEAL                10       3  2026-08..2026-10      2    50%
-  KXCANUSRAISE                4       1  2026-10..2026-10      1   100%
-  KXCAPARAMOUNTSETTLE         0       0                 -      0      -
-  KXCAPARASETTLE              1       1  2026-09..2026-09      1   100%
-  KXCAPCONTROL                1       0                 -      0      -
-  KXCAPGAIN                   0       0                 -      0      -
-  KXCAPGAINDOWN               1       0                 -      0      -
-  KXCAPITALCHANGE             1       0                 -      0      -
-  KXCAPITALMOVESK             1       1  2026-01..2026-01      1     0%
-  KXCAPMLEAVE                 3       3  2024-12..2025-01      2   100%
-  KXCARBONTAX                 0       0                 -      0      -
-  KXCARNEYHALIFAX             1       1  2025-10..2025-10      1     0%
-  KXCARNEYOUT                 5       0                 -      0      -
-  KXCARRIED                   1       1  2026-01..2026-01      1     0%
-  KXCARRIEDINTEREST           4       0                 -      0      -
-  KXCARROUT                   1       0                 -      0      -
-  KXCARVMAK                   0       0                 -      0      -
-  KXCASE                      0       0                 -      0      -
-  KXCASESSION                 1       0                 -      0      -
-  KXCASTRONG                  1       0                 -      0      -
-  KXCATHOLICWISCNOSIN         0       0                 -      0      -
-  KXCBDCBAN                   1       1  2026-10..2026-10      1   100%
-  KXCBPAIRPORT                4       3  2026-07..2026-09      2    50%
-  KXCCLIMIT                   2       1  2026-01..2026-01      1     0%
-  KXCCPCHILDREN               0       0                 -      0      -
-  KXCDCCONF                   4       4  2026-06..2026-08      2    50%
-  KXCDCDIRECTOR               0       0                 -      0      -
-  KXCEA                       0       0                 -      0      -
-  KXCENSURE                   4       4  2026-09..2026-09      1   100%
-  KXCENSUREEDWARDS            1       1  2026-09..2026-09      1   100%
-  KXCENSUREFINE               1       1  2026-04..2026-04      1     0%
-  KXCENSUSEXCLUDE             1       0                 -      0      -
-  KXCEONEXT                   7       7  2025-12..2025-12      0      -
-  KXCFOHOMELAND               0       0                 -      0      -
-  KXCFPB                      0       0                 -      0      -
-  KXCFPBELIM                  1       1  2026-01..2026-01      1   100%
-  KXCGPMUTC                   0       0                 -      0      -
-  KXCHANCELEAVE               1       1  2026-01..2026-01      1     0%
-  KXCHATRIEUSA                1       1  2026-06..2026-06      1   100%
-  KXCHAVEZCOUNT              10      10  2025-03..2025-03      1     0%
-  KXCHENEYFUNERAL            13      13  2025-11..2025-11      1     0%
-  KXCHIEFSKANSAS              1       0                 -      0      -
-  KXCHILDS                    0       0                 -      0      -
-  KXCHIMAYORLEAVE             1       1  2026-01..2026-01      1     0%
-  KXCHINAAGPURCHASE           1       1  2026-10..2026-10      1   100%
-  KXCHINAANNOUNCE             9       9  2026-05..2026-05      1   100%
-  KXCHINABANKSANC             4       1  2026-10..2026-10      1   100%
-  KXCHINABIRTHLIMITS          4       0                 -      0      -
-  KXCHINABOEING               1       1  2026-10..2026-10      1   100%
-  KXCHINADATACENTER           2       0                 -      0      -
-  KXCHINAEUV                  4       0                 -      0      -
-  KXCHINAHUKOU                4       0                 -      0      -
-  KXCHINALIST                 6       0                 -      0      -
-  KXCHINARARE                 1       1  2026-09..2026-09      1   100%
-  KXCHINATARIFF               1       1  2025-12..2025-12      0      -
-  KXCHINAUNBANBTC             4       0                 -      0      -
-  KXCHINAUNRUBIO              1       1  2025-12..2025-12      1     0%
-  KXCHIPSREPEAL               0       0                 -      0      -
-  KXCHRISCHRISTIECHARGE       1       1  2026-01..2026-01      1     0%
-  KXCIA                       9       9  2025-01..2025-01      0      -
-  KXCIT301                    1       0                 -      0      -
-  KXCLARITYACT                0       0                 -      0      -
-  KXCLARITYVOTE               4       4  2026-08..2026-09      2    50%
-  KXCLAYTONCONF               6       6  2026-06..2026-07      2    50%
-  KXCLAYTONCOUNT              8       8  2026-07..2026-07      1     0%
-  KXCLAYTONDNI                4       4  2026-08..2026-08      1   100%
-  KXCLEANCR                   2       2  2025-11..2026-01      2   100%
-  KXCLEANVEHICLE              3       3  2025-12..2025-12      0      -
-  KXCLOSEHORMUZ               4       4  2025-07..2026-03      2    50%
-  KXCLOUDSEEDING              1       1  2026-01..2026-01      1     0%
-  KXCMEATBAN                  3       3  2025-12..2025-12      1   100%
-  KXCMEATBANTIME              0       0                 -      0      -
-  KXCMEATBANUSA               1       1  2026-01..2026-01      1   100%
-  KXCMSDEFERRAL               3       1  2026-09..2026-09      1     0%
-  KXCNNTRUMPPLANE             0       0                 -      0      -
-  KXCOLLINSCOUNT             10      10  2025-02..2025-02      1     0%
-  KXCOLOMHYDESMITHDEBATE      0       0                 -      0      -
-  KXCOLUMBPRESIDENT           0       0                 -      0      -
-  KXCOMEYDISMISS              4       2  2025-11..2026-10      2   100%
-  KXCOMEYREINSTATE            1       0                 -      0      -
-  KXCOMMENCEMENT              0       0                 -      0      -
-  KXCOMMGIFTS                10       0                 -      0      -
-  KXCOMMISHCBP                9       9  2025-04..2025-06      3     0%
-  KXCOMMISHFDA               10       5  2025-03..2025-03      1     0%
-  KXCONCEALEDRECIPROCITY      1       0                 -      0      -
-  KXCONFFEDGOV               20      20  2025-09..2025-09      1     0%
-  KXCONGESTION                1       1  2025-01..2025-01      1     0%
-  KXCONGESTIONEND             2       1  2026-01..2026-01      1     0%
-  KXCONGESTIONSUIT            1       1  2026-03..2026-03      1   100%
-  KXCONGRESSCENSUREPADILLA      1       1  2025-08..2025-08      1     0%
-  KXCONGRESSEXPELSCHIFF       1       1  2026-01..2026-01      1     0%
-  KXCONGRESSPAYINCREASE       4       0                 -      0      -
-  KXCONGRESSPERSONMEMECOIN      0       0                 -      0      -
-  KXCONGRESSTARIFF            1       1  2026-01..2026-01      1     0%
-  KXCONGRESSTARIFFCOUNT      15      15  2025-05..2025-05      1     0%
-  KXCONGRESSTARIFFPASS        2       2  2025-05..2025-06      2     0%
-  KXCONGRESSTARIFFVOTE       40      40  2025-05..2026-01      2     0%
-  KXCONGRESSTESTIFY          25      11  2026-01..2026-04      3    67%
-  KXCONGRESSTRADES           10       0                 -      0      -
-  KXCONROVA                   0       0                 -      0      -
-  KXCONSENTCOLUMBIA           1       1  2026-01..2026-01      1     0%
-  KXCONSTAMEND                1       0                 -      0      -
-  KXCONSTITUTIONPIPELINE      1       1  2026-01..2026-01      1     0%
-  KXCONTEMPT                  2       2  2026-01..2026-03      2   100%
-  KXCOOK                      0       0                 -      0      -
-  KXCOOKCHARGE                1       1  2026-01..2026-01      1     0%
-  KXCOOKCOMMITTEE             1       0                 -      0      -
-  KXCOOPERWHATLEYDEBATE       1       0                 -      0      -
-  KXCOPPERCABLE               2       0                 -      0      -
-  KXCOPPERTARIFF              0       0                 -      0      -
-  KXCORNYNTALARICO            1       0                 -      0      -
-  KXCORPTAX                   0       0                 -      0      -
-  KXCORPTAXCUT                2       1  2026-01..2026-01      1     0%
-  KXCOUNTRYSTARLINK           8       8  2025-12..2026-01      0      -
-  KXCOUNTRYTARIFF            13      13  2025-04..2025-04      1   100%
-  KXCOURTBLOCKPOCKETRECISS      0       0                 -      0      -
-  KXCOVIDBILL                 0       0                 -      0      -
-  KXCPBFUNDING                1       1  2025-07..2025-07      1   100%
-  KXCPCSIZE                   5       0                 -      0      -
-  KXCR                       26      26  2024-12..2024-12      1   100%
-  KXCRIMECAB                  1       0                 -      0      -
-  KXCRIMESEN                  1       0                 -      0      -
-  KXCROCKETTCAMPAIGN          1       0                 -      0      -
-  KXCRUDEEXPORTBAN            2       1  2026-08..2026-08      1   100%
-  KXCRYPTOCAPGAIN             2       1  2026-01..2026-01      1     0%
-  KXCRYPTODAY1                1       1  2025-01..2025-01      1   100%
-  KXCRYPTOEO                  1       1  2025-03..2025-03      1   100%
-  KXCRYPTOEXEMP               1       1  2026-01..2026-01      1     0%
+  KX2028DRUN                 38       0                 -      0      -
+  KX2028RRUN                 38       0                 -      0      -
+  KX3RDPARTY                  0       0                 -      0      -
+  KX538CALL                   0       0                 -      0      -
+  KX538STATES                15      15  2025-01..2025-01      0      -
+  KXABBOTSFORDMAYOR           4       0                 -      0      -
+  KXABBOTTGOPVOTE             6       6  2026-03..2026-03      1     0%
+  KXABERDEENSOUTHBY           7       7  2026-06..2026-06      1   100%
+  KXACADIE                    6       6  2025-05..2025-05      1     0%
+  KXACKMANMAYOR               1       1  2025-11..2025-11      1     0%
+  KXACREGOV                   6       4  2026-10..2026-10      1     0%
+  KXADAMAWAGOV                6       0                 -      0      -
+  KXADAMSDROPOUT              0       0                 -      0      -
+  KXADAMSDROPOUTBY            3       3  2025-09..2025-09      1   100%
+  KXADELAIDEMAYOR             2       0                 -      0      -
+  KXAFDPERCENT                6       6  2025-02..2025-02      1   100%
+  KXAFDSACHSEN                7       7  2026-09..2026-09      1     0%
+  KXAFRICALEADEROUT          10       0                 -      0      -
+  KXAGNOMAZR                  3       3  2026-07..2026-07      1   100%
+  KXAGNOMCOD                  4       4  2026-07..2026-07      1   100%
+  KXAGNOMDVA                  0       0                 -      0      -
+  KXAGNOMGAD                  2       2  2026-05..2026-05      1   100%
+  KXAGNOMGAR                  2       2  2026-05..2026-05      1   100%
+  KXAGNOMILR                  3       3  2026-03..2026-03      1     0%
+  KXAGNOMMID                  3       3  2026-04..2026-04      1     0%
+  KXAGNOMMIR                  3       3  2026-04..2026-04      1   100%
+  KXAGNOMMND                  0       0                 -      0      -
+  KXAGNOMRID                  4       4  2026-09..2026-09      1   100%
+  KXAGNOMROK                  2       2  2026-06..2026-06      1   100%
+  KXAGNOMSCR                  2       2  2026-06..2026-06      1   100%
+  KXAGNOMTXD                  3       3  2026-03..2026-05      2    50%
+  KXAGNOMTXR                  4       4  2026-03..2026-05      2    50%
+  KXAGUASCALIENTESGOV         9       0                 -      0      -
+  KXAIPACLOSEPRIMARY          4       4  2026-05..2026-09      3   100%
+  KXAKCOMBO                  12       0                 -      0      -
+  KXAKDROPOUT                 0       0                 -      0      -
+  KXAKDROPOUTAUG              6       6  2026-08..2026-09      2    50%
+  KXAKMOV                    10       0                 -      0      -
+  KXAKPRIMARY                 5       5  2026-08..2026-09      2   100%
+  KXAKSEN1                    4       4  2026-09..2026-09      1     0%
+  KXAKSENADVANCE             17      17  2026-08..2026-09      2     0%
+  KXAKSENATE                  7       0                 -      0      -
+  KXAKSENATEROUND             3       0                 -      0      -
+  KXAKSENGOVCOMBO             4       0                 -      0      -
+  KXAKWAIBOMGOV               5       0                 -      0      -
+  KXAKWITHDRAW                0       0                 -      0      -
+  KXALASKAHOUSE               7       0                 -      0      -
+  KXALBANIAPARTY              5       5  2025-06..2025-06      1     0%
+  KXALBERTAREFS               9       0                 -      0      -
+  KXALBERTAREFYES             1       0                 -      0      -
+  KXALBERTASEPREF             1       0                 -      0      -
+  KXALPRIMARY                18      18  2026-05..2026-08      3   100%
+  KXALSUPREME8                2       0                 -      0      -
+  KXAMAZONASGOV               7       5  2026-10..2026-10      1   100%
+  KXAMERICAPARTY2028          1       0                 -      0      -
+  KXANDORRAPARLI              4       0                 -      0      -
+  KXANNARBORMAYORD            2       2  2026-08..2026-08      1   100%
+  KXANOCOALITION              0       0                 -      0      -
+  KXANYDEMWINTEXAS            1       0                 -      0      -
+  KXAOCRUN                    4       0                 -      0      -
+  KXAOCSENATE                 3       0                 -      0      -
+  KXAPCALLCAGOV               6       6  2026-06..2026-06      1   100%
+  KXAPCALLHOUSE               8       0                 -      0      -
+  KXAPCALLLAMAYOR            15      15  2026-06..2026-06      1   100%
+  KXAPCALLMID                 5       5  2026-08..2026-08      1   100%
+  KXAPCALLNJGOV              10      10  2025-11..2025-11      1   100%
+  KXAPCALLSCSEN               9       9  2026-08..2026-08      1   100%
+  KXAPCALLSENATE             10       0                 -      0      -
+  KXAPCALLSNYC                8       8  2025-11..2025-11      1   100%
+  KXAPCALLVA                  0       0                 -      0      -
+  KXAPCALLVAAG               14      14  2025-11..2025-11      1     0%
+  KXAPCALLVAGOV              12      12  2025-11..2025-11      1     0%
+  KXAPCALLWIGOVD              7       7  2026-08..2026-08      1   100%
+  KXARBROATHBY                5       5  2026-06..2026-06      1   100%
+  KXAREQUIPAGOV               2       0                 -      0      -
+  KXARGENTINAHOUSETHIRD       4       4  2025-12..2025-12      1   100%
+  KXARGENTINAMOSTGAIN         4       4  2025-12..2025-12      1     0%
+  KXARGENTINAPARTY            7       7  2025-12..2025-12      1     0%
+  KXARGENTINAPERONISTNOM     11       0                 -      0      -
+  KXARGENTINAPRES             7       0                 -      0      -
+  KXARGENTINAPRES1R           9       0                 -      0      -
+  KXARGENTINASENATE           4       4  2025-12..2025-12      1     0%
+  KXARMENIAPARLI              3       3  2026-06..2026-06      0      -
+  KXARPRIMARY                 6       6  2026-03..2026-03      1   100%
+  KXARSOSRPRIMARY             2       2  2026-04..2026-04      1   100%
+  KXASIALEADEROUT            10      10  2025-04..2025-04      1   100%
+  KXASTURIAS                  3       0                 -      0      -
+  KXATTYGENAL                 2       0                 -      0      -
+  KXATTYGENAR                 2       0                 -      0      -
+  KXATTYGENAZ                 2       0                 -      0      -
+  KXATTYGENCO                 2       0                 -      0      -
+  KXATTYGENCT                 2       0                 -      0      -
+  KXATTYGENDE                 2       0                 -      0      -
+  KXATTYGENFL                 2       0                 -      0      -
+  KXATTYGENGA                 2       0                 -      0      -
+  KXATTYGENIA                 2       0                 -      0      -
+  KXATTYGENID                 2       0                 -      0      -
+  KXATTYGENIL                 2       0                 -      0      -
+  KXATTYGENIN                 0       0                 -      0      -
+  KXATTYGENKS                 2       0                 -      0      -
+  KXATTYGENMA                 2       0                 -      0      -
+  KXATTYGENMD                 2       0                 -      0      -
+  KXATTYGENMI                 2       0                 -      0      -
+  KXATTYGENMN                 2       0                 -      0      -
+  KXATTYGENMO                 0       0                 -      0      -
+  KXATTYGENNC                 0       0                 -      0      -
+  KXATTYGENND                 2       0                 -      0      -
+  KXATTYGENNE                 2       0                 -      0      -
+  KXATTYGENNM                 2       0                 -      0      -
+  KXATTYGENNV                 2       0                 -      0      -
+  KXATTYGENNY                 2       0                 -      0      -
+  KXATTYGENOH                 2       0                 -      0      -
+  KXATTYGENOK                 2       0                 -      0      -
+  KXATTYGENOR                 0       0                 -      0      -
+  KXATTYGENPA                 0       0                 -      0      -
+  KXATTYGENRI                 2       0                 -      0      -
+  KXATTYGENSC                 2       0                 -      0      -
+  KXATTYGENSD                 2       0                 -      0      -
+  KXATTYGENTX                 2       0                 -      0      -
+  KXATTYGENUT                 0       0                 -      0      -
+  KXATTYGENVA                 2       2  2025-11..2025-11      1   100%
+  KXATTYGENVT                 2       0                 -      0      -
+  KXATTYGENWI                 2       0                 -      0      -
+  KXATTYGENWV                 0       0                 -      0      -
+  KXAUSCOALITION              4       4  2025-07..2025-07      1   100%
+  KXAUSPM                     3       3  2025-05..2025-05      1     0%
+  KXAUSSEATALBANESE           1       1  2025-06..2025-06      1     0%
+  KXAUSSEATBENNELONG          8       8  2025-06..2025-06      1     0%
+  KXAUSSEATBRISBANE           7       7  2025-06..2025-06      1     0%
+  KXAUSSEATDUTTON             1       1  2025-06..2025-06      1     0%
+  KXAUSSEATSGREENS            1       1  2025-06..2025-06      1     0%
+  KXAUSSEATSLABOR             6       6  2025-06..2025-06      1     0%
+  KXAUSSEATSLIBNAT            8       8  2025-06..2025-06      1     0%
+  KXAUSTPM                    7       0                 -      0      -
+  KXAUSTRALIA                 5       5  2025-05..2025-05      1     0%
+  KXAUSTRALIAHOUSE            4       0                 -      0      -
+  KXAUSTRALIASENATE           4       0                 -      0      -
+  KXAZ01D                     6       6  2026-07..2026-07      1   100%
+  KXAZ01R                     9       9  2026-01..2026-07      1   100%
+  KXAZ5R                      4       4  2026-07..2026-07      1   100%
+  KXAZCORPCOMM                3       0                 -      0      -
+  KXAZMINEINSPECTOR           2       0                 -      0      -
+  KXAZPRIMARY                14      14  2026-07..2026-07      1     0%
+  KXAZSOSR                    2       2  2026-07..2026-07      1   100%
+  KXAZSUPERINTENDENT          4       0                 -      0      -
+  KXAZTREASR                  2       2  2026-07..2026-07      1   100%
+  KXAZTREASRGEN               2       0                 -      0      -
+  KXAZUAYPREFECT              8       0                 -      0      -
+  KXBADWUR                    3       3  2026-04..2026-05      2    50%
+  KXBAHIAGOV                  6       6  2026-10..2026-10      1     0%
+  KXBAJAGOV                   3       0                 -      0      -
+  KXBALANCEPOWERCOMBO         4       0                 -      0      -
+  KXBALEARIC                  3       0                 -      0      -
+  KXBALLOTAMERICAPARTY        1       0                 -      0      -
+  KXBANKHEADDROPOUT           1       0                 -      0      -
+  KXBARCELONACOUNCIL          7       0                 -      0      -
+  KXBARMMCM                   2       0                 -      0      -
+  KXBARNESENDORSE             3       3  2026-08..2026-08      1   100%
+  KXBAUCHIGOV                 9       0                 -      0      -
+  KXBAYAREATRANSIT            1       0                 -      0      -
+  KXBBGMAYOR                  1       1  2025-11..2025-11      1     0%
+  KXBC2ND                     5       0                 -      0      -
+  KXBC3RD                     5       0                 -      0      -
+  KXBCCONLEAD                11       0                 -      0      -
+  KXBCCONSEATS               10       0                 -      0      -
+  KXBCELECTION                5       0                 -      0      -
+  KXBCGOVT                    5       0                 -      0      -
+  KXBCNDPSEATS                9       0                 -      0      -
+  KXBCPREMIER                 7       0                 -      0      -
+  KXBEDFORDMAYOR              5       0                 -      0      -
+  KXBEITEINUCOUNT             5       0                 -      0      -
+  KXBELIZECITYMAYOR           2       0                 -      0      -
+  KXBENINPARLIAMENT           4       4  2026-01..2026-01      1     0%
+  KXBENINUPR                  1       1  2026-01..2026-01      1   100%
+  KXBENITOJUAREZMAYOR         3       0                 -      0      -
+  KXBENUEGOV                  4       0                 -      0      -
+  KXBERGENCOUNCIL             3       0                 -      0      -
+  KXBERLIN2ND                 7       7  2026-10..2026-10      1     0%
+  KXBERLIN3RD                 7       7  2026-10..2026-10      1     0%
+  KXBERLIN4TH                 7       7  2026-10..2026-10      0      -
+  KXBERLINANYSEAT             3       3  2026-10..2026-10      1     0%
+  KXBERLINGOVMAYOR            5       0                 -      0      -
+  KXBERLINSTATE               7       7  2026-09..2026-09      1     0%
+  KXBERNIERSEAT               1       1  2025-05..2025-05      1     0%
+  KXBETHELSEAT                2       2  2026-05..2026-05      1   100%
+  KXBEXARCOUNTYJUDGE          2       0                 -      0      -
+  KXBEXARDA                   3       0                 -      0      -
+  KXBIHARELECTION             3       3  2025-11..2025-11      1     0%
+  KXBILZERIANCONCEDE          3       3  2026-08..2026-09      2    50%
+  KXBLANCHETSEAT              1       1  2025-05..2025-05      1     0%
+  KXBLUEIOWA                  1       0                 -      0      -
+  KXBLUESTRSEN               20       0                 -      0      -
+  KXBLUETRICKLECOMBO          1       0                 -      0      -
+  KXBLUETSUNAMICOMBO          1       0                 -      0      -
+  KXBLUEWAVECOMBO             1       0                 -      0      -
+  KXBOLIVIADEPUTIES           5       5  2025-09..2025-09      1     0%
+  KXBOLIVIAFIRSTROUND         4       4  2025-09..2025-09      1     0%
+  KXBOLIVIAFIRSTROUNDMOV     10      10  2025-09..2025-09      0      -
+  KXBOLIVIAPRES              11      11  2025-11..2025-11      1     0%
+  KXBOLIVIARUNOFF             3       3  2025-09..2025-09      1     0%
+  KXBOLIVIARUNOFFMOV          8       8  2025-11..2025-11      1     0%
+  KXBOLIVIASENATE             5       5  2025-09..2025-09      1   100%
+  KXBOSNIACPRES               3       0                 -      0      -
+  KXBOSNIAKPRES               4       0                 -      0      -
+  KXBOSNIANGEN               10       0                 -      0      -
+  KXBOSNIANGEN2ND            25       0                 -      0      -
+  KXBOSNIANGEN3RD            25       0                 -      0      -
+  KXBOSNIASPRES               3       3  2026-10..2026-10      1   100%
+  KXBOSTONMAYORMOV            7       7  2025-12..2025-12      0      -
+  KXBRANTFORDBY               4       0                 -      0      -
+  KXBRATISLAVAMAYOR           4       0                 -      0      -
+  KXBRAZILPRES1R              1       1  2026-10..2026-10      1   100%
+  KXBRAZILSENATE              5       5  2026-10..2026-10      1   100%
+  KXBRAZILTURNOUT            18       9  2026-10..2026-10      1   100%
+  KXBRBALLOT                  7       7  2026-09..2026-10      1   100%
+  KXBRDEP                    19      19  2026-10..2026-10      1     0%
+  KXBREMEN                    5       0                 -      0      -
+  KXBRGOVMOSTSEATS           12       0                 -      0      -
+  KXBRISRAELSENCOMBO         12       0                 -      0      -
+  KXBRONSONDROPOUT            1       0                 -      0      -
+  KXBROWNOUTPERFORMRCP        1       0                 -      0      -
+  KXBRPRES                   14      12  2026-10..2026-10      1     0%
+  KXBRPRES1MOV               11      11  2026-10..2026-10      1     0%
+  KXBRPRES1R                  8       8  2026-10..2026-10      1     0%
+  KXBRPRES2ABROAD             0       0                 -      0      -
+  KXBRPRES2COUNTRIES          0       0                 -      0      -
+  KXBRPRES2MOV                8       0                 -      0      -
+  KXBRPRES2MOVD              13       0                 -      0      -
+  KXBRPRES2STATEMOVD         14       0                 -      0      -
+  KXBRPRES2STATES             0       0                 -      0      -
+  KXBRPRESABROAD              0       0                 -      0      -
+  KXBRPRESADVANCE             6       6  2026-10..2026-10      1     0%
+  KXBRPRESIDENT2             14      14  2026-10..2026-10      1     0%
+  KXBRPRESIDENT3             14      14  2026-10..2026-10      1   100%
+  KXBRPRESIDENT4             13      13  2026-10..2026-10      1     0%
+  KXBRPRESIDENT5             13      13  2026-10..2026-10      1     0%
+  KXBRRUNOFFABROAD            2       0                 -      0      -
+  KXBRRUNOFFCOUNTRIES         5       0                 -      0      -
+  KXBRRUNOFFSTATES            7       0                 -      0      -
+  KXBRSENMOSTSEATS           15      15  2026-10..2026-10      1     0%
+  KXBRUVSEAT                  1       0                 -      0      -
+  KXBUCHARESTMAYOR           13      13  2025-12..2025-12      1   100%
+  KXBUCHARESTMAYOR2ND         4       4  2025-12..2025-12      1   100%
+  KXBUCHARESTMAYOR3RD         5       5  2025-12..2025-12      1   100%
+  KXBULGARIAPARLI            10      10  2026-04..2026-04      1     0%
+  KXBULGARIAPRES             11       0                 -      0      -
+  KXBULGARIAPRES1MOVD         7       0                 -      0      -
+  KXBULGARIAPRES1R2ND         8       0                 -      0      -
+  KXBULGARIAPRES1R3RD         8       0                 -      0      -
+  KXBULGARIATURNOUT          12       0                 -      0      -
+  KXBURBANKBALLOT             1       1  2026-09..2026-09      1     0%
+  KXBURNHAMPM                 4       4  2026-07..2026-07      1     0%
+  KXBUTTIGIEGRUN              5       0                 -      0      -
+  KXCA01S                     5       5  2026-06..2026-06      1     0%
+  KXCA04PRIMARY               7       7  2026-06..2026-06      1   100%
+  KXCA11D                     4       2  2025-12..2025-12      0      -
+  KXCA11PERSON                5       3  2026-06..2026-06      0      -
+  KXCA11PRIMARY               9       9  2026-06..2026-06      1   100%
+  KXCA14SWINNER               7       7  2026-08..2026-08      1     0%
+  KXCA17PERSON                6       0                 -      0      -
+  KXCA1SPECIAL                0       0                 -      0      -
+  KXCA22PRIMARY               6       6  2026-06..2026-06      1   100%
+  KXCA22R                     0       0                 -      0      -
+  KXCA32D                     0       0                 -      0      -
+  KXCA32PRIMARY               0       0                 -      0      -
+  KXCA40PRIMARYADVANCE        6       6  2026-06..2026-06      1   100%
+  KXCA4PRIMARY                0       0                 -      0      -
+  KXCAATTORNEYGENERAL         2       0                 -      0      -
+  KXCABALLOTMEASURES         13       0                 -      0      -
+  KXCABILLIONAIRETAX          1       0                 -      0      -
+  KXCAELECTION               16       0                 -      0      -
+  KXCAGOV2ND                 11      11  2026-06..2026-07      1     0%
+  KXCAGOV3RD                 11      11  2026-06..2026-07      2     0%
+  KXCAGOVCOUNTY               6       6  2026-07..2026-07      1     0%
+  KXCAGOVLAMAYOR              9       5  2026-06..2026-06      1     0%
+  KXCAGOVMATCHUP             20      20  2026-06..2026-06      1     0%
+  KXCAGOVOUTPERFORM          11      11  2026-07..2026-07      0      -
+  KXCAGOVPRIMARY1ST           8       8  2026-06..2026-07      2    50%
+  KXCAGOVPRIMARYEXACT        48      48  2026-07..2026-07      1     0%
+  KXCAGOVPRIMARYTOP3         24      24  2026-06..2026-07      2    50%
+  KXCAHOUSEDEM                8       0                 -      0      -
+  KXCAINSCOM                  6       6  2026-06..2026-06      1     0%
+  KXCAINSCOMGEN               2       0                 -      0      -
+  KXCALABRIAPRES              3       3  2025-10..2025-10      1     0%
+  KXCALGARYCENTRE             6       6  2025-05..2025-05      1     0%
+  KXCALGARYSHAWBY             4       4  2026-09..2026-09      0      -
+  KXCALGARYSKYVIEW            6       6  2025-05..2025-05      1     0%
+  KXCALIEUTENANTGOV           9       7  2026-06..2026-06      0      -
+  KXCALIREDISTRICTING         1       1  2025-11..2025-11      1   100%
+  KXCAMEROONPRES              0       0                 -      0      -
+  KXCAMPECHEGOV               4       0                 -      0      -
+  KXCAN2ND                    5       5  2025-05..2025-05      1     0%
+  KXCANADA3RD                 6       6  2025-05..2025-05      0      -
+  KXCANADAELECT               1       1  2025-03..2025-03      1   100%
+  KXCANADALIBERAL             1       1  2026-04..2026-04      1     0%
+  KXCANADAPARTY               6       6  2025-05..2025-05      1     0%
+  KXCANADAPM                  6       6  2025-05..2025-05      1     0%
+  KXCANALBERTAREMAIN          7       0                 -      0      -
+  KXCANARIAS                  3       0                 -      0      -
+  KXCANBQSEATS                6       6  2025-05..2025-05      1     0%
+  KXCANCOALITION              6       6  2025-05..2025-05      1   100%
+  KXCANCONSEATS              10      10  2025-05..2025-05      1     0%
+  KXCANDIDATESBR              2       2  2025-12..2025-12      0      -
+  KXCANELECTION               3       0                 -      0      -
+  KXCANGREENSEATS             6       6  2025-05..2025-05      1     0%
+  KXCANLIBSEATS              10      10  2025-05..2025-05      1     0%
+  KXCANNDPSEATS               6       6  2025-05..2025-05      1     0%
+  KXCANPPCSEATS               6       6  2025-05..2025-05      1     0%
+  KXCANPROVSNAP               0       0                 -      0      -
+  KXCANRESIGNPARTY            7       7  2025-04..2025-05      2    50%
+  KXCANTABRIA                 0       0                 -      0      -
+  KXCAPEVERDEPARLI            2       2  2026-05..2026-05      1   100%
+  KXCAPEVERDEPRES             3       0                 -      0      -
+  KXCAPEVERDEPRES1R           1       0                 -      0      -
+  KXCAPRIMARY               529     529  2026-06..2026-07      2     0%
+  KXCAPROP42V40               1       0                 -      0      -
+  KXCAPROP50OUTPERFORMVOTEHUB      1       1  2025-12..2025-12      1     0%
+  KXCAQLEADER                 6       6  2026-04..2026-04      1   100%
+  KXCARNEYSEAT                1       1  2025-05..2025-05      1     0%
+  KXCASECESSION               1       0                 -      0      -
+  KXCASEN26                   8       0                 -      0      -
+  KXCASUPT                    2       0                 -      0      -
+  KXCAVOTERID                 1       0                 -      0      -
+  KXCAWEALTHTAX               1       0                 -      0      -
+  KXCAWEALTHTAXMOVD          16       0                 -      0      -
+  KXCDASEATS                  5       5  2025-11..2025-11      1     0%
+  KXCDUCSULEAD                6       6  2026-08..2026-08      1   100%
+  KXCDUPERCENT                6       6  2025-02..2025-02      1   100%
+  KXCEARAGOV                  3       3  2026-10..2026-10      1     0%
+  KXCHANCELLOR                6       6  2025-05..2025-05      1     0%
+  KXCHANDLERMAYOR             0       0                 -      0      -
+  KXCHARLIEKIRKOFFICE         1       0                 -      0      -
+  KXCHENNAICORP               4       0                 -      0      -
+  KXCHESHIREMAYOR             5       0                 -      0      -
+  KXCHICAGOMAYOR             17       0                 -      0      -
+  KXCHICOUTIMI                6       6  2025-05..2025-05      1     0%
+  KXCHIHUAHUAGOV              3       0                 -      0      -
+  KXCHILE1ROUND               1       1  2025-11..2025-11      1     0%
+  KXCHILEANRUNOFF             8       8  2025-12..2025-12      1     0%
+  KXCHILEDEPUTIES             4       4  2025-12..2025-12      0      -
+  KXCHILEPARTY                0       0                 -      0      -
+  KXCHILEROUNDONESECOND       8       8  2025-12..2025-12      1     0%
+  KXCHILESENATE               4       4  2025-12..2025-12      0      -
+  KXCHRISTAYLORCOUNTIES       5       5  2026-05..2026-05      1     0%
+  KXCIATTARELLIOUTPERFORMRCP      0       0                 -      0      -
+  KXCLACTON2ND               16      16  2026-08..2026-08      1     0%
+  KXCLACTON3RD               16      16  2026-08..2026-08      1   100%
+  KXCLACTON4TH               16      16  2026-08..2026-08      1   100%
+  KXCLACTONBYELECTION         5       5  2026-08..2026-08      1     0%
+  KXCLACTONBYMOV             16      16  2026-08..2026-08      1     0%
+  KXCLARENCEMAYOR             4       0                 -      0      -
+  KXCLMPSOEMAJ                1       0                 -      0      -
+  KXCLOSERAKTXSEN             2       0                 -      0      -
+  KXCLOSERFLSCSEN             2       0                 -      0      -
+  KXCLOSERMETXSEN             2       0                 -      0      -
+  KXCLOSERMINHSEN             2       0                 -      0      -
+  KXCLOSERMNMSSEN             2       0                 -      0      -
+  KXCLOSERMTNJSEN             2       0                 -      0      -
+  KXCLOSERNETXSEN             2       0                 -      0      -
+  KXCLOSEST2025               6       6  2025-12..2025-12      1     0%
+  KXCLOSESTGOVERNOR          24       0                 -      0      -
+  KXCLOSESTHOUSE             34       0                 -      0      -
+  KXCLOSESTSENATE            20       0                 -      0      -
+  KXCLOVERDALE                6       6  2025-05..2025-05      1     0%
+  KXCO03R                     3       3  2026-07..2026-07      1   100%
+  KXCO8D                      6       6  2026-07..2026-07      1     0%
+  KXCOALITION                 0       0                 -      0      -
+  KXCOLLINCOUNTYJUDGE         2       0                 -      0      -
+  KXCOLLINSOUTPERFORMRCP      1       0                 -      0      -
+  KXCOLLINSSENATERUN          1       1  2026-02..2026-02      1   100%
+  KXCOLOMBIA1R2               3       3  2026-06..2026-06      1   100%
+  KXCOLOMBIACHAMBER           2       2  2026-04..2026-04      1   100%
+  KXCOLOMBIAN2RMOV           12      12  2026-07..2026-07      1     0%
+  KXCOLOMBIAPARLI             7       7  2026-04..2026-04      1   100%
+  KXCOLOMBIAPRES             12      12  2026-06..2026-06      1   100%
+  KXCOLOMBIAPRES1R            1       1  2026-06..2026-06      1   100%
+  KXCOLOMBIAPRESR1            5       5  2026-06..2026-06      1     0%
+  KXCOLOMBIASENATE            2       2  2026-04..2026-04      1   100%
+  KXCOMPTROLLER               7       7  2025-07..2025-07      1     0%
+  KXCOMPTROLLERNOMILD         4       4  2026-03..2026-03      1     0%
+  KXCONLEADER24               2       2  2024-11..2024-11      1   100%
+  KXCOOKPARLI                 4       4  2026-08..2026-08      0      -
+  KXCOOPEROUTPERFORMRCP       1       0                 -      0      -
+  KXCOPRIMARY                12      12  2026-07..2026-07      1   100%
+  KXCOQUITLAMMAYOR            3       0                 -      0      -
+  KXCORDOBAGOV                3       0                 -      0      -
+  KXCORNWALLMEADOWBY          0       0                 -      0      -
+  KXCOSTARICAASSEMBLY         7       7  2026-03..2026-03      1     0%
+  KXCOSTARICALAMAJORITY       1       1  2026-03..2026-03      0      -
+  KXCOSTARICAPRES             9       9  2026-03..2026-03      0      -
+  KXCOSTARICAPRES1ROUND       1       1  2026-03..2026-03      1     0%
+  KXCPSBOARDPRES              4       0                 -      0      -
+  KXCRASEATS                  8       8  2026-02..2026-02      1     0%
+  KXCTPRIMARY                26      26  2026-06..2026-08      1   100%
+  KXCUAUHTEMOCMAYOR           3       0                 -      0      -
+  KXCUENCAMAYOR               9       0                 -      0      -
+  KXCUMBERLAND                6       6  2025-05..2025-05      1     0%
+  KXCUMBRIAMAYOR              5       0                 -      0      -
+  KXCUOMODROPOUT              3       3  2025-09..2025-11      2   100%
+  KXCZECHCOALITION            8       8  2026-03..2026-03      1     0%
 
   A. PER SERIES (first in-cell entry)
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KX14AMENDCASE              1     1    6.70    0.00     0   +6.70    +6.70    nan 0/0   HOLD
-  KX232ALUMCA                0
-  KX250DOLLARBILL            0
-  KX30CRIME                  0
-  KX3RDTERM                  0
-  KX45X                      0
-  KX48ETAXCREDIT             0
-  KX50YMORTGAGE              0
-  KX538APPROVE               0
-  KX538APPROVEMAX            0
-  KX538APPROVEMIN            1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KX538APPROVEY              0
-  KX60MCECOT                 0
-  KXABAACCRED                0
-  KXABBASATTEND              0
-  KXABCDISNEYSUE             0
-  KXABORTION                 0
-  KXABRAHAMINDO              0
-  KXABRAHAMKAZ               0
-  KXABRAHAMNEW               0
-  KXABRAHAMQ                 0
-  KXABRAHAMS                 0
-  KXABRAHAMSA                0
-  KXABRAHAMSY                0
-  KXABRAHAMW                 0
-  KXACAENROLLMENT            0
-  KXACAEXT                   0
-  KXACAHOUSEVOTE             1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXACAHSAFSA                0
-  KXACAREPEAL                0
-  KXACASUBSIDYBILL           0
-  KXACCREDITCOLUMBIA         0
-  KXACKMANLEAVE              0
-  KXACTBLUETOP               0
-  KXADAMSDLEAVE              0
-  KXADJOURNRECESS            0
-  KXADMINCMS                 0
-  KXADMINNASA                0
-  KXADMINWHD                 0
-  KXADVOCATEBECERRA          0
-  KXAFDBANREQUEST            0
-  KXAFDSTATEGOV              0
-  KXAGANNOUNCE               1     1    6.40    0.00     0   +6.40    +6.40    nan 0/0   HOLD
-  KXAGCONF                   0
-  KXAGENCIES                 0
-  KXAGENCYCUTS               0
-  KXAGENCYELIM               0
-  KXAIBILL                   0
-  KXAIBIOSECURITY            0
-  KXAICABINET                0
-  KXAIDEBATES                0
-  KXAIDIRECTOR               0
-  KXAIDUTYOFCARE             0
-  KXAIINCIDENTREPORT         0
-  KXAIKILLSWITCH             0
-  KXAILEGISLATION            0
-  KXAIORDER                  0
-  KXAIOVERSIGHT              0
-  KXAIRCANADASTRIKE          0
-  KXAIREVIEW                 0
-  KXAISAFETY                 0
-  KXAISAFETYAUDIT            0
-  KXAISECURITY               0
-  KXAJTOSSEO                 0
-  KXALASKABACK               0
-  KXALBERTAMINWAGE           0
-  KXALCATRAZ                 0
-  KXALIENACT                 0
-  KXALITOANNOUNCERETIRE      0
-  KXALITOOUT                 0
-  KXALLVOTE                  0
-  KXALLVOTEHEGSETH           0
-  KXALLVOTERFKJR             0
-  KXALLVOTETG                0
-  KXAMAZONFTC                0
-  KXAMAZONPRIMEFTC           0
-  KXAMBCN                    0
-  KXAMBMALAY                 0
-  KXAMEND22                  0
-  KXAMEND25                  0
-  KXAMENDVIOLATENYS2         0
-  KXAMERICAPACSPEND          0
-  KXAMESOHIO                 0
-  KXANDREWSUCCESSION         0
-  KXANONYMOUSDONOR           0
-  KXANTHROPICDOD             0
-  KXANTHROPICRESCIND         0
-  KXANTHROPICRISK            0
-  KXANTHROPICVATICAN         0
-  KXANTIWEPTAX               0
-  KXAOCENDORSE               0
-  KXAPOVALOFFICE             0
-  KXAPPLELAKE                0
-  KXAPPSTORE22JAN3           0
-  KXAPRPOTUS                 2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
-  KXAPRPOTUSD                0
-  KXAPRPOTUSEOY              0
-  KXAPSUIT                   0
-  KXARCRYPTO                 0
-  KXARGSTRIKE                0
-  KXARIMPEACH                0
-  KXARREST                   0
-  KXARRESTFORBESU3           0
-  KXARRESTGRETA              1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXARRESTJOHNBOLTON         0
-  KXARRESTKWEON              0
-  KXARRESTMAMDANI            0
-  KXARRESTNETANYAHU          0
-  KXARRESTNEWSOM             0
-  KXARRESTPOWELL             0
-  KXARRESTYOON               0
-  KXASIALEADERNEXT           0
-  KXASSOCAG                  0
-  KXASSOCAGCIVIL             0
-  KXASSTSECDEFHA             0
-  KXASSTSECSTATEEAP          0
-  KXASSTSECTREASURY          0
-  KXASYLUMCASES              0
-  KXATCZERO                  0
-  KXATF                      0
-  KXATLANTIC                 0
-  KXATTENDMELANIA            0
-  KXATTENDSOTU               0
-  KXATTENDTRUMPCHINA         0
-  KXATTENDUFC250             1     1    5.80    0.00     0   +5.80    +5.80    nan 0/0   HOLD
-  KXAUGRECESSCAB             0
-  KXAUKUS                    0
-  KXAUMFVENEZUELA            0
-  KXAUSTRIANATO              0
-  KXAUTOPENPARDON            0
-  KXAVGTARIFF                0
-  KXAXONFTC                  0
-  KXAZPORNLAW                0
-  KXBABELMANDEBWEEKLY        0
-  KXBADENOCHOUT              0
-  KXBALANCE                  0
-  KXBALLROOMHALT             0
-  KXBALLROOMSCOTUS           0
-  KXBANTRANS                 0
-  KXBANXGER                  0
-  KXBANXUK                   0
-  KXBANXUS                   0
-  KXBARNESFELIX              0
-  KXBARR                     0
-  KXBATHROOM                 0
-  KXBBB                      0
-  KXBECERRABRAIDWOOD         0
-  KXBEDOYA                   0
-  KXBEEFTARIFF               0
-  KXBENGSROUNDSDEBATE        0
-  KXBERNIEENDORSE            0
-  KXBESSENTCOUNT             0
-  KXBIDENAMBIEN              0
-  KXBIDENBOOK                0
-  KXBIDENNEBRASKA            0
-  KXBIDENPARDON              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXBIDENRESIGN              0
-  KXBIDENTAPES               0
-  KXBIDENVNEBRASKA           0
-  KXBIGBENDRESUME            0
-  KXBILL                     0
-  KXBILLCLINTONPUBLIC        0
-  KXBILLCONTEMPT             0
-  KXBILLCONTEMPTVOTE         0
-  KXBILLCOUNTM               0
-  KXBILLS                    0
-  KXBILLSCOUNT               0
-  KXBILLSCOUNTWEEKLY         0
-  KXBILLSSIGNED              0
-  KXBIRTHRIGHT               0
-  KXBIRTHRIGHTEO             0
-  KXBIRTHTOURISMVOTE         0
-  KXBKLYNDEMCHAIR            0
-  KXBLANCHECOUNT             0
-  KXBLANCHEDISBAR            0
-  KXBLANCHEJUDICIARY         0
-  KXBLANCHEMAXWELL           0
-  KXBLANCHEWITHDRAW          0
-  KXBLCOKDCFED               0
-  KXBLOCK75VISA              0
-  KXBLOCKH1B                 0
-  KXBLOCKITOUTSOURCING       0
-  KXBLOCKPOCKETRESCISS       0
-  KXBLOCKTARIFF              0
-  KXBLOMHONICKMAN            0
-  KXBLSCHEIF                 0
-  KXBLSCHIEF                 0
-  KXBLSCOMM                  0
-  KXBLSCOMMISSIONER          0
-  KXBLUESLIP                 0
-  KXBLUEWALL                 0
-  KXBNADOLLY                 0
-  KXBNATRUMP                 0
-  KXBOARD                    0
-  KXBOLIBRARYOPEN            0
-  KXBOLOJANOUT               0
-  KXBOLSONAROLEAVE           0
-  KXBOLSONAROPARDON          0
-  KXBONDICOUNT               0
-  KXBONDIEPSTEIN             0
-  KXBONDIOUT                 0
-  KXBONDITESTIFY             0
-  KXBORDER                   0
-  KXBORDERBILL               0
-  KXBOUGAINVILLEIND          0
-  KXBOYCOTTWC                0
-  KXBRAINARD                 0
-  KXBRAZILDISCORD            0
-  KXBRAZILTARIFFSIZE         0
-  KXBRAZILX                  0
-  KXBRAZILXBAN               0
-  KXBRENNANCHARGE            0
-  KXBRIANCONF                0
-  KXBRICS                    0
-  KXBROWNHUSTEDDEBATE        0
-  KXBTCRESERVE               0
-  KXBTCRESERVESTATES         0
-  KXBUDGETCUT                0
-  KXBUDGETRESH               0
-  KXBUDGETRESS               0
-  KXBURGUMCOUNT              0
-  KXBURNHAMCAB               0
-  KXBURNHAMJUL               0
-  KXBURNHAMOUT               0
-  KXBUYBTC                   0
-  KXCAALPRLAW                0
-  KXCAATSA                   1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXCABCHANGE                0
-  KXCABCOUNT                 0
-  KXCABDATE                  0
-  KXCABFAIL                  0
-  KXCABFAILS                 0
-  KXCABJAN20                 0
-  KXCABLEAVE                 0
-  KXCABOUT                   1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXCABSTAY                  0
-  KXCAEUROPEMOBILITY         0
-  KXCAFRAUD                  0
-  KXCAGOAT                   0
-  KXCAHOUSINGLAW             0
-  KXCAHSR                    0
-  KXCAJEWISH                 0
-  KXCALCOLLEGEFUNDPULL       0
-  KXCALIDJT                  0
-  KXCALIFORNIALEAVE          0
-  KXCALLIMPEACHRCONGRESS     0
-  KXCAMDENYARDS              0
-  KXCAN51                    0
-  KXCANADABLOCK              0
-  KXCANADACONFIDENCE         0
-  KXCANADAUSTARIFFLOWER      0
-  KXCANAL                    0
-  KXCANAUTOSTEEL50           0
-  KXCANCARBON                0
-  KXCANCOUNTERTARIFF         0
-  KXCANCTRTARIFF             0
-  KXCANELECTRICCHARGE        0
-  KXCANELECTRICITY           0
-  KXCANEUASSOC               0
-  KXCANEUNEGOTIATE           0
-  KXCANEVTARIFF              0
-  KXCANEVTRTARIFF            0
-  KXCANMIN19                 0
-  KXCANREGISTER              0
-  KXCANRESIGN                0
-  KXCANRESIGNCOUNT           0
-  KXCANSAFETY                0
-  KXCANSNAP                  0
-  KXCANSNAPPROV              0
-  KXCANTARIFFSEFFECT         0
-  KXCANTARIFFSIZE            0
-  KXCANTERRITORY             0
-  KXCANUSDEAL                0
-  KXCANUSRAISE               0
-  KXCAPARAMOUNTSETTLE        0
-  KXCAPARASETTLE             0
-  KXCAPCONTROL               0
-  KXCAPGAIN                  0
-  KXCAPGAINDOWN              0
-  KXCAPITALCHANGE            0
-  KXCAPITALMOVESK            0
-  KXCAPMLEAVE                0
-  KXCARBONTAX                0
-  KXCARNEYHALIFAX            0
-  KXCARNEYOUT                0
-  KXCARRIED                  0
-  KXCARRIEDINTEREST          0
-  KXCARROUT                  0
-  KXCARVMAK                  0
-  KXCASE                     0
-  KXCASESSION                0
-  KXCASTRONG                 0
-  KXCATHOLICWISCNOSIN        0
-  KXCBDCBAN                  0
-  KXCBPAIRPORT               0
-  KXCCLIMIT                  0
-  KXCCPCHILDREN              0
-  KXCDCCONF                  0
-  KXCDCDIRECTOR              0
-  KXCEA                      0
-  KXCENSURE                  0
-  KXCENSUREEDWARDS           0
-  KXCENSUREFINE              0
-  KXCENSUSEXCLUDE            0
-  KXCEONEXT                  0
-  KXCFOHOMELAND              0
-  KXCFPB                     0
-  KXCFPBELIM                 0
-  KXCGPMUTC                  0
-  KXCHANCELEAVE              0
-  KXCHATRIEUSA               0
-  KXCHAVEZCOUNT              0
-  KXCHENEYFUNERAL            0
-  KXCHIEFSKANSAS             0
-  KXCHILDS                   0
-  KXCHIMAYORLEAVE            0
-  KXCHINAAGPURCHASE          0
-  KXCHINAANNOUNCE            0
-  KXCHINABANKSANC            0
-  KXCHINABIRTHLIMITS         0
-  KXCHINABOEING              0
-  KXCHINADATACENTER          0
-  KXCHINAEUV                 0
-  KXCHINAHUKOU               0
-  KXCHINALIST                0
-  KXCHINARARE                0
-  KXCHINATARIFF              0
-  KXCHINAUNBANBTC            0
-  KXCHINAUNRUBIO             0
-  KXCHIPSREPEAL              0
-  KXCHRISCHRISTIECHARGE      0
-  KXCIA                      0
-  KXCIT301                   0
-  KXCLARITYACT               0
-  KXCLARITYVOTE              0
-  KXCLAYTONCONF              0
-  KXCLAYTONCOUNT             0
-  KXCLAYTONDNI               0
-  KXCLEANCR                  0
-  KXCLEANVEHICLE             0
-  KXCLOSEHORMUZ              0
-  KXCLOUDSEEDING             0
-  KXCMEATBAN                 0
-  KXCMEATBANTIME             0
-  KXCMEATBANUSA              0
-  KXCMSDEFERRAL              0
-  KXCNNTRUMPPLANE            0
-  KXCOLLINSCOUNT             0
-  KXCOLOMHYDESMITHDEBATE     0
-  KXCOLUMBPRESIDENT          0
-  KXCOMEYDISMISS             1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXCOMEYREINSTATE           0
-  KXCOMMENCEMENT             0
-  KXCOMMGIFTS                0
-  KXCOMMISHCBP               0
-  KXCOMMISHFDA               0
-  KXCONCEALEDRECIPROCITY     0
-  KXCONFFEDGOV               0
-  KXCONGESTION               0
-  KXCONGESTIONEND            0
-  KXCONGESTIONSUIT           0
-  KXCONGRESSCENSUREPADILLA     0
-  KXCONGRESSEXPELSCHIFF      0
-  KXCONGRESSPAYINCREASE      0
-  KXCONGRESSPERSONMEMECOIN     0
-  KXCONGRESSTARIFF           0
-  KXCONGRESSTARIFFCOUNT      0
-  KXCONGRESSTARIFFPASS       0
-  KXCONGRESSTARIFFVOTE       0
-  KXCONGRESSTESTIFY          0
-  KXCONGRESSTRADES           0
-  KXCONROVA                  0
-  KXCONSENTCOLUMBIA          0
-  KXCONSTAMEND               0
-  KXCONSTITUTIONPIPELINE     0
-  KXCONTEMPT                 0
-  KXCOOK                     0
-  KXCOOKCHARGE               0
-  KXCOOKCOMMITTEE            0
-  KXCOOPERWHATLEYDEBATE      0
-  KXCOPPERCABLE              0
-  KXCOPPERTARIFF             0
-  KXCORNYNTALARICO           0
-  KXCORPTAX                  0
-  KXCORPTAXCUT               0
-  KXCOUNTRYSTARLINK          0
-  KXCOUNTRYTARIFF            0
-  KXCOURTBLOCKPOCKETRECISS     0
-  KXCOVIDBILL                0
-  KXCPBFUNDING               0
-  KXCPCSIZE                  0
-  KXCR                       0
-  KXCRIMECAB                 0
-  KXCRIMESEN                 0
-  KXCROCKETTCAMPAIGN         0
-  KXCRUDEEXPORTBAN           0
-  KXCRYPTOCAPGAIN            0
-  KXCRYPTODAY1               0
-  KXCRYPTOEO                 0
-  KXCRYPTOEXEMP              0
+  KX2028DRUN                 0
+  KX2028RRUN                 0
+  KX3RDPARTY                 0
+  KX538CALL                  0
+  KX538STATES                0
+  KXABBOTSFORDMAYOR          0
+  KXABBOTTGOPVOTE            0
+  KXABERDEENSOUTHBY          0
+  KXACADIE                   0
+  KXACKMANMAYOR              0
+  KXACREGOV                  0
+  KXADAMAWAGOV               0
+  KXADAMSDROPOUT             0
+  KXADAMSDROPOUTBY           0
+  KXADELAIDEMAYOR            0
+  KXAFDPERCENT               0
+  KXAFDSACHSEN               0
+  KXAFRICALEADEROUT          0
+  KXAGNOMAZR                 0
+  KXAGNOMCOD                 0
+  KXAGNOMDVA                 0
+  KXAGNOMGAD                 0
+  KXAGNOMGAR                 0
+  KXAGNOMILR                 0
+  KXAGNOMMID                 0
+  KXAGNOMMIR                 0
+  KXAGNOMMND                 0
+  KXAGNOMRID                 0
+  KXAGNOMROK                 0
+  KXAGNOMSCR                 0
+  KXAGNOMTXD                 0
+  KXAGNOMTXR                 0
+  KXAGUASCALIENTESGOV        0
+  KXAIPACLOSEPRIMARY         0
+  KXAKCOMBO                  0
+  KXAKDROPOUT                0
+  KXAKDROPOUTAUG             0
+  KXAKMOV                    0
+  KXAKPRIMARY                0
+  KXAKSEN1                   0
+  KXAKSENADVANCE             0
+  KXAKSENATE                 0
+  KXAKSENATEROUND            0
+  KXAKSENGOVCOMBO            0
+  KXAKWAIBOMGOV              0
+  KXAKWITHDRAW               0
+  KXALASKAHOUSE              0
+  KXALBANIAPARTY             0
+  KXALBERTAREFS              0
+  KXALBERTAREFYES            0
+  KXALBERTASEPREF            0
+  KXALPRIMARY                0
+  KXALSUPREME8               0
+  KXAMAZONASGOV              0
+  KXAMERICAPARTY2028         0
+  KXANDORRAPARLI             0
+  KXANNARBORMAYORD           0
+  KXANOCOALITION             0
+  KXANYDEMWINTEXAS           0
+  KXAOCRUN                   0
+  KXAOCSENATE                0
+  KXAPCALLCAGOV              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXAPCALLHOUSE              0
+  KXAPCALLLAMAYOR            0
+  KXAPCALLMID                0
+  KXAPCALLNJGOV              0
+  KXAPCALLSCSEN              0
+  KXAPCALLSENATE             0
+  KXAPCALLSNYC               0
+  KXAPCALLVA                 0
+  KXAPCALLVAAG               0
+  KXAPCALLVAGOV              0
+  KXAPCALLWIGOVD             0
+  KXARBROATHBY               0
+  KXAREQUIPAGOV              0
+  KXARGENTINAHOUSETHIRD      0
+  KXARGENTINAMOSTGAIN        0
+  KXARGENTINAPARTY           0
+  KXARGENTINAPERONISTNOM     0
+  KXARGENTINAPRES            0
+  KXARGENTINAPRES1R          0
+  KXARGENTINASENATE          0
+  KXARMENIAPARLI             0
+  KXARPRIMARY                0
+  KXARSOSRPRIMARY            0
+  KXASIALEADEROUT            0
+  KXASTURIAS                 0
+  KXATTYGENAL                0
+  KXATTYGENAR                0
+  KXATTYGENAZ                0
+  KXATTYGENCO                0
+  KXATTYGENCT                0
+  KXATTYGENDE                0
+  KXATTYGENFL                0
+  KXATTYGENGA                0
+  KXATTYGENIA                0
+  KXATTYGENID                0
+  KXATTYGENIL                0
+  KXATTYGENIN                0
+  KXATTYGENKS                0
+  KXATTYGENMA                0
+  KXATTYGENMD                0
+  KXATTYGENMI                0
+  KXATTYGENMN                0
+  KXATTYGENMO                0
+  KXATTYGENNC                0
+  KXATTYGENND                0
+  KXATTYGENNE                0
+  KXATTYGENNM                0
+  KXATTYGENNV                0
+  KXATTYGENNY                0
+  KXATTYGENOH                0
+  KXATTYGENOK                0
+  KXATTYGENOR                0
+  KXATTYGENPA                0
+  KXATTYGENRI                0
+  KXATTYGENSC                0
+  KXATTYGENSD                0
+  KXATTYGENTX                0
+  KXATTYGENUT                0
+  KXATTYGENVA                1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXATTYGENVT                0
+  KXATTYGENWI                0
+  KXATTYGENWV                0
+  KXAUSCOALITION             0
+  KXAUSPM                    0
+  KXAUSSEATALBANESE          0
+  KXAUSSEATBENNELONG         0
+  KXAUSSEATBRISBANE          0
+  KXAUSSEATDUTTON            0
+  KXAUSSEATSGREENS           0
+  KXAUSSEATSLABOR            0
+  KXAUSSEATSLIBNAT           0
+  KXAUSTPM                   0
+  KXAUSTRALIA                0
+  KXAUSTRALIAHOUSE           0
+  KXAUSTRALIASENATE          0
+  KXAZ01D                    0
+  KXAZ01R                    0
+  KXAZ5R                     0
+  KXAZCORPCOMM               0
+  KXAZMINEINSPECTOR          0
+  KXAZPRIMARY                0
+  KXAZSOSR                   0
+  KXAZSUPERINTENDENT         0
+  KXAZTREASR                 1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXAZTREASRGEN              0
+  KXAZUAYPREFECT             0
+  KXBADWUR                   0
+  KXBAHIAGOV                 0
+  KXBAJAGOV                  0
+  KXBALANCEPOWERCOMBO        0
+  KXBALEARIC                 0
+  KXBALLOTAMERICAPARTY       0
+  KXBANKHEADDROPOUT          0
+  KXBARCELONACOUNCIL         0
+  KXBARMMCM                  0
+  KXBARNESENDORSE            0
+  KXBAUCHIGOV                0
+  KXBAYAREATRANSIT           0
+  KXBBGMAYOR                 0
+  KXBC2ND                    0
+  KXBC3RD                    0
+  KXBCCONLEAD                0
+  KXBCCONSEATS               0
+  KXBCELECTION               0
+  KXBCGOVT                   0
+  KXBCNDPSEATS               0
+  KXBCPREMIER                0
+  KXBEDFORDMAYOR             0
+  KXBEITEINUCOUNT            0
+  KXBELIZECITYMAYOR          0
+  KXBENINPARLIAMENT          0
+  KXBENINUPR                 0
+  KXBENITOJUAREZMAYOR        0
+  KXBENUEGOV                 0
+  KXBERGENCOUNCIL            0
+  KXBERLIN2ND                0
+  KXBERLIN3RD                0
+  KXBERLIN4TH                0
+  KXBERLINANYSEAT            0
+  KXBERLINGOVMAYOR           0
+  KXBERLINSTATE              0
+  KXBERNIERSEAT              0
+  KXBETHELSEAT               0
+  KXBEXARCOUNTYJUDGE         0
+  KXBEXARDA                  0
+  KXBIHARELECTION            0
+  KXBILZERIANCONCEDE         0
+  KXBLANCHETSEAT             0
+  KXBLUEIOWA                 0
+  KXBLUESTRSEN               0
+  KXBLUETRICKLECOMBO         0
+  KXBLUETSUNAMICOMBO         0
+  KXBLUEWAVECOMBO            0
+  KXBOLIVIADEPUTIES          0
+  KXBOLIVIAFIRSTROUND        0
+  KXBOLIVIAFIRSTROUNDMOV     0
+  KXBOLIVIAPRES              0
+  KXBOLIVIARUNOFF            0
+  KXBOLIVIARUNOFFMOV         0
+  KXBOLIVIASENATE            0
+  KXBOSNIACPRES              0
+  KXBOSNIAKPRES              0
+  KXBOSNIANGEN               0
+  KXBOSNIANGEN2ND            0
+  KXBOSNIANGEN3RD            0
+  KXBOSNIASPRES              0
+  KXBOSTONMAYORMOV           0
+  KXBRANTFORDBY              0
+  KXBRATISLAVAMAYOR          0
+  KXBRAZILPRES1R             1     1    6.10    0.00     0   +6.10    +6.10    nan 0/0   HOLD
+  KXBRAZILSENATE             0
+  KXBRAZILTURNOUT            0
+  KXBRBALLOT                 0
+  KXBRDEP                    0
+  KXBREMEN                   0
+  KXBRGOVMOSTSEATS           0
+  KXBRISRAELSENCOMBO         0
+  KXBRONSONDROPOUT           0
+  KXBROWNOUTPERFORMRCP       0
+  KXBRPRES                   0
+  KXBRPRES1MOV               0
+  KXBRPRES1R                 0
+  KXBRPRES2ABROAD            0
+  KXBRPRES2COUNTRIES         0
+  KXBRPRES2MOV               0
+  KXBRPRES2MOVD              0
+  KXBRPRES2STATEMOVD         0
+  KXBRPRES2STATES            0
+  KXBRPRESABROAD             0
+  KXBRPRESADVANCE            0
+  KXBRPRESIDENT2             0
+  KXBRPRESIDENT3             0
+  KXBRPRESIDENT4             0
+  KXBRPRESIDENT5             0
+  KXBRRUNOFFABROAD           0
+  KXBRRUNOFFCOUNTRIES        0
+  KXBRRUNOFFSTATES           0
+  KXBRSENMOSTSEATS           0
+  KXBRUVSEAT                 0
+  KXBUCHARESTMAYOR           0
+  KXBUCHARESTMAYOR2ND        0
+  KXBUCHARESTMAYOR3RD        0
+  KXBULGARIAPARLI            0
+  KXBULGARIAPRES             0
+  KXBULGARIAPRES1MOVD        0
+  KXBULGARIAPRES1R2ND        0
+  KXBULGARIAPRES1R3RD        0
+  KXBULGARIATURNOUT          0
+  KXBURBANKBALLOT            0
+  KXBURNHAMPM                0
+  KXBUTTIGIEGRUN             0
+  KXCA01S                    0
+  KXCA04PRIMARY              0
+  KXCA11D                    0
+  KXCA11PERSON               0
+  KXCA11PRIMARY              0
+  KXCA14SWINNER              0
+  KXCA17PERSON               0
+  KXCA1SPECIAL               0
+  KXCA22PRIMARY              0
+  KXCA22R                    0
+  KXCA32D                    0
+  KXCA32PRIMARY              0
+  KXCA40PRIMARYADVANCE       0
+  KXCA4PRIMARY               0
+  KXCAATTORNEYGENERAL        0
+  KXCABALLOTMEASURES         0
+  KXCABILLIONAIRETAX         0
+  KXCAELECTION               0
+  KXCAGOV2ND                 0
+  KXCAGOV3RD                 0
+  KXCAGOVCOUNTY              0
+  KXCAGOVLAMAYOR             0
+  KXCAGOVMATCHUP             0
+  KXCAGOVOUTPERFORM          0
+  KXCAGOVPRIMARY1ST          0
+  KXCAGOVPRIMARYEXACT        0
+  KXCAGOVPRIMARYTOP3         0
+  KXCAHOUSEDEM               0
+  KXCAINSCOM                 0
+  KXCAINSCOMGEN              0
+  KXCALABRIAPRES             0
+  KXCALGARYCENTRE            0
+  KXCALGARYSHAWBY            0
+  KXCALGARYSKYVIEW           0
+  KXCALIEUTENANTGOV          0
+  KXCALIREDISTRICTING        0
+  KXCAMEROONPRES             0
+  KXCAMPECHEGOV              0
+  KXCAN2ND                   0
+  KXCANADA3RD                0
+  KXCANADAELECT              0
+  KXCANADALIBERAL            0
+  KXCANADAPARTY              0
+  KXCANADAPM                 0
+  KXCANALBERTAREMAIN         0
+  KXCANARIAS                 0
+  KXCANBQSEATS               0
+  KXCANCOALITION             0
+  KXCANCONSEATS              0
+  KXCANDIDATESBR             0
+  KXCANELECTION              0
+  KXCANGREENSEATS            0
+  KXCANLIBSEATS              0
+  KXCANNDPSEATS              0
+  KXCANPPCSEATS              0
+  KXCANPROVSNAP              0
+  KXCANRESIGNPARTY           0
+  KXCANTABRIA                0
+  KXCAPEVERDEPARLI           0
+  KXCAPEVERDEPRES            0
+  KXCAPEVERDEPRES1R          0
+  KXCAPRIMARY                0
+  KXCAPROP42V40              0
+  KXCAPROP50OUTPERFORMVOTEHUB     0
+  KXCAQLEADER                0
+  KXCARNEYSEAT               0
+  KXCASECESSION              0
+  KXCASEN26                  0
+  KXCASUPT                   0
+  KXCAVOTERID                0
+  KXCAWEALTHTAX              0
+  KXCAWEALTHTAXMOVD          0
+  KXCDASEATS                 0
+  KXCDUCSULEAD               0
+  KXCDUPERCENT               0
+  KXCEARAGOV                 0
+  KXCHANCELLOR               0
+  KXCHANDLERMAYOR            0
+  KXCHARLIEKIRKOFFICE        0
+  KXCHENNAICORP              0
+  KXCHESHIREMAYOR            0
+  KXCHICAGOMAYOR             0
+  KXCHICOUTIMI               0
+  KXCHIHUAHUAGOV             0
+  KXCHILE1ROUND              0
+  KXCHILEANRUNOFF            0
+  KXCHILEDEPUTIES            0
+  KXCHILEPARTY               0
+  KXCHILEROUNDONESECOND      0
+  KXCHILESENATE              0
+  KXCHRISTAYLORCOUNTIES      0
+  KXCIATTARELLIOUTPERFORMRCP     0
+  KXCLACTON2ND               0
+  KXCLACTON3RD               0
+  KXCLACTON4TH               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXCLACTONBYELECTION        0
+  KXCLACTONBYMOV             0
+  KXCLARENCEMAYOR            0
+  KXCLMPSOEMAJ               0
+  KXCLOSERAKTXSEN            0
+  KXCLOSERFLSCSEN            0
+  KXCLOSERMETXSEN            0
+  KXCLOSERMINHSEN            0
+  KXCLOSERMNMSSEN            0
+  KXCLOSERMTNJSEN            0
+  KXCLOSERNETXSEN            0
+  KXCLOSEST2025              0
+  KXCLOSESTGOVERNOR          0
+  KXCLOSESTHOUSE             0
+  KXCLOSESTSENATE            0
+  KXCLOVERDALE               0
+  KXCO03R                    0
+  KXCO8D                     0
+  KXCOALITION                0
+  KXCOLLINCOUNTYJUDGE        0
+  KXCOLLINSOUTPERFORMRCP     0
+  KXCOLLINSSENATERUN         0
+  KXCOLOMBIA1R2              1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXCOLOMBIACHAMBER          1     1    6.80    0.00     0   +6.80    +6.80    nan 0/0   HOLD
+  KXCOLOMBIAN2RMOV           0
+  KXCOLOMBIAPARLI            0
+  KXCOLOMBIAPRES             0
+  KXCOLOMBIAPRES1R           0
+  KXCOLOMBIAPRESR1           0
+  KXCOLOMBIASENATE           0
+  KXCOMPTROLLER              0
+  KXCOMPTROLLERNOMILD        0
+  KXCONLEADER24              0
+  KXCOOKPARLI                0
+  KXCOOPEROUTPERFORMRCP      0
+  KXCOPRIMARY                0
+  KXCOQUITLAMMAYOR           0
+  KXCORDOBAGOV               0
+  KXCORNWALLMEADOWBY         0
+  KXCOSTARICAASSEMBLY        0
+  KXCOSTARICALAMAJORITY      0
+  KXCOSTARICAPRES            0
+  KXCOSTARICAPRES1ROUND      0
+  KXCPSBOARDPRES             0
+  KXCRASEATS                 0
+  KXCTPRIMARY                0
+  KXCUAUHTEMOCMAYOR          0
+  KXCUENCAMAYOR              0
+  KXCUMBERLAND               0
+  KXCUMBRIAMAYOR             0
+  KXCUOMODROPOUT             0
+  KXCZECHCOALITION           0
 
   B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXAPRPOTUS                 2     2    6.50    0.00     0   +6.50    +6.50  13.00 0/0   HOLD
-  KX14AMENDCASE              1     1    6.70    0.00     0   +6.70    +6.70    nan 0/0   HOLD
-  KX538APPROVEMIN            1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXACAHOUSEVOTE             1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXAGANNOUNCE               1     1    6.40    0.00     0   +6.40    +6.40    nan 0/0   HOLD
-  KXARRESTGRETA              1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXATTENDUFC250             1     1    5.80    0.00     0   +5.80    +5.80    nan 0/0   HOLD
-  KXBIDENPARDON              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXCAATSA                   1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXCABOUT                   1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXCOMEYDISMISS             1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KX232ALUMCA                0
-  KX250DOLLARBILL            0
-  KX30CRIME                  0
-  KX3RDTERM                  0
-  KX45X                      0
-  KX48ETAXCREDIT             0
-  KX50YMORTGAGE              0
-  KX538APPROVE               0
-  KX538APPROVEMAX            0
-  KX538APPROVEY              0
-  KX60MCECOT                 0
-  KXABAACCRED                0
-  KXABBASATTEND              0
-  KXABCDISNEYSUE             0
-  KXABORTION                 0
-  KXABRAHAMINDO              0
-  KXABRAHAMKAZ               0
-  KXABRAHAMNEW               0
-  KXABRAHAMQ                 0
-  KXABRAHAMS                 0
-  KXABRAHAMSA                0
-  KXABRAHAMSY                0
-  KXABRAHAMW                 0
-  KXACAENROLLMENT            0
-  KXACAEXT                   0
-  KXACAHSAFSA                0
-  KXACAREPEAL                0
-  KXACASUBSIDYBILL           0
-  KXACCREDITCOLUMBIA         0
-  KXACKMANLEAVE              0
-  KXACTBLUETOP               0
-  KXADAMSDLEAVE              0
-  KXADJOURNRECESS            0
-  KXADMINCMS                 0
-  KXADMINNASA                0
-  KXADMINWHD                 0
-  KXADVOCATEBECERRA          0
-  KXAFDBANREQUEST            0
-  KXAFDSTATEGOV              0
-  KXAGCONF                   0
-  KXAGENCIES                 0
-  KXAGENCYCUTS               0
-  KXAGENCYELIM               0
-  KXAIBILL                   0
-  KXAIBIOSECURITY            0
-  KXAICABINET                0
-  KXAIDEBATES                0
-  KXAIDIRECTOR               0
-  KXAIDUTYOFCARE             0
-  KXAIINCIDENTREPORT         0
-  KXAIKILLSWITCH             0
-  KXAILEGISLATION            0
-  KXAIORDER                  0
-  KXAIOVERSIGHT              0
-  KXAIRCANADASTRIKE          0
-  KXAIREVIEW                 0
-  KXAISAFETY                 0
-  KXAISAFETYAUDIT            0
-  KXAISECURITY               0
-  KXAJTOSSEO                 0
-  KXALASKABACK               0
-  KXALBERTAMINWAGE           0
-  KXALCATRAZ                 0
-  KXALIENACT                 0
-  KXALITOANNOUNCERETIRE      0
-  KXALITOOUT                 0
-  KXALLVOTE                  0
-  KXALLVOTEHEGSETH           0
-  KXALLVOTERFKJR             0
-  KXALLVOTETG                0
-  KXAMAZONFTC                0
-  KXAMAZONPRIMEFTC           0
-  KXAMBCN                    0
-  KXAMBMALAY                 0
-  KXAMEND22                  0
-  KXAMEND25                  0
-  KXAMENDVIOLATENYS2         0
-  KXAMERICAPACSPEND          0
-  KXAMESOHIO                 0
-  KXANDREWSUCCESSION         0
-  KXANONYMOUSDONOR           0
-  KXANTHROPICDOD             0
-  KXANTHROPICRESCIND         0
-  KXANTHROPICRISK            0
-  KXANTHROPICVATICAN         0
-  KXANTIWEPTAX               0
-  KXAOCENDORSE               0
-  KXAPOVALOFFICE             0
-  KXAPPLELAKE                0
-  KXAPPSTORE22JAN3           0
-  KXAPRPOTUSD                0
-  KXAPRPOTUSEOY              0
-  KXAPSUIT                   0
-  KXARCRYPTO                 0
-  KXARGSTRIKE                0
-  KXARIMPEACH                0
-  KXARREST                   0
-  KXARRESTFORBESU3           0
-  KXARRESTJOHNBOLTON         0
-  KXARRESTKWEON              0
-  KXARRESTMAMDANI            0
-  KXARRESTNETANYAHU          0
-  KXARRESTNEWSOM             0
-  KXARRESTPOWELL             0
-  KXARRESTYOON               0
-  KXASIALEADERNEXT           0
-  KXASSOCAG                  0
-  KXASSOCAGCIVIL             0
-  KXASSTSECDEFHA             0
-  KXASSTSECSTATEEAP          0
-  KXASSTSECTREASURY          0
-  KXASYLUMCASES              0
-  KXATCZERO                  0
-  KXATF                      0
-  KXATLANTIC                 0
-  KXATTENDMELANIA            0
-  KXATTENDSOTU               0
-  KXATTENDTRUMPCHINA         0
-  KXAUGRECESSCAB             0
-  KXAUKUS                    0
-  KXAUMFVENEZUELA            0
-  KXAUSTRIANATO              0
-  KXAUTOPENPARDON            0
-  KXAVGTARIFF                0
-  KXAXONFTC                  0
-  KXAZPORNLAW                0
-  KXBABELMANDEBWEEKLY        0
-  KXBADENOCHOUT              0
-  KXBALANCE                  0
-  KXBALLROOMHALT             0
-  KXBALLROOMSCOTUS           0
-  KXBANTRANS                 0
-  KXBANXGER                  0
-  KXBANXUK                   0
-  KXBANXUS                   0
-  KXBARNESFELIX              0
-  KXBARR                     0
-  KXBATHROOM                 0
-  KXBBB                      0
-  KXBECERRABRAIDWOOD         0
-  KXBEDOYA                   0
-  KXBEEFTARIFF               0
-  KXBENGSROUNDSDEBATE        0
-  KXBERNIEENDORSE            0
-  KXBESSENTCOUNT             0
-  KXBIDENAMBIEN              0
-  KXBIDENBOOK                0
-  KXBIDENNEBRASKA            0
-  KXBIDENRESIGN              0
-  KXBIDENTAPES               0
-  KXBIDENVNEBRASKA           0
-  KXBIGBENDRESUME            0
-  KXBILL                     0
-  KXBILLCLINTONPUBLIC        0
-  KXBILLCONTEMPT             0
-  KXBILLCONTEMPTVOTE         0
-  KXBILLCOUNTM               0
-  KXBILLS                    0
-  KXBILLSCOUNT               0
-  KXBILLSCOUNTWEEKLY         0
-  KXBILLSSIGNED              0
-  KXBIRTHRIGHT               0
-  KXBIRTHRIGHTEO             0
-  KXBIRTHTOURISMVOTE         0
-  KXBKLYNDEMCHAIR            0
-  KXBLANCHECOUNT             0
-  KXBLANCHEDISBAR            0
-  KXBLANCHEJUDICIARY         0
-  KXBLANCHEMAXWELL           0
-  KXBLANCHEWITHDRAW          0
-  KXBLCOKDCFED               0
-  KXBLOCK75VISA              0
-  KXBLOCKH1B                 0
-  KXBLOCKITOUTSOURCING       0
-  KXBLOCKPOCKETRESCISS       0
-  KXBLOCKTARIFF              0
-  KXBLOMHONICKMAN            0
-  KXBLSCHEIF                 0
-  KXBLSCHIEF                 0
-  KXBLSCOMM                  0
-  KXBLSCOMMISSIONER          0
-  KXBLUESLIP                 0
-  KXBLUEWALL                 0
-  KXBNADOLLY                 0
-  KXBNATRUMP                 0
-  KXBOARD                    0
-  KXBOLIBRARYOPEN            0
-  KXBOLOJANOUT               0
-  KXBOLSONAROLEAVE           0
-  KXBOLSONAROPARDON          0
-  KXBONDICOUNT               0
-  KXBONDIEPSTEIN             0
-  KXBONDIOUT                 0
-  KXBONDITESTIFY             0
-  KXBORDER                   0
-  KXBORDERBILL               0
-  KXBOUGAINVILLEIND          0
-  KXBOYCOTTWC                0
-  KXBRAINARD                 0
-  KXBRAZILDISCORD            0
-  KXBRAZILTARIFFSIZE         0
-  KXBRAZILX                  0
-  KXBRAZILXBAN               0
-  KXBRENNANCHARGE            0
-  KXBRIANCONF                0
-  KXBRICS                    0
-  KXBROWNHUSTEDDEBATE        0
-  KXBTCRESERVE               0
-  KXBTCRESERVESTATES         0
-  KXBUDGETCUT                0
-  KXBUDGETRESH               0
-  KXBUDGETRESS               0
-  KXBURGUMCOUNT              0
-  KXBURNHAMCAB               0
-  KXBURNHAMJUL               0
-  KXBURNHAMOUT               0
-  KXBUYBTC                   0
-  KXCAALPRLAW                0
-  KXCABCHANGE                0
-  KXCABCOUNT                 0
-  KXCABDATE                  0
-  KXCABFAIL                  0
-  KXCABFAILS                 0
-  KXCABJAN20                 0
-  KXCABLEAVE                 0
-  KXCABSTAY                  0
-  KXCAEUROPEMOBILITY         0
-  KXCAFRAUD                  0
-  KXCAGOAT                   0
-  KXCAHOUSINGLAW             0
-  KXCAHSR                    0
-  KXCAJEWISH                 0
-  KXCALCOLLEGEFUNDPULL       0
-  KXCALIDJT                  0
-  KXCALIFORNIALEAVE          0
-  KXCALLIMPEACHRCONGRESS     0
-  KXCAMDENYARDS              0
-  KXCAN51                    0
-  KXCANADABLOCK              0
-  KXCANADACONFIDENCE         0
-  KXCANADAUSTARIFFLOWER      0
-  KXCANAL                    0
-  KXCANAUTOSTEEL50           0
-  KXCANCARBON                0
-  KXCANCOUNTERTARIFF         0
-  KXCANCTRTARIFF             0
-  KXCANELECTRICCHARGE        0
-  KXCANELECTRICITY           0
-  KXCANEUASSOC               0
-  KXCANEUNEGOTIATE           0
-  KXCANEVTARIFF              0
-  KXCANEVTRTARIFF            0
-  KXCANMIN19                 0
-  KXCANREGISTER              0
-  KXCANRESIGN                0
-  KXCANRESIGNCOUNT           0
-  KXCANSAFETY                0
-  KXCANSNAP                  0
-  KXCANSNAPPROV              0
-  KXCANTARIFFSEFFECT         0
-  KXCANTARIFFSIZE            0
-  KXCANTERRITORY             0
-  KXCANUSDEAL                0
-  KXCANUSRAISE               0
-  KXCAPARAMOUNTSETTLE        0
-  KXCAPARASETTLE             0
-  KXCAPCONTROL               0
-  KXCAPGAIN                  0
-  KXCAPGAINDOWN              0
-  KXCAPITALCHANGE            0
-  KXCAPITALMOVESK            0
-  KXCAPMLEAVE                0
-  KXCARBONTAX                0
-  KXCARNEYHALIFAX            0
-  KXCARNEYOUT                0
-  KXCARRIED                  0
-  KXCARRIEDINTEREST          0
-  KXCARROUT                  0
-  KXCARVMAK                  0
-  KXCASE                     0
-  KXCASESSION                0
-  KXCASTRONG                 0
-  KXCATHOLICWISCNOSIN        0
-  KXCBDCBAN                  0
-  KXCBPAIRPORT               0
-  KXCCLIMIT                  0
-  KXCCPCHILDREN              0
-  KXCDCCONF                  0
-  KXCDCDIRECTOR              0
-  KXCEA                      0
-  KXCENSURE                  0
-  KXCENSUREEDWARDS           0
-  KXCENSUREFINE              0
-  KXCENSUSEXCLUDE            0
-  KXCEONEXT                  0
-  KXCFOHOMELAND              0
-  KXCFPB                     0
-  KXCFPBELIM                 0
-  KXCGPMUTC                  0
-  KXCHANCELEAVE              0
-  KXCHATRIEUSA               0
-  KXCHAVEZCOUNT              0
-  KXCHENEYFUNERAL            0
-  KXCHIEFSKANSAS             0
-  KXCHILDS                   0
-  KXCHIMAYORLEAVE            0
-  KXCHINAAGPURCHASE          0
-  KXCHINAANNOUNCE            0
-  KXCHINABANKSANC            0
-  KXCHINABIRTHLIMITS         0
-  KXCHINABOEING              0
-  KXCHINADATACENTER          0
-  KXCHINAEUV                 0
-  KXCHINAHUKOU               0
-  KXCHINALIST                0
-  KXCHINARARE                0
-  KXCHINATARIFF              0
-  KXCHINAUNBANBTC            0
-  KXCHINAUNRUBIO             0
-  KXCHIPSREPEAL              0
-  KXCHRISCHRISTIECHARGE      0
-  KXCIA                      0
-  KXCIT301                   0
-  KXCLARITYACT               0
-  KXCLARITYVOTE              0
-  KXCLAYTONCONF              0
-  KXCLAYTONCOUNT             0
-  KXCLAYTONDNI               0
-  KXCLEANCR                  0
-  KXCLEANVEHICLE             0
-  KXCLOSEHORMUZ              0
-  KXCLOUDSEEDING             0
-  KXCMEATBAN                 0
-  KXCMEATBANTIME             0
-  KXCMEATBANUSA              0
-  KXCMSDEFERRAL              0
-  KXCNNTRUMPPLANE            0
-  KXCOLLINSCOUNT             0
-  KXCOLOMHYDESMITHDEBATE     0
-  KXCOLUMBPRESIDENT          0
-  KXCOMEYREINSTATE           0
-  KXCOMMENCEMENT             0
-  KXCOMMGIFTS                0
-  KXCOMMISHCBP               0
-  KXCOMMISHFDA               0
-  KXCONCEALEDRECIPROCITY     0
-  KXCONFFEDGOV               0
-  KXCONGESTION               0
-  KXCONGESTIONEND            0
-  KXCONGESTIONSUIT           0
-  KXCONGRESSCENSUREPADILLA     0
-  KXCONGRESSEXPELSCHIFF      0
-  KXCONGRESSPAYINCREASE      0
-  KXCONGRESSPERSONMEMECOIN     0
-  KXCONGRESSTARIFF           0
-  KXCONGRESSTARIFFCOUNT      0
-  KXCONGRESSTARIFFPASS       0
-  KXCONGRESSTARIFFVOTE       0
-  KXCONGRESSTESTIFY          0
-  KXCONGRESSTRADES           0
-  KXCONROVA                  0
-  KXCONSENTCOLUMBIA          0
-  KXCONSTAMEND               0
-  KXCONSTITUTIONPIPELINE     0
-  KXCONTEMPT                 0
-  KXCOOK                     0
-  KXCOOKCHARGE               0
-  KXCOOKCOMMITTEE            0
-  KXCOOPERWHATLEYDEBATE      0
-  KXCOPPERCABLE              0
-  KXCOPPERTARIFF             0
-  KXCORNYNTALARICO           0
-  KXCORPTAX                  0
-  KXCORPTAXCUT               0
-  KXCOUNTRYSTARLINK          0
-  KXCOUNTRYTARIFF            0
-  KXCOURTBLOCKPOCKETRECISS     0
-  KXCOVIDBILL                0
-  KXCPBFUNDING               0
-  KXCPCSIZE                  0
-  KXCR                       0
-  KXCRIMECAB                 0
-  KXCRIMESEN                 0
-  KXCROCKETTCAMPAIGN         0
-  KXCRUDEEXPORTBAN           0
-  KXCRYPTOCAPGAIN            0
-  KXCRYPTODAY1               0
-  KXCRYPTOEO                 0
-  KXCRYPTOEXEMP              0
+  KXAPCALLCAGOV              1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXATTYGENVA                1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXAZTREASR                 1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXBRAZILPRES1R             1     1    6.10    0.00     0   +6.10    +6.10    nan 0/0   HOLD
+  KXCLACTON4TH               1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXCOLOMBIA1R2              1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXCOLOMBIACHAMBER          1     1    6.80    0.00     0   +6.80    +6.80    nan 0/0   HOLD
+  KX2028DRUN                 0
+  KX2028RRUN                 0
+  KX3RDPARTY                 0
+  KX538CALL                  0
+  KX538STATES                0
+  KXABBOTSFORDMAYOR          0
+  KXABBOTTGOPVOTE            0
+  KXABERDEENSOUTHBY          0
+  KXACADIE                   0
+  KXACKMANMAYOR              0
+  KXACREGOV                  0
+  KXADAMAWAGOV               0
+  KXADAMSDROPOUT             0
+  KXADAMSDROPOUTBY           0
+  KXADELAIDEMAYOR            0
+  KXAFDPERCENT               0
+  KXAFDSACHSEN               0
+  KXAFRICALEADEROUT          0
+  KXAGNOMAZR                 0
+  KXAGNOMCOD                 0
+  KXAGNOMDVA                 0
+  KXAGNOMGAD                 0
+  KXAGNOMGAR                 0
+  KXAGNOMILR                 0
+  KXAGNOMMID                 0
+  KXAGNOMMIR                 0
+  KXAGNOMMND                 0
+  KXAGNOMRID                 0
+  KXAGNOMROK                 0
+  KXAGNOMSCR                 0
+  KXAGNOMTXD                 0
+  KXAGNOMTXR                 0
+  KXAGUASCALIENTESGOV        0
+  KXAIPACLOSEPRIMARY         0
+  KXAKCOMBO                  0
+  KXAKDROPOUT                0
+  KXAKDROPOUTAUG             0
+  KXAKMOV                    0
+  KXAKPRIMARY                0
+  KXAKSEN1                   0
+  KXAKSENADVANCE             0
+  KXAKSENATE                 0
+  KXAKSENATEROUND            0
+  KXAKSENGOVCOMBO            0
+  KXAKWAIBOMGOV              0
+  KXAKWITHDRAW               0
+  KXALASKAHOUSE              0
+  KXALBANIAPARTY             0
+  KXALBERTAREFS              0
+  KXALBERTAREFYES            0
+  KXALBERTASEPREF            0
+  KXALPRIMARY                0
+  KXALSUPREME8               0
+  KXAMAZONASGOV              0
+  KXAMERICAPARTY2028         0
+  KXANDORRAPARLI             0
+  KXANNARBORMAYORD           0
+  KXANOCOALITION             0
+  KXANYDEMWINTEXAS           0
+  KXAOCRUN                   0
+  KXAOCSENATE                0
+  KXAPCALLHOUSE              0
+  KXAPCALLLAMAYOR            0
+  KXAPCALLMID                0
+  KXAPCALLNJGOV              0
+  KXAPCALLSCSEN              0
+  KXAPCALLSENATE             0
+  KXAPCALLSNYC               0
+  KXAPCALLVA                 0
+  KXAPCALLVAAG               0
+  KXAPCALLVAGOV              0
+  KXAPCALLWIGOVD             0
+  KXARBROATHBY               0
+  KXAREQUIPAGOV              0
+  KXARGENTINAHOUSETHIRD      0
+  KXARGENTINAMOSTGAIN        0
+  KXARGENTINAPARTY           0
+  KXARGENTINAPERONISTNOM     0
+  KXARGENTINAPRES            0
+  KXARGENTINAPRES1R          0
+  KXARGENTINASENATE          0
+  KXARMENIAPARLI             0
+  KXARPRIMARY                0
+  KXARSOSRPRIMARY            0
+  KXASIALEADEROUT            0
+  KXASTURIAS                 0
+  KXATTYGENAL                0
+  KXATTYGENAR                0
+  KXATTYGENAZ                0
+  KXATTYGENCO                0
+  KXATTYGENCT                0
+  KXATTYGENDE                0
+  KXATTYGENFL                0
+  KXATTYGENGA                0
+  KXATTYGENIA                0
+  KXATTYGENID                0
+  KXATTYGENIL                0
+  KXATTYGENIN                0
+  KXATTYGENKS                0
+  KXATTYGENMA                0
+  KXATTYGENMD                0
+  KXATTYGENMI                0
+  KXATTYGENMN                0
+  KXATTYGENMO                0
+  KXATTYGENNC                0
+  KXATTYGENND                0
+  KXATTYGENNE                0
+  KXATTYGENNM                0
+  KXATTYGENNV                0
+  KXATTYGENNY                0
+  KXATTYGENOH                0
+  KXATTYGENOK                0
+  KXATTYGENOR                0
+  KXATTYGENPA                0
+  KXATTYGENRI                0
+  KXATTYGENSC                0
+  KXATTYGENSD                0
+  KXATTYGENTX                0
+  KXATTYGENUT                0
+  KXATTYGENVT                0
+  KXATTYGENWI                0
+  KXATTYGENWV                0
+  KXAUSCOALITION             0
+  KXAUSPM                    0
+  KXAUSSEATALBANESE          0
+  KXAUSSEATBENNELONG         0
+  KXAUSSEATBRISBANE          0
+  KXAUSSEATDUTTON            0
+  KXAUSSEATSGREENS           0
+  KXAUSSEATSLABOR            0
+  KXAUSSEATSLIBNAT           0
+  KXAUSTPM                   0
+  KXAUSTRALIA                0
+  KXAUSTRALIAHOUSE           0
+  KXAUSTRALIASENATE          0
+  KXAZ01D                    0
+  KXAZ01R                    0
+  KXAZ5R                     0
+  KXAZCORPCOMM               0
+  KXAZMINEINSPECTOR          0
+  KXAZPRIMARY                0
+  KXAZSOSR                   0
+  KXAZSUPERINTENDENT         0
+  KXAZTREASRGEN              0
+  KXAZUAYPREFECT             0
+  KXBADWUR                   0
+  KXBAHIAGOV                 0
+  KXBAJAGOV                  0
+  KXBALANCEPOWERCOMBO        0
+  KXBALEARIC                 0
+  KXBALLOTAMERICAPARTY       0
+  KXBANKHEADDROPOUT          0
+  KXBARCELONACOUNCIL         0
+  KXBARMMCM                  0
+  KXBARNESENDORSE            0
+  KXBAUCHIGOV                0
+  KXBAYAREATRANSIT           0
+  KXBBGMAYOR                 0
+  KXBC2ND                    0
+  KXBC3RD                    0
+  KXBCCONLEAD                0
+  KXBCCONSEATS               0
+  KXBCELECTION               0
+  KXBCGOVT                   0
+  KXBCNDPSEATS               0
+  KXBCPREMIER                0
+  KXBEDFORDMAYOR             0
+  KXBEITEINUCOUNT            0
+  KXBELIZECITYMAYOR          0
+  KXBENINPARLIAMENT          0
+  KXBENINUPR                 0
+  KXBENITOJUAREZMAYOR        0
+  KXBENUEGOV                 0
+  KXBERGENCOUNCIL            0
+  KXBERLIN2ND                0
+  KXBERLIN3RD                0
+  KXBERLIN4TH                0
+  KXBERLINANYSEAT            0
+  KXBERLINGOVMAYOR           0
+  KXBERLINSTATE              0
+  KXBERNIERSEAT              0
+  KXBETHELSEAT               0
+  KXBEXARCOUNTYJUDGE         0
+  KXBEXARDA                  0
+  KXBIHARELECTION            0
+  KXBILZERIANCONCEDE         0
+  KXBLANCHETSEAT             0
+  KXBLUEIOWA                 0
+  KXBLUESTRSEN               0
+  KXBLUETRICKLECOMBO         0
+  KXBLUETSUNAMICOMBO         0
+  KXBLUEWAVECOMBO            0
+  KXBOLIVIADEPUTIES          0
+  KXBOLIVIAFIRSTROUND        0
+  KXBOLIVIAFIRSTROUNDMOV     0
+  KXBOLIVIAPRES              0
+  KXBOLIVIARUNOFF            0
+  KXBOLIVIARUNOFFMOV         0
+  KXBOLIVIASENATE            0
+  KXBOSNIACPRES              0
+  KXBOSNIAKPRES              0
+  KXBOSNIANGEN               0
+  KXBOSNIANGEN2ND            0
+  KXBOSNIANGEN3RD            0
+  KXBOSNIASPRES              0
+  KXBOSTONMAYORMOV           0
+  KXBRANTFORDBY              0
+  KXBRATISLAVAMAYOR          0
+  KXBRAZILSENATE             0
+  KXBRAZILTURNOUT            0
+  KXBRBALLOT                 0
+  KXBRDEP                    0
+  KXBREMEN                   0
+  KXBRGOVMOSTSEATS           0
+  KXBRISRAELSENCOMBO         0
+  KXBRONSONDROPOUT           0
+  KXBROWNOUTPERFORMRCP       0
+  KXBRPRES                   0
+  KXBRPRES1MOV               0
+  KXBRPRES1R                 0
+  KXBRPRES2ABROAD            0
+  KXBRPRES2COUNTRIES         0
+  KXBRPRES2MOV               0
+  KXBRPRES2MOVD              0
+  KXBRPRES2STATEMOVD         0
+  KXBRPRES2STATES            0
+  KXBRPRESABROAD             0
+  KXBRPRESADVANCE            0
+  KXBRPRESIDENT2             0
+  KXBRPRESIDENT3             0
+  KXBRPRESIDENT4             0
+  KXBRPRESIDENT5             0
+  KXBRRUNOFFABROAD           0
+  KXBRRUNOFFCOUNTRIES        0
+  KXBRRUNOFFSTATES           0
+  KXBRSENMOSTSEATS           0
+  KXBRUVSEAT                 0
+  KXBUCHARESTMAYOR           0
+  KXBUCHARESTMAYOR2ND        0
+  KXBUCHARESTMAYOR3RD        0
+  KXBULGARIAPARLI            0
+  KXBULGARIAPRES             0
+  KXBULGARIAPRES1MOVD        0
+  KXBULGARIAPRES1R2ND        0
+  KXBULGARIAPRES1R3RD        0
+  KXBULGARIATURNOUT          0
+  KXBURBANKBALLOT            0
+  KXBURNHAMPM                0
+  KXBUTTIGIEGRUN             0
+  KXCA01S                    0
+  KXCA04PRIMARY              0
+  KXCA11D                    0
+  KXCA11PERSON               0
+  KXCA11PRIMARY              0
+  KXCA14SWINNER              0
+  KXCA17PERSON               0
+  KXCA1SPECIAL               0
+  KXCA22PRIMARY              0
+  KXCA22R                    0
+  KXCA32D                    0
+  KXCA32PRIMARY              0
+  KXCA40PRIMARYADVANCE       0
+  KXCA4PRIMARY               0
+  KXCAATTORNEYGENERAL        0
+  KXCABALLOTMEASURES         0
+  KXCABILLIONAIRETAX         0
+  KXCAELECTION               0
+  KXCAGOV2ND                 0
+  KXCAGOV3RD                 0
+  KXCAGOVCOUNTY              0
+  KXCAGOVLAMAYOR             0
+  KXCAGOVMATCHUP             0
+  KXCAGOVOUTPERFORM          0
+  KXCAGOVPRIMARY1ST          0
+  KXCAGOVPRIMARYEXACT        0
+  KXCAGOVPRIMARYTOP3         0
+  KXCAHOUSEDEM               0
+  KXCAINSCOM                 0
+  KXCAINSCOMGEN              0
+  KXCALABRIAPRES             0
+  KXCALGARYCENTRE            0
+  KXCALGARYSHAWBY            0
+  KXCALGARYSKYVIEW           0
+  KXCALIEUTENANTGOV          0
+  KXCALIREDISTRICTING        0
+  KXCAMEROONPRES             0
+  KXCAMPECHEGOV              0
+  KXCAN2ND                   0
+  KXCANADA3RD                0
+  KXCANADAELECT              0
+  KXCANADALIBERAL            0
+  KXCANADAPARTY              0
+  KXCANADAPM                 0
+  KXCANALBERTAREMAIN         0
+  KXCANARIAS                 0
+  KXCANBQSEATS               0
+  KXCANCOALITION             0
+  KXCANCONSEATS              0
+  KXCANDIDATESBR             0
+  KXCANELECTION              0
+  KXCANGREENSEATS            0
+  KXCANLIBSEATS              0
+  KXCANNDPSEATS              0
+  KXCANPPCSEATS              0
+  KXCANPROVSNAP              0
+  KXCANRESIGNPARTY           0
+  KXCANTABRIA                0
+  KXCAPEVERDEPARLI           0
+  KXCAPEVERDEPRES            0
+  KXCAPEVERDEPRES1R          0
+  KXCAPRIMARY                0
+  KXCAPROP42V40              0
+  KXCAPROP50OUTPERFORMVOTEHUB     0
+  KXCAQLEADER                0
+  KXCARNEYSEAT               0
+  KXCASECESSION              0
+  KXCASEN26                  0
+  KXCASUPT                   0
+  KXCAVOTERID                0
+  KXCAWEALTHTAX              0
+  KXCAWEALTHTAXMOVD          0
+  KXCDASEATS                 0
+  KXCDUCSULEAD               0
+  KXCDUPERCENT               0
+  KXCEARAGOV                 0
+  KXCHANCELLOR               0
+  KXCHANDLERMAYOR            0
+  KXCHARLIEKIRKOFFICE        0
+  KXCHENNAICORP              0
+  KXCHESHIREMAYOR            0
+  KXCHICAGOMAYOR             0
+  KXCHICOUTIMI               0
+  KXCHIHUAHUAGOV             0
+  KXCHILE1ROUND              0
+  KXCHILEANRUNOFF            0
+  KXCHILEDEPUTIES            0
+  KXCHILEPARTY               0
+  KXCHILEROUNDONESECOND      0
+  KXCHILESENATE              0
+  KXCHRISTAYLORCOUNTIES      0
+  KXCIATTARELLIOUTPERFORMRCP     0
+  KXCLACTON2ND               0
+  KXCLACTON3RD               0
+  KXCLACTONBYELECTION        0
+  KXCLACTONBYMOV             0
+  KXCLARENCEMAYOR            0
+  KXCLMPSOEMAJ               0
+  KXCLOSERAKTXSEN            0
+  KXCLOSERFLSCSEN            0
+  KXCLOSERMETXSEN            0
+  KXCLOSERMINHSEN            0
+  KXCLOSERMNMSSEN            0
+  KXCLOSERMTNJSEN            0
+  KXCLOSERNETXSEN            0
+  KXCLOSEST2025              0
+  KXCLOSESTGOVERNOR          0
+  KXCLOSESTHOUSE             0
+  KXCLOSESTSENATE            0
+  KXCLOVERDALE               0
+  KXCO03R                    0
+  KXCO8D                     0
+  KXCOALITION                0
+  KXCOLLINCOUNTYJUDGE        0
+  KXCOLLINSOUTPERFORMRCP     0
+  KXCOLLINSSENATERUN         0
+  KXCOLOMBIAN2RMOV           0
+  KXCOLOMBIAPARLI            0
+  KXCOLOMBIAPRES             0
+  KXCOLOMBIAPRES1R           0
+  KXCOLOMBIAPRESR1           0
+  KXCOLOMBIASENATE           0
+  KXCOMPTROLLER              0
+  KXCOMPTROLLERNOMILD        0
+  KXCONLEADER24              0
+  KXCOOKPARLI                0
+  KXCOOPEROUTPERFORMRCP      0
+  KXCOPRIMARY                0
+  KXCOQUITLAMMAYOR           0
+  KXCORDOBAGOV               0
+  KXCORNWALLMEADOWBY         0
+  KXCOSTARICAASSEMBLY        0
+  KXCOSTARICALAMAJORITY      0
+  KXCOSTARICAPRES            0
+  KXCOSTARICAPRES1ROUND      0
+  KXCPSBOARDPRES             0
+  KXCRASEATS                 0
+  KXCTPRIMARY                0
+  KXCUAUHTEMOCMAYOR          0
+  KXCUENCAMAYOR              0
+  KXCUMBERLAND               0
+  KXCUMBRIAMAYOR             0
+  KXCUOMODROPOUT             0
+  KXCZECHCOALITION           0
 
   C. PER FAMILY BY MONTH (n, c/ct)
-  KX14AMENDCASE          2026-06: 1 @ +6.7
-  KX538APPROVEMIN        2024-12: 1 @ +7.0
-  KXACAHOUSEVOTE         2026-01: 1 @ +6.0
-  KXAGANNOUNCE           2026-04: 1 @ +6.4
-  KXAPRPOTUS             2025-03: 1 @ +6.0, 2025-11: 1 @ +7.0
-  KXARRESTGRETA          2025-10: 1 @ +7.0
-  KXATTENDUFC250         2026-06: 1 @ +5.8
-  KXBIDENPARDON          2025-01: 1 @ +6.0
-  KXCAATSA               2026-10: 1 @ +7.0
-  KXCABOUT               2026-03: 1 @ +6.0
-  KXCOMEYDISMISS         2026-10: 1 @ +7.0
+  KXAPCALLCAGOV          2026-06: 1 @ +6.0
+  KXATTYGENVA            2025-11: 1 @ +7.0
+  KXAZTREASR             2026-07: 1 @ +7.0
+  KXBRAZILPRES1R         2026-10: 1 @ +6.1
+  KXCLACTON4TH           2026-08: 1 @ +7.0
+  KXCOLOMBIA1R2          2026-06: 1 @ +7.0
+  KXCOLOMBIACHAMBER      2026-04: 1 @ +6.8
 
   D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KX14AMENDCASE              1/2        50% FEASIBLE
-  KX232ALUMCA                0/0         0% NOT FEASIBLE
-  KX250DOLLARBILL            0/0         0% NOT FEASIBLE
-  KX30CRIME                  0/0         0% NOT FEASIBLE
-  KX3RDTERM                  0/1         0% NOT FEASIBLE
-  KX45X                      0/0         0% NOT FEASIBLE
-  KX48ETAXCREDIT             0/0         0% NOT FEASIBLE
-  KX50YMORTGAGE              1/1       100% FEASIBLE
-  KX538APPROVE               4/6        67% FEASIBLE
-  KX538APPROVEMAX            0/0         0% NOT FEASIBLE
-  KX538APPROVEMIN            2/2       100% FEASIBLE
-  KX538APPROVEY              0/0         0% NOT FEASIBLE
-  KX60MCECOT                 2/2       100% FEASIBLE
-  KXABAACCRED                0/0         0% NOT FEASIBLE
-  KXABBASATTEND              0/0         0% NOT FEASIBLE
-  KXABCDISNEYSUE             1/1       100% FEASIBLE
-  KXABORTION                 1/1       100% FEASIBLE
-  KXABRAHAMINDO              0/0         0% NOT FEASIBLE
-  KXABRAHAMKAZ               0/0         0% NOT FEASIBLE
-  KXABRAHAMNEW               0/0         0% NOT FEASIBLE
-  KXABRAHAMQ                 0/0         0% NOT FEASIBLE
-  KXABRAHAMS                 0/0         0% NOT FEASIBLE
-  KXABRAHAMSA                1/2        50% FEASIBLE
-  KXABRAHAMSY                1/1       100% FEASIBLE
-  KXABRAHAMW                 1/1       100% FEASIBLE
-  KXACAENROLLMENT            0/0         0% NOT FEASIBLE
-  KXACAEXT                   0/4         0% NOT FEASIBLE
-  KXACAHOUSEVOTE             1/1       100% FEASIBLE
-  KXACAHSAFSA                0/3         0% NOT FEASIBLE
-  KXACAREPEAL                0/1         0% NOT FEASIBLE
-  KXACASUBSIDYBILL           1/1       100% FEASIBLE
-  KXACCREDITCOLUMBIA         0/0         0% NOT FEASIBLE
-  KXACKMANLEAVE              0/1         0% NOT FEASIBLE
-  KXACTBLUETOP               4/4       100% FEASIBLE
-  KXADAMSDLEAVE              1/1       100% FEASIBLE
-  KXADJOURNRECESS            0/1         0% NOT FEASIBLE
-  KXADMINCMS                 0/0         0% NOT FEASIBLE
-  KXADMINNASA                1/5        20% NOT FEASIBLE
-  KXADMINWHD                 0/0         0% NOT FEASIBLE
-  KXADVOCATEBECERRA          0/0         0% NOT FEASIBLE
-  KXAFDBANREQUEST            0/1         0% NOT FEASIBLE
-  KXAFDSTATEGOV              0/0         0% NOT FEASIBLE
-  KXAGANNOUNCE               2/3        67% FEASIBLE
-  KXAGCONF                   1/4        25% NOT FEASIBLE
-  KXAGENCIES                 1/1       100% FEASIBLE
-  KXAGENCYCUTS               0/0         0% NOT FEASIBLE
-  KXAGENCYELIM               0/0         0% NOT FEASIBLE
-  KXAIBILL                   0/0         0% NOT FEASIBLE
-  KXAIBIOSECURITY            0/0         0% NOT FEASIBLE
-  KXAICABINET                0/0         0% NOT FEASIBLE
-  KXAIDEBATES                0/0         0% NOT FEASIBLE
-  KXAIDIRECTOR               1/1       100% FEASIBLE
-  KXAIDUTYOFCARE             0/0         0% NOT FEASIBLE
-  KXAIINCIDENTREPORT         0/0         0% NOT FEASIBLE
-  KXAIKILLSWITCH             0/0         0% NOT FEASIBLE
-  KXAILEGISLATION            0/0         0% NOT FEASIBLE
-  KXAIORDER                  1/1       100% FEASIBLE
-  KXAIOVERSIGHT              0/0         0% NOT FEASIBLE
-  KXAIRCANADASTRIKE          0/1         0% NOT FEASIBLE
-  KXAIREVIEW                 2/2       100% FEASIBLE
-  KXAISAFETY                 0/0         0% NOT FEASIBLE
-  KXAISAFETYAUDIT            0/0         0% NOT FEASIBLE
-  KXAISECURITY               0/1         0% NOT FEASIBLE
-  KXAJTOSSEO                 0/0         0% NOT FEASIBLE
-  KXALASKABACK               0/1         0% NOT FEASIBLE
-  KXALBERTAMINWAGE           0/0         0% NOT FEASIBLE
-  KXALCATRAZ                 0/1         0% NOT FEASIBLE
-  KXALIENACT                 0/0         0% NOT FEASIBLE
-  KXALITOANNOUNCERETIRE      2/2       100% FEASIBLE
-  KXALITOOUT                 1/3        33% NOT FEASIBLE
-  KXALLVOTE                  0/0         0% NOT FEASIBLE
-  KXALLVOTEHEGSETH           1/1       100% FEASIBLE
-  KXALLVOTERFKJR             1/1       100% FEASIBLE
-  KXALLVOTETG                1/1       100% FEASIBLE
-  KXAMAZONFTC                0/0         0% NOT FEASIBLE
-  KXAMAZONPRIMEFTC           0/0         0% NOT FEASIBLE
-  KXAMBCN                    0/0         0% NOT FEASIBLE
-  KXAMBMALAY                 2/6        33% NOT FEASIBLE
-  KXAMEND22                  0/0         0% NOT FEASIBLE
-  KXAMEND25                  0/0         0% NOT FEASIBLE
-  KXAMENDVIOLATENYS2         1/1       100% FEASIBLE
-  KXAMERICAPACSPEND          0/0         0% NOT FEASIBLE
-  KXAMESOHIO                 0/0         0% NOT FEASIBLE
-  KXANDREWSUCCESSION         0/0         0% NOT FEASIBLE
-  KXANONYMOUSDONOR           1/1       100% FEASIBLE
-  KXANTHROPICDOD             1/1       100% FEASIBLE
-  KXANTHROPICRESCIND         2/2       100% FEASIBLE
-  KXANTHROPICRISK            1/1       100% FEASIBLE
-  KXANTHROPICVATICAN         0/0         0% NOT FEASIBLE
-  KXANTIWEPTAX               1/1       100% FEASIBLE
-  KXAOCENDORSE               0/1         0% NOT FEASIBLE
-  KXAPOVALOFFICE             0/0         0% NOT FEASIBLE
-  KXAPPLELAKE                1/1       100% FEASIBLE
-  KXAPPSTORE22JAN3           0/0         0% NOT FEASIBLE
-  KXAPRPOTUS                16/25       64% FEASIBLE
-  KXAPRPOTUSD                1/1       100% FEASIBLE
-  KXAPRPOTUSEOY              0/1         0% NOT FEASIBLE
-  KXAPSUIT                   1/1       100% FEASIBLE
-  KXARCRYPTO                 0/0         0% NOT FEASIBLE
-  KXARGSTRIKE                0/0         0% NOT FEASIBLE
-  KXARIMPEACH                0/1         0% NOT FEASIBLE
-  KXARREST                   3/4        75% FEASIBLE
-  KXARRESTFORBESU3           0/0         0% NOT FEASIBLE
-  KXARRESTGRETA              1/1       100% FEASIBLE
-  KXARRESTJOHNBOLTON         1/1       100% FEASIBLE
-  KXARRESTKWEON              1/1       100% FEASIBLE
-  KXARRESTMAMDANI            0/1         0% NOT FEASIBLE
-  KXARRESTNETANYAHU          0/1         0% NOT FEASIBLE
-  KXARRESTNEWSOM             0/1         0% NOT FEASIBLE
-  KXARRESTPOWELL             0/1         0% NOT FEASIBLE
-  KXARRESTYOON               0/0         0% NOT FEASIBLE
-  KXASIALEADERNEXT           0/0         0% NOT FEASIBLE
-  KXASSOCAG                  0/0         0% NOT FEASIBLE
-  KXASSOCAGCIVIL             0/0         0% NOT FEASIBLE
-  KXASSTSECDEFHA             0/0         0% NOT FEASIBLE
-  KXASSTSECSTATEEAP          0/0         0% NOT FEASIBLE
-  KXASSTSECTREASURY          0/0         0% NOT FEASIBLE
-  KXASYLUMCASES              1/3        33% NOT FEASIBLE
-  KXATCZERO                  0/1         0% NOT FEASIBLE
-  KXATF                      0/1         0% NOT FEASIBLE
-  KXATLANTIC                 0/1         0% NOT FEASIBLE
-  KXATTENDMELANIA            0/0         0% NOT FEASIBLE
-  KXATTENDSOTU               1/1       100% FEASIBLE
-  KXATTENDTRUMPCHINA         0/1         0% NOT FEASIBLE
-  KXATTENDUFC250             1/1       100% FEASIBLE
-  KXAUGRECESSCAB             1/1       100% FEASIBLE
-  KXAUKUS                    0/1         0% NOT FEASIBLE
-  KXAUMFVENEZUELA            0/0         0% NOT FEASIBLE
-  KXAUSTRIANATO              0/1         0% NOT FEASIBLE
-  KXAUTOPENPARDON            0/0         0% NOT FEASIBLE
-  KXAVGTARIFF                1/1       100% FEASIBLE
-  KXAXONFTC                  0/0         0% NOT FEASIBLE
-  KXAZPORNLAW                1/1       100% FEASIBLE
-  KXBABELMANDEBWEEKLY        3/3       100% FEASIBLE
-  KXBADENOCHOUT              0/0         0% NOT FEASIBLE
-  KXBALANCE                  1/1       100% FEASIBLE
-  KXBALLROOMHALT             1/1       100% FEASIBLE
-  KXBALLROOMSCOTUS           0/0         0% NOT FEASIBLE
-  KXBANTRANS                 0/0         0% NOT FEASIBLE
-  KXBANXGER                  0/1         0% NOT FEASIBLE
-  KXBANXUK                   0/1         0% NOT FEASIBLE
-  KXBANXUS                   0/1         0% NOT FEASIBLE
-  KXBARNESFELIX              0/0         0% NOT FEASIBLE
-  KXBARR                     0/0         0% NOT FEASIBLE
-  KXBATHROOM                 0/1         0% NOT FEASIBLE
-  KXBBB                      0/0         0% NOT FEASIBLE
-  KXBECERRABRAIDWOOD         0/0         0% NOT FEASIBLE
-  KXBEDOYA                   0/0         0% NOT FEASIBLE
-  KXBEEFTARIFF               1/2        50% FEASIBLE
-  KXBENGSROUNDSDEBATE        0/0         0% NOT FEASIBLE
-  KXBERNIEENDORSE            5/5       100% FEASIBLE
-  KXBESSENTCOUNT             1/1       100% FEASIBLE
-  KXBIDENAMBIEN              0/0         0% NOT FEASIBLE
-  KXBIDENBOOK                0/1         0% NOT FEASIBLE
-  KXBIDENNEBRASKA            1/1       100% FEASIBLE
-  KXBIDENPARDON              2/2       100% FEASIBLE
-  KXBIDENRESIGN              0/0         0% NOT FEASIBLE
-  KXBIDENTAPES               1/1       100% FEASIBLE
-  KXBIDENVNEBRASKA           0/0         0% NOT FEASIBLE
-  KXBIGBENDRESUME            0/2         0% NOT FEASIBLE
-  KXBILL                     0/0         0% NOT FEASIBLE
-  KXBILLCLINTONPUBLIC        1/1       100% FEASIBLE
-  KXBILLCONTEMPT             0/1         0% NOT FEASIBLE
-  KXBILLCONTEMPTVOTE         0/1         0% NOT FEASIBLE
-  KXBILLCOUNTM               0/0         0% NOT FEASIBLE
-  KXBILLS                    2/5        40% NOT FEASIBLE
-  KXBILLSCOUNT               4/11       36% NOT FEASIBLE
-  KXBILLSCOUNTWEEKLY         1/1       100% FEASIBLE
-  KXBILLSSIGNED              0/0         0% NOT FEASIBLE
-  KXBIRTHRIGHT               1/1       100% FEASIBLE
-  KXBIRTHRIGHTEO             0/0         0% NOT FEASIBLE
-  KXBIRTHTOURISMVOTE         0/1         0% NOT FEASIBLE
-  KXBKLYNDEMCHAIR            0/0         0% NOT FEASIBLE
-  KXBLANCHECOUNT             1/1       100% FEASIBLE
-  KXBLANCHEDISBAR            0/0         0% NOT FEASIBLE
-  KXBLANCHEJUDICIARY         1/1       100% FEASIBLE
-  KXBLANCHEMAXWELL           0/1         0% NOT FEASIBLE
-  KXBLANCHEWITHDRAW          0/1         0% NOT FEASIBLE
-  KXBLCOKDCFED               0/0         0% NOT FEASIBLE
-  KXBLOCK75VISA              0/0         0% NOT FEASIBLE
-  KXBLOCKH1B                 0/1         0% NOT FEASIBLE
-  KXBLOCKITOUTSOURCING       1/1       100% FEASIBLE
-  KXBLOCKPOCKETRESCISS       0/0         0% NOT FEASIBLE
-  KXBLOCKTARIFF              1/1       100% FEASIBLE
-  KXBLOMHONICKMAN            0/0         0% NOT FEASIBLE
-  KXBLSCHEIF                 0/0         0% NOT FEASIBLE
-  KXBLSCHIEF                 0/1         0% NOT FEASIBLE
-  KXBLSCOMM                  0/0         0% NOT FEASIBLE
-  KXBLSCOMMISSIONER          1/1       100% FEASIBLE
-  KXBLUESLIP                 0/0         0% NOT FEASIBLE
-  KXBLUEWALL                 0/0         0% NOT FEASIBLE
-  KXBNADOLLY                 1/1       100% FEASIBLE
-  KXBNATRUMP                 0/0         0% NOT FEASIBLE
-  KXBOARD                    0/1         0% NOT FEASIBLE
-  KXBOLIBRARYOPEN            0/2         0% NOT FEASIBLE
-  KXBOLOJANOUT               2/2       100% FEASIBLE
-  KXBOLSONAROLEAVE           0/1         0% NOT FEASIBLE
-  KXBOLSONAROPARDON          0/0         0% NOT FEASIBLE
-  KXBONDICOUNT               1/1       100% FEASIBLE
-  KXBONDIEPSTEIN             0/0         0% NOT FEASIBLE
-  KXBONDIOUT                 1/2        50% FEASIBLE
-  KXBONDITESTIFY             1/1       100% FEASIBLE
-  KXBORDER                   0/1         0% NOT FEASIBLE
-  KXBORDERBILL               1/2        50% FEASIBLE
-  KXBOUGAINVILLEIND          0/0         0% NOT FEASIBLE
-  KXBOYCOTTWC                1/1       100% FEASIBLE
-  KXBRAINARD                 0/0         0% NOT FEASIBLE
-  KXBRAZILDISCORD            0/0         0% NOT FEASIBLE
-  KXBRAZILTARIFFSIZE         0/0         0% NOT FEASIBLE
-  KXBRAZILX                  0/0         0% NOT FEASIBLE
-  KXBRAZILXBAN               0/0         0% NOT FEASIBLE
-  KXBRENNANCHARGE            1/1       100% FEASIBLE
-  KXBRIANCONF                0/1         0% NOT FEASIBLE
-  KXBRICS                    1/1       100% FEASIBLE
-  KXBROWNHUSTEDDEBATE        0/0         0% NOT FEASIBLE
-  KXBTCRESERVE               0/1         0% NOT FEASIBLE
-  KXBTCRESERVESTATES         1/2        50% FEASIBLE
-  KXBUDGETCUT                1/2        50% FEASIBLE
-  KXBUDGETRESH               1/1       100% FEASIBLE
-  KXBUDGETRESS               1/1       100% FEASIBLE
-  KXBURGUMCOUNT              0/1         0% NOT FEASIBLE
-  KXBURNHAMCAB               0/0         0% NOT FEASIBLE
-  KXBURNHAMJUL               2/2       100% FEASIBLE
-  KXBURNHAMOUT               0/1         0% NOT FEASIBLE
-  KXBUYBTC                   0/1         0% NOT FEASIBLE
-  KXCAALPRLAW                1/1       100% FEASIBLE
-  KXCAATSA                   1/1       100% FEASIBLE
-  KXCABCHANGE                0/1         0% NOT FEASIBLE
-  KXCABCOUNT                 0/1         0% NOT FEASIBLE
-  KXCABDATE                  0/1         0% NOT FEASIBLE
-  KXCABFAIL                  0/0         0% NOT FEASIBLE
-  KXCABFAILS                 0/0         0% NOT FEASIBLE
-  KXCABJAN20                 0/0         0% NOT FEASIBLE
-  KXCABLEAVE                 9/11       82% FEASIBLE
-  KXCABOUT                   4/4       100% FEASIBLE
-  KXCABSTAY                  0/0         0% NOT FEASIBLE
-  KXCAEUROPEMOBILITY         0/0         0% NOT FEASIBLE
-  KXCAFRAUD                  2/2       100% FEASIBLE
-  KXCAGOAT                   1/1       100% FEASIBLE
-  KXCAHOUSINGLAW             0/1         0% NOT FEASIBLE
-  KXCAHSR                    0/0         0% NOT FEASIBLE
-  KXCAJEWISH                 0/0         0% NOT FEASIBLE
-  KXCALCOLLEGEFUNDPULL       1/1       100% FEASIBLE
-  KXCALIDJT                  0/1         0% NOT FEASIBLE
-  KXCALIFORNIALEAVE          1/1       100% FEASIBLE
-  KXCALLIMPEACHRCONGRESS     0/1         0% NOT FEASIBLE
-  KXCAMDENYARDS              0/0         0% NOT FEASIBLE
-  KXCAN51                    0/0         0% NOT FEASIBLE
-  KXCANADABLOCK              0/1         0% NOT FEASIBLE
-  KXCANADACONFIDENCE         0/1         0% NOT FEASIBLE
-  KXCANADAUSTARIFFLOWER      1/1       100% FEASIBLE
-  KXCANAL                    0/0         0% NOT FEASIBLE
-  KXCANAUTOSTEEL50           0/0         0% NOT FEASIBLE
-  KXCANCARBON                0/0         0% NOT FEASIBLE
-  KXCANCOUNTERTARIFF         0/0         0% NOT FEASIBLE
-  KXCANCTRTARIFF             1/1       100% FEASIBLE
-  KXCANELECTRICCHARGE        0/0         0% NOT FEASIBLE
-  KXCANELECTRICITY           0/1         0% NOT FEASIBLE
-  KXCANEUASSOC               0/0         0% NOT FEASIBLE
-  KXCANEUNEGOTIATE           0/0         0% NOT FEASIBLE
-  KXCANEVTARIFF              0/0         0% NOT FEASIBLE
-  KXCANEVTRTARIFF            0/0         0% NOT FEASIBLE
-  KXCANMIN19                 0/0         0% NOT FEASIBLE
-  KXCANREGISTER              0/0         0% NOT FEASIBLE
-  KXCANRESIGN                1/1       100% FEASIBLE
-  KXCANRESIGNCOUNT           0/1         0% NOT FEASIBLE
-  KXCANSAFETY                1/1       100% FEASIBLE
-  KXCANSNAP                  0/0         0% NOT FEASIBLE
-  KXCANSNAPPROV              1/1       100% FEASIBLE
-  KXCANTARIFFSEFFECT         1/1       100% FEASIBLE
-  KXCANTARIFFSIZE            0/0         0% NOT FEASIBLE
-  KXCANTERRITORY             0/0         0% NOT FEASIBLE
-  KXCANUSDEAL                1/2        50% FEASIBLE
-  KXCANUSRAISE               1/1       100% FEASIBLE
-  KXCAPARAMOUNTSETTLE        0/0         0% NOT FEASIBLE
-  KXCAPARASETTLE             1/1       100% FEASIBLE
-  KXCAPCONTROL               0/0         0% NOT FEASIBLE
-  KXCAPGAIN                  0/0         0% NOT FEASIBLE
-  KXCAPGAINDOWN              0/0         0% NOT FEASIBLE
-  KXCAPITALCHANGE            0/0         0% NOT FEASIBLE
-  KXCAPITALMOVESK            0/1         0% NOT FEASIBLE
-  KXCAPMLEAVE                2/2       100% FEASIBLE
-  KXCARBONTAX                0/0         0% NOT FEASIBLE
-  KXCARNEYHALIFAX            0/1         0% NOT FEASIBLE
-  KXCARNEYOUT                0/0         0% NOT FEASIBLE
-  KXCARRIED                  0/1         0% NOT FEASIBLE
-  KXCARRIEDINTEREST          0/0         0% NOT FEASIBLE
-  KXCARROUT                  0/0         0% NOT FEASIBLE
-  KXCARVMAK                  0/0         0% NOT FEASIBLE
-  KXCASE                     0/0         0% NOT FEASIBLE
-  KXCASESSION                0/0         0% NOT FEASIBLE
-  KXCASTRONG                 0/0         0% NOT FEASIBLE
-  KXCATHOLICWISCNOSIN        0/0         0% NOT FEASIBLE
-  KXCBDCBAN                  1/1       100% FEASIBLE
-  KXCBPAIRPORT               1/2        50% FEASIBLE
-  KXCCLIMIT                  0/1         0% NOT FEASIBLE
-  KXCCPCHILDREN              0/0         0% NOT FEASIBLE
-  KXCDCCONF                  1/2        50% FEASIBLE
-  KXCDCDIRECTOR              0/0         0% NOT FEASIBLE
-  KXCEA                      0/0         0% NOT FEASIBLE
-  KXCENSURE                  1/1       100% FEASIBLE
-  KXCENSUREEDWARDS           1/1       100% FEASIBLE
-  KXCENSUREFINE              0/1         0% NOT FEASIBLE
-  KXCENSUSEXCLUDE            0/0         0% NOT FEASIBLE
-  KXCEONEXT                  0/0         0% NOT FEASIBLE
-  KXCFOHOMELAND              0/0         0% NOT FEASIBLE
-  KXCFPB                     0/0         0% NOT FEASIBLE
-  KXCFPBELIM                 1/1       100% FEASIBLE
-  KXCGPMUTC                  0/0         0% NOT FEASIBLE
-  KXCHANCELEAVE              0/1         0% NOT FEASIBLE
-  KXCHATRIEUSA               1/1       100% FEASIBLE
-  KXCHAVEZCOUNT              0/1         0% NOT FEASIBLE
-  KXCHENEYFUNERAL            0/1         0% NOT FEASIBLE
-  KXCHIEFSKANSAS             0/0         0% NOT FEASIBLE
-  KXCHILDS                   0/0         0% NOT FEASIBLE
-  KXCHIMAYORLEAVE            0/1         0% NOT FEASIBLE
-  KXCHINAAGPURCHASE          1/1       100% FEASIBLE
-  KXCHINAANNOUNCE            1/1       100% FEASIBLE
-  KXCHINABANKSANC            1/1       100% FEASIBLE
-  KXCHINABIRTHLIMITS         0/0         0% NOT FEASIBLE
-  KXCHINABOEING              1/1       100% FEASIBLE
-  KXCHINADATACENTER          0/0         0% NOT FEASIBLE
-  KXCHINAEUV                 0/0         0% NOT FEASIBLE
-  KXCHINAHUKOU               0/0         0% NOT FEASIBLE
-  KXCHINALIST                0/0         0% NOT FEASIBLE
-  KXCHINARARE                1/1       100% FEASIBLE
-  KXCHINATARIFF              0/0         0% NOT FEASIBLE
-  KXCHINAUNBANBTC            0/0         0% NOT FEASIBLE
-  KXCHINAUNRUBIO             0/1         0% NOT FEASIBLE
-  KXCHIPSREPEAL              0/0         0% NOT FEASIBLE
-  KXCHRISCHRISTIECHARGE      0/1         0% NOT FEASIBLE
-  KXCIA                      0/0         0% NOT FEASIBLE
-  KXCIT301                   0/0         0% NOT FEASIBLE
-  KXCLARITYACT               0/0         0% NOT FEASIBLE
-  KXCLARITYVOTE              1/2        50% FEASIBLE
-  KXCLAYTONCONF              1/2        50% FEASIBLE
-  KXCLAYTONCOUNT             0/1         0% NOT FEASIBLE
-  KXCLAYTONDNI               1/1       100% FEASIBLE
-  KXCLEANCR                  2/2       100% FEASIBLE
-  KXCLEANVEHICLE             0/0         0% NOT FEASIBLE
-  KXCLOSEHORMUZ              1/2        50% FEASIBLE
-  KXCLOUDSEEDING             0/1         0% NOT FEASIBLE
-  KXCMEATBAN                 1/1       100% FEASIBLE
-  KXCMEATBANTIME             0/0         0% NOT FEASIBLE
-  KXCMEATBANUSA              1/1       100% FEASIBLE
-  KXCMSDEFERRAL              0/1         0% NOT FEASIBLE
-  KXCNNTRUMPPLANE            0/0         0% NOT FEASIBLE
-  KXCOLLINSCOUNT             0/1         0% NOT FEASIBLE
-  KXCOLOMHYDESMITHDEBATE     0/0         0% NOT FEASIBLE
-  KXCOLUMBPRESIDENT          0/0         0% NOT FEASIBLE
-  KXCOMEYDISMISS             2/2       100% FEASIBLE
-  KXCOMEYREINSTATE           0/0         0% NOT FEASIBLE
-  KXCOMMENCEMENT             0/0         0% NOT FEASIBLE
-  KXCOMMGIFTS                0/0         0% NOT FEASIBLE
-  KXCOMMISHCBP               0/3         0% NOT FEASIBLE
-  KXCOMMISHFDA               0/1         0% NOT FEASIBLE
-  KXCONCEALEDRECIPROCITY     0/0         0% NOT FEASIBLE
-  KXCONFFEDGOV               0/1         0% NOT FEASIBLE
-  KXCONGESTION               0/1         0% NOT FEASIBLE
-  KXCONGESTIONEND            0/1         0% NOT FEASIBLE
-  KXCONGESTIONSUIT           1/1       100% FEASIBLE
-  KXCONGRESSCENSUREPADILLA     0/1         0% NOT FEASIBLE
-  KXCONGRESSEXPELSCHIFF      0/1         0% NOT FEASIBLE
-  KXCONGRESSPAYINCREASE      0/0         0% NOT FEASIBLE
-  KXCONGRESSPERSONMEMECOIN     0/0         0% NOT FEASIBLE
-  KXCONGRESSTARIFF           0/1         0% NOT FEASIBLE
-  KXCONGRESSTARIFFCOUNT      0/1         0% NOT FEASIBLE
-  KXCONGRESSTARIFFPASS       0/2         0% NOT FEASIBLE
-  KXCONGRESSTARIFFVOTE       0/2         0% NOT FEASIBLE
-  KXCONGRESSTESTIFY          2/3        67% FEASIBLE
-  KXCONGRESSTRADES           0/0         0% NOT FEASIBLE
-  KXCONROVA                  0/0         0% NOT FEASIBLE
-  KXCONSENTCOLUMBIA          0/1         0% NOT FEASIBLE
-  KXCONSTAMEND               0/0         0% NOT FEASIBLE
-  KXCONSTITUTIONPIPELINE     0/1         0% NOT FEASIBLE
-  KXCONTEMPT                 2/2       100% FEASIBLE
-  KXCOOK                     0/0         0% NOT FEASIBLE
-  KXCOOKCHARGE               0/1         0% NOT FEASIBLE
-  KXCOOKCOMMITTEE            0/0         0% NOT FEASIBLE
-  KXCOOPERWHATLEYDEBATE      0/0         0% NOT FEASIBLE
-  KXCOPPERCABLE              0/0         0% NOT FEASIBLE
-  KXCOPPERTARIFF             0/0         0% NOT FEASIBLE
-  KXCORNYNTALARICO           0/0         0% NOT FEASIBLE
-  KXCORPTAX                  0/0         0% NOT FEASIBLE
-  KXCORPTAXCUT               0/1         0% NOT FEASIBLE
-  KXCOUNTRYSTARLINK          0/0         0% NOT FEASIBLE
-  KXCOUNTRYTARIFF            1/1       100% FEASIBLE
-  KXCOURTBLOCKPOCKETRECISS     0/0         0% NOT FEASIBLE
-  KXCOVIDBILL                0/0         0% NOT FEASIBLE
-  KXCPBFUNDING               1/1       100% FEASIBLE
-  KXCPCSIZE                  0/0         0% NOT FEASIBLE
-  KXCR                       1/1       100% FEASIBLE
-  KXCRIMECAB                 0/0         0% NOT FEASIBLE
-  KXCRIMESEN                 0/0         0% NOT FEASIBLE
-  KXCROCKETTCAMPAIGN         0/0         0% NOT FEASIBLE
-  KXCRUDEEXPORTBAN           1/1       100% FEASIBLE
-  KXCRYPTOCAPGAIN            0/1         0% NOT FEASIBLE
-  KXCRYPTODAY1               1/1       100% FEASIBLE
-  KXCRYPTOEO                 1/1       100% FEASIBLE
-  KXCRYPTOEXEMP              0/1         0% NOT FEASIBLE
+  KX2028DRUN                 0/0         0% NOT FEASIBLE
+  KX2028RRUN                 0/0         0% NOT FEASIBLE
+  KX3RDPARTY                 0/0         0% NOT FEASIBLE
+  KX538CALL                  0/0         0% NOT FEASIBLE
+  KX538STATES                0/0         0% NOT FEASIBLE
+  KXABBOTSFORDMAYOR          0/0         0% NOT FEASIBLE
+  KXABBOTTGOPVOTE            0/1         0% NOT FEASIBLE
+  KXABERDEENSOUTHBY          1/1       100% FEASIBLE
+  KXACADIE                   0/1         0% NOT FEASIBLE
+  KXACKMANMAYOR              0/1         0% NOT FEASIBLE
+  KXACREGOV                  0/1         0% NOT FEASIBLE
+  KXADAMAWAGOV               0/0         0% NOT FEASIBLE
+  KXADAMSDROPOUT             0/0         0% NOT FEASIBLE
+  KXADAMSDROPOUTBY           1/1       100% FEASIBLE
+  KXADELAIDEMAYOR            0/0         0% NOT FEASIBLE
+  KXAFDPERCENT               1/1       100% FEASIBLE
+  KXAFDSACHSEN               0/1         0% NOT FEASIBLE
+  KXAFRICALEADEROUT          0/0         0% NOT FEASIBLE
+  KXAGNOMAZR                 1/1       100% FEASIBLE
+  KXAGNOMCOD                 1/1       100% FEASIBLE
+  KXAGNOMDVA                 0/0         0% NOT FEASIBLE
+  KXAGNOMGAD                 1/1       100% FEASIBLE
+  KXAGNOMGAR                 1/1       100% FEASIBLE
+  KXAGNOMILR                 0/1         0% NOT FEASIBLE
+  KXAGNOMMID                 0/1         0% NOT FEASIBLE
+  KXAGNOMMIR                 1/1       100% FEASIBLE
+  KXAGNOMMND                 0/0         0% NOT FEASIBLE
+  KXAGNOMRID                 1/1       100% FEASIBLE
+  KXAGNOMROK                 1/1       100% FEASIBLE
+  KXAGNOMSCR                 1/1       100% FEASIBLE
+  KXAGNOMTXD                 1/2        50% FEASIBLE
+  KXAGNOMTXR                 1/2        50% FEASIBLE
+  KXAGUASCALIENTESGOV        0/0         0% NOT FEASIBLE
+  KXAIPACLOSEPRIMARY         3/3       100% FEASIBLE
+  KXAKCOMBO                  0/0         0% NOT FEASIBLE
+  KXAKDROPOUT                0/0         0% NOT FEASIBLE
+  KXAKDROPOUTAUG             1/2        50% FEASIBLE
+  KXAKMOV                    0/0         0% NOT FEASIBLE
+  KXAKPRIMARY                2/2       100% FEASIBLE
+  KXAKSEN1                   0/1         0% NOT FEASIBLE
+  KXAKSENADVANCE             0/2         0% NOT FEASIBLE
+  KXAKSENATE                 0/0         0% NOT FEASIBLE
+  KXAKSENATEROUND            0/0         0% NOT FEASIBLE
+  KXAKSENGOVCOMBO            0/0         0% NOT FEASIBLE
+  KXAKWAIBOMGOV              0/0         0% NOT FEASIBLE
+  KXAKWITHDRAW               0/0         0% NOT FEASIBLE
+  KXALASKAHOUSE              0/0         0% NOT FEASIBLE
+  KXALBANIAPARTY             0/1         0% NOT FEASIBLE
+  KXALBERTAREFS              0/0         0% NOT FEASIBLE
+  KXALBERTAREFYES            0/0         0% NOT FEASIBLE
+  KXALBERTASEPREF            0/0         0% NOT FEASIBLE
+  KXALPRIMARY                3/3       100% FEASIBLE
+  KXALSUPREME8               0/0         0% NOT FEASIBLE
+  KXAMAZONASGOV              1/1       100% FEASIBLE
+  KXAMERICAPARTY2028         0/0         0% NOT FEASIBLE
+  KXANDORRAPARLI             0/0         0% NOT FEASIBLE
+  KXANNARBORMAYORD           1/1       100% FEASIBLE
+  KXANOCOALITION             0/0         0% NOT FEASIBLE
+  KXANYDEMWINTEXAS           0/0         0% NOT FEASIBLE
+  KXAOCRUN                   0/0         0% NOT FEASIBLE
+  KXAOCSENATE                0/0         0% NOT FEASIBLE
+  KXAPCALLCAGOV              1/1       100% FEASIBLE
+  KXAPCALLHOUSE              0/0         0% NOT FEASIBLE
+  KXAPCALLLAMAYOR            1/1       100% FEASIBLE
+  KXAPCALLMID                1/1       100% FEASIBLE
+  KXAPCALLNJGOV              1/1       100% FEASIBLE
+  KXAPCALLSCSEN              1/1       100% FEASIBLE
+  KXAPCALLSENATE             0/0         0% NOT FEASIBLE
+  KXAPCALLSNYC               1/1       100% FEASIBLE
+  KXAPCALLVA                 0/0         0% NOT FEASIBLE
+  KXAPCALLVAAG               0/1         0% NOT FEASIBLE
+  KXAPCALLVAGOV              0/1         0% NOT FEASIBLE
+  KXAPCALLWIGOVD             1/1       100% FEASIBLE
+  KXARBROATHBY               1/1       100% FEASIBLE
+  KXAREQUIPAGOV              0/0         0% NOT FEASIBLE
+  KXARGENTINAHOUSETHIRD      1/1       100% FEASIBLE
+  KXARGENTINAMOSTGAIN        0/1         0% NOT FEASIBLE
+  KXARGENTINAPARTY           0/1         0% NOT FEASIBLE
+  KXARGENTINAPERONISTNOM     0/0         0% NOT FEASIBLE
+  KXARGENTINAPRES            0/0         0% NOT FEASIBLE
+  KXARGENTINAPRES1R          0/0         0% NOT FEASIBLE
+  KXARGENTINASENATE          0/1         0% NOT FEASIBLE
+  KXARMENIAPARLI             0/0         0% NOT FEASIBLE
+  KXARPRIMARY                1/1       100% FEASIBLE
+  KXARSOSRPRIMARY            1/1       100% FEASIBLE
+  KXASIALEADEROUT            1/1       100% FEASIBLE
+  KXASTURIAS                 0/0         0% NOT FEASIBLE
+  KXATTYGENAL                0/0         0% NOT FEASIBLE
+  KXATTYGENAR                0/0         0% NOT FEASIBLE
+  KXATTYGENAZ                0/0         0% NOT FEASIBLE
+  KXATTYGENCO                0/0         0% NOT FEASIBLE
+  KXATTYGENCT                0/0         0% NOT FEASIBLE
+  KXATTYGENDE                0/0         0% NOT FEASIBLE
+  KXATTYGENFL                0/0         0% NOT FEASIBLE
+  KXATTYGENGA                0/0         0% NOT FEASIBLE
+  KXATTYGENIA                0/0         0% NOT FEASIBLE
+  KXATTYGENID                0/0         0% NOT FEASIBLE
+  KXATTYGENIL                0/0         0% NOT FEASIBLE
+  KXATTYGENIN                0/0         0% NOT FEASIBLE
+  KXATTYGENKS                0/0         0% NOT FEASIBLE
+  KXATTYGENMA                0/0         0% NOT FEASIBLE
+  KXATTYGENMD                0/0         0% NOT FEASIBLE
+  KXATTYGENMI                0/0         0% NOT FEASIBLE
+  KXATTYGENMN                0/0         0% NOT FEASIBLE
+  KXATTYGENMO                0/0         0% NOT FEASIBLE
+  KXATTYGENNC                0/0         0% NOT FEASIBLE
+  KXATTYGENND                0/0         0% NOT FEASIBLE
+  KXATTYGENNE                0/0         0% NOT FEASIBLE
+  KXATTYGENNM                0/0         0% NOT FEASIBLE
+  KXATTYGENNV                0/0         0% NOT FEASIBLE
+  KXATTYGENNY                0/0         0% NOT FEASIBLE
+  KXATTYGENOH                0/0         0% NOT FEASIBLE
+  KXATTYGENOK                0/0         0% NOT FEASIBLE
+  KXATTYGENOR                0/0         0% NOT FEASIBLE
+  KXATTYGENPA                0/0         0% NOT FEASIBLE
+  KXATTYGENRI                0/0         0% NOT FEASIBLE
+  KXATTYGENSC                0/0         0% NOT FEASIBLE
+  KXATTYGENSD                0/0         0% NOT FEASIBLE
+  KXATTYGENTX                0/0         0% NOT FEASIBLE
+  KXATTYGENUT                0/0         0% NOT FEASIBLE
+  KXATTYGENVA                1/1       100% FEASIBLE
+  KXATTYGENVT                0/0         0% NOT FEASIBLE
+  KXATTYGENWI                0/0         0% NOT FEASIBLE
+  KXATTYGENWV                0/0         0% NOT FEASIBLE
+  KXAUSCOALITION             1/1       100% FEASIBLE
+  KXAUSPM                    0/1         0% NOT FEASIBLE
+  KXAUSSEATALBANESE          0/1         0% NOT FEASIBLE
+  KXAUSSEATBENNELONG         0/1         0% NOT FEASIBLE
+  KXAUSSEATBRISBANE          0/1         0% NOT FEASIBLE
+  KXAUSSEATDUTTON            0/1         0% NOT FEASIBLE
+  KXAUSSEATSGREENS           0/1         0% NOT FEASIBLE
+  KXAUSSEATSLABOR            0/1         0% NOT FEASIBLE
+  KXAUSSEATSLIBNAT           0/1         0% NOT FEASIBLE
+  KXAUSTPM                   0/0         0% NOT FEASIBLE
+  KXAUSTRALIA                0/1         0% NOT FEASIBLE
+  KXAUSTRALIAHOUSE           0/0         0% NOT FEASIBLE
+  KXAUSTRALIASENATE          0/0         0% NOT FEASIBLE
+  KXAZ01D                    1/1       100% FEASIBLE
+  KXAZ01R                    1/1       100% FEASIBLE
+  KXAZ5R                     1/1       100% FEASIBLE
+  KXAZCORPCOMM               0/0         0% NOT FEASIBLE
+  KXAZMINEINSPECTOR          0/0         0% NOT FEASIBLE
+  KXAZPRIMARY                0/1         0% NOT FEASIBLE
+  KXAZSOSR                   1/1       100% FEASIBLE
+  KXAZSUPERINTENDENT         0/0         0% NOT FEASIBLE
+  KXAZTREASR                 1/1       100% FEASIBLE
+  KXAZTREASRGEN              0/0         0% NOT FEASIBLE
+  KXAZUAYPREFECT             0/0         0% NOT FEASIBLE
+  KXBADWUR                   1/2        50% FEASIBLE
+  KXBAHIAGOV                 0/1         0% NOT FEASIBLE
+  KXBAJAGOV                  0/0         0% NOT FEASIBLE
+  KXBALANCEPOWERCOMBO        0/0         0% NOT FEASIBLE
+  KXBALEARIC                 0/0         0% NOT FEASIBLE
+  KXBALLOTAMERICAPARTY       0/0         0% NOT FEASIBLE
+  KXBANKHEADDROPOUT          0/0         0% NOT FEASIBLE
+  KXBARCELONACOUNCIL         0/0         0% NOT FEASIBLE
+  KXBARMMCM                  0/0         0% NOT FEASIBLE
+  KXBARNESENDORSE            1/1       100% FEASIBLE
+  KXBAUCHIGOV                0/0         0% NOT FEASIBLE
+  KXBAYAREATRANSIT           0/0         0% NOT FEASIBLE
+  KXBBGMAYOR                 0/1         0% NOT FEASIBLE
+  KXBC2ND                    0/0         0% NOT FEASIBLE
+  KXBC3RD                    0/0         0% NOT FEASIBLE
+  KXBCCONLEAD                0/0         0% NOT FEASIBLE
+  KXBCCONSEATS               0/0         0% NOT FEASIBLE
+  KXBCELECTION               0/0         0% NOT FEASIBLE
+  KXBCGOVT                   0/0         0% NOT FEASIBLE
+  KXBCNDPSEATS               0/0         0% NOT FEASIBLE
+  KXBCPREMIER                0/0         0% NOT FEASIBLE
+  KXBEDFORDMAYOR             0/0         0% NOT FEASIBLE
+  KXBEITEINUCOUNT            0/0         0% NOT FEASIBLE
+  KXBELIZECITYMAYOR          0/0         0% NOT FEASIBLE
+  KXBENINPARLIAMENT          0/1         0% NOT FEASIBLE
+  KXBENINUPR                 1/1       100% FEASIBLE
+  KXBENITOJUAREZMAYOR        0/0         0% NOT FEASIBLE
+  KXBENUEGOV                 0/0         0% NOT FEASIBLE
+  KXBERGENCOUNCIL            0/0         0% NOT FEASIBLE
+  KXBERLIN2ND                0/1         0% NOT FEASIBLE
+  KXBERLIN3RD                0/1         0% NOT FEASIBLE
+  KXBERLIN4TH                0/0         0% NOT FEASIBLE
+  KXBERLINANYSEAT            0/1         0% NOT FEASIBLE
+  KXBERLINGOVMAYOR           0/0         0% NOT FEASIBLE
+  KXBERLINSTATE              0/1         0% NOT FEASIBLE
+  KXBERNIERSEAT              0/1         0% NOT FEASIBLE
+  KXBETHELSEAT               1/1       100% FEASIBLE
+  KXBEXARCOUNTYJUDGE         0/0         0% NOT FEASIBLE
+  KXBEXARDA                  0/0         0% NOT FEASIBLE
+  KXBIHARELECTION            0/1         0% NOT FEASIBLE
+  KXBILZERIANCONCEDE         1/2        50% FEASIBLE
+  KXBLANCHETSEAT             0/1         0% NOT FEASIBLE
+  KXBLUEIOWA                 0/0         0% NOT FEASIBLE
+  KXBLUESTRSEN               0/0         0% NOT FEASIBLE
+  KXBLUETRICKLECOMBO         0/0         0% NOT FEASIBLE
+  KXBLUETSUNAMICOMBO         0/0         0% NOT FEASIBLE
+  KXBLUEWAVECOMBO            0/0         0% NOT FEASIBLE
+  KXBOLIVIADEPUTIES          0/1         0% NOT FEASIBLE
+  KXBOLIVIAFIRSTROUND        0/1         0% NOT FEASIBLE
+  KXBOLIVIAFIRSTROUNDMOV     0/0         0% NOT FEASIBLE
+  KXBOLIVIAPRES              0/1         0% NOT FEASIBLE
+  KXBOLIVIARUNOFF            0/1         0% NOT FEASIBLE
+  KXBOLIVIARUNOFFMOV         0/1         0% NOT FEASIBLE
+  KXBOLIVIASENATE            1/1       100% FEASIBLE
+  KXBOSNIACPRES              0/0         0% NOT FEASIBLE
+  KXBOSNIAKPRES              0/0         0% NOT FEASIBLE
+  KXBOSNIANGEN               0/0         0% NOT FEASIBLE
+  KXBOSNIANGEN2ND            0/0         0% NOT FEASIBLE
+  KXBOSNIANGEN3RD            0/0         0% NOT FEASIBLE
+  KXBOSNIASPRES              1/1       100% FEASIBLE
+  KXBOSTONMAYORMOV           0/0         0% NOT FEASIBLE
+  KXBRANTFORDBY              0/0         0% NOT FEASIBLE
+  KXBRATISLAVAMAYOR          0/0         0% NOT FEASIBLE
+  KXBRAZILPRES1R             1/1       100% FEASIBLE
+  KXBRAZILSENATE             1/1       100% FEASIBLE
+  KXBRAZILTURNOUT            1/1       100% FEASIBLE
+  KXBRBALLOT                 1/1       100% FEASIBLE
+  KXBRDEP                    0/1         0% NOT FEASIBLE
+  KXBREMEN                   0/0         0% NOT FEASIBLE
+  KXBRGOVMOSTSEATS           0/0         0% NOT FEASIBLE
+  KXBRISRAELSENCOMBO         0/0         0% NOT FEASIBLE
+  KXBRONSONDROPOUT           0/0         0% NOT FEASIBLE
+  KXBROWNOUTPERFORMRCP       0/0         0% NOT FEASIBLE
+  KXBRPRES                   0/1         0% NOT FEASIBLE
+  KXBRPRES1MOV               0/1         0% NOT FEASIBLE
+  KXBRPRES1R                 0/1         0% NOT FEASIBLE
+  KXBRPRES2ABROAD            0/0         0% NOT FEASIBLE
+  KXBRPRES2COUNTRIES         0/0         0% NOT FEASIBLE
+  KXBRPRES2MOV               0/0         0% NOT FEASIBLE
+  KXBRPRES2MOVD              0/0         0% NOT FEASIBLE
+  KXBRPRES2STATEMOVD         0/0         0% NOT FEASIBLE
+  KXBRPRES2STATES            0/0         0% NOT FEASIBLE
+  KXBRPRESABROAD             0/0         0% NOT FEASIBLE
+  KXBRPRESADVANCE            0/1         0% NOT FEASIBLE
+  KXBRPRESIDENT2             0/1         0% NOT FEASIBLE
+  KXBRPRESIDENT3             1/1       100% FEASIBLE
+  KXBRPRESIDENT4             0/1         0% NOT FEASIBLE
+  KXBRPRESIDENT5             0/1         0% NOT FEASIBLE
+  KXBRRUNOFFABROAD           0/0         0% NOT FEASIBLE
+  KXBRRUNOFFCOUNTRIES        0/0         0% NOT FEASIBLE
+  KXBRRUNOFFSTATES           0/0         0% NOT FEASIBLE
+  KXBRSENMOSTSEATS           0/1         0% NOT FEASIBLE
+  KXBRUVSEAT                 0/0         0% NOT FEASIBLE
+  KXBUCHARESTMAYOR           1/1       100% FEASIBLE
+  KXBUCHARESTMAYOR2ND        1/1       100% FEASIBLE
+  KXBUCHARESTMAYOR3RD        1/1       100% FEASIBLE
+  KXBULGARIAPARLI            0/1         0% NOT FEASIBLE
+  KXBULGARIAPRES             0/0         0% NOT FEASIBLE
+  KXBULGARIAPRES1MOVD        0/0         0% NOT FEASIBLE
+  KXBULGARIAPRES1R2ND        0/0         0% NOT FEASIBLE
+  KXBULGARIAPRES1R3RD        0/0         0% NOT FEASIBLE
+  KXBULGARIATURNOUT          0/0         0% NOT FEASIBLE
+  KXBURBANKBALLOT            0/1         0% NOT FEASIBLE
+  KXBURNHAMPM                0/1         0% NOT FEASIBLE
+  KXBUTTIGIEGRUN             0/0         0% NOT FEASIBLE
+  KXCA01S                    0/1         0% NOT FEASIBLE
+  KXCA04PRIMARY              1/1       100% FEASIBLE
+  KXCA11D                    0/0         0% NOT FEASIBLE
+  KXCA11PERSON               0/0         0% NOT FEASIBLE
+  KXCA11PRIMARY              1/1       100% FEASIBLE
+  KXCA14SWINNER              0/1         0% NOT FEASIBLE
+  KXCA17PERSON               0/0         0% NOT FEASIBLE
+  KXCA1SPECIAL               0/0         0% NOT FEASIBLE
+  KXCA22PRIMARY              1/1       100% FEASIBLE
+  KXCA22R                    0/0         0% NOT FEASIBLE
+  KXCA32D                    0/0         0% NOT FEASIBLE
+  KXCA32PRIMARY              0/0         0% NOT FEASIBLE
+  KXCA40PRIMARYADVANCE       1/1       100% FEASIBLE
+  KXCA4PRIMARY               0/0         0% NOT FEASIBLE
+  KXCAATTORNEYGENERAL        0/0         0% NOT FEASIBLE
+  KXCABALLOTMEASURES         0/0         0% NOT FEASIBLE
+  KXCABILLIONAIRETAX         0/0         0% NOT FEASIBLE
+  KXCAELECTION               0/0         0% NOT FEASIBLE
+  KXCAGOV2ND                 0/1         0% NOT FEASIBLE
+  KXCAGOV3RD                 0/2         0% NOT FEASIBLE
+  KXCAGOVCOUNTY              0/1         0% NOT FEASIBLE
+  KXCAGOVLAMAYOR             0/1         0% NOT FEASIBLE
+  KXCAGOVMATCHUP             0/1         0% NOT FEASIBLE
+  KXCAGOVOUTPERFORM          0/0         0% NOT FEASIBLE
+  KXCAGOVPRIMARY1ST          1/2        50% FEASIBLE
+  KXCAGOVPRIMARYEXACT        0/1         0% NOT FEASIBLE
+  KXCAGOVPRIMARYTOP3         1/2        50% FEASIBLE
+  KXCAHOUSEDEM               0/0         0% NOT FEASIBLE
+  KXCAINSCOM                 0/1         0% NOT FEASIBLE
+  KXCAINSCOMGEN              0/0         0% NOT FEASIBLE
+  KXCALABRIAPRES             0/1         0% NOT FEASIBLE
+  KXCALGARYCENTRE            0/1         0% NOT FEASIBLE
+  KXCALGARYSHAWBY            0/0         0% NOT FEASIBLE
+  KXCALGARYSKYVIEW           0/1         0% NOT FEASIBLE
+  KXCALIEUTENANTGOV          0/0         0% NOT FEASIBLE
+  KXCALIREDISTRICTING        1/1       100% FEASIBLE
+  KXCAMEROONPRES             0/0         0% NOT FEASIBLE
+  KXCAMPECHEGOV              0/0         0% NOT FEASIBLE
+  KXCAN2ND                   0/1         0% NOT FEASIBLE
+  KXCANADA3RD                0/0         0% NOT FEASIBLE
+  KXCANADAELECT              1/1       100% FEASIBLE
+  KXCANADALIBERAL            0/1         0% NOT FEASIBLE
+  KXCANADAPARTY              0/1         0% NOT FEASIBLE
+  KXCANADAPM                 0/1         0% NOT FEASIBLE
+  KXCANALBERTAREMAIN         0/0         0% NOT FEASIBLE
+  KXCANARIAS                 0/0         0% NOT FEASIBLE
+  KXCANBQSEATS               0/1         0% NOT FEASIBLE
+  KXCANCOALITION             1/1       100% FEASIBLE
+  KXCANCONSEATS              0/1         0% NOT FEASIBLE
+  KXCANDIDATESBR             0/0         0% NOT FEASIBLE
+  KXCANELECTION              0/0         0% NOT FEASIBLE
+  KXCANGREENSEATS            0/1         0% NOT FEASIBLE
+  KXCANLIBSEATS              0/1         0% NOT FEASIBLE
+  KXCANNDPSEATS              0/1         0% NOT FEASIBLE
+  KXCANPPCSEATS              0/1         0% NOT FEASIBLE
+  KXCANPROVSNAP              0/0         0% NOT FEASIBLE
+  KXCANRESIGNPARTY           1/2        50% FEASIBLE
+  KXCANTABRIA                0/0         0% NOT FEASIBLE
+  KXCAPEVERDEPARLI           1/1       100% FEASIBLE
+  KXCAPEVERDEPRES            0/0         0% NOT FEASIBLE
+  KXCAPEVERDEPRES1R          0/0         0% NOT FEASIBLE
+  KXCAPRIMARY                0/2         0% NOT FEASIBLE
+  KXCAPROP42V40              0/0         0% NOT FEASIBLE
+  KXCAPROP50OUTPERFORMVOTEHUB     0/1         0% NOT FEASIBLE
+  KXCAQLEADER                1/1       100% FEASIBLE
+  KXCARNEYSEAT               0/1         0% NOT FEASIBLE
+  KXCASECESSION              0/0         0% NOT FEASIBLE
+  KXCASEN26                  0/0         0% NOT FEASIBLE
+  KXCASUPT                   0/0         0% NOT FEASIBLE
+  KXCAVOTERID                0/0         0% NOT FEASIBLE
+  KXCAWEALTHTAX              0/0         0% NOT FEASIBLE
+  KXCAWEALTHTAXMOVD          0/0         0% NOT FEASIBLE
+  KXCDASEATS                 0/1         0% NOT FEASIBLE
+  KXCDUCSULEAD               1/1       100% FEASIBLE
+  KXCDUPERCENT               1/1       100% FEASIBLE
+  KXCEARAGOV                 0/1         0% NOT FEASIBLE
+  KXCHANCELLOR               0/1         0% NOT FEASIBLE
+  KXCHANDLERMAYOR            0/0         0% NOT FEASIBLE
+  KXCHARLIEKIRKOFFICE        0/0         0% NOT FEASIBLE
+  KXCHENNAICORP              0/0         0% NOT FEASIBLE
+  KXCHESHIREMAYOR            0/0         0% NOT FEASIBLE
+  KXCHICAGOMAYOR             0/0         0% NOT FEASIBLE
+  KXCHICOUTIMI               0/1         0% NOT FEASIBLE
+  KXCHIHUAHUAGOV             0/0         0% NOT FEASIBLE
+  KXCHILE1ROUND              0/1         0% NOT FEASIBLE
+  KXCHILEANRUNOFF            0/1         0% NOT FEASIBLE
+  KXCHILEDEPUTIES            0/0         0% NOT FEASIBLE
+  KXCHILEPARTY               0/0         0% NOT FEASIBLE
+  KXCHILEROUNDONESECOND      0/1         0% NOT FEASIBLE
+  KXCHILESENATE              0/0         0% NOT FEASIBLE
+  KXCHRISTAYLORCOUNTIES      0/1         0% NOT FEASIBLE
+  KXCIATTARELLIOUTPERFORMRCP     0/0         0% NOT FEASIBLE
+  KXCLACTON2ND               0/1         0% NOT FEASIBLE
+  KXCLACTON3RD               1/1       100% FEASIBLE
+  KXCLACTON4TH               1/1       100% FEASIBLE
+  KXCLACTONBYELECTION        0/1         0% NOT FEASIBLE
+  KXCLACTONBYMOV             0/1         0% NOT FEASIBLE
+  KXCLARENCEMAYOR            0/0         0% NOT FEASIBLE
+  KXCLMPSOEMAJ               0/0         0% NOT FEASIBLE
+  KXCLOSERAKTXSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERFLSCSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERMETXSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERMINHSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERMNMSSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERMTNJSEN            0/0         0% NOT FEASIBLE
+  KXCLOSERNETXSEN            0/0         0% NOT FEASIBLE
+  KXCLOSEST2025              0/1         0% NOT FEASIBLE
+  KXCLOSESTGOVERNOR          0/0         0% NOT FEASIBLE
+  KXCLOSESTHOUSE             0/0         0% NOT FEASIBLE
+  KXCLOSESTSENATE            0/0         0% NOT FEASIBLE
+  KXCLOVERDALE               0/1         0% NOT FEASIBLE
+  KXCO03R                    1/1       100% FEASIBLE
+  KXCO8D                     0/1         0% NOT FEASIBLE
+  KXCOALITION                0/0         0% NOT FEASIBLE
+  KXCOLLINCOUNTYJUDGE        0/0         0% NOT FEASIBLE
+  KXCOLLINSOUTPERFORMRCP     0/0         0% NOT FEASIBLE
+  KXCOLLINSSENATERUN         1/1       100% FEASIBLE
+  KXCOLOMBIA1R2              1/1       100% FEASIBLE
+  KXCOLOMBIACHAMBER          1/1       100% FEASIBLE
+  KXCOLOMBIAN2RMOV           0/1         0% NOT FEASIBLE
+  KXCOLOMBIAPARLI            1/1       100% FEASIBLE
+  KXCOLOMBIAPRES             1/1       100% FEASIBLE
+  KXCOLOMBIAPRES1R           1/1       100% FEASIBLE
+  KXCOLOMBIAPRESR1           0/1         0% NOT FEASIBLE
+  KXCOLOMBIASENATE           1/1       100% FEASIBLE
+  KXCOMPTROLLER              0/1         0% NOT FEASIBLE
+  KXCOMPTROLLERNOMILD        0/1         0% NOT FEASIBLE
+  KXCONLEADER24              1/1       100% FEASIBLE
+  KXCOOKPARLI                0/0         0% NOT FEASIBLE
+  KXCOOPEROUTPERFORMRCP      0/0         0% NOT FEASIBLE
+  KXCOPRIMARY                1/1       100% FEASIBLE
+  KXCOQUITLAMMAYOR           0/0         0% NOT FEASIBLE
+  KXCORDOBAGOV               0/0         0% NOT FEASIBLE
+  KXCORNWALLMEADOWBY         0/0         0% NOT FEASIBLE
+  KXCOSTARICAASSEMBLY        0/1         0% NOT FEASIBLE
+  KXCOSTARICALAMAJORITY      0/0         0% NOT FEASIBLE
+  KXCOSTARICAPRES            0/0         0% NOT FEASIBLE
+  KXCOSTARICAPRES1ROUND      0/1         0% NOT FEASIBLE
+  KXCPSBOARDPRES             0/0         0% NOT FEASIBLE
+  KXCRASEATS                 0/1         0% NOT FEASIBLE
+  KXCTPRIMARY                1/1       100% FEASIBLE
+  KXCUAUHTEMOCMAYOR          0/0         0% NOT FEASIBLE
+  KXCUENCAMAYOR              0/0         0% NOT FEASIBLE
+  KXCUMBERLAND               0/1         0% NOT FEASIBLE
+  KXCUMBRIAMAYOR             0/0         0% NOT FEASIBLE
+  KXCUOMODROPOUT             2/2       100% FEASIBLE
+  KXCZECHCOALITION           0/1         0% NOT FEASIBLE
 
   CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
 
