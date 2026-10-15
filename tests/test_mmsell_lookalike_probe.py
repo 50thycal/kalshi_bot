@@ -246,6 +246,31 @@ def test_day_stratification_spreads_an_hourly_series_over_days():
     assert len(lp.stratified_sample(many, 1, "month")) == 12
 
 
+def test_family_flag_pools_unrelated_series_into_one_bet_per_day(monkeypatch, capsys):
+    close_iso = "2026-01-15T23:00:00Z"
+    close = lp._ts(close_iso)
+    listings = {s: [{"ticker": f"{s}-26JAN15-W", "close_time": close_iso, "result": r,
+                     "open_time": "2026-01-13T00:00:00Z"}]
+                for s, r in (("KXAMENTION", "no"), ("KXBMENTION", "no"))}
+    cs = [{"end_period_ts": close - 6 * 3600, "yes_bid": {"close": 5}, "yes_ask": {"close": 7}}]
+
+    def fake_get(url: str):
+        if "/candlesticks" in url:
+            return {"candlesticks": cs} if "/series/" in url else {"candlesticks": []}
+        for series, mkts in listings.items():
+            if f"series_ticker={series}&" in url and "/historical/" not in url:
+                return {"markets": mkts, "cursor": ""}
+        return {"markets": [], "cursor": ""}
+
+    monkeypatch.setattr(lp.xl, "_get", fake_get)
+    assert lp.main(["--series", "KXAMENTION,KXBMENTION", "--no-control",
+                    "--family", "MENTIONS"]) == 0
+    out = capsys.readouterr().out
+    fam = [ln for ln in out.splitlines() if ln.strip().startswith("MENTIONS ")]
+    # Two series, one date: two entries, ONE family-day.
+    assert fam and " 2     1 " in fam[0]
+
+
 def test_probe_is_allowlisted_on_the_ops_channel():
     ops_runner = _load("ops_runner")
     assert "mmsell_lookalike_probe" in ops_runner.ALLOWED_SCRIPTS

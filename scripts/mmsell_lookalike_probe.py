@@ -320,6 +320,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--minutes", default="",
                     help="comma list of MINUTES before close: replay the final hour on 1-minute "
                          "candles instead of the hourly offsets (docs §9)")
+    ap.add_argument("--family", default="",
+                    help="pool every series of this run into ONE family of this name (a "
+                         "pre-registered pooling, e.g. the mentions test, docs §13)")
     ap.add_argument("--stratify", choices=("month", "day"), default="month",
                     help="spread the per-series sample over months (default) or days")
     ap.add_argument("--min-cents", type=float, default=None,
@@ -338,6 +341,9 @@ def main(argv: list[str] | None = None) -> int:
     series = series[: args.max_series] + ([CONTROL] if CONTROL in series[args.max_series:] else [])
     print(f"=== MMSELL look-alike probe — {len(series)} series; cell {args.lo:g}<=mid<={args.hi:g}"
           f", yes_ask<={args.maxyes:g}; first in-cell entry, gross, 1 contract ===\n")
+
+    def fam_of(series_ticker: str) -> str:
+        return args.family or family_of(series_ticker)
 
     if args.minutes:
         offsets = tuple(sorted(float(m) / 60.0 for m in args.minutes.split(",") if m.strip()))
@@ -398,7 +404,7 @@ def main(argv: list[str] | None = None) -> int:
 
     families: dict[str, list] = defaultdict(list)
     for s, rows in per_series.items():
-        fam = family_of(s)
+        fam = fam_of(s)
         # A family-day is one bet: re-key the day with the family so cities pool on one date.
         families[fam].extend((r[0], r[1], r[2], f"{fam}:{r[3]}", r[4]) for r in rows)
     print("\n  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here")
@@ -421,8 +427,8 @@ def main(argv: list[str] | None = None) -> int:
           f"floor); below {FEASIBLE_SHARE:.0%} a family is untradeable without a global change")
     fam_feas: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     for s, (ok, n) in feasible.items():
-        fam_feas[family_of(s)][0] += ok
-        fam_feas[family_of(s)][1] += n
+        fam_feas[fam_of(s)][0] += ok
+        fam_feas[fam_of(s)][1] += n
     for fam, (ok, n) in sorted(fam_feas.items()):
         share = ok / n if n else 0.0
         print(f"  {fam:<22} {ok:>5}/{n:<5} {share:>6.0%} "
@@ -437,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
             print(line(f"{fam} first", summarize(families[fam])))
             for name, _low, _high in WINDOWS:
                 wf = [(r[0], r[1], r[2], f"{fam}:{r[3]}", r[4])
-                      for s, rows in per_window[name].items() if family_of(s) == fam
+                      for s, rows in per_window[name].items() if fam_of(s) == fam
                       for r in rows]
                 d = day_paired(wf, families[fam])
                 print(line(f"{fam} {name}", summarize(wf))
