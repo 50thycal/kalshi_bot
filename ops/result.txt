@@ -1,56 +1,70 @@
 # ops request [READ]
-# type=script  id=c-ultra-khight-20261015a
-# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T06:19:23Z
-=== MMSELL look-alike probe — 17 series; cell 1<=mid<=5, yes_ask<=4; first in-cell entry, gross, 1 contract ===
+# type=script  id=c-ultra-klowt-20261015a
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T06:50:49Z
+=== MMSELL look-alike probe — 24 series; cell 1<=mid<=5, yes_ask<=4; first in-cell entry, gross, 1 contract ===
 
   series                 listed settled              span priced   >=1h
-  KXHIGHTATL               1524    1512  2026-02..2026-10    297    98%
-  KXHIGHTBOS               1518    1506  2026-02..2026-10    297   100%
-  KXHIGHTDAL               1482    1470  2026-02..2026-10    297    98%
-  KXHIGHTDC                1632    1602  2026-01..2026-10    300   100%
-  KXHIGHTEWR                306     294  2026-08..2026-10    214    95%
-  KXHIGHTHOU               1482    1470  2026-02..2026-10    297    97%
-  KXHIGHTLV                1650    1638  2026-01..2026-10    300    99%
-  KXHIGHTMIN               1524    1512  2026-02..2026-10    297    99%
-  KXHIGHTNOLA              1650    1638  2026-01..2026-10    300   100%
-  KXHIGHTOKC               1482    1470  2026-02..2026-10    297    99%
-  KXHIGHTPHX               1524    1512  2026-02..2026-10    297    99%
-  KXHIGHTSAN                348     330  2026-08..2026-10    250    94%
-  KXHIGHTSATX              1482    1470  2026-02..2026-10    297    97%
-  KXHIGHTSDF                294     282  2026-08..2026-10    202    90%
-  KXHIGHTSEA               1650    1638  2026-01..2026-10    300   100%
-  KXHIGHTSFO               1650    1638  2026-01..2026-10    300   100%
-  KXHIGHTTTN                306     294  2026-08..2026-10    214    96%
+  KXLOWTATL                1176    1158  2026-04..2026-10    196   100%
+  KXLOWTAUS                1842    1830  2025-12..2026-10    198   100%
+  KXLOWTBOS                1182    1164  2026-04..2026-10    196    95%
+  KXLOWTCHI                1842    1830  2025-12..2026-10    198    99%
+  KXLOWTDAL                1176    1164  2026-04..2026-10    196    98%
+  KXLOWTDC                 1176    1164  2026-04..2026-10    196    98%
+  KXLOWTDEN                1842    1830  2025-12..2026-10    198   100%
+  KXLOWTEWR                 306     294  2026-08..2026-10    162    95%
+  KXLOWTHOU                1176    1164  2026-04..2026-10    196    98%
+  KXLOWTLAX                1842    1830  2025-12..2026-10    198    97%
+  KXLOWTLV                 1176    1164  2026-04..2026-10    196    95%
+  KXLOWTMIA                1842    1816  2025-12..2026-10    198   100%
+  KXLOWTMIN                1176    1164  2026-04..2026-10    196   100%
+  KXLOWTNOLA               1176    1164  2026-04..2026-10    196    97%
+  KXLOWTNYC                1842    1830  2025-12..2026-10    198   100%
+  KXLOWTOKC                1176    1164  2026-04..2026-10    196   100%
+  KXLOWTPHIL               1842    1830  2025-12..2026-10    198    96%
+  KXLOWTPHX                1176    1164  2026-04..2026-10    196    99%
+  KXLOWTSAN                 348     330  2026-08..2026-10    198    85%
+  KXLOWTSATX               1176    1164  2026-04..2026-10    196    99%
+  KXLOWTSDF                 294     282  2026-08..2026-10    150    91%
+  KXLOWTSEA                1176    1164  2026-04..2026-10    196    97%
+  KXLOWTSFO                1176    1164  2026-04..2026-10    196    98%
+  KXLOWTTTN                 306     294  2026-08..2026-10    162    95%
 
   A. PER SERIES (first in-cell entry)
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGHTATL               177    54    3.02    0.00     0   +3.02    +9.91  19.58 9/9   PROMOTE
-  KXHIGHTBOS               172    54    3.01    3.49     6   -0.48    -1.52  -0.35 5/9   KILL
-  KXHIGHTDAL               171    54    2.96    1.17     2   +1.80    +5.69   2.11 7/9   HOLD
-  KXHIGHTDC                152    50    3.13    0.66     1   +2.47    +7.52   3.74 9/10  PROMOTE
-  KXHIGHTEWR                81    31    2.72    1.23     1   +1.48    +3.87   1.23 2/2   HOLD
-  KXHIGHTHOU               174    54    3.01    0.57     1   +2.43    +7.83   4.14 8/9   PROMOTE
-  KXHIGHTLV                166    50    2.93    0.60     1   +2.33    +7.74   4.00 9/10  PROMOTE
-  KXHIGHTMIN               168    54    3.08    0.60     1   +2.49    +7.74   4.04 8/9   PROMOTE
-  KXHIGHTNOLA              166    50    3.01    1.20     2   +1.81    +6.00   2.17 8/10  HOLD
-  KXHIGHTOKC               161    54    3.07    0.00     0   +3.07    +9.15  21.45 9/9   PROMOTE
-  KXHIGHTPHX               169    54    3.05    0.59     1   +2.46    +7.69   3.84 8/9   PROMOTE
-  KXHIGHTSAN                61    29    3.00    1.64     1   +1.36    +2.86   0.80 1/2   HOLD
-  KXHIGHTSATX              180    54    3.08    0.00     0   +3.08   +10.26  25.86 9/9   PROMOTE
-  KXHIGHTSDF                62    25    2.82    0.00     0   +2.82    +7.00  11.78 2/2   HOLD
-  KXHIGHTSEA               168    50    3.08    2.38     4   +0.70    +2.34   0.61 7/10  HOLD
-  KXHIGHTSFO               156    50    3.13    1.28     2   +1.85    +5.76   2.05 9/10  HOLD
-  KXHIGHTTTN                74    31    2.74    1.35     1   +1.39    +3.32   1.09 1/2   HOLD
+  KXLOWTATL                 96    34    3.28    1.04     1   +2.24    +6.32   2.17 5/6   HOLD
+  KXLOWTAUS                 67    28    3.10    0.00     0   +3.10    +7.43   8.97 3/3   HOLD
+  KXLOWTBOS                 83    32    3.25    1.20     1   +2.05    +5.31   1.76 5/6   HOLD
+  KXLOWTCHI                 76    31    3.22    1.32     1   +1.91    +4.68   1.55 1/1   HOLD
+  KXLOWTDAL                 87    33    3.05    0.00     0   +3.05    +8.03  12.29 7/7   HOLD
+  KXLOWTDC                  80    32    3.17    1.25     1   +1.93    +4.81   1.50 4/4   HOLD
+  KXLOWTDEN                 67    29    3.45    5.97     4   -2.52    -5.83  -0.89 0/0   HOLD
+  KXLOWTEWR                 27    17    2.85    3.70     1   -0.85    -1.35  -0.23 0/1   HOLD
+  KXLOWTHOU                 81    33    3.15    0.00     0   +3.15    +7.73  11.16 5/5   HOLD
+  KXLOWTLAX                 97    32    3.09    0.00     0   +3.09    +9.38  15.20 4/4   HOLD
+  KXLOWTLV                  79    34    3.04    1.27     1   +1.77    +4.12   1.40 4/4   HOLD
+  KXLOWTMIA                 99    31    3.06    2.02     2   +1.04    +3.32   0.74 5/6   HOLD
+  KXLOWTMIN                 95    34    3.19    1.05     1   +2.14    +5.97   2.01 5/6   HOLD
+  KXLOWTNOLA                76    34    3.22    0.00     0   +3.22    +7.21  12.20 6/6   HOLD
+  KXLOWTNYC                 88    33    3.24    2.27     2   +0.97    +2.58   0.62 3/3   HOLD
+  KXLOWTOKC                 73    32    3.11    0.00     0   +3.11    +7.09  11.90 3/3   HOLD
+  KXLOWTPHIL                84    30    3.06    1.19     1   +1.87    +5.23   1.52 3/3   HOLD
+  KXLOWTPHX                 88    33    3.09    2.27     2   +0.82    +2.18   0.52 4/6   HOLD
+  KXLOWTSAN                 33    17    2.88    0.00     0   +2.88    +5.59   9.60 2/2   HOLD
+  KXLOWTSATX                95    30    3.11    2.11     2   +1.00    +3.17   0.67 4/6   HOLD
+  KXLOWTSDF                 27    14    3.00    0.00     0   +3.00    +5.79   6.05 1/1   HOLD
+  KXLOWTSEA                 82    34    2.83    1.22     1   +1.61    +3.88   1.30 5/6   HOLD
+  KXLOWTSFO                 83    33    3.19    0.00     0   +3.19    +8.03  11.50 7/7   HOLD
+  KXLOWTTTN                 25    18    2.88    8.00     2   -5.12    -7.11  -0.97 1/2   HOLD
 
   B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGHT                 2458    80    3.02    0.98    24   +2.04   +62.66   7.66 10/10  PROMOTE
+  KXLOWT                  1788    60    3.13    1.29    23   +1.84   +54.87   5.29 10/11  HOLD
 
   C. PER FAMILY BY MONTH (n, c/ct)
-  KXHIGHT                2026-01: 63 @ +1.6, 2026-02: 223 @ +2.2, 2026-03: 224 @ +2.8, 2026-04: 265 @ +3.3, 2026-05: 225 @ +1.1, 2026-06: 252 @ +1.8, 2026-07: 255 @ +0.7, 2026-08: 210 @ +1.6, 2026-09: 351 @ +2.3, 2026-10: 390 @ +2.3
+  KXLOWT                 2025-12: 12 @ +2.8, 2026-01: 60 @ -0.2, 2026-02: 52 @ +3.1, 2026-03: 59 @ +1.5, 2026-04: 189 @ +2.5, 2026-05: 174 @ +0.7, 2026-06: 250 @ +2.8, 2026-07: 240 @ +2.0, 2026-08: 220 @ +2.0, 2026-09: 259 @ +2.0, 2026-10: 273 @ +1.0
 
   D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXHIGHT                 4658/4756     98% FEASIBLE
+  KXLOWT                  4485/4606     97% FEASIBLE
 
   CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
 
