@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXTEMPAUSH,KXTEMPBOSH,KXTEMPCHIH,KXTEMPCHIHS,KXTEMPDCH,KXTEMPLAXH,KXTEMPLAXHS,KXTEMPMIAH,KXTEMPNYCH,KXTEMPNYCHS","--per-series","400","--no-control"],"id":"fast-a-hourly-20261015a"}
