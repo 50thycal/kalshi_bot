@@ -74,18 +74,81 @@ def test_windows_are_half_open_on_hours_from_start():
     assert et.window_of(3) == "in-play"
 
 
-def test_accept_occurrence_reference_and_internal_paths():
-    ok, _ = et.accept_occurrence([0.0] * 19 + [30.0], 20, 20, 0, 0, [])
-    assert ok                                                 # 95% agree on 20 checks
-    ok, _ = et.accept_occurrence([0.0] * 17 + [30.0] * 3, 20, 20, 0, 0, [])
-    assert not ok                                             # 85% < 90%
-    # no references: internal test needs presence, ordering and a short median lag
-    ok, why = et.accept_occurrence([], 95, 100, 40, 40, [2.0] * 40)
-    assert ok and why.startswith("internal")
-    ok, _ = et.accept_occurrence([], 95, 100, 40, 40, [15.0] * 40)   # day placeholder
-    assert not ok
-    ok, _ = et.accept_occurrence([], 50, 100, 40, 40, [2.0] * 40)    # mostly absent
-    assert not ok
+def test_calibrate_offset_needs_enough_tight_offsets():
+    d, how = et.calibrate_offset([180.0] * 19 + [175.0])
+    assert d == 180.0 and how.startswith("family D +3.00h")
+    assert et.calibrate_offset([180.0] * 19)[0] is None                  # 19 < 20 checkable
+    assert et.calibrate_offset([180.0] * 10 + [0.0] * 10)[0] is None     # scattered
+
+
+def test_internal_ok_rejects_early_resolution_and_placeholders():
+    assert et.internal_ok(40, 40, [2.0] * 40)[0]
+    assert not et.internal_ok(30, 40, [2.0] * 40)[0]       # 75% resolved after derived start
+    assert not et.internal_ok(40, 40, [15.0] * 40)[0]      # placeholder: lag far too long
+    assert not et.internal_ok(0, 0, [])[0]
+
+
+def _mk(ev, occ, close=None):
+    return {"ticker": f"{ev}-X", "event_ticker": ev, "occurrence_datetime": occ.isoformat(),
+            "expected_expiration_time": occ.isoformat(),
+            "close_time": (close or occ).isoformat(),
+            "expiration_time": (occ + timedelta(days=14)).isoformat()}
+
+
+def test_sources_precedence_and_pooled_offset_for_tennis():
+    markets, tickers = {}, []
+    for i in range(25):   # MLB: HHMM in the ticker, occurrence = start + 3h -> D = 3h
+        start = datetime(2026, 8, 1 + i, 23, 10, tzinfo=UTC)
+        ev = f"KXMLBGAME-26AUG{1 + i:02d}1910NYYBOS"
+        m = _mk(ev, start + timedelta(hours=3))
+        markets[m["ticker"]] = m
+        tickers.append(m["ticker"])
+    for i in range(10):   # tennis: date only; match ends ~2h after the derived start
+        start = datetime(2026, 8, 1 + i, 15, 0, tzinfo=UTC)
+        ev = f"KXATPMATCH-26AUG{1 + i:02d}AAABBB{i}"
+        m = _mk(ev, start + timedelta(hours=3), close=start + timedelta(hours=2))
+        markets[m["ticker"]] = m
+        tickers.append(m["ticker"])
+    src = et.resolve_sources(markets, tickers, {})
+    assert src["MLB"]["D"] == 180.0 and src["MLB"]["D_source"] == "family"
+    assert src["tennis"]["D"] == 180.0 and src["tennis"]["D_source"] == "pooled"
+    st, how = et.start_of(tickers[0], markets, src)
+    assert how == "ticker-hhmm" and st == datetime(2026, 8, 1, 23, 10, tzinfo=UTC)
+    st, how = et.start_of(tickers[-1], markets, src)
+    assert how == "occurrence-D(pooled)" and st == datetime(2026, 8, 10, 15, 0, tzinfo=UTC)
+
+
+def test_pooled_offset_rejected_when_resolutions_precede_derived_start():
+    markets, tickers = {}, []
+    for i in range(25):
+        start = datetime(2026, 8, 1 + i, 23, 10, tzinfo=UTC)
+        m = _mk(f"KXMLBGAME-26AUG{1 + i:02d}1910NYYBOS", start + timedelta(hours=3))
+        markets[m["ticker"]] = m
+        tickers.append(m["ticker"])
+    for i in range(10):   # resolves 5h BEFORE the derived start: occurrence is not end-ish here
+        occ = datetime(2026, 8, 1 + i, 20, 0, tzinfo=UTC)
+        m = _mk(f"KXATPMATCH-26AUG{1 + i:02d}AAABBB{i}", occ, close=occ - timedelta(hours=8))
+        markets[m["ticker"]] = m
+        tickers.append(m["ticker"])
+    src = et.resolve_sources(markets, tickers, {})
+    assert src["tennis"]["D"] is None and "rejected" in src["tennis"]["why"]
+    assert et.start_of(tickers[-1], markets, src) == (None, "none")
+
+
+def test_external_schedule_is_a_start_source():
+    markets, tickers = {}, []
+    refs = {"NFL": {}}
+    for i in range(3):
+        start = datetime(2026, 9, 10 + i, 0, 20, tzinfo=UTC)
+        ev = f"KXNFLTOTAL-26SEP{9 + i:02d}INDNE"
+        m = _mk(ev, start + timedelta(hours=3))
+        markets[m["ticker"]] = m
+        tickers.append(m["ticker"])
+        refs["NFL"].setdefault(f"2026-09-{9 + i:02d}", []).append((start, "NE", "IND"))
+    src = et.resolve_sources(markets, tickers, refs)
+    assert src["NFL"]["ext_matched"] == 3
+    st, how = et.start_of(tickers[0], markets, src)
+    assert how == "external" and st == datetime(2026, 9, 10, 0, 20, tzinfo=UTC)
 
 
 def _rows(n, cents, day0=0, win="pre<6h"):
@@ -128,7 +191,7 @@ def test_end_to_end_offline(monkeypatch, capsys):
         ev = f"KXMLBTOTAL-26AUG{day:02d}1905NYY{'BOS' if i % 2 else 'TOR'}{i}"
         tk = f"{ev}-9"
         markets[tk] = {"ticker": tk, "event_ticker": ev,
-                       "occurrence_datetime": start.isoformat(),
+                       "occurrence_datetime": (start + timedelta(hours=3)).isoformat(),
                        "expected_expiration_time": (start + timedelta(hours=3)).isoformat(),
                        "close_time": (start + timedelta(hours=2)).isoformat(),
                        "expiration_time": (start + timedelta(hours=72)).isoformat()}
@@ -144,7 +207,8 @@ def test_end_to_end_offline(monkeypatch, capsys):
     monkeypatch.setattr(et, "reference_starts", lambda fam, dates: {})
     assert et.main(["--boot", "100"]) == 0
     out = capsys.readouterr().out
-    assert "STEP 1" in out and "MLB" in out and "occurrence" in out
+    assert "STEP 1" in out and "MLB" in out and "ticker-hhmm 100%" in out
+    assert "family D +3.00h" in out
     assert "VERDICT:" in out
     assert "in-play" in out
     # --sources prints no P&L

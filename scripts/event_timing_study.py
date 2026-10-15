@@ -57,17 +57,19 @@ SINGLE_FALLBACK_CAP = 2500
 #: Windows on hours from the event START to the entry (negative = before the start).
 WINDOWS = (("pre>24h", None, -24.0), ("pre6-24h", -24.0, -6.0), ("pre<6h", -6.0, 0.0),
            ("in-play", 0.0, None))
-#: A start source agrees with a reference when within this many minutes.
+#: Amendment A (docs/MMSELL_EVENT_TIMING.md §2A, before any P&L was read): Kalshi's
+#: `occurrence_datetime` equals `expected_expiration_time` and is the EXPECTED END of the game
+#: (scheduled start + ~3h), not its start. It yields a start only after subtracting the
+#: family's offset D = occurrence - start, calibrated on events whose start is known otherwise.
+#: Ticker HHMM agrees with an external schedule when within this many minutes (reported).
 AGREE_MIN = 15
-#: Share of checkable events that must agree for occurrence_datetime to be accepted.
-AGREE_SHARE = 0.90
-#: Checkable events needed before the agreement test counts; below it the internal test is used.
-MIN_CHECKABLE = 20
-#: Internal test (no reference available): occurrence present on this share of markets, no
-#: early-closed market resolved before it on more than 1 - INTERNAL_ORDER of them, and the
-#: median early resolution lands within INTERNAL_MAX_LAG_H of it — a day or tournament
-#: placeholder would pass the ordering test and fail this one.
-INTERNAL_PRESENT, INTERNAL_ORDER, INTERNAL_MAX_LAG_H = 0.90, 0.95, 6.0
+#: A family calibrates its own D from >= MIN_CHECKABLE events with a known start, when
+#: >= OFFSET_SHARE of their offsets lie within OFFSET_TOL_MIN of the median.
+MIN_CHECKABLE, OFFSET_SHARE, OFFSET_TOL_MIN = 20, 0.80, 30
+#: A family without enough checkable events borrows the pooled D only when the derived start
+#: passes the internal test: >= INTERNAL_ORDER of its early-closed markets resolve after the
+#: derived start, and the median such resolution lands within INTERNAL_MAX_LAG_H of it.
+INTERNAL_ORDER, INTERNAL_MAX_LAG_H = 0.95, 6.0
 #: The bar. A window SIGNALS when, on live, its c/contract differs from every other window
 #: pooled by at least BAR_CENTS with the 90% interval excluding zero, it holds at least
 #: MIN_WINDOW_N live markets, and paper (>= MIN_WINDOW_N entries) moves the same direction.
@@ -195,22 +197,26 @@ def window_of(hours_from_start: float) -> str:
     return WINDOWS[-1][0]
 
 
-def accept_occurrence(checks: list[float], present: int, total: int,
-                      order_ok: int, order_n: int, lags_h: list[float]) -> tuple[bool, str]:
-    """The pre-registered rule for trusting Kalshi's `occurrence_datetime` as the event start
-    in one sport family. `checks` are |occurrence - reference| in minutes on checkable events."""
-    if len(checks) >= MIN_CHECKABLE:
-        share = sum(1 for c in checks if c <= AGREE_MIN) / len(checks)
-        return share >= AGREE_SHARE, f"reference: {share:.0%} of {len(checks)} within {AGREE_MIN}m"
+def calibrate_offset(offsets_min: list[float]) -> tuple[float | None, str]:
+    """A family's own D (minutes, occurrence - start) from events whose start is known from the
+    ticker HHMM or an external schedule. None when too few or too scattered."""
+    if len(offsets_min) < MIN_CHECKABLE:
+        return None, f"{len(offsets_min)} checkable < {MIN_CHECKABLE}"
+    med = median(offsets_min)
+    share = sum(1 for o in offsets_min if abs(o - med) <= OFFSET_TOL_MIN) / len(offsets_min)
+    how = (f"family D {med / 60:+.2f}h, {share:.0%} of {len(offsets_min)} within "
+           f"{OFFSET_TOL_MIN}m")
+    return (med, how) if share >= OFFSET_SHARE else (None, "scattered: " + how)
+
+
+def internal_ok(order_ok: int, order_n: int, lags_h: list[float]) -> tuple[bool, str]:
+    """The internal test on a derived start (no family calibration available)."""
     lag = median(lags_h) if lags_h else None
-    detail = (f"{len(checks)} checkable; present {present}/{total}; resolved after it "
-              f"{order_ok}/{order_n}; median lag to early resolution "
+    detail = (f"early-closed after derived start {order_ok}/{order_n}, median lag "
               + (f"{lag:.1f}h" if lag is not None else "-"))
-    if total and present / total >= INTERNAL_PRESENT and order_n \
-            and order_ok / order_n >= INTERNAL_ORDER and lag is not None \
-            and lag <= INTERNAL_MAX_LAG_H:
-        return True, "internal: " + detail
-    return False, "insufficient: " + detail
+    ok = bool(order_n) and order_ok / order_n >= INTERNAL_ORDER and lag is not None \
+        and 0 <= lag <= INTERNAL_MAX_LAG_H
+    return ok, detail
 
 
 def verdict(windows_live: dict, windows_paper: dict, n_boot: int = 1500) -> tuple[str, list[str]]:
@@ -349,95 +355,119 @@ def series_of(ticker: str) -> str:
     return ticker.split("-")[0].upper()
 
 
+def _event_of(ticker: str, m: dict) -> str:
+    return m.get("event_ticker") or ticker.rsplit("-", 1)[0]
+
+
 def resolve_sources(markets: dict[str, dict], tickers: list[str], refs_by_family: dict) -> dict:
-    """Per family: which start source is accepted, and the evidence. Prints no P&L."""
+    """Per family: start sources, the calibrated offset D and the evidence. Prints no P&L.
+
+    Start precedence per market: ticker HHMM (ET) -> external schedule match -> occurrence - D
+    (family D, else pooled D if the internal test passes) -> uncovered."""
     fam_tickers: dict[str, list[str]] = defaultdict(list)
     for t in tickers:
         fam_tickers[family_of(series_of(t))].append(t)
-    report = {}
+    report: dict[str, dict] = {}
     for fam, ts in sorted(fam_tickers.items()):
-        checks_hhmm, checks_ext, durations, lags, present = [], [], [], [], 0
-        order_ok = order_n = 0
-        ext_matched = ext_tried = 0
-        seen_events = set()
         refs = refs_by_family.get(fam, {})
+        r = {"markets": len(ts), "occ_present": 0, "events": 0, "hhmm_vs_ext": [],
+             "offsets": [], "ext_matched": 0, "ext_tried": 0, "ext_start": {}, "eexp_eq_occ": 0}
+        seen = set()
         for t in ts:
             m = markets.get(t) or {}
             occ = parse_ts(m.get("occurrence_datetime"))
             if occ:
-                present += 1
-                close = parse_ts(m.get("close_time"))
-                exp = parse_ts(m.get("expiration_time"))
-                if close and exp and close < exp - timedelta(hours=1):   # closed early
-                    order_n += 1
-                    order_ok += close >= occ
-                    lags.append((close - occ).total_seconds() / 3600)
-                eexp = parse_ts(m.get("expected_expiration_time"))
-                if eexp:
-                    durations.append((eexp - occ).total_seconds() / 3600)
-            ev = m.get("event_ticker") or t.rsplit("-", 1)[0]
-            if ev in seen_events or not occ:
+                r["occ_present"] += 1
+                r["eexp_eq_occ"] += parse_ts(m.get("expected_expiration_time")) == occ
+            ev = _event_of(t, m)
+            if ev in seen:
                 continue
-            seen_events.add(ev)
-            ts_start = ticker_start(ev)
-            if ts_start:
-                checks_hhmm.append(abs((occ - ts_start).total_seconds()) / 60)
+            seen.add(ev)
+            hh = ticker_start(ev)
+            ext = None
             if refs:
-                ext_tried += 1
+                r["ext_tried"] += 1
                 code = team_code(ev)
                 cands = [st for st, a, b in refs.get(ticker_date(ev), [])
                          if code_matches(code, a, b)]
                 if cands:
-                    ext_matched += 1
-                    checks_ext.append(min(abs((occ - st).total_seconds()) / 60 for st in cands))
-        checks = checks_hhmm + checks_ext
-        ok, why = accept_occurrence(checks, present, len(ts), order_ok, order_n, lags)
-        report[fam] = {
-            "markets": len(ts), "events": len(seen_events), "occ_present": present,
-            "hhmm_checks": checks_hhmm, "ext_checks": checks_ext,
-            "ext_matched": ext_matched, "ext_tried": ext_tried,
-            "duration_h": durations, "accept_occurrence": ok, "why": why,
-        }
+                    r["ext_matched"] += 1
+                    pivot = hh or (occ - timedelta(hours=3) if occ else cands[0])
+                    ext = min(cands, key=lambda st: abs((st - pivot).total_seconds()))
+                    r["ext_start"][ev] = ext
+            if hh and ext:
+                r["hhmm_vs_ext"].append(abs((hh - ext).total_seconds()) / 60)
+            known = hh or ext
+            if occ and known:
+                r["offsets"].append((occ - known).total_seconds() / 60)
+        r["events"] = len(seen)
+        r["D"], r["why"] = calibrate_offset(r["offsets"])
+        r["D_source"] = "family" if r["D"] is not None else None
+        report[fam] = r
+    pooled = [o for r in report.values() for o in r["offsets"]]
+    pooled_d, pooled_how = calibrate_offset(pooled)
+    for fam, r in report.items():
+        if r["D"] is not None or pooled_d is None:
+            continue
+        order_ok = order_n = 0
+        lags = []
+        for t in fam_tickers[fam]:
+            m = markets.get(t) or {}
+            occ = parse_ts(m.get("occurrence_datetime"))
+            close = parse_ts(m.get("close_time"))
+            exp = parse_ts(m.get("expiration_time"))
+            if occ and close and exp and close < exp - timedelta(hours=1):   # closed early
+                derived = occ - timedelta(minutes=pooled_d)
+                order_n += 1
+                order_ok += close >= derived
+                lags.append((close - derived).total_seconds() / 3600)
+        ok, detail = internal_ok(order_ok, order_n, lags)
+        r["why"] += f"; pooled ({pooled_how}): {detail} -> {'accepted' if ok else 'rejected'}"
+        if ok:
+            r["D"], r["D_source"] = pooled_d, "pooled"
     return report
 
 
 def start_of(ticker: str, markets: dict, sources: dict) -> tuple[datetime | None, str]:
     m = markets.get(ticker) or {}
-    fam = family_of(series_of(ticker))
-    if (sources.get(fam) or {}).get("accept_occurrence"):
-        occ = parse_ts(m.get("occurrence_datetime"))
-        if occ:
-            return occ, "occurrence"
-    ev = m.get("event_ticker") or ticker.rsplit("-", 1)[0]
+    ev = _event_of(ticker, m)
     st = ticker_start(ev)
-    return (st, "ticker-hhmm") if st else (None, "none")
-
-
-def _med(xs):
-    return f"{median(xs):+.1f}" if xs else "-"
+    if st:
+        return st, "ticker-hhmm"
+    fam = sources.get(family_of(series_of(ticker))) or {}
+    if ev in fam.get("ext_start", {}):
+        return fam["ext_start"][ev], "external"
+    occ = parse_ts(m.get("occurrence_datetime"))
+    if occ and fam.get("D") is not None:
+        return occ - timedelta(minutes=fam["D"]), f"occurrence-D({fam['D_source']})"
+    return None, "none"
 
 
 def print_sources(sources: dict, coverage: dict) -> None:
     print("\nSTEP 1 — START-TIME SOURCES (per sport family; no P&L)")
-    print(f"  rule: occurrence_datetime accepted when >= {AGREE_SHARE:.0%} of >= {MIN_CHECKABLE} "
-          f"reference-checkable events agree within {AGREE_MIN} min (ticker HHMM ET, MLB StatsAPI, "
-          "ESPN); else the internal test; else the ticker HHMM; else uncovered")
-    print(f"  {'family':12s} {'mkts':>5s} {'events':>6s} {'occ%':>5s} {'hhmm agree':>14s} "
-          f"{'ext agree':>16s} {'occ->exp h':>10s}  accepted  coverage")
+    print("  rule (Amendment A): ticker HHMM ET -> external schedule (MLB StatsAPI, ESPN NFL/NCAAF/"
+          "MLS) -> occurrence_datetime - D (family-calibrated, else pooled + internal test) "
+          "-> uncovered")
+    print(f"  {'family':12s} {'mkts':>5s} {'events':>6s} {'occ%':>5s} {'occ=eexp':>8s} "
+          f"{'ext match':>10s} {'hhmm~ext':>10s} {'D (h)':>6s}  coverage")
     for fam, r in sorted(sources.items(), key=lambda kv: -kv[1]["markets"]):
-        hh = r["hhmm_checks"]
-        ex = r["ext_checks"]
-        hh_s = (f"{sum(c <= AGREE_MIN for c in hh)}/{len(hh)} med{median(hh):.0f}m"
-                if hh else "-")
-        ex_s = (f"{sum(c <= AGREE_MIN for c in ex)}/{len(ex)} ({r['ext_matched']}/"
-                f"{r['ext_tried']}m)" if r["ext_tried"] else "-")
+        hv = r["hhmm_vs_ext"]
+        hv_s = f"{sum(c <= AGREE_MIN for c in hv)}/{len(hv)}" if hv else "-"
+        ex_s = f"{r['ext_matched']}/{r['ext_tried']}" if r["ext_tried"] else "-"
+        d_s = f"{r['D'] / 60:+.2f}" if r["D"] is not None else "-"
         cov = coverage.get(fam, Counter())
         tot = sum(cov.values()) or 1
         cov_s = ", ".join(f"{k} {v / tot:.0%}" for k, v in cov.most_common())
+        occ_n = max(r["occ_present"], 1)
         print(f"  {fam:12s} {r['markets']:5d} {r['events']:6d} "
-              f"{r['occ_present'] / max(r['markets'], 1):5.0%} {hh_s:>14s} {ex_s:>16s} "
-              f"{_med(r['duration_h']):>10s}  {'occurrence' if r['accept_occurrence'] else 'NO':10s}"
-              f" {cov_s}")
+              f"{r['occ_present'] / max(r['markets'], 1):5.0%} {r['eexp_eq_occ'] / occ_n:8.0%} "
+              f"{ex_s:>10s} {hv_s:>10s} {d_s:>6s}  {cov_s}")
+        off = r["offsets"]
+        if off:
+            qs = sorted(off)
+            print(f"  {'':12s} offsets occ-start (h): p10 {qs[len(qs) // 10] / 60:+.2f}  "
+                  f"median {median(off) / 60:+.2f}  p90 {qs[(9 * len(qs)) // 10] / 60:+.2f}  "
+                  f"n={len(off)}")
         print(f"  {'':12s} {r['why']}")
 
 
@@ -528,8 +558,12 @@ def study(live: list[dict], paper: list[dict], markets: dict, sources: dict, n_b
           f"filled in-play (rested into the game): {len(rested)}")
     if rested:
         print(f"    rested-into-game {lcp.fmt(lcp.boot_diff(rested, n=n_boot))}")
+    edge = [r for r in ls if abs(r["h"]) <= 0.5]
+    print(f"  live fills within 30 min of the start (where a start error flips the window): "
+          f"{len(edge)}; by source: "
+          + ", ".join(f"{k} {v}" for k, v in Counter(r['src'] for r in ls).most_common()))
     late = [r for r in inplay if r["exp_end"] and r["entry"] > r["exp_end"]]
-    print(f"  live fills after Kalshi's expected expiration (scheduled end): {len(late)}")
+    print(f"  live fills after Kalshi's expected end (occurrence = expected expiration): {len(late)}")
     pl = [r for r in P if "win" in r]
     pin = [r for r in pl if r["win"] == "in-play"]
     print(f"  paper in-play share of entries: {len(pin)}/{len(pl)} = "
