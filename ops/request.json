@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXLOWTATL,KXLOWTAUS,KXLOWTBOS,KXLOWTCHI,KXLOWTDAL,KXLOWTDC,KXLOWTDEN,KXLOWTEWR,KXLOWTHOU,KXLOWTLAX,KXLOWTLV,KXLOWTMIA,KXLOWTMIN,KXLOWTNOLA,KXLOWTNYC,KXLOWTOKC,KXLOWTPHIL,KXLOWTPHX,KXLOWTSAN,KXLOWTSATX,KXLOWTSDF,KXLOWTSEA,KXLOWTSFO,KXLOWTTTN","--per-series","200","--no-control","--timing"],"id":"fast-b-klowt-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXRAIN", "--per-series", "2100", "--lo", "1", "--hi", "5", "--maxyes", "4"], "id": "c-ultra-rain-20261015a"}
