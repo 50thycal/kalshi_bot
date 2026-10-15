@@ -1,0 +1,407 @@
+# ops request [READ]
+# type=xos  id=bands-show-20261015a
+# code ef2dd22a434ab233df07554032cfb5195c6b706a · started 2026-10-15T09:58:20Z
+{
+  "key": "mmsell-weather-bands",
+  "title": "mmsell weather bands \u2014 is the cheap tail overpriced outside the shipped cell",
+  "state": "PAPER",
+  "paused_from_state": null,
+  "origin": "operator",
+  "family": "maker",
+  "hypothesis": "The longshot overpricing that the shipped cell sells on daily rain and temperature extends to the cheaper (YES <= 4c) and dearer (YES 10-15c) bands, on the families where the replay PROMOTEd each band.",
+  "legacy_class": null,
+  "migration_integrity": null,
+  "platform_snapshot_id": 2,
+  "predecessor_experiment_id": null,
+  "retired_at": null,
+  "docs": {
+    "probe": "scripts/mmsell_lookalike_probe.py",
+    "thesis": "docs/MMSELL_LOOKALIKE_PROBE.md",
+    "siblings": "kalshi_bot/experiment_os/temperature_season.py, rain_season.py"
+  },
+  "versions": [
+    {
+      "version": 1,
+      "frozen_at": "2026-10-15 09:55:18.815540+00:00",
+      "fingerprint": "e7ba225c014a5b753bf22f2b12aeeba88c68201799ac578bcd911187bde5ab36",
+      "pre_registration_hash": "09127955f64709649bf5839c379dc4a47b94541af78cab957367af0e883f1ad6",
+      "independent_variable": "none \u2014 three absolute arms, each judged on its own gate",
+      "held_constant": [
+        "entry is the mmsell maker entry on every arm: buy NO at the no-bid, 1 contract, paper",
+        "exit is hold to settlement on every arm: no stop, take-profit, volatility gate or strangle",
+        "each band is disjoint from the shipped cell (mid 5-10, YES <= 7): ultra sells YES <= 4c, so its mid is <= 4; upper needs mid >= 10",
+        "the temperature arms reach the skipped series through their own `optin=`; the global skip list is unchanged and the tracker refuses every live mirror on a skipped series",
+        "no contest cap or size rule; the global caps apply unchanged",
+        "every tag is PAPER and appears in no live arm set"
+      ],
+      "change_reason": null,
+      "arms": [
+        {
+          "arm_key": "hight_ultra",
+          "role": "treatment",
+          "strategy_tag": null,
+          "params": {
+            "tag": "Tempmmsell3",
+            "band": "mid 1-5, yes<=4",
+            "book": "lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT",
+            "series": [
+              "KXHIGHT"
+            ]
+          }
+        },
+        {
+          "arm_key": "rain_ultra",
+          "role": "treatment",
+          "strategy_tag": null,
+          "params": {
+            "tag": "Rainmmsell3",
+            "band": "mid 1-5, yes<=4",
+            "book": "lo=1,hi=5,maxyes=4,onlyx=KXRAIN",
+            "series": [
+              "KXRAIN"
+            ]
+          }
+        },
+        {
+          "arm_key": "temp_upper",
+          "role": "control",
+          "strategy_tag": null,
+          "params": {
+            "tag": "Tempmmsell2",
+            "band": "mid 10-16, yes<=15",
+            "book": "lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH",
+            "series": [
+              "KXHIGH"
+            ]
+          }
+        }
+      ],
+      "gates": [
+        {
+          "gate_key": "hight_ultra_winter_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "hight_ultra": {
+                "op": ">=",
+                "value": 120,
+                "metric": "settled_days"
+              }
+            },
+            "fail_any": [
+              {
+                "op": "<",
+                "arm": "hight_ultra",
+                "value": 0.0,
+                "metric": "pnl_cents_per_contract",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 45,
+                  "metric": "settled_days"
+                }
+              },
+              {
+                "op": "<",
+                "arm": "hight_ultra",
+                "value": 1.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": "<",
+                "arm": "hight_ultra",
+                "value": 0.0,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">=",
+                "arm": "hight_ultra",
+                "value": 2.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": ">=",
+                "arm": "hight_ultra",
+                "value": 0.15,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "description": "Keep/kill for the ultra band (YES <= 4c) on KXHIGHT through winter. Judged alone; not pooled.",
+            "max_evidence_horizon": {
+              "arms": [
+                "hight_ultra"
+              ],
+              "value": 180,
+              "metric": "settled_days"
+            }
+          },
+          "spec_hash": "4656f70a44c17701822afd4ffef3ed1e31a31fbb5a33174e332b6cf489f5badb",
+          "evidence_started_at": null,
+          "results": []
+        },
+        {
+          "gate_key": "rain_ultra_winter_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "rain_ultra": {
+                "op": ">=",
+                "value": 120,
+                "metric": "settled_days"
+              }
+            },
+            "fail_any": [
+              {
+                "op": "<",
+                "arm": "rain_ultra",
+                "value": 0.0,
+                "metric": "pnl_cents_per_contract",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 45,
+                  "metric": "settled_days"
+                }
+              },
+              {
+                "op": "<",
+                "arm": "rain_ultra",
+                "value": 1.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": "<",
+                "arm": "rain_ultra",
+                "value": 0.0,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">=",
+                "arm": "rain_ultra",
+                "value": 2.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": ">=",
+                "arm": "rain_ultra",
+                "value": 0.15,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "description": "Keep/kill for the ultra band (YES <= 4c) on KXRAIN through winter. Judged alone; not pooled.",
+            "max_evidence_horizon": {
+              "arms": [
+                "rain_ultra"
+              ],
+              "value": 180,
+              "metric": "settled_days"
+            }
+          },
+          "spec_hash": "1e10bef442541471f2245f0f0be654aa802d3f1b2a2304484b6982f8050a7f08",
+          "evidence_started_at": null,
+          "results": []
+        },
+        {
+          "gate_key": "temp_upper_winter_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "temp_upper": {
+                "op": ">=",
+                "value": 120,
+                "metric": "settled_days"
+              }
+            },
+            "fail_any": [
+              {
+                "op": "<",
+                "arm": "temp_upper",
+                "value": 0.0,
+                "metric": "pnl_cents_per_contract",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 45,
+                  "metric": "settled_days"
+                }
+              },
+              {
+                "op": "<",
+                "arm": "temp_upper",
+                "value": 1.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": "<",
+                "arm": "temp_upper",
+                "value": 0.0,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">=",
+                "arm": "temp_upper",
+                "value": 2.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": ">=",
+                "arm": "temp_upper",
+                "value": 0.15,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "description": "Keep/kill for the upper band (YES 10-15c) on KXHIGH and KXHIGHT through winter. Judged alone; not pooled.",
+            "max_evidence_horizon": {
+              "arms": [
+                "temp_upper"
+              ],
+              "value": 180,
+              "metric": "settled_days"
+            }
+          },
+          "spec_hash": "f5951d26956686139c4f5bd045514fb4c4b9ffee2205ae01bc7e3576c9fa4f51",
+          "evidence_started_at": null,
+          "results": []
+        }
+      ],
+      "epochs": [
+        {
+          "epoch_number": 1,
+          "started_at": "2026-10-15 09:55:18.815540+00:00",
+          "ended_at": null,
+          "reason": "v1's first operating interval; all three arms open together.",
+          "impact_class": null,
+          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
+          "platform_snapshot": [
+            [
+              "DATA_PROVENANCE",
+              "live_vs_backfill_2026_08"
+            ],
+            [
+              "EXECUTION_ENGINE",
+              "live_executor_2026_08"
+            ],
+            [
+              "EXPERIMENT_ENGINE",
+              "foundation_pr1"
+            ],
+            [
+              "FEE_MODEL",
+              "maker_rate_2026_08_11"
+            ],
+            [
+              "FILL_MODEL",
+              "assumed_fill_plus_mmsell3_calibration"
+            ],
+            [
+              "KALSHI_API_SCHEMA",
+              "advanced_tier_2026_08_12"
+            ],
+            [
+              "MARKET_TAXONOMY",
+              "settlement_repair_2026_08_24"
+            ],
+            [
+              "METRICS_ENGINE",
+              "pnl_scripts_2026_08"
+            ],
+            [
+              "RISK_ENGINE",
+              "caps_2026_08"
+            ],
+            [
+              "SETTLEMENT_ENGINE",
+              "hold_to_settlement_2026_08"
+            ]
+          ],
+          "deployments": [
+            {
+              "deployment_key": "mmsell-weather-bands-paper-1",
+              "stage": "PAPER",
+              "kind": "paper",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-10-15 09:55:18.815540+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "hight_ultra",
+                  "strategy_tag": "Tempmmsell3"
+                },
+                {
+                  "arm_key": "rain_ultra",
+                  "strategy_tag": "Rainmmsell3"
+                },
+                {
+                  "arm_key": "temp_upper",
+                  "strategy_tag": "Tempmmsell2"
+                }
+              ]
+            },
+            {
+              "deployment_key": "mmsell-weather-bands-probe-1",
+              "stage": "PROBE",
+              "kind": "probe",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-10-15 09:55:18.815540+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "hight_ultra",
+                  "strategy_tag": null
+                },
+                {
+                  "arm_key": "rain_ultra",
+                  "strategy_tag": null
+                },
+                {
+                  "arm_key": "temp_upper",
+                  "strategy_tag": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": null,
+      "to": "IDEA",
+      "occurred_at": "2026-10-15 09:55:18.815540+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "experiment created",
+      "gate_result_id": null
+    },
+    {
+      "from": "IDEA",
+      "to": "PROBE",
+      "occurred_at": "2026-10-15 09:55:18.815540+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "the band replays are recorded on v1 with their confounds; they authorize nothing",
+      "gate_result_id": null
+    },
+    {
+      "from": "PROBE",
+      "to": "PAPER",
+      "occurred_at": "2026-10-15 09:55:18.815540+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "pre-registration merged (docs/MMSELL_LOOKALIKE_PROBE.md \u00a77, \u00a710); the forward winter tape decides",
+      "gate_result_id": null
+    }
+  ],
+  "integrity_events": [],
+  "legacy_evidence": []
+}
