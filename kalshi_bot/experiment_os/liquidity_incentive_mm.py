@@ -124,6 +124,7 @@ RISK_ENVELOPE: dict = {
     "max_price_cents": limm.MAX_PRICE_CENTS,
     "max_open_orders": limm.MAX_OPEN_ORDERS,
     "max_book_exposure_usd": limm.MAX_STRATEGY_EXPOSURE_USD,
+    "max_markets_per_event": limm.MAX_MARKETS_PER_EVENT,
     "max_loss_per_clip_usd": round(limm.MAX_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,

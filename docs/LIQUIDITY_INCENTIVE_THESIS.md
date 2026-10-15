@@ -2963,3 +2963,22 @@ Size is unchanged (~$10 a bid, close to Kalshi's $1 payout floor per programme);
 declined smaller bids. TSWIF is left as is (operator). The paper twin stays invalid (§9.52).
 This changes the book's universe: per Experiment OS it is a recorded change (new epoch) for the
 operator to register; this doc is the evidence, not the record.
+
+### 9.56 Capital raised: ten markets, $100, up to three markets per event (2026-10-15)
+
+**Evidence.** Confirmed rewards to date $10.91 on a book held to two markets and $50 (§9.41),
+while §9.55 left ~2 event-tied mention events a day, each with dozens of word markets carrying a
+~$100 programme. The binding constraint was slots, not supply.
+
+**Decision (operator, 2026-10-15: "go full send and do the 100 dollar limit"; the operator is
+adding $150 of cash so every book is funded):**
+- `MAX_OPEN_ORDERS` 2 → **10** markets; `MAX_STRATEGY_EXPOSURE_USD` $50 → **$100**.
+- Bid size unchanged (`MAX_ORDER_DOLLARS` $10, `MAX_PRICE_CENTS` 10c), so 10 × $10 fits the budget.
+- `MAX_MARKETS_PER_EVENT` 1 → **3**: one event's words are correlated (one speech), so the cap
+  keeps a single bad event to ~$30 of fills. The cross-book event rule is kept.
+- Portfolio safeguards are NOT changed: `MAX_TOTAL_EXPOSURE` ($100, open positions across all
+  books), `MAX_MARKET_EXPOSURE` ($25), `MAX_DAILY_LOSS` ($50) still bind on top.
+
+**At risk.** Resting bids cost nothing until filled; a filled bid is worth at most its ~$10 cost.
+Worst case is every bid filling and going to zero (~$100). This is a risk-envelope change: per
+Experiment OS it is a recorded change (new epoch) for the operator to register.

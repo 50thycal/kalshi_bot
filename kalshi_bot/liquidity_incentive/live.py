@@ -64,9 +64,18 @@ MAX_CONTRACTS_PER_ORDER = 500
 MAX_ORDER_DOLLARS = 10.00
 #: Markets this strategy may be working at once. `repository.count_live_book_open` counts open
 #: TICKERS, so a two-legged pair is one. 3 -> 5 (§9.34) -> 2 (§9.36); unchanged by §9.37.
-MAX_OPEN_ORDERS = 2
-#: Total dollars committed at once. `MAX_OPEN_ORDERS * 2 * MAX_ORDER_DOLLARS` must stay within it.
-MAX_STRATEGY_EXPOSURE_USD = 50.00
+#: 2 -> 10 (§9.56, operator 2026-10-15: "go full send … the 100 dollar limit"), with the
+#: universe narrowed to event-tied mention markets (§9.55) and one ~$10 bid per market.
+MAX_OPEN_ORDERS = 10
+#: Total dollars committed at once (resting bids + held legs; exit legs excluded, §9.53).
+#: 50 -> 100 (§9.56). One-sided since §9.48, so `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS` fits.
+MAX_STRATEGY_EXPOSURE_USD = 100.00
+#: Markets of ONE event this book may rest in at once. Was 1 (§9.15: several markets of one event
+#: resolve together). 1 -> 3 (§9.56): a mention event is ~16-40 separate word markets, each its
+#: own ~$100 reward pool, and one-per-event left the book unable to use more than 2-4 slots.
+#: The shared risk — every word of one speech is said in the same hour — is what the §9.55
+#: pre-event cancel removes; a held POSITION on an event still blocks further entries there.
+MAX_MARKETS_PER_EVENT = 3
 #: Refuse a leg priced above this. Was the one-sided book's 25c cheap-side cap; a pair always
 #: has a dear side, so the cap bounds each leg. 90 -> 5 (§9.41, operator decision 2026-09-29):
 #: only cheap-both-sides pairs. The lopsided pairs the 90c cap admitted (gas at 10c/28c NO legs)
