@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXEURUSD", "--per-series", "900", "--no-control"], "id": "d-deep-fin-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--series", "KXBILLBOARDRUNNERUPSONG,KXBILLBOARDRUNNERUPALBUM,KXBBCHARTPOSITIONALBUM,KXBBCHARTPOSITIONSONG,KXAPPRANKFREE,KXARTISTSTREAMS", "--per-series", "300", "--no-control"], "id": "d-deep-ent-20261015a"}
