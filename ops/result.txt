@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=script  id=evtime-sources-20261015a
-# code 5a81b555fc084a60dbfa93f02fe51e06a174dff6 · started 2026-10-15T17:30:52Z
+# type=script  id=evtime-study-20261015a
+# code 5a81b555fc084a60dbfa93f02fe51e06a174dff6 · started 2026-10-15T17:35:12Z
 # event_timing_study  live sports markets 2323, paper mmsell10 sports entries on the same event days 8576, sports series 401
 # Kalshi market objects found 9151/9151
 
@@ -25,3 +25,47 @@ STEP 1 — START-TIME SOURCES (per sport family; no P&L)
   tennis         936    920  100%      99%          -          -      -  none 98%, ticker-hhmm 2%
                offsets occ-start (h): p10 +4.00  median +4.00  p90 +8.00  n=18
                18 checkable < 20; pooled (family D +3.00h, 88% of 2660 within 30m): early-closed after derived start 741/936, median lag 2.3h -> rejected
+
+STEP 2 — SAMPLE
+  live  sports markets 2323, with a start 1823 (78%), event days 71
+  paper sports markets 8540, with a start 7661 (90%), event days 64
+
+STEP 3 — c/contract by entry time relative to the event START (live = first fill, paper = entry)
+  LIVE : n=1823 all -0.49c  [90% -1.99, +0.83]
+    pre>24h   n=   40 (  2%)  +2.38c  [90% -5.17, +7.43]  $+0.97
+    pre6-24h  n=   39 (  2%)  -6.43c  [90% -13.65, +1.99]  $-2.96
+    pre<6h    n=  189 ( 10%)  +1.58c  [90% -1.79, +4.27]  $+3.57
+    in-play   n= 1555 ( 85%)  -0.66c  [90% -2.12, +0.78]  $-12.17
+  PAPER: n=7661 all +0.74c  [90% +0.26, +1.21]
+    pre>24h   n=  509 (  7%)  -0.72c  [90% -3.44, +1.62]  $-3.68
+    pre6-24h  n=  451 (  6%)  +0.78c  [90% -1.15, +2.49]  $+3.53
+    pre<6h    n= 1558 ( 20%)  +1.00c  [90% -0.10, +2.10]  $+15.55
+    in-play   n= 5143 ( 67%)  +0.81c  [90% +0.12, +1.45]  $+41.58
+
+PRE-REGISTERED BAR (>= 2c vs the rest, 90% interval excludes 0, live n >= 30, paper same direction):
+  pre>24h   live minus rest +2.93c  [90% -5.26, +8.55] | paper minus rest -1.57c  -> no
+  pre6-24h  live minus rest -6.07c  [90% -13.17, +2.45] | paper minus rest +0.04c  -> no
+  pre<6h    live minus rest +2.32c  [90% -1.08, +5.29] | paper minus rest +0.32c  -> no
+  in-play   live minus rest -1.17c  [90% -4.20, +2.12] | paper minus rest +0.20c  -> no
+  VERDICT: NO SIGNAL
+
+DESCRIPTIVE (not gated)
+  live in-play share of fills: 1555/1823 = 85%; of those, order placed BEFORE the start and filled in-play (rested into the game): 177
+    rested-into-game +0.04c  [90% -4.40, +3.91]
+  live fills within 30 min of the start (where a start error flips the window): 387; by source: ticker-hhmm 968, occurrence-D(pooled) 692, external 115, occurrence-D(family) 48
+  live fills after Kalshi's expected end (occurrence = expected expiration): 73
+  paper in-play share of entries: 5143/7661 = 67%
+  live minus paper, per window (the fill gap):
+    pre>24h   +3.10c  (live 40, paper 509)
+    pre6-24h  -7.21c  (live 39, paper 451)
+    pre<6h    +0.58c  (live 189, paper 1558)
+    in-play   -1.47c  (live 1555, paper 5143)
+  per family, live c/ct by window (n):
+    MLB          pre>24h +8.9(12)  pre6-24h +7.0(4)  pre<6h +2.5(76)  in-play -2.1(763)
+    NCAAF        pre>24h +6.4(4)  pre6-24h +6.4(4)  pre<6h +6.9(1)  in-play +5.0(30)
+    NFL          pre>24h -2.9(11)  pre6-24h -10.4(10)  pre<6h -27.8(3)  in-play +2.9(37)
+    other-sports pre>24h +6.8(6)  pre6-24h -13.2(12)  pre<6h +7.2(29)  in-play +1.6(317)
+    soccer       pre>24h -7.2(7)  pre6-24h -2.4(9)  pre<6h -0.8(80)  in-play -0.7(403)
+    tennis       pre>24h -  pre6-24h -  pre<6h -  in-play -9.8(5)
+  the live 'fill 12-24h before close' cell, located against the real start:
+    n=2 +7.50c  [90% +7.50, +7.50]  in-play 2
