@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Crypto", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-3-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Companies", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-4-20261015a"}
