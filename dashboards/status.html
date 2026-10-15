@@ -1,0 +1,260 @@
+<title>Experiment Monitor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>
+/* ======================================================================
+   TOP TABLE CONFIG: edit this list to change the summary table.
+   Each row: label, value(s) -> text, optional warnIf(s) -> bool, optional
+   note(s) -> text. `s` is the snapshot (see kalshi_bot/monitor/snapshot.py).
+   Nothing else in the file needs to change when you add, drop or reorder rows.
+   ====================================================================== */
+const SUMMARY = [
+  { label: "Active", value: s => s.summary.active,
+    note: s => `${s.summary.live} live · ${s.summary.paper} paper · ${s.summary.paused} paused` },
+  { label: "Blocked", value: s => s.summary.blocked, warnIf: s => s.summary.blocked > 0,
+    note: s => `${s.summary.blocked_gates} gate(s) can't be read yet` },
+  { label: "Not running", value: s => (s.summary.health.ERROR || 0) + (s.summary.health.SILENT || 0) + (s.summary.health.STALE || 0),
+    warnIf: s => ((s.summary.health.ERROR || 0) + (s.summary.health.SILENT || 0) + (s.summary.health.STALE || 0)) > 0,
+    note: () => "error, silent or stale experiments" },
+  { label: "Closed", value: s => s.summary.closed_recent,
+    note: s => `last ${s.summary.closed_recent_days} days` + (s.summary.closed_total != null ? ` · ${s.summary.closed_total} all time` : "") },
+  { label: "Live $ / 30d", value: s => money(s.summary.realized.live_30d_usd),
+    warnIf: s => (s.summary.realized.live_30d_usd ?? 0) < 0, note: () => "real money, settled" },
+  { label: "Paper $ / 30d", value: s => money(s.summary.realized.paper_30d_usd),
+    note: () => "simulated; not profit" },
+  { label: "Goal: $100/mo", value: s => s.summary.realized.live_pct_of_goal == null ? "–" : `${s.summary.realized.live_pct_of_goal}%`,
+    warnIf: s => (s.summary.realized.live_pct_of_goal ?? 0) < 100, note: () => "live realized ÷ $100" },
+  { label: "Needs you", value: s => s.summary.needs_you, warnIf: s => s.summary.needs_you > 0,
+    note: () => "operator decisions" },
+  { label: "Systems", value: s => s.summary.external_unhealthy === 0 ? "all OK" : `${s.summary.external_unhealthy} not OK`,
+    warnIf: s => s.summary.external_unhealthy > 0, note: () => "worker, collectors, desks" },
+];
+</script>
+<style>
+/* Layout: one narrow operations column. Summary table, then notes, then the
+   filterable experiment register, then systems and issues. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #1b2330; --muted: #5d6878; --line: #dde2ea;
+  --accent: #2b5fb4; --row-hover: #eef2f8;
+  --ok: #1f7a4d; --ok-bg: #e3f3ea; --warn: #9a5b00; --warn-bg: #fdf0d8;
+  --bad: #b3261e; --bad-bg: #fbe5e3; --info: #4a5a72; --info-bg: #e8ecf2;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --surface: #1a2029; --ink: #e4e8ef; --muted: #98a3b3; --line: #2c3440;
+  --accent: #7ea6ea; --row-hover: #212935;
+  --ok: #6fcf9a; --ok-bg: #173226; --warn: #f0b35c; --warn-bg: #3a2c14;
+  --bad: #f2867d; --bad-bg: #3d1d1b; --info: #a9b6c9; --info-bg: #242c38; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --ink: #e4e8ef; --muted: #98a3b3; --line: #2c3440;
+  --accent: #7ea6ea; --row-hover: #212935;
+  --ok: #6fcf9a; --ok-bg: #173226; --warn: #f0b35c; --warn-bg: #3a2c14;
+  --bad: #f2867d; --bad-bg: #3d1d1b; --info: #a9b6c9; --info-bg: #242c38; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+.wrap > * { min-width: 0; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { margin: 0 0 10px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.asof { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; min-width: 0; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 600; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+/* Summary: the one bordered object on the page. */
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.summary td { font-variant-numeric: tabular-nums; }
+.summary td.label { font-weight: 600; white-space: nowrap; width: 1%; }
+.summary td.value { font-family: var(--font-data); font-size: 1.05rem; font-weight: 500; white-space: nowrap; width: 1%; }
+.summary td.note { color: var(--muted); }
+.summary tr:last-child td { border-bottom: 0; }
+.summary tr.warn td.value { color: var(--bad); }
+.summary tr.warn td.label::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); margin-right: 8px; vertical-align: 1px; }
+
+ul.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ul.notes li { display: grid; grid-template-columns: 4.5rem 1fr; gap: 10px; align-items: baseline; }
+ul.notes li span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.tag { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 3px; text-align: center; white-space: nowrap; }
+.tag.act { color: var(--bad); background: var(--bad-bg); }
+.tag.you { color: var(--warn); background: var(--warn-bg); }
+.tag.soon { color: var(--accent); background: var(--info-bg); }
+.tag.info { color: var(--info); background: var(--info-bg); }
+
+.chip { font-family: var(--font-data); font-size: 0.72rem; font-weight: 500; padding: 1px 7px; border-radius: 10px; white-space: nowrap; }
+.h-OK { color: var(--ok); background: var(--ok-bg); }
+.h-ERROR, .h-SILENT { color: var(--bad); background: var(--bad-bg); }
+.h-STALE, .h-BLOCKED { color: var(--warn); background: var(--warn-bg); }
+.h-PAUSED, .h-IDLE, .h-UNKNOWN, .h-INACTIVE { color: var(--info); background: var(--info-bg); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.filters button { font: inherit; font-size: 0.8rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 14px; padding: 3px 11px; cursor: pointer; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.filters input { font: inherit; font-size: 0.85rem; padding: 4px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); min-width: 0; flex: 1 1 12rem; max-width: 18rem; }
+button:focus-visible, input:focus-visible, tr.exp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+tr.exp { cursor: pointer; }
+tr.exp:hover td { background: var(--row-hover); }
+tr.exp td.key { font-weight: 600; }
+tr.exp td.key small { display: block; font-weight: 400; color: var(--muted); }
+tr.detail td { background: var(--surface); padding: 12px 16px 16px; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 14px 24px; }
+.detail-grid > div { min-width: 0; }
+.detail-grid h3 { margin: 0 0 4px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.detail-grid ul { margin: 0; padding-left: 1.1rem; }
+.num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.neg { color: var(--bad); }
+.muted { color: var(--muted); }
+details > summary { cursor: pointer; font-weight: 600; }
+footer { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: no-preference) { tr.exp td { transition: background-color 0.12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Experiment Monitor</h1>
+    <div class="asof" id="asof"></div>
+  </header>
+
+  <section aria-labelledby="h-summary">
+    <h2 id="h-summary">At a glance</h2>
+    <div class="summary scroll"><table><tbody id="summary"></tbody></table></div>
+  </section>
+
+  <section aria-labelledby="h-notes">
+    <h2 id="h-notes">Worth knowing</h2>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <section aria-labelledby="h-exps">
+    <h2 id="h-exps">Experiments</h2>
+    <div class="filters" id="filters"></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Experiment</th><th>Health</th><th>Stage</th><th class="num">Entries 24h / 7d</th><th>Last evidence</th><th class="num">Live $ 30d</th><th>Next verdict</th></tr></thead>
+      <tbody id="exps"></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="h-ext">
+    <h2 id="h-ext">Systems outside Experiment OS</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>System</th><th>Health</th><th>Last seen</th><th>Detail</th></tr></thead>
+      <tbody id="ext"></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="h-issues">
+    <h2 id="h-issues">Problems on file</h2>
+    <details><summary id="issues-sum"></summary><div class="scroll"><table>
+      <thead><tr><th>Issue</th><th>Status</th><th>Owner</th><th>Title</th></tr></thead>
+      <tbody id="issues"></tbody></table></div></details>
+    <details><summary id="untracked-sum"></summary><div class="scroll"><table>
+      <thead><tr><th>Recommended owner</th><th>Scope</th><th>Problem</th></tr></thead>
+      <tbody id="untracked"></tbody></table></div></details>
+  </section>
+
+  <footer id="footer">A view of Experiment OS, not a ledger. Experiment state, gates and verdicts live in Experiment OS. Nothing on this page authorizes anything.</footer>
+</div>
+
+<script id="snapshot" type="application/json">/*__SNAPSHOT__*/null</script>
+<script>
+function money(v) { return v == null ? "–" : (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function esc(v) { return String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function ct(ts) {
+  if (!ts) return "–";
+  const d = new Date(String(ts).replace(" ", "T"));
+  if (isNaN(d)) return esc(ts);
+  return d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+function ago(ts, now) {
+  if (!ts) return "never";
+  const h = (now - new Date(String(ts).replace(" ", "T"))) / 3.6e6;
+  if (isNaN(h)) return "–";
+  return h < 1 ? `${Math.round(h * 60)}m ago` : h < 48 ? `${h.toFixed(h < 10 ? 1 : 0)}h ago` : `${Math.round(h / 24)}d ago`;
+}
+const chip = h => `<span class="chip h-${esc(h)}">${esc(h)}</span>`;
+const $ = id => document.getElementById(id);
+
+const S = (() => { try { return JSON.parse($("snapshot").textContent); } catch (e) { return null; } })();
+if (!S) {
+  $("asof").textContent = "No snapshot embedded. Render with: python -m kalshi_bot.monitor.page";
+} else {
+  const now = new Date(String(S.generated_at).replace(" ", "T"));
+  $("asof").textContent = `as of ${ct(S.generated_at)} CT · enforcement ${S.enforcement.mode || "?"}`
+    + (S.partial ? " · PARTIAL: " + S.partial : "");
+
+  $("summary").innerHTML = SUMMARY.map(row => {
+    let value = "–", warn = false, note = "";
+    try { value = row.value(S); } catch (e) {}
+    try { warn = !!(row.warnIf && row.warnIf(S)); } catch (e) {}
+    try { note = row.note ? row.note(S) : ""; } catch (e) {}
+    return `<tr class="${warn ? "warn" : ""}"><td class="label">${esc(row.label)}</td><td class="value">${esc(value)}</td><td class="note">${esc(note)}</td></tr>`;
+  }).join("");
+
+  const notes = S.details || [];
+  $("notes").innerHTML = notes.length
+    ? notes.map(n => `<li><span class="tag ${esc(n.level)}">${({ act: "fix", you: "decide", soon: "soon", info: "fyi" })[n.level] || esc(n.level)}</span><span>${esc(n.text)}</span></li>`).join("")
+    : `<li><span class="tag info">fyi</span><span>Nothing new. Every experiment and system reads as expected.</span></li>`;
+
+  const healths = ["all", ...Object.keys(S.summary.health)];
+  let filter = "all", query = "";
+  try { filter = localStorage.getItem("mon-filter") || "all"; } catch (e) {}
+  if (!healths.includes(filter)) filter = "all";
+  function drawFilters() {
+    $("filters").innerHTML = healths.map(h => `<button type="button" data-h="${esc(h)}" aria-pressed="${h === filter}">${esc(h)}${h === "all" ? "" : " " + S.summary.health[h]}</button>`).join("")
+      + `<input id="q" type="search" placeholder="Filter by name or tag" aria-label="Filter experiments" value="${esc(query)}">`;
+    $("q").addEventListener("input", e => { query = e.target.value.toLowerCase(); drawExps(); });
+  }
+  $("filters").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    filter = b.dataset.h; try { localStorage.setItem("mon-filter", filter); } catch (err) {}
+    drawFilters(); drawExps();
+  });
+  const open = new Set();
+  function detail(e) {
+    const arms = (e.arms || []).map(a => `<li><span class="mono">${esc(a.arm)}/${esc(a.kind)}</span> ${esc((a.tags || []).join(", "))} · last ${ago(a.last_evidence_at, now)} · ${a.entries_7d ?? "–"} in 7d${a.settled != null ? ` · ${a.settled} settled at ${a.cents_per_trade ?? "–"}¢` : ""}</li>`).join("") || "<li class=muted>no armed arms</li>";
+    const gates = (e.gates || []).map(g => `<li><span class="mono">${esc(g.gate_key)}</span> recorded ${esc(g.recorded || "never")}${g.dry_run ? `, dry run ${esc(g.dry_run)}` : ""}${g.floor ? ` · floor ${Math.round(g.floor.progress * 100)}%` : ""}</li>`).join("") || "<li class=muted>no gates</li>";
+    const why = (e.health_reasons || []).map(r => `<li>${esc(r)}</li>`).join("") || "<li class=muted>reads as expected</li>";
+    const x = e.exposure ? `${e.exposure.open_positions ?? 0} open positions · ${money(e.exposure.notional_usd)} resting` : "none";
+    return `<div class="detail-grid">
+      <div><h3>Why this health</h3><ul>${why}</ul></div>
+      <div><h3>Arms</h3><ul>${arms}</ul></div>
+      <div><h3>Gates</h3><ul>${gates}</ul></div>
+      <div><h3>Money</h3><ul><li>paper this epoch ${money(e.paper_realized_epoch_usd)}</li><li>live this epoch ${money(e.live_realized_epoch_usd)}</li><li>live at risk: ${esc(x)}</li></ul>
+        <h3 style="margin-top:10px">Issues · expectation</h3><ul><li>${esc((e.open_issues || []).join(", ") || "none open")}${e.untracked ? ` · ${e.untracked} untracked` : ""}</li><li>quiet ≤ ${esc(e.expect?.max_silence_hours ?? "–")}h (${esc(e.expect_source || "default")})${e.expect?.note ? ` · ${esc(e.expect.note)}` : ""}</li></ul></div>
+    </div>`;
+  }
+  function drawExps() {
+    const rows = S.experiments.filter(e => (filter === "all" || e.health === filter)
+      && (!query || (e.key + " " + (e.tags || []).join(" ") + " " + (e.title || "")).toLowerCase().includes(query)));
+    $("exps").innerHTML = rows.map(e => {
+      const nv = e.next_verdict ? `${esc(e.next_verdict.gate_key)} · ${e.next_verdict.eta_days === 0 ? "floor met" : "~" + esc(e.next_verdict.eta_date)}` : "–";
+      const live = e.live_realized_30d_usd;
+      const main = `<tr class="exp" tabindex="0" data-k="${esc(e.key)}" aria-expanded="${open.has(e.key)}">
+        <td class="key">${esc(e.key)}<small>${esc((e.tags || []).join(" · "))}</small></td>
+        <td>${chip(e.health)}</td><td class="mono">${esc(e.stage)}${e.kind === "live" ? " · live" : ""}</td>
+        <td class="num">${e.entries_24h ?? "–"} / ${e.entries_7d ?? "–"}</td>
+        <td class="mono">${S.partial ? "not read" : ago(e.last_evidence_at, now)}</td>
+        <td class="num ${live < 0 ? "neg" : ""}">${money(live)}</td><td class="mono">${nv}</td></tr>`;
+      return main + (open.has(e.key) ? `<tr class="detail"><td colspan="7">${detail(e)}</td></tr>` : "");
+    }).join("") || `<tr><td colspan="7" class="muted">No experiments match this filter.</td></tr>`;
+  }
+  function toggle(tr) { const k = tr.dataset.k; open.has(k) ? open.delete(k) : open.add(k); drawExps(); }
+  $("exps").addEventListener("click", e => { const tr = e.target.closest("tr.exp"); if (tr) toggle(tr); });
+  $("exps").addEventListener("keydown", e => { const tr = e.target.closest("tr.exp"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(tr); } });
+  drawFilters(); drawExps();
+
+  $("ext").innerHTML = (S.external || []).map(x => `<tr><td>${esc(x.title)}</td><td>${chip(x.health)}</td><td class="mono">${x.last_seen ? ago(x.last_seen, now) : "–"}</td><td class="muted">${esc(x.detail || "")}${x.desks ? " · " + Object.entries(x.desks).map(([k, d]) => `${esc(k)} ${esc(d.health)}`).join(", ") : ""}</td></tr>`).join("");
+
+  $("issues-sum").textContent = `${S.issues.length} open issue(s)`;
+  $("issues").innerHTML = S.issues.map(i => `<tr><td class="mono">${esc(i.issue_key)}</td><td class="mono">${esc(i.status)}</td><td class="mono">${esc(i.owner_role)}</td><td>${esc(i.title)}</td></tr>`).join("");
+  $("untracked-sum").textContent = `${S.untracked.length} detected problem(s) with no issue yet`;
+  $("untracked").innerHTML = S.untracked.map(c => `<tr><td class="mono">${esc(c.recommended_owner)}</td><td>${esc(c.scope)}</td><td>${esc(c.title)}</td></tr>`).join("");
+}
+</script>

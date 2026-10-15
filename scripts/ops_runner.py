@@ -10,6 +10,7 @@ ops/request.json shapes:
   {"type": "db",   "sql": "select ...", "max_rows": 200}
   {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
   {"type": "xos", "command": "control-tower"}           # canonical Experiment OS read CLI
+  {"type": "xos", "command": "monitor-snapshot"}        # WS-026 global monitor JSON
   {"type": "xos", "command": "issue-list"}              # open investigations
   {"type": "xos", "command": "issue-show", "args": ["XOS-000123"]}
   {"type": "xos", "command": "issue-candidates"}        # anomalies with no open issue
@@ -95,7 +96,7 @@ XOS_EXPERIMENT_COMMAND_READS: dict[str, list[str]] = {
 XOS_DIRECT_READS: frozenset[str] = frozenset({
     "control-tower", "list", "show", "transitions", "platform", "tag",
     "scoreboard", "enforcement", "readiness", "evaluate-gates", "metric",
-    "package-preflight",
+    "package-preflight", "monitor-snapshot",
 })
 
 

@@ -61,6 +61,13 @@ from .models import ExperimentGate, ExperimentVersion
 from .read import get_experiment, latest_version
 
 EXPERIMENT_KEY = "liquidity-incentive-mm"
+
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 72,
+                  "note": "three resting one-lot orders: a new placement only follows a fill, "
+                          "a cancel or a program change, so days without one are normal"}
 ARM_KEY = "limm1side"
 
 #: Tags are IMPORTED from the runtime module, never retyped. The runtime decides what it

@@ -45,6 +45,11 @@ from .read import get_experiment
 
 EXPERIMENT_KEY = "mmsell-temperature-season"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24}
+
 CELL_ARM = "temp_cell"
 
 #: Fresh tag. LIVE_STRATEGIES matches by PREFIX: no existing tag starts `Tempmmsell`, and

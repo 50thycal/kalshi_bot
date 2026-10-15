@@ -60,6 +60,11 @@ from .read import get_experiment
 
 EXPERIMENT_KEY = "mmsell-reviewed-universe"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24}
+
 CONTROL_ARM = "reviewed_uncapped"
 CAPPED_ARM = "reviewed_capped"
 

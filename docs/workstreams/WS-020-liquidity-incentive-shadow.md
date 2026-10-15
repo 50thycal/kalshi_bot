@@ -1,10 +1,13 @@
 # WS-020 — Liquidity-incentive shadow market maker (Phase 0: instrumentation only)
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Paused
 **Created:** 2026-09-16
-**Updated:** 2026-09-17
+**Updated:** 2026-10-15
 **Build OS:** v0.12
+
+> **Paused 2026-10-15 by the owner** to make room for WS-026 on the board. The shadow had already
+> stopped on 2026-10-07. The live limm-smoke experiment is unaffected and stays under Experiment OS.
 
 ## Goal
 

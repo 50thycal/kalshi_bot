@@ -59,6 +59,11 @@ from .read import get_experiment
 PREDECESSOR_KEY = "mmsell-price-ceiling"
 SUCCESSOR_KEY = "mmsell-price-ceiling-capacity"
 
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24}
+
 ARM_KEY = "mmsell10"
 #: The long-running paper control, handed over from the predecessor at the same
 #: instant its deployment ends. A paper tag with history is FINE here -- it is

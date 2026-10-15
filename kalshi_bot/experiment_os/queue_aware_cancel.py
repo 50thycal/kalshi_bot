@@ -79,6 +79,11 @@ from .models import ExperimentDeployment, ExperimentDeploymentArm
 from .read import get_experiment, latest_version, open_epoch_for
 
 EXPERIMENT_KEY = "mmsell10-queue-aware-cancel"
+
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24, "note": "retired shadow instrument"}
 THESIS_DOC = "docs/MMSELL_QUEUE_AWARE_CANCEL.md"
 WORKSTREAM_DOC = "docs/workstreams/WS-015-mmsell10-queue-aware-cancel.md"
 

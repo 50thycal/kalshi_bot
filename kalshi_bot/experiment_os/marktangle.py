@@ -83,6 +83,11 @@ from .lifecycle import ArmRole, DeploymentKind, LifecycleState
 from .read import get_experiment
 
 EXPERIMENT_KEY = "marktangle-conditional-reversion"
+
+#: How quiet an armed arm may go before the global monitor (WS-026) reads it
+#: STALE. Monitoring configuration only — never a gate, authorizes nothing.
+#: See kalshi_bot/monitor/expectations.py.
+MONITOR_EXPECT = {"max_silence_hours": 24, "note": "retired probe; no evidence expected"}
 PROBE_DEPLOYMENT_KEY = "marktangle-probe-1"
 
 TREATMENT_ARM = "mktrev3"
