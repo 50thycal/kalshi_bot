@@ -3,7 +3,7 @@
 Research Lab, 2026-10-15. Paper and read-only. **This document authorizes nothing.** Experiment
 OS is canonical for experiment state. Any live consequence is a Live Ops hard stop.
 
-Sections 1–5 are the **pre-registration**. They were committed before any P&L was read by entry
+Sections 1–5 are the **pre-registration**, with Amendment A (§2A). All of it was committed before any P&L was read by entry
 time relative to the event. The live P&L by hours before **close** was already known
 (docs/MMSELL_LIVE_CANARY_PATTERNS.md §1); that is the hypothesis source, not evidence for it.
 
@@ -49,6 +49,57 @@ Checked cheapest first. The field inventory was read from the live API through t
    measurement.
 
 Reference APIs only validate a source. No P&L row takes its start from them.
+
+### 2A. Amendment A (2026-10-15, before any P&L was read by entry time)
+
+**Why it was amended.** The `--fields` run (ops `evtime-fields-20261015a`, 10 markets across
+eight sport families) showed the rule above rested on a wrong premise.
+
+**What `occurrence_datetime` actually is:**
+- It equals `expected_expiration_time` on every sampled market.
+- It is the **expected end** of the game, not the start:
+
+| market | known start (UTC) | `occurrence_datetime` (UTC) | resolved (UTC) |
+|---|---|---|---|
+| MLB `KXMLBKS-26AUG081915CLECWS` | 23:15 (ticker 19:15 ET) | 02:15 (+3h) | 02:35 |
+| MLB `KXMLBHR-26JUL261920NYYPHI` | 23:20 (ticker) | 02:20 (+3h) | 02:30 |
+| NFL `KXNFLTOTAL-26AUG13INDNE` | 23:30 (expiration − 48h) | 02:30 (+3h) | 03:15 |
+| NCAAF `KXNCAAFTOTAL-26AUG29UNCTCU` | 16:00 (expiration − 48h) | 19:00 (+3h) | 19:50 |
+| tennis `KXATPCHALLENGERMATCH-26JUL13KENSHE` | — (date only) | 01:30 | **00:40, before it** |
+| KBO `KXKBOGAME-26AUG110600LGKIW` | 10:00 (ticker 06:00 ET) | 14:00 (+4h) | 13:19 |
+
+**Consequences:**
+- Rule 1 would correctly have rejected `occurrence_datetime` as a start.
+- Every date-only family (tennis, NFL, NCAAF, soccer) would then have been uncovered. Those
+  hold most of the live sports sample.
+- `expiration_time` also encodes the start, as start + a fallback. That fallback varies by
+  series (48h, 54h, 72h, 14 days), so it is not used.
+
+**Replacement rule.** Rules 1–4 above are superseded. Start precedence per market:
+
+1. **Ticker HHMM (ET)** when present. This is checked against MLB StatsAPI, and agreement
+   within 15 minutes is reported.
+2. **External schedule** start when the event matches one: MLB StatsAPI, or ESPN for NFL,
+   NCAAF FBS and MLS. Match by date plus both team codes. Doubleheaders resolve to the game
+   nearest the ticker time.
+3. **`occurrence_datetime − D`**, where D is the family's offset (occurrence minus known start)
+   calibrated on events that rules 1–2 cover:
+   - **Family D:** accepted with **≥ 20** such events and **≥ 80%** of offsets within
+     **30 minutes** of the median.
+   - **Pooled D:** a family without its own calibration borrows the D pooled across all
+     families, only if the derived start passes the internal test. Both must hold:
+     - ≥ 95% of its early-closed markets resolve after the derived start;
+     - the median resolution lands 0–6h after it.
+4. Otherwise the market is **uncovered**.
+
+**Unchanged:** the sample (§3), the windows and the bar (§4), and the consequence (§5). The
+reference APIs may now supply a start (rule 2), but they remain public and keyless.
+
+**Disclosed limits:**
+- Tennis will most likely rest on the pooled D. Tennis start times are themselves soft ("not
+  before", order of play), so its in-play boundary is the least precise.
+- The run reports how many live fills sit within ±30 minutes of the start. Those are the
+  fills a start error can move across the in-play boundary.
 
 ## 3. Sample (STEP 2)
 
