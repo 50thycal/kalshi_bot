@@ -1,46 +1,13 @@
 # ops request [READ]
-# type=script  id=fast-b-khigh-20261015a
-# code c276792977129df1c474eb0d0ba72ffeb592c34b · started 2026-10-15T03:55:27Z
-=== MMSELL look-alike probe — 8 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+# type=db  id=temp-early-20261015a
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T04:57:11Z
+created_at                        ev_optin  mk_optin  ev_seen  temp_trades  first_trade                       series                                                                                                                                                       
+--------------------------------  --------  --------  -------  -----------  --------------------------------  -------------------------------------------------------------------------------------------------------------------------------------------------------------
+2026-10-15 04:27:29.113090+00:00  78        468       150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
+2026-10-15 03:57:36.694565+00:00  96        576       150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
+2026-10-15 03:27:20.749006+00:00  96        576       150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
+2026-10-15 02:58:02.263156+00:00  96        576       150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
+2026-10-15 02:53:09.860895+00:00  0         0         150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
+2026-10-15 02:41:01.593058+00:00                      150      17           2026-10-15 02:57:52.331647+00:00  KXHIGHCHI,KXHIGHDEN,KXHIGHLAX,KXHIGHPHIL,KXHIGHTATL,KXHIGHTDC,KXHIGHTLV,KXHIGHTOKC,KXHIGHTPHX,KXHIGHTSATX,KXHIGHTSEA,KXLOWTEWR,KXLOWTMIN,KXLOWTNYC,KXLOWTPHIL
 
-  series                 listed settled              span priced   >=1h
-  KXHIGHAUS                4332    4320  2024-10..2026-10    600    97%
-  KXHIGHCHI                4332    4320  2024-10..2026-10    600    96%
-  KXHIGHDEN                4170    4158  2024-11..2026-10    600    99%
-  KXHIGHLAX                3894    3882  2025-01..2026-10    594    96%
-  KXHIGHMIA                4332    4318  2024-10..2026-10    600    89%
-  KXHIGHNY                 4332    4320  2024-10..2026-10    600    95%
-  KXHIGHPHIL               4170    4158  2024-11..2026-10    600    95%
-  KXHIGHHOU                 420     420  2024-11..2025-01    420    87%
-
-  A. PER SERIES (first in-cell entry)
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGHAUS                 82    62    6.48    4.88     4   +1.60    +2.11   0.70 0/0   HOLD
-  KXHIGHCHI                 76    50    6.54    2.63     2   +3.91    +5.94   2.22 0/0   HOLD
-  KXHIGHDEN                 75    58    6.56    5.33     4   +1.23    +1.59   0.48 0/0   HOLD
-  KXHIGHLAX                 91    65    6.44    4.40     4   +2.04    +2.86   1.00 1/1   HOLD
-  KXHIGHMIA                 71    55    6.51    1.41     1   +5.10    +6.58   3.61 0/0   HOLD
-  KXHIGHNY                  72    55    6.65    0.00     0   +6.65    +8.71  18.68 0/0   HOLD
-  KXHIGHPHIL                81    60    6.67    7.41     6   -0.74    -1.00  -0.25 0/0   HOLD
-  KXHIGHHOU                 16    16    6.50   12.50     2   -6.00    -6.00  -0.70 0/0   HOLD
-
-  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGH                   564   120    6.54    4.08    23   +2.47   +11.59   2.94 18/23  PROMOTE
-
-  C. PER FAMILY BY MONTH (n, c/ct)
-  KXHIGH                 2024-10: 1 @ +6.0, 2024-11: 21 @ +2.0, 2024-12: 18 @ -10.2, 2025-01: 25 @ -9.4, 2025-02: 9 @ +6.8, 2025-03: 15 @ -0.1, 2025-04: 19 @ +6.6, 2025-05: 14 @ +6.6, 2025-06: 12 @ +6.5, 2025-07: 11 @ +6.5, 2025-08: 18 @ +6.8, 2025-09: 19 @ +1.4, 2025-10: 15 @ +0.0, 2025-11: 17 @ +6.7, 2025-12: 29 @ +3.2, 2026-01: 43 @ +4.3, 2026-02: 28 @ +2.9, 2026-03: 35 @ +3.7, 2026-04: 32 @ +3.2, 2026-05: 26 @ +6.6, 2026-06: 36 @ +3.6, 2026-07: 37 @ +3.7, 2026-08: 29 @ +3.0, 2026-09: 30 @ -3.5, 2026-10: 25 @ +2.4
-
-  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXHIGH                  4357/4614     94% FEASIBLE
-
-  E. TIMING — entry window vs the first-entry rule, day-paired per family (BETTER/WORSE: |diff| >= 1c, |t| >= 2, >= 30 shared days)
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXHIGH first             564   120    6.54    4.08    23   +2.47   +11.59   2.94 18/23  PROMOTE
-  KXHIGH early             137    69    6.49    2.92     4   +3.57    +7.09   2.72 4/4   PROMOTE   vs first: +2.29c t 2.11 on 69 days -> BETTER
-  KXHIGH mid               431   112    6.55    4.41    19   +2.14    +8.24   2.10 16/21  HOLD   vs first: -0.99c t -1.65 on 112 days -> SAME
-  KXHIGH late               34    29    6.74    2.94     1   +3.79    +4.45   1.27 0/0   HOLD   vs first: +0.18c t 0.06 on 29 days -> THIN
-
-  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
-
-  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+(6 rows)
