@@ -356,3 +356,36 @@ mostly fills when it is about to lose.
   - The bot scans about every 30 minutes, so it would see each market at most once or twice in its
     life. A PROMOTE says the price is wrong, not that the bot can catch it often.
 - **HOLD or KILL:** recorded, and hourly temperature is closed.
+
+## 10. Results — C, other price bands (2026-10-15)
+
+Ops ids `c-<band>-<family>-20261015a`, same series and samples as §4 and §6. The KXRAIN rows are
+the rain family itself, not the control.
+
+| family | ultra (1–5 mid, YES ≤ 4) | upper (10–16 mid, YES ≤ 15) |
+|---|---|---|
+| KXRAIN | 1,070 entries, **+2.10¢**, t 7.81, 4/4 months → **PROMOTE** | 309, **+4.73¢**, t 2.91, 3/4 → **PROMOTE** (Oct −5.2¢) |
+| KXHIGH | 1,908, +1.77¢, t 6.21, 21/24 → HOLD (under +2¢) | 910, **+2.41¢**, t 2.72, 19/24 → **PROMOTE** |
+| KXHIGHT | 2,458, **+2.04¢**, t 7.66, 10/10 → **PROMOTE** | 896, **+3.60¢**, t 3.46, 10/10 → **PROMOTE** |
+| KXLOWT | 1,788, +1.84¢, t 5.29, 10/11 → HOLD (under +2¢) | 463, +2.36¢, t 1.89, 5/10 → HOLD |
+
+**Reading.**
+- **The overpricing covers the whole cheap tail, not just the shipped cell.** Realized YES runs about
+  a third to two-thirds below implied from 1¢ to 15¢.
+- **Ultra band:** the effect is the most certain anywhere (t 5–8), and the smallest in cents. It
+  sits right at the +2¢ fill-gap bar, so it is real but thin.
+- **Upper band:** the edge in cents is larger, and so is the noise.
+
+**Consequence**, per §7: each PROMOTE band becomes a paper arm on the families that PROMOTEd it.
+That is `mmsell-weather-bands` (`kalshi_bot/experiment_os/weather_bands.py`):
+
+| arm | tag | book |
+|---|---|---|
+| `temp_upper` | `Tempmmsell2` | `lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH` (KXHIGH and KXHIGHT) |
+| `hight_ultra` | `Tempmmsell3` | `lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT` |
+| `rain_ultra` | `Rainmmsell3` | `lo=1,hi=5,maxyes=4,onlyx=KXRAIN` |
+
+- **Gates:** each arm has its own gate, with the same floor, horizon and bars as the rain and
+  temperature contracts (120 settlement days, +2¢ pass, < +1¢ fail).
+- **Left out:** rain in the upper band, because `Rainmmsell2` (8–12¢) already tests it.
+- **Paper only.** None of these running books is edited.

@@ -271,6 +271,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         successor_mmsell10_contest_cap,
         successor_mmsell10_size_split,
         temperature_season,
+        weather_bands,
     )
 
     return {
@@ -360,6 +361,21 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=temperature_season.register,
             strategy_tags=(temperature_season.CELL_TAG,),
+        ),
+        "mmsell-weather-bands": ExperimentPackage(
+            name="mmsell-weather-bands",
+            experiment_key=weather_bands.EXPERIMENT_KEY,
+            description=(
+                "The contract for `Tempmmsell2`/`Tempmmsell3`/`Rainmmsell3`: three PAPER books "
+                "selling the cheap tail in the price bands either side of the shipped cell, "
+                "each on the families whose replay PROMOTEd it — upper (YES 10-15c) on KXHIGH*, "
+                "ultra (YES <=4c) on KXHIGHT and KXRAIN. One keep/kill gate per arm, floor in "
+                "settlement DAYS (not before mid-February). Arms nothing, trades nothing, no "
+                "real money: an operator-side env append to MMSELL_VARIANTS creates the books."
+            ),
+            register=weather_bands.register,
+            strategy_tags=(weather_bands.UPPER_TAG, weather_bands.HIGHT_ULTRA_TAG,
+                           weather_bands.RAIN_ULTRA_TAG),
         ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",
