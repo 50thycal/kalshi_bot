@@ -389,3 +389,62 @@ That is `mmsell-weather-bands` (`kalshi_bot/experiment_os/weather_bands.py`):
   temperature contracts (120 settlement days, +2¢ pass, < +1¢ fail).
 - **Left out:** rain in the upper band, because `Rainmmsell2` (8–12¢) already tests it.
 - **Paper only.** None of these running books is edited.
+
+## 11. Last-hour test — first run void for sampling; re-run by day
+
+`lasthour-temp-20261015a`, code `ef2dd22a`:
+- **Sample:** 3,414 markets priced; 58% were quoted at least 45 min before close.
+- **Entries:** only **53 first entries over 5 family-days**: −4.62¢, realized YES 11.3% against
+  6.7% implied, HOLD.
+- **Why the run is void:** the per-series sample was spread by **month**. An hourly series
+  settles more than 100 markets a day, so the newest few per month all fall on the last day or
+  two of each month. The run therefore saw about 5 bet-days, far below the §3 minimum of 30. It
+  is void as a test. It is recorded because its direction (the cheap tail settling YES *more*
+  often than implied) is the adverse selection §9 was written to catch.
+- **Fix:** `--stratify day`. Month mode is unchanged, so every earlier run reproduces.
+- **Re-run:** the same series, cell, offsets and +4¢ bar, stratified by day
+  (`lasthour-temp-20261015b`). The §9 gate and consequences are unchanged.
+
+## 12. Results — D, outside weather (2026-10-15)
+
+**Listing pass** (`d-list-1..11-20261015a`, `KX` only, a category discovery capped at 400 series):
+
+| category | what it holds |
+|---|---|
+| Economics | AAA gas (daily, weekly, monthly, by state), diesel |
+| Financials | Dow daily, FX (daily, hourly, 15-minute), Treasury rates (hourly) |
+| Crypto | 15-minute and daily coin ladders |
+| Entertainment | Billboard, streams, app ranks |
+| Mentions | broadcast "will X say Y" ladders |
+| Science and Technology | LLM and model rankings |
+| Politics, Elections, World | one-off events; no series with ≥ 800 settled markets |
+| Sports | already the bulk of MMSELL paper evidence, so not deep-run, per §7's ordering |
+
+- **Too late to trade:** hourly and 15-minute series list inside the 1h entry floor (as A found
+  for hourly temperature).
+- **Already traded by paper:** most liquid daily series (gas daily −2.4¢, Dow, crypto daily,
+  the gas weekly and monthly series). For those, §7 asks only for confirmation, and the existing
+  books already carry live paper evidence.
+
+**Deep runs** covered series with long histories that paper does not reach (fewer than 30
+settled trades), using the cell and the §3 gate, read per series:
+
+| run | series | first entries | reading |
+|---|---|---|---|
+| `d-deep-fin-20261015a` | KXEURUSD (622 priced) | 18 over 10 days, +1.22¢, t 0.2 | HOLD |
+| `d-deep-ent-20261015a` | Billboard ×4, app rank, artist streams | 0–9 each | HOLD / NO-DATA |
+| `d-deep-men-20261015a` | 12 mention series (about 230 priced each) | 1–20 each | HOLD |
+| `d-deep-sci-20261015a` | KXLLM1 | 4 | HOLD |
+
+**Verdict: no CANDIDATE.** These series rarely sit in the cell at the replay's hours (about 2–3%
+of priced markets enter, against about 12% for weather). Reaching 100 entries per series would
+need on the order of 3,000 priced markets each.
+
+**A lead, not a result.** Pooled across the 12 mention series, entries were 74, with 1 loss, at
++5.33¢/contract. The pooling was chosen after seeing the per-series rows, so it authorizes
+nothing. A confirmatory test would need its own pre-registration:
+- a pooled "mentions" family, day-stratified;
+- a large sample, on markets other than these;
+- the cell and the ultra band.
+
+It is put to the operator as a decision, not started.

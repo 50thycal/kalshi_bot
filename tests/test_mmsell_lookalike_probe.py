@@ -229,6 +229,23 @@ def test_minutes_mode_end_to_end(monkeypatch, capsys):
     assert " 1 " in fam and "+7.00" in fam
 
 
+def test_day_stratification_spreads_an_hourly_series_over_days():
+    """Monthly sampling of an hourly series takes everything from the newest day of each month;
+    daily sampling covers every day."""
+    mkts = [{"close_time": f"2026-08-{d:02d}T{h:02d}:00:00Z"} for d in range(1, 31) for h in range(24)]
+    by_month = lp.stratified_sample(mkts, 60, "month")
+    by_day = lp.stratified_sample(mkts, 60, "day")
+    assert len({m["close_time"][:10] for m in by_month}) <= 3
+    assert len({m["close_time"][:10] for m in by_day}) == 30 and len(by_day) == 60
+    # More days than the sample allows: still spread across the whole span, one per chosen day.
+    thin = lp.stratified_sample(mkts, 10, "day")
+    days = sorted({m["close_time"][:10] for m in thin})
+    assert len(thin) == 10 and len(days) == 10 and days[0] == "2026-08-01" and days[-1] >= "2026-08-28"
+    # Month mode is unchanged: one per month even when that exceeds a tiny per-series budget.
+    many = [{"close_time": f"2025-{mo:02d}-15T00:00:00Z"} for mo in range(1, 13)]
+    assert len(lp.stratified_sample(many, 1, "month")) == 12
+
+
 def test_probe_is_allowlisted_on_the_ops_channel():
     ops_runner = _load("ops_runner")
     assert "mmsell_lookalike_probe" in ops_runner.ALLOWED_SCRIPTS
