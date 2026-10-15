@@ -184,6 +184,30 @@ def first_entry(cs: list[dict], close: int, lo: float, hi: float, maxyes: float,
     return None
 
 
+def stratified_sample(settled: list[dict], per_series: int, unit: str = "month") -> list[dict]:
+    """Up to `per_series` settled markets, spread evenly over close-time strata, newest first
+    within each stratum. `month` is the original rule. `day` exists for series that settle many
+    times a day (hourly temperature): sampling a few markets per MONTH there takes them all from
+    the newest day or two of each month, so a run of thousands of markets covers ~5 bet-days
+    (`lasthour-temp-20261015a`, docs §11)."""
+    fmt = "%Y-%m-%d" if unit == "day" else "%Y-%m"
+    strata: dict[str, list] = defaultdict(list)
+    for m in sorted(settled, key=lambda x: x.get("close_time") or "", reverse=True):
+        strata[time.strftime(fmt, time.gmtime(_ts(m.get("close_time"))))].append(m)
+    if not strata:
+        return []
+    cap = max(1, per_series // len(strata))
+    picked = [m for k in sorted(strata) for m in strata[k][:cap]]
+    if unit == "day" and len(picked) > per_series:
+        # More days than markets allowed: take every k-th day so the sample still spans the
+        # whole history rather than its oldest stretch. Month mode is left exactly as it was,
+        # so every earlier run reproduces.
+        keys = sorted(strata)
+        step = len(keys) / per_series
+        picked = [strata[keys[int(i * step)]][0] for i in range(per_series)]
+    return picked
+
+
 def _row(yes_ask: float, yes: bool, day: str) -> tuple:
     """(yes_ask, settled_yes, pnl_c, day, month) for a maker NO bought at 100 - yes_ask."""
     return (yes_ask, yes, -(100.0 - yes_ask) if yes else yes_ask, day, day[:7])
@@ -296,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--minutes", default="",
                     help="comma list of MINUTES before close: replay the final hour on 1-minute "
                          "candles instead of the hourly offsets (docs §9)")
+    ap.add_argument("--stratify", choices=("month", "day"), default="month",
+                    help="spread the per-series sample over months (default) or days")
     ap.add_argument("--min-cents", type=float, default=None,
                     help="stricter per-contract PROMOTE bar for this run (pre-registered)")
     ap.add_argument("--timing", action="store_true",
@@ -331,8 +357,7 @@ def main(argv: list[str] | None = None) -> int:
         by_mon = defaultdict(list)
         for m in sorted(settled, key=lambda x: x.get("close_time") or "", reverse=True):
             by_mon[time.strftime("%Y-%m", time.gmtime(_ts(m.get("close_time"))))].append(m)
-        cap = max(1, args.per_series // max(1, len(by_mon)))
-        sample = [m for mon in sorted(by_mon) for m in by_mon[mon][:cap]]
+        sample = stratified_sample(settled, args.per_series, args.stratify)
         rows, priced, early_enough = [], 0, 0
         wrows: dict[str, list] = {w[0]: [] for w in WINDOWS}
         for m in sample:

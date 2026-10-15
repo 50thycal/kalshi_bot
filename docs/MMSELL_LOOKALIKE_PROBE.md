@@ -389,3 +389,18 @@ That is `mmsell-weather-bands` (`kalshi_bot/experiment_os/weather_bands.py`):
   temperature contracts (120 settlement days, +2¢ pass, < +1¢ fail).
 - **Left out:** rain in the upper band, because `Rainmmsell2` (8–12¢) already tests it.
 - **Paper only.** None of these running books is edited.
+
+## 11. Last-hour test — first run void for sampling; re-run by day
+
+`lasthour-temp-20261015a`, code `ef2dd22a`:
+- **Sample:** 3,414 markets priced; 58% were quoted at least 45 min before close.
+- **Entries:** only **53 first entries over 5 family-days**: −4.62¢, realized YES 11.3% against
+  6.7% implied, HOLD.
+- **Why the run is void:** the per-series sample was spread by **month**. An hourly series
+  settles more than 100 markets a day, so the newest few per month all fall on the last day or
+  two of each month. The run therefore saw about 5 bet-days, far below the §3 minimum of 30. It
+  is void as a test. It is recorded because its direction (the cheap tail settling YES *more*
+  often than implied) is the adverse selection §9 was written to catch.
+- **Fix:** `--stratify day`. Month mode is unchanged, so every earlier run reproduces.
+- **Re-run:** the same series, cell, offsets and +4¢ bar, stratified by day
+  (`lasthour-temp-20261015b`). The §9 gate and consequences are unchanged.
