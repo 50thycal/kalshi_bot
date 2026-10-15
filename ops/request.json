@@ -1,1 +1,1 @@
-{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Economics", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-1-20261015a"}
+{"type": "script", "name": "mmsell_lookalike_probe", "args": ["--category", "Financials", "--prefixes", "KX", "--max-series", "400", "--per-series", "1", "--no-control", "--max-pages", "3"], "id": "d-list-2-20261015a"}
