@@ -1,17 +1,1068 @@
 # ops request [READ]
-# type=db  id=limm-db-1015k
-# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T09:24:04Z
-series_ticker       event_ticker                mkts  pool_usd  closes                  prog_end                       title                                                                 
-------------------  --------------------------  ----  --------  ----------------------  -----------------------------  ----------------------------------------------------------------------
-KXACTBLUETOP        KXACTBLUETOP-26OCT16        1     100       2026-10-16 13:59:00+00  2026-10-15 17:31:31.148035+00  Will Abdul El-Sayed be the top ActBlue fundraiser on Oct 16 at 10:00 A
-KXTRUMPSAY          KXTRUMPSAY-26OCT19          41    4100      2026-10-19 14:00:00+00  2026-10-19 14:00:00+00         Will Trump say "Zohran / Mamdani" before Oct 19, 2026?                
-KXTRUMPMENTION      KXTRUMPMENTION-26OCT13      37    3700      2026-10-27 14:00:00+00  2026-10-27 14:00:00+00         What will Donald Trump say during Midterm Rally in Wasilla, Alaska ori
-KXWORLDNEWSMENTION  KXWORLDNEWSMENTION-26OCT14  16    1600      2026-10-28 14:00:00+00  2026-10-28 14:00:00+00         What will any host or reporter say during ABC World News Tonight origi
-KXTRUMPMENTION      KXTRUMPMENTION-26OCT14      39    3900      2026-10-28 14:00:00+00  2026-10-28 14:00:00+00         What will Donald Trump say during Midterm Rally in Bullhead City, Ariz
-KXTRUMPMENTION      KXTRUMPMENTION-26OCT16      36    3600      2026-10-30 14:00:00+00  2026-10-16 22:00:00+00         What will Donald Trump say during Midterm Rally at Dalton, Georgia ori
-KXTRUMPMENTION      KXTRUMPMENTION-26OCT17      38    3800      2026-10-31 14:00:00+00  2026-10-17 21:00:00+00         What will Donald Trump say during Midterm Rally in Highland Heights, K
-KXTRUMPSAYCOMPANY   KXTRUMPSAYCOMPANY-26NOV01   41    4100      2026-11-01 15:00:00+00  2026-10-15 14:02:11.551952+00  Will Trump say "X / Twitter" before Nov 1, 2026?                      
-KXTRUMPSAYMONTH     KXTRUMPSAYMONTH-26NOV01     15    1500      2026-11-01 15:00:00+00  2026-10-15 14:02:11.551952+00  Will Trump say "UFO / UAP" before Nov 1, 2026?                        
-KXMIBENSONELSAYED   KXMIBENSONELSAYED-26DEC01   8     600       2026-12-01 14:59:00+00  2026-10-18 03:59:59.999999+00  Will the difference between Jocelyn Benson's governor margin and Abdul
+# type=script  id=d-list-3-20261015a
+# code 66889d0d466cad489fdb1f056fc23774ff1903c0 · started 2026-10-15T09:24:19Z
+=== MMSELL look-alike probe — 261 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
-(10 rows)
+  series                 listed settled              span priced   >=1h
+  KXADA15M                    0       0                 -      0      -
+  KXAIRDROPHYPE               2       2  2025-10..2026-01      2    50%
+  KXAIRDROPMEGA               5       5  2025-10..2026-02      5    20%
+  KXAIRDROPMONAD              5       5  2025-10..2026-01      4    25%
+  KXAIRDROPPUMPFUN            5       5  2025-09..2026-01      5    40%
+  KXAIRDROPQ                  0       0                 -      0      -
+  KXARBITRUMTVL               0       0                 -      0      -
+  KXAVAX                      0       0                 -      0      -
+  KXAVAXD                     0       0                 -      0      -
+  KXAVAXMAXY                  3       3  2026-01..2026-01      1     0%
+  KXAVAXMINY                  3       3  2025-04..2026-01      1   100%
+  KXBCH                       0       0                 -      0      -
+  KXBCH15M                    0       0                 -      0      -
+  KXBCHD                      0       0                 -      0      -
+  KXBCHMAXY                   7       7  2025-06..2026-01      3    67%
+  KXBCHMINY                   5       5  2025-04..2026-01      2    50%
+  KXBITCOIN25                 1       1  2025-05..2025-05      1   100%
+  KXBITCOINMAXY               0       0                 -      0      -
+  KXBNB                    6000    3000  2026-08..2026-08      1     0%
+  KXBNB15M                 6000    5925  2026-07..2026-10      0      -
+  KXBNBD                   6000    3000  2026-08..2026-08      1     0%
+  KXBNBMAXMON                86      69  2026-04..2026-10      6    83%
+  KXBNBMAXY                   8       8  2026-08..2026-08      1   100%
+  KXBNBMINMON                76      72  2026-04..2026-10      7   100%
+  KXBNBMINY                   8       0                 -      0      -
+  KXBNBY                     18       0                 -      0      -
+  KXBOASTABLE                 1       1  2025-12..2025-12      1     0%
+  KXBTC                    6000    3000  2026-08..2026-08      1     0%
+  KXBTC100                    0       0                 -      0      -
+  KXBTC15M                 6000    5925  2026-07..2026-10      0      -
+  KXBTC2025100                1       1  2026-01..2026-01      1   100%
+  KXBTC2026200                1       0                 -      0      -
+  KXBTC2026250                1       0                 -      0      -
+  KXBTC25ATTEND               3       3  2025-05..2025-05      1   100%
+  KXBTC50VS100                1       0                 -      0      -
+  KXBTC60VS100                1       1  2026-06..2026-06      1   100%
+  KXBTC70VS100                1       0                 -      0      -
+  KXBTC75VS100                1       1  2026-05..2026-05      1   100%
+  KXBTCATH                    2       2  2025-10..2025-11      2   100%
+  KXBTCD                   6000    3000  2026-08..2026-08      1     0%
+  KXBTCD-B                    0       0                 -      0      -
+  KXBTCDOM                    0       0                 -      0      -
+  KXBTCE                     14      14  2024-11..2024-11      1   100%
+  KXBTCETHATH                 0       0                 -      0      -
+  KXBTCETHRETURN              0       0                 -      0      -
+  KXBTCEU                     1       1  2024-11..2024-11      1   100%
+  KXBTCHALF                   4       0                 -      0      -
+  KXBTCMAX100                12       9  2024-12..2026-10      9     0%
+  KXBTCMAX100INAUG            1       1  2025-01..2025-01      1   100%
+  KXBTCMAX125                17      17  2025-09..2025-10      2   100%
+  KXBTCMAX130                 0       0                 -      0      -
+  KXBTCMAX150                18      17  2025-02..2026-09     14     7%
+  KXBTCMAX90                  0       0                 -      0      -
+  KXBTCMAXD                   0       0                 -      0      -
+  KXBTCMAXM                  30      30  2024-12..2025-12      8    38%
+  KXBTCMAXMON               100      93  2026-01..2026-10     10    80%
+  KXBTCMAXQ                   8       8  2026-05..2026-05      1     0%
+  KXBTCMAXW                  22      22  2024-11..2024-11      1   100%
+  KXBTCMAXY                  24      17  2024-11..2026-01      5    60%
+  KXBTCMINMAXY                0       0                 -      0      -
+  KXBTCMINMON                93      85  2026-01..2026-10      9    67%
+  KXBTCMINY                  24      20  2025-02..2026-06      6   100%
+  KXBTCPRICE                 29      18  2026-08..2026-09      2   100%
+  KXBTCQ                      0       0                 -      0      -
+  KXBTCRESERVECOUNTRY         7       7  2026-01..2026-01      1   100%
+  KXBTCVSETH                  2       2  2026-05..2026-05      1   100%
+  KXBTCVSHYPE                 2       2  2026-05..2026-05      1   100%
+  KXBTCVSSOL                  2       2  2026-05..2026-05      1   100%
+  KXBTCY                     28       0                 -      0      -
+  KXBTCYEAR                   0       0                 -      0      -
+  KXCOUNTRYBTC                1       1  2025-11..2025-11      1   100%
+  KXCRYPTOCOMP15M             0       0                 -      0      -
+  KXCRYPTOLEAD15M          3000    2621  2026-10..2026-10      0      -
+  KXCRYPTOPERFORMY            9       9  2026-01..2026-01      1   100%
+  KXCRYPTORETURNY            20      10  2025-12..2026-01      1   100%
+  KXDJBTC                     0       0                 -      0      -
+  KXDJTBTC                    5       5  2025-05..2026-01      3   100%
+  KXDJTCHAIN                  1       1  2025-12..2025-12      1   100%
+  KXDJTNFT                    1       1  2025-12..2025-12      1     0%
+  KXDOGE                   6000    3792  2026-08..2026-10      2     0%
+  KXDOGE15M                6000    5925  2026-07..2026-10      0      -
+  KXDOGED                  6000    3792  2026-08..2026-10      2     0%
+  KXDOGEMAX1                  8       6  2025-01..2026-06      5     0%
+  KXDOGEMAX69                 1       1  2025-01..2025-01      1   100%
+  KXDOGEMAXM                  5       5  2025-10..2025-10      1   100%
+  KXDOGEMAXMON               80      71  2026-02..2026-10      9    67%
+  KXDOGEMAXW                  7       7  2024-11..2024-11      1     0%
+  KXDOGEMAXY                 15      10  2024-11..2026-09      3    67%
+  KXDOGEMINMON               62      56  2026-04..2026-10      7    86%
+  KXDOGEMINY                  7       1  2026-07..2026-07      1   100%
+  KXDOGEY                    21       0                 -      0      -
+  KXDOT                       0       0                 -      0      -
+  KXDOTD                      0       0                 -      0      -
+  KXDOTMAXY                   6       6  2026-01..2026-01      1     0%
+  KXDOTMINY                   5       5  2025-04..2026-01      3    33%
+  KXEIP3074                   1       1  2026-01..2026-01      1     0%
+  KXEIP3540                   1       1  2026-01..2026-01      1   100%
+  KXEIP4444                   1       1  2026-01..2026-01      1     0%
+  KXEIP7503                   1       1  2026-01..2026-01      1     0%
+  KXELSALVADORBTC             3       3  2025-10..2025-12      3    33%
+  KXETH                    6000    3000  2026-08..2026-08      1     0%
+  KXETH15M                 6000    5925  2026-07..2026-10      0      -
+  KXETHATH                    2       2  2025-08..2026-01      2    50%
+  KXETHD                   6000    3000  2026-08..2026-08      1     0%
+  KXETHE                     11      11  2024-11..2024-11      1     0%
+  KXETHEU                     1       1  2024-11..2024-11      1   100%
+  KXETHFLIP                   1       1  2025-12..2025-12      1     0%
+  KXETHFORK                   1       1  2025-05..2025-05      1   100%
+  KXETHMAXM                   7       7  2025-12..2025-12      1     0%
+  KXETHMAXMON                80      72  2026-02..2026-10      9    44%
+  KXETHMAXY                  21      13  2025-08..2025-12      2    50%
+  KXETHMINMON                66      59  2026-01..2026-10      9    44%
+  KXETHMINY                  19      15  2025-08..2026-06      6    83%
+  KXETHY                     18       0                 -      0      -
+  KXFDVAVAXSOL                3       3  2026-01..2026-01      1     0%
+  KXFDVBIRB                   7       7  2026-01..2026-01      1   100%
+  KXFDVESPRESSO               6       6  2026-02..2026-02      1   100%
+  KXFDVFOGO                   8       8  2026-01..2026-01      1     0%
+  KXFDVFOOTBALLFUN           13      13  2026-01..2026-01      1   100%
+  KXFDVGENSYN                 0       0                 -      0      -
+  KXFDVHYPERSWAP              6       6  2026-01..2026-01      1     0%
+  KXFDVINFINEX                7       7  2026-02..2026-02      1     0%
+  KXFDVKINETIQ                6       6  2025-12..2025-12      0      -
+  KXFDVLIGHTER                6       6  2026-01..2026-01      1   100%
+  KXFDVLINEA                  0       0                 -      0      -
+  KXFDVMEGAETH                4       4  2026-05..2026-05      1     0%
+  KXFDVMET                   11      11  2025-10..2025-10      1     0%
+  KXFDVMONAD                  4       4  2025-11..2025-11      1     0%
+  KXFDVOPENSEA                6       0                 -      0      -
+  KXFDVPLASMA                 4       4  2025-09..2025-09      1   100%
+  KXFDVRAINBOW                6       6  2026-02..2026-02      1     0%
+  KXFDVRANGER                 6       6  2026-01..2026-01      1   100%
+  KXFDVSTABLE                 6       6  2025-12..2025-12      1     0%
+  KXFDVWET                    8       8  2025-12..2025-12      1   100%
+  KXFDVWLFI                   1       1  2025-09..2025-09      1     0%
+  KXFDVZAMA                   7       7  2026-02..2026-02      1     0%
+  KXFDVZECZMR                 0       0                 -      0      -
+  KXGTEDEPLOYMEGAETHDAY1      1       1  2026-05..2026-05      1   100%
+  KXHARDFORKBTC               1       1  2026-01..2026-01      1     0%
+  KXHYPE                   6000    3000  2026-08..2026-08      1     0%
+  KXHYPE15M                6000    5925  2026-07..2026-10      0      -
+  KXHYPED                  6000    3000  2026-08..2026-08      1     0%
+  KXHYPEMAXMON               76      71  2026-04..2026-10      7   100%
+  KXHYPEMAXY                  0       0                 -      0      -
+  KXHYPEMINMON               66      51  2026-04..2026-10      7    71%
+  KXHYPEMINY                  0       0                 -      0      -
+  KXHYPEY                    20       0                 -      0      -
+  KXLINK                      0       0                 -      0      -
+  KXLINKD                     0       0                 -      0      -
+  KXLINKMAXY                  4       4  2025-09..2026-01      2     0%
+  KXLINKMINY                  4       4  2025-04..2026-01      2     0%
+  KXLTC                       0       0                 -      0      -
+  KXLTCD                      0       0                 -      0      -
+  KXLTCMAXY                   4       4  2025-12..2025-12      1     0%
+  KXLTCMINY                   5       5  2025-04..2026-01      2    50%
+  KXMAG7BTC                   1       1  2026-01..2026-01      1     0%
+  KXMAINNETFIRSTMONADMEGAETH      1       1  2025-12..2025-12      1   100%
+  KXMAXTPSAVAX                3       3  2026-01..2026-01      1   100%
+  KXNEAR                      0       0                 -      0      -
+  KXNEAR15M                6000    5925  2026-07..2026-10      0      -
+  KXNEARD                     0       0                 -      0      -
+  KXNEARH                     0       0                 -      0      -
+  KXNEARMAXMON                0       0                 -      0      -
+  KXNEARMAXY                  8       8  2026-08..2026-09      2   100%
+  KXNEARMINMON                0       0                 -      0      -
+  KXNEARMINY                  3       0                 -      0      -
+  KXNEARW                     0       0                 -      0      -
+  KXNEARY                    21       0                 -      0      -
+  KXNEWCOINCHAIN              6       6  2025-09..2025-12      3     0%
+  KXNEWCOINLAUNCH            13      12  2025-02..2026-01      3    67%
+  KXNEWKANYETICKER            0       0                 -      0      -
+  KXNEXTCOINBI                8       8  2025-01..2025-01      0      -
+  KXNEXTCOINCB                0       0                 -      0      -
+  KXNEXTCOINRH               22      22  2024-12..2025-05      2   100%
+  KXNOMINEECONF               0       0                 -      0      -
+  KXPHXVSHYP                  0       0                 -      0      -
+  KXPRCBTC                    1       1  2026-01..2026-01      1     0%
+  KXPVPTRADE                  6       6  2025-12..2025-12      0      -
+  KXRANKLISTASTER20           1       1  2026-01..2026-01      1   100%
+  KXRANKLISTBONK50            1       1  2026-01..2026-01      0      -
+  KXRIPPLE                    0       0                 -      0      -
+  KXRIPPLED                   0       0                 -      0      -
+  KXRIPPLEMAXY                0       0                 -      0      -
+  KXRIPPLEMINY                0       0                 -      0      -
+  KXRWAMCAPAVAX              10      10  2025-10..2026-01      2    50%
+  KXSATOSHIBTCYEAR            1       0                 -      0      -
+  KXSHIBA                  4792    4736  2026-05..2026-10      6     0%
+  KXSHIBAD                 4792    4736  2026-05..2026-10      6     0%
+  KXSHIBAMAXY                 2       2  2026-01..2026-01      1     0%
+  KXSHIBAMINY                 2       2  2025-12..2026-01      2     0%
+  KXSNSBTC                    1       1  2025-05..2025-05      1   100%
+  KXSOL                       0       0                 -      0      -
+  KXSOL150                    1       1  2026-01..2026-01      1   100%
+  KXSOL15M                 6000    5925  2026-07..2026-10      0      -
+  KXSOL26500                  1       0                 -      0      -
+  KXSOLANAATH                 1       1  2026-01..2026-01      1     0%
+  KXSOLD                   6000    3000  2026-08..2026-08      1     0%
+  KXSOLD26                    9       0                 -      0      -
+  KXSOLDATHOLDINGS            4       4  2025-09..2025-10      2   100%
+  KXSOLE                   6000    3000  2026-08..2026-08      1     0%
+  KXSOLETHRATIO               5       5  2025-09..2026-01      2    50%
+  KXSOLFLIPETH                1       1  2026-01..2026-01      1     0%
+  KXSOLMAXM                   5       5  2025-09..2025-09      0      -
+  KXSOLMAXMON                90      83  2026-01..2026-10     10    90%
+  KXSOLMAXY                   8       0                 -      0      -
+  KXSOLMINMON                64      58  2026-04..2026-10      7   100%
+  KXSOLMINY                   8       0                 -      0      -
+  KXSOLNASDAQ                 1       1  2026-01..2026-01      1   100%
+  KXSOLSTABLESUPP             5       5  2025-12..2025-12      1   100%
+  KXSOLTPS                    5       5  2026-01..2026-01      1     0%
+  KXSOLTXCOUNT                4       4  2025-12..2025-12      1   100%
+  KXSTABLEYIELDNOTION         1       1  2026-01..2026-01      1   100%
+  KXSTRKMAXY                  7       0                 -      0      -
+  KXSTRKMINY                  7       0                 -      0      -
+  KXSUI                       0       0                 -      0      -
+  KXSUIATH                    0       0                 -      0      -
+  KXSUIATH26                  0       0                 -      0      -
+  KXTESTCRYPTO                0       0                 -      0      -
+  KXTOKENLAUNCH              39      25  2025-12..2026-03      3    67%
+  KXTOKENLAUNCHABSTRACT       1       1  2026-01..2026-01      1     0%
+  KXTOKENLAUNCHAXIOM          1       1  2026-01..2026-01      1     0%
+  KXTOKENLAUNCHINFINEX        1       1  2026-01..2026-01      1     0%
+  KXTOKENLAUNCHOPENSEA        5       5  2025-10..2026-02      5    40%
+  KXTOKENLAUNCHUNIT           1       0                 -      0      -
+  KXTOKENLAUNCHVENTUALS       1       1  2026-01..2026-01      1     0%
+  KXTON                       0       0                 -      0      -
+  KXTON15M                    0       0                 -      0      -
+  KXTOND                      0       0                 -      0      -
+  KXTONH                      0       0                 -      0      -
+  KXTONMAXMON                 0       0                 -      0      -
+  KXTONMINMON                 0       0                 -      0      -
+  KXTONW                      0       0                 -      0      -
+  KXUSDCMIN                   1       1  2026-01..2026-01      1     0%
+  KXUSDHVOTE                  9       9  2025-09..2025-09      1     0%
+  KXUSDTMIN                   1       1  2025-12..2025-12      1     0%
+  KXWAL25                     0       0                 -      0      -
+  KXXLM                       0       0                 -      0      -
+  KXXLMD                      0       0                 -      0      -
+  KXXLMMAXY                   4       4  2025-07..2026-01      2    50%
+  KXXLMMINY                   4       4  2026-01..2026-01      1     0%
+  KXXRP                    6000    3000  2026-08..2026-08      1     0%
+  KXXRP15M                 6000    5925  2026-07..2026-10      0      -
+  KXXRPATH                    0       0                 -      0      -
+  KXXRPD                   6000    3000  2026-08..2026-08      1     0%
+  KXXRPMAXATH                 1       1  2026-01..2026-01      1   100%
+  KXXRPMAXM                   9       9  2025-08..2025-10      1     0%
+  KXXRPMAXMON                90      82  2026-02..2026-10      9    67%
+  KXXRPMAXY                  17       6  2025-07..2026-08      3    67%
+  KXXRPMINMON                64      58  2026-04..2026-10      7   100%
+  KXXRPMINY                   9       6  2025-04..2026-08      3    67%
+  KXXRPY                     24       0                 -      0      -
+  KXZEC                       0       0                 -      0      -
+  KXZEC15M                 6000    5925  2026-07..2026-10      0      -
+  KXZECD                      0       0                 -      0      -
+  KXZECH                      0       0                 -      0      -
+  KXZECHW                     0       0                 -      0      -
+  KXZECMAXMON               150     113  2026-01..2026-10      9    78%
+  KXZECMAXY                   8       8  2026-08..2026-08      1   100%
+  KXZECMINMON               134     119  2026-03..2026-10      8   100%
+  KXZECMINY                   8       6  2026-07..2026-07      1   100%
+  KXZECY                     16       0                 -      0      -
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXADA15M                   0
+  KXAIRDROPHYPE              0
+  KXAIRDROPMEGA              0
+  KXAIRDROPMONAD             0
+  KXAIRDROPPUMPFUN           0
+  KXAIRDROPQ                 0
+  KXARBITRUMTVL              0
+  KXAVAX                     0
+  KXAVAXD                    0
+  KXAVAXMAXY                 0
+  KXAVAXMINY                 0
+  KXBCH                      0
+  KXBCH15M                   0
+  KXBCHD                     0
+  KXBCHMAXY                  0
+  KXBCHMINY                  0
+  KXBITCOIN25                0
+  KXBITCOINMAXY              0
+  KXBNB                      0
+  KXBNB15M                   0
+  KXBNBD                     0
+  KXBNBMAXMON                0
+  KXBNBMAXY                  0
+  KXBNBMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXBNBMINY                  0
+  KXBNBY                     0
+  KXBOASTABLE                0
+  KXBTC                      0
+  KXBTC100                   0
+  KXBTC15M                   0
+  KXBTC2025100               0
+  KXBTC2026200               0
+  KXBTC2026250               0
+  KXBTC25ATTEND              0
+  KXBTC50VS100               0
+  KXBTC60VS100               0
+  KXBTC70VS100               0
+  KXBTC75VS100               0
+  KXBTCATH                   0
+  KXBTCD                     0
+  KXBTCD-B                   0
+  KXBTCDOM                   0
+  KXBTCE                     0
+  KXBTCETHATH                0
+  KXBTCETHRETURN             0
+  KXBTCEU                    0
+  KXBTCHALF                  0
+  KXBTCMAX100                0
+  KXBTCMAX100INAUG           0
+  KXBTCMAX125                0
+  KXBTCMAX130                0
+  KXBTCMAX150                0
+  KXBTCMAX90                 0
+  KXBTCMAXD                  0
+  KXBTCMAXM                  0
+  KXBTCMAXMON                0
+  KXBTCMAXQ                  0
+  KXBTCMAXW                  0
+  KXBTCMAXY                  0
+  KXBTCMINMAXY               0
+  KXBTCMINMON                0
+  KXBTCMINY                  0
+  KXBTCPRICE                 0
+  KXBTCQ                     0
+  KXBTCRESERVECOUNTRY        0
+  KXBTCVSETH                 0
+  KXBTCVSHYPE                0
+  KXBTCVSSOL                 0
+  KXBTCY                     0
+  KXBTCYEAR                  0
+  KXCOUNTRYBTC               0
+  KXCRYPTOCOMP15M            0
+  KXCRYPTOLEAD15M            0
+  KXCRYPTOPERFORMY           0
+  KXCRYPTORETURNY            0
+  KXDJBTC                    0
+  KXDJTBTC                   0
+  KXDJTCHAIN                 0
+  KXDJTNFT                   0
+  KXDOGE                     0
+  KXDOGE15M                  0
+  KXDOGED                    0
+  KXDOGEMAX1                 0
+  KXDOGEMAX69                0
+  KXDOGEMAXM                 0
+  KXDOGEMAXMON               0
+  KXDOGEMAXW                 0
+  KXDOGEMAXY                 0
+  KXDOGEMINMON               0
+  KXDOGEMINY                 0
+  KXDOGEY                    0
+  KXDOT                      0
+  KXDOTD                     0
+  KXDOTMAXY                  0
+  KXDOTMINY                  0
+  KXEIP3074                  0
+  KXEIP3540                  0
+  KXEIP4444                  0
+  KXEIP7503                  0
+  KXELSALVADORBTC            0
+  KXETH                      0
+  KXETH15M                   0
+  KXETHATH                   0
+  KXETHD                     0
+  KXETHE                     0
+  KXETHEU                    0
+  KXETHFLIP                  0
+  KXETHFORK                  0
+  KXETHMAXM                  0
+  KXETHMAXMON                0
+  KXETHMAXY                  0
+  KXETHMINMON                0
+  KXETHMINY                  0
+  KXETHY                     0
+  KXFDVAVAXSOL               0
+  KXFDVBIRB                  0
+  KXFDVESPRESSO              0
+  KXFDVFOGO                  0
+  KXFDVFOOTBALLFUN           0
+  KXFDVGENSYN                0
+  KXFDVHYPERSWAP             0
+  KXFDVINFINEX               0
+  KXFDVKINETIQ               0
+  KXFDVLIGHTER               0
+  KXFDVLINEA                 0
+  KXFDVMEGAETH               0
+  KXFDVMET                   0
+  KXFDVMONAD                 0
+  KXFDVOPENSEA               0
+  KXFDVPLASMA                0
+  KXFDVRAINBOW               0
+  KXFDVRANGER                0
+  KXFDVSTABLE                0
+  KXFDVWET                   0
+  KXFDVWLFI                  0
+  KXFDVZAMA                  0
+  KXFDVZECZMR                0
+  KXGTEDEPLOYMEGAETHDAY1     0
+  KXHARDFORKBTC              0
+  KXHYPE                     0
+  KXHYPE15M                  0
+  KXHYPED                    0
+  KXHYPEMAXMON               0
+  KXHYPEMAXY                 0
+  KXHYPEMINMON               1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXHYPEMINY                 0
+  KXHYPEY                    0
+  KXLINK                     0
+  KXLINKD                    0
+  KXLINKMAXY                 0
+  KXLINKMINY                 0
+  KXLTC                      0
+  KXLTCD                     0
+  KXLTCMAXY                  0
+  KXLTCMINY                  0
+  KXMAG7BTC                  0
+  KXMAINNETFIRSTMONADMEGAETH     0
+  KXMAXTPSAVAX               0
+  KXNEAR                     0
+  KXNEAR15M                  0
+  KXNEARD                    0
+  KXNEARH                    0
+  KXNEARMAXMON               0
+  KXNEARMAXY                 0
+  KXNEARMINMON               0
+  KXNEARMINY                 0
+  KXNEARW                    0
+  KXNEARY                    0
+  KXNEWCOINCHAIN             0
+  KXNEWCOINLAUNCH            0
+  KXNEWKANYETICKER           0
+  KXNEXTCOINBI               0
+  KXNEXTCOINCB               0
+  KXNEXTCOINRH               0
+  KXNOMINEECONF              0
+  KXPHXVSHYP                 0
+  KXPRCBTC                   0
+  KXPVPTRADE                 0
+  KXRANKLISTASTER20          0
+  KXRANKLISTBONK50           0
+  KXRIPPLE                   0
+  KXRIPPLED                  0
+  KXRIPPLEMAXY               0
+  KXRIPPLEMINY               0
+  KXRWAMCAPAVAX              0
+  KXSATOSHIBTCYEAR           0
+  KXSHIBA                    0
+  KXSHIBAD                   0
+  KXSHIBAMAXY                0
+  KXSHIBAMINY                0
+  KXSNSBTC                   0
+  KXSOL                      0
+  KXSOL150                   0
+  KXSOL15M                   0
+  KXSOL26500                 0
+  KXSOLANAATH                0
+  KXSOLD                     0
+  KXSOLD26                   0
+  KXSOLDATHOLDINGS           0
+  KXSOLE                     0
+  KXSOLETHRATIO              0
+  KXSOLFLIPETH               0
+  KXSOLMAXM                  0
+  KXSOLMAXMON                0
+  KXSOLMAXY                  0
+  KXSOLMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXSOLMINY                  0
+  KXSOLNASDAQ                0
+  KXSOLSTABLESUPP            0
+  KXSOLTPS                   0
+  KXSOLTXCOUNT               0
+  KXSTABLEYIELDNOTION        0
+  KXSTRKMAXY                 0
+  KXSTRKMINY                 0
+  KXSUI                      0
+  KXSUIATH                   0
+  KXSUIATH26                 0
+  KXTESTCRYPTO               0
+  KXTOKENLAUNCH              0
+  KXTOKENLAUNCHABSTRACT      0
+  KXTOKENLAUNCHAXIOM         0
+  KXTOKENLAUNCHINFINEX       0
+  KXTOKENLAUNCHOPENSEA       0
+  KXTOKENLAUNCHUNIT          0
+  KXTOKENLAUNCHVENTUALS      0
+  KXTON                      0
+  KXTON15M                   0
+  KXTOND                     0
+  KXTONH                     0
+  KXTONMAXMON                0
+  KXTONMINMON                0
+  KXTONW                     0
+  KXUSDCMIN                  0
+  KXUSDHVOTE                 0
+  KXUSDTMIN                  0
+  KXWAL25                    0
+  KXXLM                      0
+  KXXLMD                     0
+  KXXLMMAXY                  0
+  KXXLMMINY                  0
+  KXXRP                      0
+  KXXRP15M                   0
+  KXXRPATH                   0
+  KXXRPD                     0
+  KXXRPMAXATH                0
+  KXXRPMAXM                  0
+  KXXRPMAXMON                0
+  KXXRPMAXY                  0
+  KXXRPMINMON                0
+  KXXRPMINY                  0
+  KXXRPY                     0
+  KXZEC                      0
+  KXZEC15M                   0
+  KXZECD                     0
+  KXZECH                     0
+  KXZECHW                    0
+  KXZECMAXMON                0
+  KXZECMAXY                  0
+  KXZECMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXZECMINY                  0
+  KXZECY                     0
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXBNBMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXHYPEMINMON               1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXSOLMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXZECMINMON                1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXADA15M                   0
+  KXAIRDROPHYPE              0
+  KXAIRDROPMEGA              0
+  KXAIRDROPMONAD             0
+  KXAIRDROPPUMPFUN           0
+  KXAIRDROPQ                 0
+  KXARBITRUMTVL              0
+  KXAVAX                     0
+  KXAVAXD                    0
+  KXAVAXMAXY                 0
+  KXAVAXMINY                 0
+  KXBCH                      0
+  KXBCH15M                   0
+  KXBCHD                     0
+  KXBCHMAXY                  0
+  KXBCHMINY                  0
+  KXBITCOIN25                0
+  KXBITCOINMAXY              0
+  KXBNB                      0
+  KXBNB15M                   0
+  KXBNBD                     0
+  KXBNBMAXMON                0
+  KXBNBMAXY                  0
+  KXBNBMINY                  0
+  KXBNBY                     0
+  KXBOASTABLE                0
+  KXBTC                      0
+  KXBTC100                   0
+  KXBTC15M                   0
+  KXBTC2025100               0
+  KXBTC2026200               0
+  KXBTC2026250               0
+  KXBTC25ATTEND              0
+  KXBTC50VS100               0
+  KXBTC60VS100               0
+  KXBTC70VS100               0
+  KXBTC75VS100               0
+  KXBTCATH                   0
+  KXBTCD                     0
+  KXBTCD-B                   0
+  KXBTCDOM                   0
+  KXBTCE                     0
+  KXBTCETHATH                0
+  KXBTCETHRETURN             0
+  KXBTCEU                    0
+  KXBTCHALF                  0
+  KXBTCMAX100                0
+  KXBTCMAX100INAUG           0
+  KXBTCMAX125                0
+  KXBTCMAX130                0
+  KXBTCMAX150                0
+  KXBTCMAX90                 0
+  KXBTCMAXD                  0
+  KXBTCMAXM                  0
+  KXBTCMAXMON                0
+  KXBTCMAXQ                  0
+  KXBTCMAXW                  0
+  KXBTCMAXY                  0
+  KXBTCMINMAXY               0
+  KXBTCMINMON                0
+  KXBTCMINY                  0
+  KXBTCPRICE                 0
+  KXBTCQ                     0
+  KXBTCRESERVECOUNTRY        0
+  KXBTCVSETH                 0
+  KXBTCVSHYPE                0
+  KXBTCVSSOL                 0
+  KXBTCY                     0
+  KXBTCYEAR                  0
+  KXCOUNTRYBTC               0
+  KXCRYPTOCOMP15M            0
+  KXCRYPTOLEAD15M            0
+  KXCRYPTOPERFORMY           0
+  KXCRYPTORETURNY            0
+  KXDJBTC                    0
+  KXDJTBTC                   0
+  KXDJTCHAIN                 0
+  KXDJTNFT                   0
+  KXDOGE                     0
+  KXDOGE15M                  0
+  KXDOGED                    0
+  KXDOGEMAX1                 0
+  KXDOGEMAX69                0
+  KXDOGEMAXM                 0
+  KXDOGEMAXMON               0
+  KXDOGEMAXW                 0
+  KXDOGEMAXY                 0
+  KXDOGEMINMON               0
+  KXDOGEMINY                 0
+  KXDOGEY                    0
+  KXDOT                      0
+  KXDOTD                     0
+  KXDOTMAXY                  0
+  KXDOTMINY                  0
+  KXEIP3074                  0
+  KXEIP3540                  0
+  KXEIP4444                  0
+  KXEIP7503                  0
+  KXELSALVADORBTC            0
+  KXETH                      0
+  KXETH15M                   0
+  KXETHATH                   0
+  KXETHD                     0
+  KXETHE                     0
+  KXETHEU                    0
+  KXETHFLIP                  0
+  KXETHFORK                  0
+  KXETHMAXM                  0
+  KXETHMAXMON                0
+  KXETHMAXY                  0
+  KXETHMINMON                0
+  KXETHMINY                  0
+  KXETHY                     0
+  KXFDVAVAXSOL               0
+  KXFDVBIRB                  0
+  KXFDVESPRESSO              0
+  KXFDVFOGO                  0
+  KXFDVFOOTBALLFUN           0
+  KXFDVGENSYN                0
+  KXFDVHYPERSWAP             0
+  KXFDVINFINEX               0
+  KXFDVKINETIQ               0
+  KXFDVLIGHTER               0
+  KXFDVLINEA                 0
+  KXFDVMEGAETH               0
+  KXFDVMET                   0
+  KXFDVMONAD                 0
+  KXFDVOPENSEA               0
+  KXFDVPLASMA                0
+  KXFDVRAINBOW               0
+  KXFDVRANGER                0
+  KXFDVSTABLE                0
+  KXFDVWET                   0
+  KXFDVWLFI                  0
+  KXFDVZAMA                  0
+  KXFDVZECZMR                0
+  KXGTEDEPLOYMEGAETHDAY1     0
+  KXHARDFORKBTC              0
+  KXHYPE                     0
+  KXHYPE15M                  0
+  KXHYPED                    0
+  KXHYPEMAXMON               0
+  KXHYPEMAXY                 0
+  KXHYPEMINY                 0
+  KXHYPEY                    0
+  KXLINK                     0
+  KXLINKD                    0
+  KXLINKMAXY                 0
+  KXLINKMINY                 0
+  KXLTC                      0
+  KXLTCD                     0
+  KXLTCMAXY                  0
+  KXLTCMINY                  0
+  KXMAG7BTC                  0
+  KXMAINNETFIRSTMONADMEGAETH     0
+  KXMAXTPSAVAX               0
+  KXNEAR                     0
+  KXNEAR15M                  0
+  KXNEARD                    0
+  KXNEARH                    0
+  KXNEARMAXMON               0
+  KXNEARMAXY                 0
+  KXNEARMINMON               0
+  KXNEARMINY                 0
+  KXNEARW                    0
+  KXNEARY                    0
+  KXNEWCOINCHAIN             0
+  KXNEWCOINLAUNCH            0
+  KXNEWKANYETICKER           0
+  KXNEXTCOINBI               0
+  KXNEXTCOINCB               0
+  KXNEXTCOINRH               0
+  KXNOMINEECONF              0
+  KXPHXVSHYP                 0
+  KXPRCBTC                   0
+  KXPVPTRADE                 0
+  KXRANKLISTASTER20          0
+  KXRANKLISTBONK50           0
+  KXRIPPLE                   0
+  KXRIPPLED                  0
+  KXRIPPLEMAXY               0
+  KXRIPPLEMINY               0
+  KXRWAMCAPAVAX              0
+  KXSATOSHIBTCYEAR           0
+  KXSHIBA                    0
+  KXSHIBAD                   0
+  KXSHIBAMAXY                0
+  KXSHIBAMINY                0
+  KXSNSBTC                   0
+  KXSOL                      0
+  KXSOL150                   0
+  KXSOL15M                   0
+  KXSOL26500                 0
+  KXSOLANAATH                0
+  KXSOLD                     0
+  KXSOLD26                   0
+  KXSOLDATHOLDINGS           0
+  KXSOLE                     0
+  KXSOLETHRATIO              0
+  KXSOLFLIPETH               0
+  KXSOLMAXM                  0
+  KXSOLMAXMON                0
+  KXSOLMAXY                  0
+  KXSOLMINY                  0
+  KXSOLNASDAQ                0
+  KXSOLSTABLESUPP            0
+  KXSOLTPS                   0
+  KXSOLTXCOUNT               0
+  KXSTABLEYIELDNOTION        0
+  KXSTRKMAXY                 0
+  KXSTRKMINY                 0
+  KXSUI                      0
+  KXSUIATH                   0
+  KXSUIATH26                 0
+  KXTESTCRYPTO               0
+  KXTOKENLAUNCH              0
+  KXTOKENLAUNCHABSTRACT      0
+  KXTOKENLAUNCHAXIOM         0
+  KXTOKENLAUNCHINFINEX       0
+  KXTOKENLAUNCHOPENSEA       0
+  KXTOKENLAUNCHUNIT          0
+  KXTOKENLAUNCHVENTUALS      0
+  KXTON                      0
+  KXTON15M                   0
+  KXTOND                     0
+  KXTONH                     0
+  KXTONMAXMON                0
+  KXTONMINMON                0
+  KXTONW                     0
+  KXUSDCMIN                  0
+  KXUSDHVOTE                 0
+  KXUSDTMIN                  0
+  KXWAL25                    0
+  KXXLM                      0
+  KXXLMD                     0
+  KXXLMMAXY                  0
+  KXXLMMINY                  0
+  KXXRP                      0
+  KXXRP15M                   0
+  KXXRPATH                   0
+  KXXRPD                     0
+  KXXRPMAXATH                0
+  KXXRPMAXM                  0
+  KXXRPMAXMON                0
+  KXXRPMAXY                  0
+  KXXRPMINMON                0
+  KXXRPMINY                  0
+  KXXRPY                     0
+  KXZEC                      0
+  KXZEC15M                   0
+  KXZECD                     0
+  KXZECH                     0
+  KXZECHW                    0
+  KXZECMAXMON                0
+  KXZECMAXY                  0
+  KXZECMINY                  0
+  KXZECY                     0
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXBNBMINMON            2026-08: 1 @ +6.0
+  KXHYPEMINMON           2026-08: 1 @ +6.0
+  KXSOLMINMON            2026-08: 1 @ +6.0
+  KXZECMINMON            2026-05: 1 @ +6.0
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXADA15M                   0/0         0% NOT FEASIBLE
+  KXAIRDROPHYPE              1/2        50% FEASIBLE
+  KXAIRDROPMEGA              1/5        20% NOT FEASIBLE
+  KXAIRDROPMONAD             1/4        25% NOT FEASIBLE
+  KXAIRDROPPUMPFUN           2/5        40% NOT FEASIBLE
+  KXAIRDROPQ                 0/0         0% NOT FEASIBLE
+  KXARBITRUMTVL              0/0         0% NOT FEASIBLE
+  KXAVAX                     0/0         0% NOT FEASIBLE
+  KXAVAXD                    0/0         0% NOT FEASIBLE
+  KXAVAXMAXY                 0/1         0% NOT FEASIBLE
+  KXAVAXMINY                 1/1       100% FEASIBLE
+  KXBCH                      0/0         0% NOT FEASIBLE
+  KXBCH15M                   0/0         0% NOT FEASIBLE
+  KXBCHD                     0/0         0% NOT FEASIBLE
+  KXBCHMAXY                  2/3        67% FEASIBLE
+  KXBCHMINY                  1/2        50% FEASIBLE
+  KXBITCOIN25                1/1       100% FEASIBLE
+  KXBITCOINMAXY              0/0         0% NOT FEASIBLE
+  KXBNB                      0/1         0% NOT FEASIBLE
+  KXBNB15M                   0/0         0% NOT FEASIBLE
+  KXBNBD                     0/1         0% NOT FEASIBLE
+  KXBNBMAXMON                5/6        83% FEASIBLE
+  KXBNBMAXY                  1/1       100% FEASIBLE
+  KXBNBMINMON                7/7       100% FEASIBLE
+  KXBNBMINY                  0/0         0% NOT FEASIBLE
+  KXBNBY                     0/0         0% NOT FEASIBLE
+  KXBOASTABLE                0/1         0% NOT FEASIBLE
+  KXBTC                      0/1         0% NOT FEASIBLE
+  KXBTC100                   0/0         0% NOT FEASIBLE
+  KXBTC15M                   0/0         0% NOT FEASIBLE
+  KXBTC2025100               1/1       100% FEASIBLE
+  KXBTC2026200               0/0         0% NOT FEASIBLE
+  KXBTC2026250               0/0         0% NOT FEASIBLE
+  KXBTC25ATTEND              1/1       100% FEASIBLE
+  KXBTC50VS100               0/0         0% NOT FEASIBLE
+  KXBTC60VS100               1/1       100% FEASIBLE
+  KXBTC70VS100               0/0         0% NOT FEASIBLE
+  KXBTC75VS100               1/1       100% FEASIBLE
+  KXBTCATH                   2/2       100% FEASIBLE
+  KXBTCD                     0/1         0% NOT FEASIBLE
+  KXBTCD-B                   0/0         0% NOT FEASIBLE
+  KXBTCDOM                   0/0         0% NOT FEASIBLE
+  KXBTCE                     1/1       100% FEASIBLE
+  KXBTCETHATH                0/0         0% NOT FEASIBLE
+  KXBTCETHRETURN             0/0         0% NOT FEASIBLE
+  KXBTCEU                    1/1       100% FEASIBLE
+  KXBTCHALF                  0/0         0% NOT FEASIBLE
+  KXBTCMAX100                0/9         0% NOT FEASIBLE
+  KXBTCMAX100INAUG           1/1       100% FEASIBLE
+  KXBTCMAX125                2/2       100% FEASIBLE
+  KXBTCMAX130                0/0         0% NOT FEASIBLE
+  KXBTCMAX150                1/14        7% NOT FEASIBLE
+  KXBTCMAX90                 0/0         0% NOT FEASIBLE
+  KXBTCMAXD                  0/0         0% NOT FEASIBLE
+  KXBTCMAXM                  3/8        38% NOT FEASIBLE
+  KXBTCMAXMON                8/10       80% FEASIBLE
+  KXBTCMAXQ                  0/1         0% NOT FEASIBLE
+  KXBTCMAXW                  1/1       100% FEASIBLE
+  KXBTCMAXY                  3/5        60% FEASIBLE
+  KXBTCMINMAXY               0/0         0% NOT FEASIBLE
+  KXBTCMINMON                6/9        67% FEASIBLE
+  KXBTCMINY                  6/6       100% FEASIBLE
+  KXBTCPRICE                 2/2       100% FEASIBLE
+  KXBTCQ                     0/0         0% NOT FEASIBLE
+  KXBTCRESERVECOUNTRY        1/1       100% FEASIBLE
+  KXBTCVSETH                 1/1       100% FEASIBLE
+  KXBTCVSHYPE                1/1       100% FEASIBLE
+  KXBTCVSSOL                 1/1       100% FEASIBLE
+  KXBTCY                     0/0         0% NOT FEASIBLE
+  KXBTCYEAR                  0/0         0% NOT FEASIBLE
+  KXCOUNTRYBTC               1/1       100% FEASIBLE
+  KXCRYPTOCOMP15M            0/0         0% NOT FEASIBLE
+  KXCRYPTOLEAD15M            0/0         0% NOT FEASIBLE
+  KXCRYPTOPERFORMY           1/1       100% FEASIBLE
+  KXCRYPTORETURNY            1/1       100% FEASIBLE
+  KXDJBTC                    0/0         0% NOT FEASIBLE
+  KXDJTBTC                   3/3       100% FEASIBLE
+  KXDJTCHAIN                 1/1       100% FEASIBLE
+  KXDJTNFT                   0/1         0% NOT FEASIBLE
+  KXDOGE                     0/2         0% NOT FEASIBLE
+  KXDOGE15M                  0/0         0% NOT FEASIBLE
+  KXDOGED                    0/2         0% NOT FEASIBLE
+  KXDOGEMAX1                 0/5         0% NOT FEASIBLE
+  KXDOGEMAX69                1/1       100% FEASIBLE
+  KXDOGEMAXM                 1/1       100% FEASIBLE
+  KXDOGEMAXMON               6/9        67% FEASIBLE
+  KXDOGEMAXW                 0/1         0% NOT FEASIBLE
+  KXDOGEMAXY                 2/3        67% FEASIBLE
+  KXDOGEMINMON               6/7        86% FEASIBLE
+  KXDOGEMINY                 1/1       100% FEASIBLE
+  KXDOGEY                    0/0         0% NOT FEASIBLE
+  KXDOT                      0/0         0% NOT FEASIBLE
+  KXDOTD                     0/0         0% NOT FEASIBLE
+  KXDOTMAXY                  0/1         0% NOT FEASIBLE
+  KXDOTMINY                  1/3        33% NOT FEASIBLE
+  KXEIP3074                  0/1         0% NOT FEASIBLE
+  KXEIP3540                  1/1       100% FEASIBLE
+  KXEIP4444                  0/1         0% NOT FEASIBLE
+  KXEIP7503                  0/1         0% NOT FEASIBLE
+  KXELSALVADORBTC            1/3        33% NOT FEASIBLE
+  KXETH                      0/1         0% NOT FEASIBLE
+  KXETH15M                   0/0         0% NOT FEASIBLE
+  KXETHATH                   1/2        50% FEASIBLE
+  KXETHD                     0/1         0% NOT FEASIBLE
+  KXETHE                     0/1         0% NOT FEASIBLE
+  KXETHEU                    1/1       100% FEASIBLE
+  KXETHFLIP                  0/1         0% NOT FEASIBLE
+  KXETHFORK                  1/1       100% FEASIBLE
+  KXETHMAXM                  0/1         0% NOT FEASIBLE
+  KXETHMAXMON                4/9        44% NOT FEASIBLE
+  KXETHMAXY                  1/2        50% FEASIBLE
+  KXETHMINMON                4/9        44% NOT FEASIBLE
+  KXETHMINY                  5/6        83% FEASIBLE
+  KXETHY                     0/0         0% NOT FEASIBLE
+  KXFDVAVAXSOL               0/1         0% NOT FEASIBLE
+  KXFDVBIRB                  1/1       100% FEASIBLE
+  KXFDVESPRESSO              1/1       100% FEASIBLE
+  KXFDVFOGO                  0/1         0% NOT FEASIBLE
+  KXFDVFOOTBALLFUN           1/1       100% FEASIBLE
+  KXFDVGENSYN                0/0         0% NOT FEASIBLE
+  KXFDVHYPERSWAP             0/1         0% NOT FEASIBLE
+  KXFDVINFINEX               0/1         0% NOT FEASIBLE
+  KXFDVKINETIQ               0/0         0% NOT FEASIBLE
+  KXFDVLIGHTER               1/1       100% FEASIBLE
+  KXFDVLINEA                 0/0         0% NOT FEASIBLE
+  KXFDVMEGAETH               0/1         0% NOT FEASIBLE
+  KXFDVMET                   0/1         0% NOT FEASIBLE
+  KXFDVMONAD                 0/1         0% NOT FEASIBLE
+  KXFDVOPENSEA               0/0         0% NOT FEASIBLE
+  KXFDVPLASMA                1/1       100% FEASIBLE
+  KXFDVRAINBOW               0/1         0% NOT FEASIBLE
+  KXFDVRANGER                1/1       100% FEASIBLE
+  KXFDVSTABLE                0/1         0% NOT FEASIBLE
+  KXFDVWET                   1/1       100% FEASIBLE
+  KXFDVWLFI                  0/1         0% NOT FEASIBLE
+  KXFDVZAMA                  0/1         0% NOT FEASIBLE
+  KXFDVZECZMR                0/0         0% NOT FEASIBLE
+  KXGTEDEPLOYMEGAETHDAY1     1/1       100% FEASIBLE
+  KXHARDFORKBTC              0/1         0% NOT FEASIBLE
+  KXHYPE                     0/1         0% NOT FEASIBLE
+  KXHYPE15M                  0/0         0% NOT FEASIBLE
+  KXHYPED                    0/1         0% NOT FEASIBLE
+  KXHYPEMAXMON               7/7       100% FEASIBLE
+  KXHYPEMAXY                 0/0         0% NOT FEASIBLE
+  KXHYPEMINMON               5/7        71% FEASIBLE
+  KXHYPEMINY                 0/0         0% NOT FEASIBLE
+  KXHYPEY                    0/0         0% NOT FEASIBLE
+  KXLINK                     0/0         0% NOT FEASIBLE
+  KXLINKD                    0/0         0% NOT FEASIBLE
+  KXLINKMAXY                 0/2         0% NOT FEASIBLE
+  KXLINKMINY                 0/2         0% NOT FEASIBLE
+  KXLTC                      0/0         0% NOT FEASIBLE
+  KXLTCD                     0/0         0% NOT FEASIBLE
+  KXLTCMAXY                  0/1         0% NOT FEASIBLE
+  KXLTCMINY                  1/2        50% FEASIBLE
+  KXMAG7BTC                  0/1         0% NOT FEASIBLE
+  KXMAINNETFIRSTMONADMEGAETH     1/1       100% FEASIBLE
+  KXMAXTPSAVAX               1/1       100% FEASIBLE
+  KXNEAR                     0/0         0% NOT FEASIBLE
+  KXNEAR15M                  0/0         0% NOT FEASIBLE
+  KXNEARD                    0/0         0% NOT FEASIBLE
+  KXNEARH                    0/0         0% NOT FEASIBLE
+  KXNEARMAXMON               0/0         0% NOT FEASIBLE
+  KXNEARMAXY                 2/2       100% FEASIBLE
+  KXNEARMINMON               0/0         0% NOT FEASIBLE
+  KXNEARMINY                 0/0         0% NOT FEASIBLE
+  KXNEARW                    0/0         0% NOT FEASIBLE
+  KXNEARY                    0/0         0% NOT FEASIBLE
+  KXNEWCOINCHAIN             0/3         0% NOT FEASIBLE
+  KXNEWCOINLAUNCH            2/3        67% FEASIBLE
+  KXNEWKANYETICKER           0/0         0% NOT FEASIBLE
+  KXNEXTCOINBI               0/0         0% NOT FEASIBLE
+  KXNEXTCOINCB               0/0         0% NOT FEASIBLE
+  KXNEXTCOINRH               2/2       100% FEASIBLE
+  KXNOMINEECONF              0/0         0% NOT FEASIBLE
+  KXPHXVSHYP                 0/0         0% NOT FEASIBLE
+  KXPRCBTC                   0/1         0% NOT FEASIBLE
+  KXPVPTRADE                 0/0         0% NOT FEASIBLE
+  KXRANKLISTASTER20          1/1       100% FEASIBLE
+  KXRANKLISTBONK50           0/0         0% NOT FEASIBLE
+  KXRIPPLE                   0/0         0% NOT FEASIBLE
+  KXRIPPLED                  0/0         0% NOT FEASIBLE
+  KXRIPPLEMAXY               0/0         0% NOT FEASIBLE
+  KXRIPPLEMINY               0/0         0% NOT FEASIBLE
+  KXRWAMCAPAVAX              1/2        50% FEASIBLE
+  KXSATOSHIBTCYEAR           0/0         0% NOT FEASIBLE
+  KXSHIBA                    0/6         0% NOT FEASIBLE
+  KXSHIBAD                   0/6         0% NOT FEASIBLE
+  KXSHIBAMAXY                0/1         0% NOT FEASIBLE
+  KXSHIBAMINY                0/2         0% NOT FEASIBLE
+  KXSNSBTC                   1/1       100% FEASIBLE
+  KXSOL                      0/0         0% NOT FEASIBLE
+  KXSOL150                   1/1       100% FEASIBLE
+  KXSOL15M                   0/0         0% NOT FEASIBLE
+  KXSOL26500                 0/0         0% NOT FEASIBLE
+  KXSOLANAATH                0/1         0% NOT FEASIBLE
+  KXSOLD                     0/1         0% NOT FEASIBLE
+  KXSOLD26                   0/0         0% NOT FEASIBLE
+  KXSOLDATHOLDINGS           2/2       100% FEASIBLE
+  KXSOLE                     0/1         0% NOT FEASIBLE
+  KXSOLETHRATIO              1/2        50% FEASIBLE
+  KXSOLFLIPETH               0/1         0% NOT FEASIBLE
+  KXSOLMAXM                  0/0         0% NOT FEASIBLE
+  KXSOLMAXMON                9/10       90% FEASIBLE
+  KXSOLMAXY                  0/0         0% NOT FEASIBLE
+  KXSOLMINMON                7/7       100% FEASIBLE
+  KXSOLMINY                  0/0         0% NOT FEASIBLE
+  KXSOLNASDAQ                1/1       100% FEASIBLE
+  KXSOLSTABLESUPP            1/1       100% FEASIBLE
+  KXSOLTPS                   0/1         0% NOT FEASIBLE
+  KXSOLTXCOUNT               1/1       100% FEASIBLE
+  KXSTABLEYIELDNOTION        1/1       100% FEASIBLE
+  KXSTRKMAXY                 0/0         0% NOT FEASIBLE
+  KXSTRKMINY                 0/0         0% NOT FEASIBLE
+  KXSUI                      0/0         0% NOT FEASIBLE
+  KXSUIATH                   0/0         0% NOT FEASIBLE
+  KXSUIATH26                 0/0         0% NOT FEASIBLE
+  KXTESTCRYPTO               0/0         0% NOT FEASIBLE
+  KXTOKENLAUNCH              2/3        67% FEASIBLE
+  KXTOKENLAUNCHABSTRACT      0/1         0% NOT FEASIBLE
+  KXTOKENLAUNCHAXIOM         0/1         0% NOT FEASIBLE
+  KXTOKENLAUNCHINFINEX       0/1         0% NOT FEASIBLE
+  KXTOKENLAUNCHOPENSEA       2/5        40% NOT FEASIBLE
+  KXTOKENLAUNCHUNIT          0/0         0% NOT FEASIBLE
+  KXTOKENLAUNCHVENTUALS      0/1         0% NOT FEASIBLE
+  KXTON                      0/0         0% NOT FEASIBLE
+  KXTON15M                   0/0         0% NOT FEASIBLE
+  KXTOND                     0/0         0% NOT FEASIBLE
+  KXTONH                     0/0         0% NOT FEASIBLE
+  KXTONMAXMON                0/0         0% NOT FEASIBLE
+  KXTONMINMON                0/0         0% NOT FEASIBLE
+  KXTONW                     0/0         0% NOT FEASIBLE
+  KXUSDCMIN                  0/1         0% NOT FEASIBLE
+  KXUSDHVOTE                 0/1         0% NOT FEASIBLE
+  KXUSDTMIN                  0/1         0% NOT FEASIBLE
+  KXWAL25                    0/0         0% NOT FEASIBLE
+  KXXLM                      0/0         0% NOT FEASIBLE
+  KXXLMD                     0/0         0% NOT FEASIBLE
+  KXXLMMAXY                  1/2        50% FEASIBLE
+  KXXLMMINY                  0/1         0% NOT FEASIBLE
+  KXXRP                      0/1         0% NOT FEASIBLE
+  KXXRP15M                   0/0         0% NOT FEASIBLE
+  KXXRPATH                   0/0         0% NOT FEASIBLE
+  KXXRPD                     0/1         0% NOT FEASIBLE
+  KXXRPMAXATH                1/1       100% FEASIBLE
+  KXXRPMAXM                  0/1         0% NOT FEASIBLE
+  KXXRPMAXMON                6/9        67% FEASIBLE
+  KXXRPMAXY                  2/3        67% FEASIBLE
+  KXXRPMINMON                7/7       100% FEASIBLE
+  KXXRPMINY                  2/3        67% FEASIBLE
+  KXXRPY                     0/0         0% NOT FEASIBLE
+  KXZEC                      0/0         0% NOT FEASIBLE
+  KXZEC15M                   0/0         0% NOT FEASIBLE
+  KXZECD                     0/0         0% NOT FEASIBLE
+  KXZECH                     0/0         0% NOT FEASIBLE
+  KXZECHW                    0/0         0% NOT FEASIBLE
+  KXZECMAXMON                7/9        78% FEASIBLE
+  KXZECMAXY                  1/1       100% FEASIBLE
+  KXZECMINMON                8/8       100% FEASIBLE
+  KXZECMINY                  1/1       100% FEASIBLE
+  KXZECY                     0/0         0% NOT FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
