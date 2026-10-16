@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=xos  id=ws027-arm-receipt-1
+# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:09:19Z
+{
+  "command_id": "ws027-arm-canary-1",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "REJECTED",
+  "payload_hash": "2f8675bdd5a67e0a37dcf5b756a972469e4c757121758d8aa0e6e51c69308d68",
+  "completed_at": "2026-10-16 14:06:52.397679+00:00",
+  "result": null,
+  "error": "ExperimentCommandRejected: approved_by must name the person approving real-money capability",
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
