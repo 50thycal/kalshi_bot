@@ -290,6 +290,15 @@ def cmd_scoreboard(session: Session, args) -> int:
     return 0
 
 
+def cmd_attribution_impact(session: Session, args) -> int:
+    """`docs/LIVE_FILL_ATTRIBUTION.md` §7 step 3. Persists nothing; the per-fill
+    provider is forced on in this process only."""
+    from .attribution_report import render
+
+    print(render(session, days=args.days))
+    return 0
+
+
 def cmd_metric(session: Session, args) -> int:
     """Compute one canonical metric at an EXPLICIT scope, and show its provenance.
 
@@ -852,6 +861,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="skip the DRY-RUN gate evaluation (faster; recorded verdicts only)",
     )
     p_ms.set_defaults(fn=cmd_monitor_snapshot)
+
+    p_ai = sub.add_parser(
+        "attribution-impact",
+        help="WS-027: every live gate evaluated twice as a DRY RUN — shipped per-position "
+        "provider vs per-fill attribution — plus per-tag reconciliation (read-only)",
+    )
+    p_ai.add_argument("--days", type=int, default=45,
+                      help="reconciliation look-back over live orders (default 45)")
+    p_ai.set_defaults(fn=cmd_attribution_impact)
 
     p_ev = sub.add_parser(
         "evaluate-gates",

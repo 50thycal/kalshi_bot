@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-10-16
-**Updated:** 2026-10-16
+**Updated:** 2026-10-16 (#644 merged; impact report moved to `xos attribution-impact`)
 **Build OS:** v0.12
 
 ## Goal
@@ -38,10 +38,9 @@ a combined per-market bound.
 
 ## Open Decisions
 
-- **D1.** Per-book live budgets (parked as a prerequisite for a second live canary): arm without
-  them, guarded by the preflight breaker read? Recommendation: yes.
-- **D2.** Clip size 3 (registered) or 1. Recommendation: 3.
-- Hard stops still ahead, each needing the owner's words: merge (touches a live safeguard), the
+- ~~D1~~ / ~~D2~~ answered by the #644 merge as recommended (3-lot; budgets stay parked, the
+  arming preflight re-reads the account breakers).
+- Hard stops still ahead, each needing the owner's words: the
   revision activation, `ARM_CANARY` with its env act.
 
 ## Assumptions
@@ -66,12 +65,14 @@ a combined per-market bound.
    (boundary tested both sides, partner's working order counted).
 4. Closeout on a shared market never exceeds the selling tag's own filled quantity.
 5. The revision's impact on every live gate is listed before activation
-   (`scripts/live_attribution_impact.py`, run after merge, recorded in the review §4).
+   (`xos attribution-impact`, run after merge, recorded in the review §4).
 6. The book trades only WIN-set series that clear the tier and skip bars; a sports-total market
    is refused (`tests/test_mmsell_win_set_canary.py`).
 
 ## Next Step
 
-Owner merges the WS-027 PR (hard stop). Then Platform Change Review: `REGISTER_REVISION`, run the
+#644 merged 2026-10-16 (owner acceptance of D1/D2 as recommended: 3-lot, arm without per-book
+budgets behind the preflight breaker read). The impact report first failed in the ops `script`
+sandbox (no SQLAlchemy) and moved to `xos attribution-impact` (follow-up PR). Then Platform Change Review: `REGISTER_REVISION`, run the
 impact report, `RECORD_IMPACTS`; the owner confirms activation; `CUTOVER`. In parallel,
 `REGISTER_PACKAGE mmsell-win-set-canary` and the paper append of `Pmmsell10`.

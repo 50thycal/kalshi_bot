@@ -62,7 +62,7 @@ each epoch and requires a FRESH post-boundary evaluation before any result autho
 transition (`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`). A pre-change PASS cannot promote.
 
 **No verdict moves silently.** Which verdicts move is not asserted here from arithmetic; it is
-measured. `scripts/live_attribution_impact.py` (ops `script`, read-only) evaluates every live
+measured. `xos attribution-impact` (`experiment_os/attribution_report.py`, read-only) evaluates every live
 gate twice as a dry run — shipped provider, then fill attribution forced on in its own process —
 and prints every verdict and clause that differs, then the reconciliation of every settled
 market. It runs after merge, before `RECORD_IMPACTS`, and its output goes into this table. A
@@ -110,7 +110,7 @@ re-rules and a new epoch for Kmmsell10 is the expected remedy — never pooling 
 |---|---|---|---|
 | 1 | Merge the WS-027 PR. Inert: no revision is active, every gate computes byte-identically, the pair list is empty. | owner | hard stop (touches a live safeguard) |
 | 2 | `REGISTER_REVISION` `{"component":"METRICS_ENGINE","version":"live_fill_attribution_2026_10","fingerprint":<metrics_fingerprint() of the merged file>,"pr_ref":"<PR>"}` — pending, activates nothing | PCR | request-authorized |
-| 3 | `{"type":"script","name":"live_attribution_impact"}` — every live gate before/after, reconciliation. Record the result in §4. | PCR | free (read) |
+| 3 | `{"type":"xos","command":"attribution-impact"}` — every live gate before/after, reconciliation. Record the result in §4. | PCR | free (read) |
 | 4 | `RECORD_IMPACTS` — the 15 rows of §4 (I1 rows carry `normalization_ref`), as one batch | PCR | request-authorized |
 | 5 | **Owner confirms activation**, in words naming the revision | owner | **hard stop** |
 | 6 | `CUTOVER` `{"revision":"METRICS_ENGINE:live_fill_attribution_2026_10","expect_metrics_fingerprint":<same>,"apply_accepted_recompute":true}` — activates at the measured worker boot, applies the accepted I1s at that instant; defers on a worker not serving the reviewed file | PCR | (authorized by 5) |
