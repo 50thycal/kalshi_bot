@@ -1,1 +1,1 @@
-{"type": "db", "id": "ws027-tags-2", "max_rows": 400, "sql": "select distinct s from (select distinct strategy s from paper_trades union select distinct strategy from live_orders union select distinct strategy_tag from experiment_deployment_arms where strategy_tag is not null) x where s is not null order by 1"}
+{"type": "xos", "command": "control-tower", "id": "ct-24h-20261016a"}
