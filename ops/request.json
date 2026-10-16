@@ -1,1 +1,1 @@
-{"type":"noop","id":"ws027-noop-2"}
+{"type":"xos","command":"show","args":["mmsell-win-set"],"id":"ws027-show-2"}
