@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["mmsell-win-set-canary"],"id":"ws027-preflight-1"}
+{"type":"env","id":"ws027-env-read-1"}
