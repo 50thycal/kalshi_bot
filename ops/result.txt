@@ -1,265 +1,140 @@
-# ops request [READ]
-# type=xos  id=ws027-prev-1
-# code 783a2b2daf4bc3c1b642c551f1347487507352bb · started 2026-10-16T09:22:16Z
-{
-  "component": "METRICS_ENGINE",
-  "revision": {
-    "id": 14,
-    "version": "live_fill_attribution_2026_10",
-    "status": "pending",
-    "reason": "WS-027 / DEC-037: two live books may share a market; the per-market provider excluded every shared market from both books' gates. Impact report ws027-impact-2: 13 live gates, 0 verdicts move; 1237/1237 settled markets reconcile.",
-    "safety_class": null,
-    "pr_ref": "#644, #645",
-    "activated_at": null,
-    "boundary_established": false
-  },
-  "supersedes": {
-    "id": 9,
-    "version": "pnl_scripts_2026_08",
-    "status": "active"
-  },
-  "affected": {
-    "active_on_superseded": [
-      {
-        "key": "liquidity-incentive-mm",
-        "state": "LIVE_CANARY",
-        "legacy": null,
-        "version_id": 22,
-        "epoch_id": 30,
-        "epoch_number": 2,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-correlation-cap",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 18,
-        "epoch_id": 21,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-price-ceiling",
-        "state": "LIVE_CANARY",
-        "legacy": "ACTIVE_PAPER",
-        "version_id": 10,
-        "epoch_id": 12,
-        "epoch_number": 2,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-price-ceiling-capacity",
-        "state": "LIVE_CANARY",
-        "legacy": null,
-        "version_id": 13,
-        "epoch_id": 16,
-        "epoch_number": 2,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-price-ceiling-cell-size",
-        "state": "LIVE_CANARY",
-        "legacy": null,
-        "version_id": 24,
-        "epoch_id": 37,
-        "epoch_number": 2,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-price-ceiling-contest-cap",
-        "state": "LIVE_CANARY",
-        "legacy": null,
-        "version_id": 19,
-        "epoch_id": 24,
-        "epoch_number": 3,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-price-ceiling-size-split",
-        "state": "LIVE_CANARY",
-        "legacy": null,
-        "version_id": 23,
-        "epoch_id": 35,
-        "epoch_number": 3,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-rain-season",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 25,
-        "epoch_id": 38,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-reviewed-universe",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 21,
-        "epoch_id": 26,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-temperature-season",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 26,
-        "epoch_id": 39,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-type-tight",
-        "state": "PAPER",
-        "legacy": "ACTIVE_PAPER",
-        "version_id": 9,
-        "epoch_id": 10,
-        "epoch_number": 2,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-weather-bands",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 27,
-        "epoch_id": 40,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-wide-control",
-        "state": "PAPER",
-        "legacy": "ACTIVE_PAPER",
-        "version_id": 4,
-        "epoch_id": 4,
-        "epoch_number": 1,
-        "snapshot_id": 1,
-        "pinned_revision_id": 9
-      },
-      {
-        "key": "mmsell-win-set",
-        "state": "PAPER",
-        "legacy": null,
-        "version_id": 28,
-        "epoch_id": 41,
-        "epoch_number": 1,
-        "snapshot_id": 2,
-        "pinned_revision_id": 9
-      }
-    ],
-    "already_on_new": [],
-    "no_pinned_epoch": [
-      "theta-tail-sell"
-    ],
-    "retired": [
-      "freeze-dark-window-pin",
-      "live-shape-probe",
-      "marktangle-2-conditional-dependence",
-      "marktangle-conditional-reversion",
-      "mmsell10-queue-aware-cancel",
-      "mmsell11-no-late-entry",
-      "mmsell4-skip-list",
-      "mmsell-anchor-stops",
-      "mmsell-anchor-strangle",
-      "mmsell-anchor-vol-entry",
-      "mmsell-first-cohort",
-      "mmsell-maker-offset-ab",
-      "mmsell-scan-depth",
-      "mmsell-scheduled-settle-live",
-      "mmsell-type-tight-retired",
-      "mmsell-type-wide",
-      "mmsell-variants-2026-07",
-      "origin-scanner-books",
-      "perp-v1",
-      "pin15",
-      "tfav",
-      "theta4-fat-tail",
-      "wcprop",
-      "weather-consensus",
-      "weather-consensus-city",
-      "weather-legacy-cells",
-      "xgame"
-    ]
-  },
-  "impact_records": [],
-  "activation": {
-    "affected_active": [
-      "liquidity-incentive-mm",
-      "mmsell-correlation-cap",
-      "mmsell-price-ceiling",
-      "mmsell-price-ceiling-capacity",
-      "mmsell-price-ceiling-cell-size",
-      "mmsell-price-ceiling-contest-cap",
-      "mmsell-price-ceiling-size-split",
-      "mmsell-rain-season",
-      "mmsell-reviewed-universe",
-      "mmsell-temperature-season",
-      "mmsell-type-tight",
-      "mmsell-weather-bands",
-      "mmsell-wide-control",
-      "mmsell-win-set"
-    ],
-    "already_on_new": [],
-    "retired_ignored": [
-      "freeze-dark-window-pin",
-      "live-shape-probe",
-      "marktangle-2-conditional-dependence",
-      "marktangle-conditional-reversion",
-      "mmsell10-queue-aware-cancel",
-      "mmsell11-no-late-entry",
-      "mmsell4-skip-list",
-      "mmsell-anchor-stops",
-      "mmsell-anchor-strangle",
-      "mmsell-anchor-vol-entry",
-      "mmsell-first-cohort",
-      "mmsell-maker-offset-ab",
-      "mmsell-scan-depth",
-      "mmsell-scheduled-settle-live",
-      "mmsell-type-tight-retired",
-      "mmsell-type-wide",
-      "mmsell-variants-2026-07",
-      "origin-scanner-books",
-      "perp-v1",
-      "pin15",
-      "tfav",
-      "theta4-fat-tail",
-      "wcprop",
-      "weather-consensus",
-      "weather-consensus-city",
-      "weather-legacy-cells",
-      "xgame"
-    ],
-    "unaccounted": [
-      "liquidity-incentive-mm",
-      "mmsell-correlation-cap",
-      "mmsell-price-ceiling",
-      "mmsell-price-ceiling-capacity",
-      "mmsell-price-ceiling-cell-size",
-      "mmsell-price-ceiling-contest-cap",
-      "mmsell-price-ceiling-size-split",
-      "mmsell-rain-season",
-      "mmsell-reviewed-universe",
-      "mmsell-temperature-season",
-      "mmsell-type-tight",
-      "mmsell-weather-bands",
-      "mmsell-wide-control",
-      "mmsell-win-set"
-    ],
-    "blocking_unapplied": [],
-    "safe": false
-  }
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_PLATFORM_COMMAND  id=ws027-boot2-send
+# code 783a2b2daf4bc3c1b642c551f1347487507352bb · started 2026-10-16T09:23:18Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 982 bytes, sha256:c4157c1408785ca4>
+  set EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 4957 bytes, sha256:96c9361a5b5416c9>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 4957 bytes, sha256:96c9361a5b5416c9>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 59,
+#       "grandfathered": 12,
+#       "native": 47
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-sizesplit-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-sizesplit-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 7,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-10-16 09:23:25.606408+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "42 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10",
+#             "Jmmsell10",
+#             "Kmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 59,
+#           "grandfathered": 12,
+#           "native": 47
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "5 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
