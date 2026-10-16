@@ -100,6 +100,13 @@ moved verdict on a LIVE_CANARY changes the disposition discussion with the owner
   blocked are cell-size and size-split, whose keep gates read HOLD. Next time, record RECOMPUTE
   rows in the same session as the CUTOVER.
 
+### 4c. Activated (2026-10-16 09:34:11Z)
+
+Owner confirmed activation by name in session `01D3m7Af5FnpLDG5eDQ6JJRL`. `CUTOVER`
+`ws027-metrics-cutover-1` activated revision #14 at the measured worker boot and applied all six
+RECOMPUTE dispositions at that instant (14 of 14 applied). The Control Tower afterwards
+(`ws027-ct-3`) shows no gate newly blocked by this revision.
+
 ## 5. Reconciliation is durable, and non-blocking
 
 On the designated writer, once the revision is active, each evaluation cycle reconciles markets

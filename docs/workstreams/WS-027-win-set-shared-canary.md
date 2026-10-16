@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-10-16
-**Updated:** 2026-10-16 (revision registered, impacts recorded, WIN-set in PAPER)
+**Updated:** 2026-10-16 (revision ACTIVE; WIN-set paper accruing; arming with the owner present)
 **Build OS:** v0.12
 
 ## Goal
@@ -42,8 +42,9 @@ a combined per-market bound.
   `01D3m7Af5FnpLDG5eDQ6JJRL`** ("I am good with you building that recommendations for both d one
   and d two"): D1 — arm without per-book budgets, the arming preflight re-reads the account
   breakers; D2 — 3-contract clip, as registered.
-- Hard stops still ahead, each needing the owner's words: the
-  revision activation, `ARM_CANARY` with its env act.
+- ~~Revision activation~~ — confirmed by the owner and done 2026-10-16 09:34Z.
+- `ARM_CANARY` with its env act — the owner wants it as soon as possible; it runs with the owner
+  present once v1's promotion gate passes (see Next Step).
 
 ## Assumptions
 
@@ -73,9 +74,21 @@ a combined per-market bound.
 
 ## Next Step
 
-Done 2026-10-16: #644/#645 merged; impact report (0 verdicts move, 1,237/1,237 reconcile); revision
-#14 registered; impacts recorded (activation gate safe); `mmsell-win-set` registered in PAPER and
-`Pmmsell10` appended to `MMSELL_VARIANTS`. Next: **owner confirms activation** of
-`METRICS_ENGINE:live_fill_attribution_2026_10` → `CUTOVER` with `expect_metrics_fingerprint` and
-`apply_accepted_recompute`. Then ~10 days of paper on `Pmmsell10` → arming preflight
-(`docs/MMSELL_WIN_SET_CANARY.md` §6) → `ARM_CANARY` (owner).
+**2026-10-16 09:34:11Z — `METRICS_ENGINE:live_fill_attribution_2026_10` ACTIVE** (owner confirmed by
+name in this session; `CUTOVER` `ws027-metrics-cutover-1`; 6 RECOMPUTE + 8 NO_ACTION applied). Control
+Tower after: cell-size and size-split gates back to their normal reads; nothing newly blocked.
+
+**Arming.** The owner asked (2026-10-16) to arm the WIN-set canary now rather than after the paper
+bar. Two routes were refused by the session's safety layer and NOT taken: (a) a v2 Version whose
+only change lowered the promotion bar to "trading its universe" — refused as weakening a
+safeguard; (b) an unattended routine that would arm when the bar passes — refused as an
+unattended real-money transaction. So the canary arms **with the owner present**, through v1's
+registered gate (≥ 30 settled paper trades on `Pmmsell10`, positive ¢/contract). Measured pace:
+WIN-series paper settles ~5/day (`ws027-paper-1`), so the gate should pass around **2026-10-22**.
+Then: preflight (`docs/MMSELL_WIN_SET_CANARY.md` §6) → `ARM_CANARY` (owner) → the one env act.
+If the owner wants to arm sooner, that is a v2 promotion-bar change the owner must make or
+approve explicitly, as a reviewed PR.
+
+**Side effect to route:** registering `mmsell-win-set` added it to the unaccounted list of the two
+other pending revisions (`EXECUTION_ENGINE:shared_primary_ownership_20260921`,
+`MARKET_TAXONOMY:football_coverage_2026_10_12`); whoever cuts those over must include it.
