@@ -1,236 +1,46 @@
 # ops request [READ]
-# type=db  id=ws027-tags-2
-# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T03:01:37Z
-s                   
---------------------
-Alimm1              
-Alimm1_pt3          
-buy_favorite        
-Cmmsell10           
-Cmmsell10_pt3       
-Dmmsell10           
-Dmmsell10_pt4       
-Emmsell10           
-Emmsell10_pt4       
-Fmmsell10           
-Fmmsell10_pt4       
-freeze1             
-freeze2             
-freeze3             
-freeze4             
-Gmmsell0            
-Gmmsell1            
-Hmmsell10           
-Hmmsell10_pt4       
-Jmmsell10           
-Jmmsell10_pt4       
-Kmmsell10           
-Kmmsell10_pt4       
-Lmmsell10           
-Lmmsell10_pt3       
-Lmmsell8            
-Lmmsell8_pt3        
-mmsell              
-mmsell1             
-mmsell10            
-mmsell10a           
-mmsell10a_pt        
-mmsell10a_pt2       
-mmsell10a_pt3       
-mmsell10b           
-mmsell10b_pt        
-mmsell10b_pt2       
-mmsell10b_pt3       
-mmsell10d           
-mmsell10e           
-mmsell10_pt         
-mmsell10_pt3        
-mmsell11            
-mmsell2             
-mmsell3             
-mmsell3_closeout    
-mmsell4             
-mmsell5             
-mmsell6             
-mmsell7             
-mmsell8             
-mmsell8_pt3         
-mmsell9             
-mmsellA1            
-mmsellA2            
-mmsellA3            
-mmsellA4            
-mmsellA5            
-momentum            
-pin15               
-probe               
-qacshadow1          
-Rainmmsell1         
-Rainmmsell2         
-Rainmmsell3         
-reversion           
-Rmmsell1            
-Rmmsell2            
-Tempmmsell1         
-Tempmmsell2         
-Tempmmsell3         
-tfav                
-theta               
-theta1              
-theta2              
-theta3              
-theta4              
-theta4_pt           
-theta4_pt2          
-theta4_pt3          
-Tmmsell1            
-Tmmsell2            
-Tmmsell3            
-Tmmsell4            
-Tmmsell5            
-Tmmsell6            
-weather_cal_h14     
-weather_cal_h16     
-weather_cal_h17     
-weather_cal_h18     
-weather_cal_h19     
-weather_cal_h20     
-weather_cal_h22     
-weather_cal_h25     
-weather_cal_h30     
-weather_cal_h8      
-weather_concity_h14 
-weather_concity_h17 
-weather_concity_h20 
-weather_concity_h8  
-weather_con_h14     
-weather_con_h17     
-weather_con_h20     
-weather_con_h8      
-weather_cwin_h10    
-weather_cwin_h18    
-weather_cwin_h24    
-weather_dist_h14    
-weather_dist_h16    
-weather_dist_h17    
-weather_dist_h18    
-weather_dist_h19    
-weather_dist_h20    
-weather_dist_h22    
-weather_dist_h25    
-weather_dist_h30    
-weather_dist_h8     
-weather_favband_h14 
-weather_favband_h17 
-weather_favband_h20 
-weather_fav_h11     
-weather_fav_h12     
-weather_fav_h14     
-weather_fav_h16     
-weather_fav_h17     
-weather_fav_h18     
-weather_fav_h19     
-weather_fav_h20     
-weather_fav_h22     
-weather_fav_h25     
-weather_fav_h30     
-weather_fav_h8      
-weather_low_cal_h10 
-weather_low_cal_h11 
-weather_low_cal_h12 
-weather_low_cal_h14 
-weather_low_cal_h16 
-weather_low_cal_h17 
-weather_low_cal_h18 
-weather_low_cal_h19 
-weather_low_cal_h20 
-weather_low_cal_h22 
-weather_low_cal_h25 
-weather_low_cal_h30 
-weather_low_cal_h4  
-weather_low_cal_h6  
-weather_low_cal_h8  
-weather_low_con_h20 
-weather_low_dist_h11
-weather_low_dist_h12
-weather_low_dist_h14
-weather_low_dist_h16
-weather_low_dist_h17
-weather_low_dist_h18
-weather_low_dist_h19
-weather_low_dist_h20
-weather_low_dist_h22
-weather_low_dist_h25
-weather_low_dist_h30
-weather_low_dist_h8 
-weather_low_fav_h10 
-weather_low_fav_h11 
-weather_low_fav_h12 
-weather_low_fav_h14 
-weather_low_fav_h16 
-weather_low_fav_h17 
-weather_low_fav_h18 
-weather_low_fav_h19 
-weather_low_fav_h20 
-weather_low_fav_h22 
-weather_low_fav_h25 
-weather_low_fav_h30 
-weather_low_fav_h4  
-weather_low_fav_h6  
-weather_low_fav_h8  
-weather_low_nws_h10 
-weather_low_nws_h11 
-weather_low_nws_h12 
-weather_low_nws_h14 
-weather_low_nws_h16 
-weather_low_nws_h17 
-weather_low_nws_h18 
-weather_low_nws_h19 
-weather_low_nws_h20 
-weather_low_nws_h22 
-weather_low_nws_h25 
-weather_low_nws_h30 
-weather_low_nws_h4  
-weather_low_nws_h6  
-weather_low_nws_h8  
-weather_low_obs     
-weather_low_pm_h14  
-weather_low_pm_h17  
-weather_low_pm_h18  
-weather_low_pm_h19  
-weather_low_pm_h20  
-weather_low_pm_h22  
-weather_low_pm_h25  
-weather_low_pm_h30  
-weather_low_pm_h8   
-weather_nws_h14     
-weather_nws_h16     
-weather_nws_h17     
-weather_nws_h18     
-weather_nws_h19     
-weather_nws_h20     
-weather_nws_h22     
-weather_nws_h25     
-weather_nws_h30     
-weather_nws_h8      
-weather_obs         
-weather_pm_h14      
-weather_pm_h16      
-weather_pm_h17      
-weather_pm_h18      
-weather_pm_h19      
-weather_pm_h20      
-weather_pm_h22      
-weather_pm_h25      
-weather_pm_h30      
-weather_pm_h8       
-Wmmsell1            
-Wmmsell2            
-Wmmsell3            
-Wmmsell4            
-Wmmsell5            
-Wmmsell6            
-Wmmsell7            
-Wmmsell8            
-
-(229 rows)
+# type=xos  id=ws027-list-1
+# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T03:18:37Z
+key                                  state        origin      family               version  class                 integrity
+-----------------------------------  -----------  ----------  -------------------  -------  --------------------  ---------
+freeze-dark-window-pin               RETIRED      operator    structural           v1       ACTIVE_PAPER          B        
+liquidity-incentive-mm               LIVE_CANARY  operator    liquidity_incentive  v1       native                -        
+live-shape-probe                     RETIRED      operator    operational          -        HISTORICAL_UNTRACKED  D        
+marktangle-2-conditional-dependence  RETIRED      operator    serial_dependence    v1       native                -        
+marktangle-conditional-reversion     RETIRED      operator    serial_dependence    v1       native                -        
+mmsell10-queue-aware-cancel          RETIRED      operator    maker                v1       native                -        
+mmsell11-no-late-entry               RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell4-skip-list                    RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-anchor-stops                  RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-anchor-strangle               RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-anchor-vol-entry              RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-correlation-cap               PAPER        operator    risk_concentration   v1       native                -        
+mmsell-first-cohort                  RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-maker-offset-ab               RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-price-ceiling                 LIVE_CANARY  operator    maker                v2       ACTIVE_PAPER          B        
+mmsell-price-ceiling-capacity        LIVE_CANARY  operator    maker                v3       native                -        
+mmsell-price-ceiling-cell-size       LIVE_CANARY  operator    maker                v1       native                -        
+mmsell-price-ceiling-contest-cap     LIVE_CANARY  operator    maker                v1       native                -        
+mmsell-price-ceiling-size-split      LIVE_CANARY  operator    maker                v1       native                -        
+mmsell-rain-season                   PAPER        operator    maker                v1       native                -        
+mmsell-reviewed-universe             PAPER        operator    risk_concentration   v1       native                -        
+mmsell-scan-depth                    RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-scheduled-settle-live         RETIRED      operator    maker                v1       ACTIVE_LIVE           B        
+mmsell-temperature-season            PAPER        operator    maker                v1       native                -        
+mmsell-type-tight                    PAPER        operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-type-tight-retired            RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-type-wide                     RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-variants-2026-07              RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-weather-bands                 PAPER        operator    maker                v1       native                -        
+mmsell-wide-control                  PAPER        operator    maker                v1       ACTIVE_PAPER          B        
+origin-scanner-books                 RETIRED      operator    scanner              -        HISTORICAL_UNTRACKED  D        
+perp-v1                              RETIRED      operator    perp                 v1       native                -        
+pin15                                RETIRED      operator    observation_pin      -        RETIRED_OR_KILLED     C        
+tfav                                 RETIRED      operator    favorite_buy         -        RETIRED_OR_KILLED     C        
+theta4-fat-tail                      RETIRED      operator    theta                v1       ACTIVE_LIVE           B        
+theta-tail-sell                      PAUSED       operator    theta                -        ACTIVE_PAPER          C        
+wcprop                               RETIRED      operator    structural           -        RETIRED_OR_KILLED     C        
+weather-consensus                    RETIRED      operator    forecast             -        RETIRED_OR_KILLED     C        
+weather-consensus-city               RETIRED      operator    forecast             -        RETIRED_OR_KILLED     C        
+weather-legacy-cells                 RETIRED      operator    forecast             -        RETIRED_OR_KILLED     D        
+xgame                                RETIRED      idea_model  cross_venue          -        RETIRED_OR_KILLED     C        
