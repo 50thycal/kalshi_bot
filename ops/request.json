@@ -1,1 +1,1 @@
-{"type":"xos","command":"platform","args":["review","METRICS_ENGINE:live_fill_attribution_2026_10"],"id":"ws027-prev-3"}
+{"type":"xos","command":"control-tower","id":"ws027-ct-2"}
