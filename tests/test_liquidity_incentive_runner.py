@@ -1558,3 +1558,67 @@ def test_up_to_three_markets_of_one_event_are_quoted(live_db, settings, monkeypa
         out = _cycle(client, settings, s)
     assert out["placed"] == 3
     assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 2
+
+
+# --- §9.57: a bid priced out of the band for an hour is cancelled -----------------------------
+
+def _oob_runner(settings, book):
+    client = FakeClient({"KXTEST-OOB": book})
+    return client, run.IncentiveLiveRunner(client, settings)
+
+
+def test_a_bid_out_of_the_band_for_an_hour_is_cancelled(live_db, settings):
+    # Our NO bid rests at 3c; 100 NO contracts at 30c put the reference (Target/5 = 40) at 30c.
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    client, runner = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        assert runner._retire_out_of_band(s, ex, NOW) == 0          # clock starts
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=59)) == 0
+        assert client.canceled == []
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=61)) == 1
+    assert client.canceled == ["K-KXTEST-OOB"]
+
+
+def test_a_return_inside_the_band_restarts_the_clock(live_db, settings):
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    in_book = _book([(23, 500)], [(4, 100), (3, 300)])
+    client, runner = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        runner._retire_out_of_band(s, ex, NOW)
+        client.books["KXTEST-OOB"] = in_book
+        runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=30))
+        client.books["KXTEST-OOB"] = out_book
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=40)) == 0
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=95)) == 0
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=101)) == 1
+
+
+def test_an_unreadable_book_neither_runs_nor_resets_the_clock(live_db, settings):
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    client, runner = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        runner._retire_out_of_band(s, ex, NOW)
+        client.books["KXTEST-OOB"] = RuntimeError("down")
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=70)) == 0
+        client.books["KXTEST-OOB"] = out_book
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=71)) == 1
+
+
+def test_a_bid_inside_the_band_is_left_alone(live_db, settings):
+    client, runner = _oob_runner(settings, _book([(23, 500)], [(4, 100), (3, 300)]))
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        runner._retire_out_of_band(s, ex, NOW)
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(hours=5)) == 0
+    assert client.canceled == []

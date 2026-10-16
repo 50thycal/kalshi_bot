@@ -2982,3 +2982,24 @@ adding $150 of cash so every book is funded):**
 **At risk.** Resting bids cost nothing until filled; a filled bid is worth at most its ~$10 cost.
 Worst case is every bid filling and going to zero (~$100). This is a risk-envelope change: per
 Experiment OS it is a recorded change (new epoch) for the operator to register.
+
+### 9.57 A bid priced out of the 10c band for an hour is cancelled (2026-10-16)
+
+**Evidence.** 2026-10-16 01:00Z, four of the nine resting bids (Oct 19/20 Trump words MADE, FEMA,
+NUCL, VETE) scored ~0: each word's YES had re-priced to 34–57c, putting the reference price
+(Target/5 = 200 contracts from the best bid) at 20–36c, 10–29 ticks above our 5–10c bids. At
+DiscountFactor 0.5 per tick that is <0.1% credit. §9.49's re-price cannot follow above
+`MAX_PRICE_CENTS`, and the dead-quote swap waits for the 24h `MIN_HOLD_SECONDS`, so the four
+slots sat idle.
+
+**Decision (operator, 2026-10-16):** free the slot, but only once the move has lasted.
+`_retire_out_of_band` runs every cycle (~2 min): it reads the book of each purely resting single
+bid; a reference price above `MAX_PRICE_CENTS` on the bid's side starts a clock, a read inside the
+band resets it, an unreadable book leaves it unchanged. After `OUT_OF_BAND_EXIT_SECONDS` (1h)
+continuously out of band the bid is cancelled (`out_of_band`) and the normal entry step refills
+the slot. The 24h hold still governs bids that are scoring. The clock lives in memory: a worker
+restart restarts it, which only delays an exit. Exposure is reduced, never added.
+
+**Why the 10c cap stays.** It is the operator's fill-risk bound (§9.41: lopsided legs at 10–28c
+were ~$12.6 of ~$16 realised loss; 5c → 10c in §9.46) and it maximises score per dollar — the
+score is per contract, and $10 buys 100 contracts at 10c but only 20 at 50c.
