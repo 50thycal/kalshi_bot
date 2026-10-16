@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=ws024-check1-b
-# code a60751c0a17569f42a4bfcb6b99a0b1cebddc11f · started 2026-10-08T04:29:31Z
-id  started_at  secs  programs_listed  liquidity_programs  new_terms  changed_terms  disappeared  errors  deferred  max_last_seen  db_now
---  ----------  ----  ---------------  ------------------  ---------  -------------  -----------  ------  --------  -------------  ------
-
-(0 rows)
