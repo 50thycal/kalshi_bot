@@ -1,0 +1,12 @@
+# ops request [READ]
+# type=db  id=nucl-4
+# code 3a2f1c26b2af487eb3b9f5366d63f3a159435262 · started 2026-10-16T04:53:17Z
+market_ticker                side  action  limit_price  quantity  status    cancel_reason  created_at                        pos
+---------------------------  ----  ------  -----------  --------  --------  -------------  --------------------------------  ---
+KXTRUMPMENTION-26OCT20-NUCL  yes   buy     3            333       canceled  repriced       2026-10-15 16:25:09.646987+00:00     
+KXTRUMPMENTION-26OCT20-NUCL  yes   buy     7            142       canceled  repriced       2026-10-15 17:27:59.144428+00:00     
+KXTRUMPMENTION-26OCT20-NUCL  yes   buy     8            125       canceled  repriced       2026-10-15 18:47:49.532713+00:00     
+KXTRUMPMENTION-26OCT20-NUCL  yes   buy     9            111       canceled  repriced       2026-10-15 19:50:24.755690+00:00     
+KXTRUMPMENTION-26OCT20-NUCL  yes   buy     10           100       resting                  2026-10-15 21:15:04.449545+00:00     
+
+(5 rows)
