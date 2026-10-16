@@ -1,141 +1,28 @@
-# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
-# readiness reported a problem — read the block above
-========================================================================
-!! MUTATING OPS REQUEST — this changes the running system !!
-========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=ws027-arm-canary-2
-# actor=claude-code  purpose=WS-027 ARM_CANARY mmsell-win-set (owner approved in session 01D3m7Af5FnpLDG5eDQ6JJRL)  workstream=WS-027
-# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:10:06Z
-# target service: main
-# BEFORE:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 266 bytes, sha256:9b960737f80e53be>
-  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:e5c6143014a2b77f>
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
-# AFTER:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:e5c6143014a2b77f>
-# VERDICT: VERIFIED
-
-# post-change canonical checks: enforcement, readiness
-# $ xos enforcement
-#   {
-#     "mode": "NEW_ONLY",
-#     "cutover_id": "prod-new-only-20260816",
-#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
-#     "resolver_degraded_alarms_24h": 0,
-#     "deployments": {
-#       "total": 60,
-#       "grandfathered": 12,
-#       "native": 48
-#     },
-#     "post_cutover_unstamped": {
-#       "paper_trades": [],
-#       "live_orders": []
-#     },
-#     "live_canaries": [
-#       {
-#         "deployment": "mmsell-ceiling-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-ceiling-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-capacity-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-capacity-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-contestcap-live-2",
-#         "grandfathered": false,
-#         "twin": "mmsell-contestcap-twin-2",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "limm-smoke-live-1",
-#         "grandfathered": false,
-#         "twin": "limm-smoke-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-sizesplit-live-2",
-#         "grandfathered": false,
-#         "twin": "mmsell-sizesplit-twin-2",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-cellsize-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-cellsize-twin-1",
-#         "boundary_match": true
-#       }
-#     ],
-#     "unresolved_integrity_events": 1,
-#     "recorded_state_events": 7,
-#     "unverifiable_live_config": 0,
-#     "unresolved_config_drift": 1,
-#     "session_counters": {
-#       "blocked": 0,
-#       "warned": 0,
-# $ xos readiness
-#   {
-#     "ok": false,
-#     "checked_at": "2026-10-16 14:10:10.482999+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
-#     "checks": {
-#       "import_ran": {
-#         "ok": true,
-#         "detail": "42 experiments recorded"
-#       },
-#       "coverage_complete": {
-#         "ok": true,
-#         "detail": {
-#           "unmapped_tags": []
-#         }
-#       },
-#       "live_books_represented": {
-#         "ok": true,
-#         "detail": {
-#           "registered_live_tags": [
-#             "Alimm1",
-#             "Cmmsell10",
-#             "Dmmsell10",
-#             "Fmmsell10",
-#             "Jmmsell10",
-#             "Kmmsell10"
-#           ],
-#           "note": "no Settings supplied \u2014 presence-only check"
-#         }
-#       },
-#       "platform_snapshot_complete": {
-#         "ok": true,
-#         "detail": {
-#           "snapshot": "315bffccc104d1cc",
-#           "missing_components": []
-#         }
-#       },
-#       "grandfathered_identity": {
-#         "ok": true,
-#         "detail": {
-#           "deployments": 60,
-#           "grandfathered": 12,
-#           "native": 48
-#         }
-#       },
-#       "live_twin_links": {
-#         "ok": true,
-#         "detail": "all linked"
-#       },
-#       "no_unresolved_integrity": {
-#         "ok": false,
-#         "detail": "1 unresolved integrity events"
-#       },
-#       "no_unresolved_platform_impact": {
-#         "ok": false,
-#         "detail": "5 platform-impact dispositions awaiting acceptance/application"
-#       },
-#       "lineage_columns_present": {
-#         "ok": true,
-#         "detail": {
-#           "paper_trades": "experiment_deployment_arm_id present",
+# ops request [READ]
+# type=xos  id=ws027-arm-receipt-2
+# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:13:22Z
+{
+  "command_id": "ws027-arm-canary-2",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "9449f162dc833a2a3e00b7b62ac3137f25ad0da02192548c6ce55e9085196a94",
+  "completed_at": "2026-10-16 14:11:23.357540+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-win-set-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-winset-live-1",
+    "live_started_at": "2026-10-16 14:11:23.046444+00:00",
+    "twin_deployment": "mmsell-winset-twin-1",
+    "twin_started_at": "2026-10-16 14:11:23.046444+00:00",
+    "epoch_started_at": "2026-10-16 14:11:23.046444+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-win-set"
+}
