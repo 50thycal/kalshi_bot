@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "pos-1", "sql": "select distinct on (p.market_ticker) p.market_ticker, p.quantity_fp, p.captured_at from positions p where p.market_ticker in (select distinct market_ticker from live_orders where strategy='Alimm1' and created_at > now() - interval '5 days') order by p.market_ticker, p.captured_at desc"}
