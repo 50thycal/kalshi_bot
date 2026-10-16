@@ -38,8 +38,10 @@ a combined per-market bound.
 
 ## Open Decisions
 
-- ~~D1~~ / ~~D2~~ answered by the #644 merge as recommended (3-lot; budgets stay parked, the
-  arming preflight re-reads the account breakers).
+- ~~D1~~ / ~~D2~~ **decided by the owner, 2026-10-16, in session
+  `01D3m7Af5FnpLDG5eDQ6JJRL`** ("I am good with you building that recommendations for both d one
+  and d two"): D1 — arm without per-book budgets, the arming preflight re-reads the account
+  breakers; D2 — 3-contract clip, as registered.
 - Hard stops still ahead, each needing the owner's words: the
   revision activation, `ARM_CANARY` with its env act.
 
@@ -71,8 +73,7 @@ a combined per-market bound.
 
 ## Next Step
 
-#644 merged 2026-10-16 (owner acceptance of D1/D2 as recommended: 3-lot, arm without per-book
-budgets behind the preflight breaker read). The impact report first failed in the ops `script`
+#644 merged 2026-10-16; D1/D2 decided by the owner as recommended (see Open Decisions). The impact report first failed in the ops `script`
 sandbox (no SQLAlchemy) and moved to `xos attribution-impact` (follow-up PR). Then Platform Change Review: `REGISTER_REVISION`, run the
 impact report, `RECORD_IMPACTS`; the owner confirms activation; `CUTOVER`. In parallel,
 `REGISTER_PACKAGE mmsell-win-set-canary` and the paper append of `Pmmsell10`.
