@@ -1,23 +1,12 @@
 # ops request [READ]
-# type=db  id=ws027-integrity-1
-# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:17:17Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 643, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 639, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 456, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 500, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
-    cur.execute(sql)
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column i.detail does not exist
-LINE 1: select i.id, e.key, i.kind, i.detected_at, left(i.detail::te...
-                                                        ^
+# type=db  id=ws027-integrity-2
+# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:17:44Z
+id  key                               kind                             severity  detected_at                       description                                                                                                                                                                                             
+--  --------------------------------  -------------------------------  --------  --------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+25  mmsell-price-ceiling-size-split   EXPERIMENT_EXECUTION_STOOD_DOWN  info      2026-10-11 15:29:29.619702+00:00  mmsell-sizesplit-live-2 is intentionally stood down — none of its registered live tags (Jmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open …
+24  mmsell-price-ceiling-size-split   EXPERIMENT_CONFIG_DRIFT          error     2026-10-04 17:24:12.726835+00:00  runtime config for mmsell-sizesplit-live-1 differs from the registered deployment — classify: harmless deployment revision, new epoch, new version, or platform impact. Gate evaluation is blocked whil…
+23  mmsell-price-ceiling-contest-cap  EXPERIMENT_EXECUTION_STOOD_DOWN  info      2026-10-04 02:18:55.371846+00:00  mmsell-contestcap-live-2 is intentionally stood down — none of its registered live tags (Fmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open…
+22  mmsell-price-ceiling-contest-cap  EXPERIMENT_EXECUTION_STOOD_DOWN  info      2026-10-04 02:18:55.357732+00:00  mmsell-contestcap-live-2 is intentionally stood down — none of its registered live tags (Fmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open…
+20  mmsell-price-ceiling-capacity     EXPERIMENT_EXECUTION_STOOD_DOWN  info      2026-09-12 20:02:40.476251+00:00  mmsell-capacity-live-1 is intentionally stood down — none of its registered live tags (Dmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open p…
+
+(5 rows)
