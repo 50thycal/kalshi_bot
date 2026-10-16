@@ -101,7 +101,7 @@ the twin gap are what separate the two.
 6. Readback: twin epoch row for `Nmmsell10_pt4`; `xos enforcement`, `readiness`; after 24h no
    silent arm; the first settled shared market reconciles (Σ per-tag P&L = positions).
 
-## 7. Open owner decisions
+## 7. Owner decisions (decided 2026-10-16, both as recommended — WS-027)
 
 - **D1 — per-book budgets.** `docs/workstreams/ACTIVE.md` parks per-book live budgets as a
   prerequisite for a second concurrent live canary. Measured: the account breakers have not

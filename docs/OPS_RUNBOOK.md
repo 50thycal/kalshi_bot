@@ -608,7 +608,7 @@ To run a request:
      `live-paper-parallel` skill. **Standing policy: no strategy goes live without a twin.**
 
    - **"what would per-fill live attribution change"** ->
-     `{"type":"script","name":"live_attribution_impact"}` — WS-027's pre-activation report:
+     `{"type":"xos","command":"attribution-impact"}` — WS-027's pre-activation report:
      every live gate evaluated twice as a dry run (shipped per-position provider, then
      per-fill attribution forced on in its own process), every verdict and clause that would
      move, then the reconciliation of every settled live market (per-tag fill P&L vs

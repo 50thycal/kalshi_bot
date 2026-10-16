@@ -387,10 +387,15 @@ def test_an_unnamed_normalizer_is_still_refused_through_the_transport(xos_sessio
 
 def test_the_impact_report_is_allowlisted_and_reconciles_without_activating(xos_session,
                                                                              xos_platform):
-    from scripts import live_attribution_impact as report
+    from kalshi_bot.experiment_os import attribution_report as report
+    from kalshi_bot.experiment_os.cli import build_parser
     from scripts import ops_runner
 
-    assert "live_attribution_impact" in ops_runner.ALLOWED_SCRIPTS
+    # Served as a canonical xos read: the ops `script` sandbox has no SQLAlchemy.
+    assert "attribution-impact" in ops_runner.xos_allowlist()
+    assert "live_attribution_impact" not in ops_runner.ALLOWED_SCRIPTS
+    assert build_parser().parse_args(["attribution-impact"]).fn.__name__ \
+        == "cmd_attribution_impact"
     s = xos_session
     _live_experiment(s, xos_platform, "Kmm")
     _shared_market(s, result="yes", a_fills=(3.0,), a_px=93, b_fills=(3.0,), b_px=93)
@@ -405,3 +410,5 @@ def test_the_impact_report_is_allowlisted_and_reconciles_without_activating(xos_
     assert (rec["markets"], rec["ok"], rec["shared"]) == (2, 1, 1)
     assert [r.ticker for r in rec["mismatch"]] == [t]
     assert report.gate_impact(s) == []   # no live gate registered: nothing to move
+    text = report.render(s, days=36500)
+    assert "MISMATCH 1" in text and la.metrics_fingerprint() in text
