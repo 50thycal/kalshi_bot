@@ -148,6 +148,12 @@ MIN_HOURS_BEFORE_EVENT = 6.0
 #: A held quote is never swapped for a better market before it has rested this long (§9.55; the
 #: book swapped gas -> IASAND -> gas inside two hours on 2026-10-14, resetting time-in-book).
 MIN_HOLD_SECONDS = 24 * 3600.0
+#: §9.57 (operator, 2026-10-16): a resting bid whose side's reference price has moved ABOVE
+#: MAX_PRICE_CENTS scores ~nothing (DiscountFactor per tick below the reference) and cannot be
+#: re-priced inside the cap. Once it has been out of the band continuously for this long — checked
+#: every cycle (~2 min), a return inside the band resets the clock — it is cancelled to free the
+#: slot, without waiting for MIN_HOLD_SECONDS.
+OUT_OF_BAND_EXIT_SECONDS = 3600.0
 
 _EVENT_DATE_RE = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
 _MONTHS = {m: i for i, m in enumerate(

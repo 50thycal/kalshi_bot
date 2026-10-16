@@ -226,6 +226,9 @@ class IncentiveLiveRunner:
         self._cooldown_saved_at: datetime | None = None
         #: No entries before this: Kalshi said the account has no free cash (see live.py).
         self._balance_backoff_until: datetime | None = None
+        #: §9.57: ticker -> when its resting bid was first seen out of the price band, in this
+        #: process. In memory on purpose: a restart restarts the clock, which only delays an exit.
+        self._out_of_band_since: dict[str, datetime] = {}
         #: WS-024 D1 programme discovery: the GET-only client it runs through (built on first
         #: use), and when this process last attempted a pass — success or not, so a failing
         #: pass is retried on the discovery cadence, never every cycle.
@@ -290,6 +293,9 @@ class IncentiveLiveRunner:
         stepped = self._retire_before_event(session, executor, now)
         if stepped:
             summary["outcomes"].update(stepped)
+        out_of_band = self._retire_out_of_band(session, executor, now)
+        if out_of_band:
+            summary["outcomes"]["out_of_band"] = out_of_band
         snapped = self._snapshot_own_books(session, now)
         if snapped:
             summary["book_snapshots"] = snapped
@@ -600,6 +606,46 @@ class IncentiveLiveRunner:
                 logger.info(f"incentive book: {reason}: cancelled resting bid on {ticker}"
                             + (f" (cutoff {cutoff.isoformat()})" if cutoff else ""))
         return out
+
+    def _retire_out_of_band(self, session, executor, now: datetime) -> int:
+        """§9.57: cancel a purely resting single bid whose side's reference price has been above
+        MAX_PRICE_CENTS for OUT_OF_BAND_EXIT_SECONDS without a break. Such a bid scores ~nothing
+        and cannot be re-priced inside the cap, so it only holds a slot. Checked every cycle; a
+        read inside the band resets the clock, an unreadable book leaves it as it was. Returns
+        the number cancelled."""
+        held = self._stale_held_pairs(session, now, min_age_seconds=0.0)
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
+        seen: set[str] = set()
+        n = 0
+        for ticker, working in held.items():
+            if len(working) != 1 or ticker not in programs:
+                continue
+            seen.add(ticker)
+            row = working[0]
+            try:
+                ob = self.client.get_orderbook(ticker)
+            except Exception:  # noqa: BLE001 — unknown book: the clock neither runs nor resets
+                continue
+            c = candidate_from_book(programs[ticker], ob, now=now)
+            ref = (c.get("reference_price_by_side") or {}).get(row.side)
+            # Our own bid sits at or below the cap, so it can never lift the reference above it:
+            # a reference above the cap is the rest of the book's doing.
+            if ref is None or int(ref) <= limm.MAX_PRICE_CENTS:
+                self._out_of_band_since.pop(ticker, None)
+                continue
+            since = self._out_of_band_since.setdefault(ticker, now)
+            if (now - since).total_seconds() < limm.OUT_OF_BAND_EXIT_SECONDS:
+                continue
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="out_of_band"):
+                self._out_of_band_since.pop(ticker, None)
+                n += 1
+                logger.info(f"incentive book: out_of_band: cancelled resting {row.side} bid on "
+                            f"{ticker} at {row.limit_price}c (reference {ref}c above "
+                            f"{limm.MAX_PRICE_CENTS}c since {since.isoformat()})")
+        for t in [t for t in self._out_of_band_since if t not in seen]:
+            del self._out_of_band_since[t]
+        return n
 
     def _reprice_held(self, session, executor, now: datetime, account_state=None) -> int:
         """§9.49: a held single-side quote that has fallen BELOW its own market's reference
