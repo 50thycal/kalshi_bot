@@ -1,11 +1,16 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1016e
-# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-16T22:26:10Z
-strategy  status   n     pnl    losses  last_entry                      
---------  -------  ----  -----  ------  --------------------------------
-Rmmsell1  open     11    0.00   0       2026-10-16 18:21:46.363816+00:00
-Rmmsell1  settled  1002  17.56  47      2026-10-16 18:21:17.710959+00:00
-Rmmsell2  open     9     0.00   0       2026-10-16 17:19:50.079338+00:00
-Rmmsell2  settled  663   7.66   35      2026-10-16 18:21:17.725903+00:00
+# type=db  id=cc-rmm-1016f
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-16T22:26:30Z
+ev                           legs                                                               
+---------------------------  -------------------------------------------------------------------
+KXINXU-26OCT16H1600          T7689.9999:1:o:- T7694.9999:1:o:- T7714.9999:1:o:- T7714.9999:2:o:-
+KXITFMATCH-26OCT15PLEHEW     HEW:1:s:0.07 HEW:2:s:0.07                                          
+KXITFMATCH-26OCT16ANDGOM     GOM:1:s:0.07 GOM:2:s:0.07                                          
+KXITFMATCH-26OCT16CALCAS     CAS:1:s:0.06 CAS:2:s:0.06                                          
+KXITFMATCH-26OCT16CHATOS     CHA:1:s:0.06 CHA:2:s:0.06                                          
+KXITFMATCH-26OCT16STEZAM     ZAM:1:s:0.07 ZAM:2:s:0.07                                          
+KXNPBGAME-26OCT160500HOKFUK  HOK:1:s:0.06 HOK:2:s:0.06                                          
+KXNPBGAME-26OCT160500YOKHAN  HAN:1:s:0.06 HAN:2:s:0.06                                          
+KXRAIN-26OCT16               DAL:1:o:- DAL:2:o:-                                                
 
-(4 rows)
+(9 rows)
