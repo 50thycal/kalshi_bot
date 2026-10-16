@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "nucl-3", "sql": "select o.market_ticker, o.side, o.action, o.limit_price, o.quantity, o.status, o.cancel_reason, o.created_at, (select p.quantity_fp from position_snapshots p where p.market_ticker=o.market_ticker order by p.captured_at desc limit 1) pos from live_orders o where o.strategy='Alimm1' and o.created_at > now() - interval '30 hours' and (o.market_ticker like '%NUCL%' or o.status not in ('resting','canceled','cancelled')) order by o.created_at"}
