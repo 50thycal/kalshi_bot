@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=ws027-recon-4
+# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T02:57:29Z
+ntags  markets  within_1c  fill_pnl  pos_pnl   max_abs_diff  contracts_fp  contracts_int_col  markets_with_fractional
+-----  -------  ---------  --------  --------  ------------  ------------  -----------------  -----------------------
+1      2491     2490       -34.1760  -34.0383  0.1377        3068.81       3069               7                      
+2      16       16         -2.0770   -2.0770   0.0000        53.00         53                 0                      
+
+(2 rows)
