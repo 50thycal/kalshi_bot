@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["ws027-arm-canary-2"],"id":"ws027-arm-receipt-2"}
+{"type":"env","action":"get","id":"ws027-env-2"}
