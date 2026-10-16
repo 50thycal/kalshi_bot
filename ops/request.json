@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "oob-1", "sql": "select created_at, message, raw_json from system_events where component='limm_out_of_band' order by id desc limit 3"}
