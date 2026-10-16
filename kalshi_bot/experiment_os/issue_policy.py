@@ -830,6 +830,8 @@ _INTEGRITY_KIND_CAUSE: dict[str, str] = {
     # whoever registers a deployment, not an operational fault of the running
     # book — so it routes where the semantic lives (XOS-000036).
     "EXPERIMENT_CONFIG_UNVERIFIABLE": "shared_semantics",
+    # Per-fill live attribution is a shared metric definition (WS-027).
+    "LIVE_ATTRIBUTION_MISMATCH": "shared_semantics",
 }
 
 #: The three causes §6 recognises for an integrity problem, and who owns each.

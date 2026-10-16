@@ -1059,7 +1059,16 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
     cannot be split between arms. The reference script silently attributes the
     full position to every strategy that touched it; for an A/B promotion gate
     that would be double-counting. Exclusions are counted in provenance, never
-    dropped silently."""
+    dropped silently.
+
+    **Superseded on activation** of `METRICS_ENGINE:live_fill_attribution_2026_10`
+    (WS-027, `docs/LIVE_FILL_ATTRIBUTION.md`): from then on a shared market is priced
+    from each arm's OWN fills instead of being excluded — `live_attribution`. Until
+    that revision is active this function runs exactly as it always has."""
+    from . import live_attribution
+
+    if live_attribution.fill_attribution_active(session):
+        return live_attribution.attributed_market_rows(session, tags, scope)
     from ..models import Fill, LiveOrder, Position
 
     # Markets this arm entered inside the window, and every strategy that traded
@@ -1172,6 +1181,60 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
             for t in sorted(settled)
         ] if settled else [],
     }
+
+
+def _fill_attribution_provenance(agg: dict) -> dict:
+    """Provenance only fill attribution adds. Empty under the shipped provider, so a
+    gate's recorded provenance is byte-identical until the revision activates."""
+    if agg.get("attribution") != "fill":
+        return {}
+    return {
+        "live_attribution": "fill",
+        "shared_markets_included": agg.get("shared_markets_included", 0),
+        "attribution_basis": (
+            "each arm's own entry fills (fills x live_orders), count_fp contracts, priced "
+            "against the market's settlement value — shared markets included, never "
+            "split pro rata (METRICS_ENGINE:live_fill_attribution_2026_10)"
+        ),
+    }
+
+
+def _shared_market_fill_rate(session, scope: MetricScope) -> dict:
+    """Filled vs resolved entry contracts on markets where ANOTHER tag also placed an
+    entry order — the per-tag queue self-competition read."""
+    from ..models import LiveOrder
+
+    tags = list(scope.strategy_tags)
+    mine = session.execute(
+        select(LiveOrder.market_ticker, LiveOrder.status, LiveOrder.quantity,
+               LiveOrder.kalshi_order_id)
+        .where(LiveOrder.strategy.in_(tags), LiveOrder.action == "buy",
+               LiveOrder.created_at >= scope.window_start,
+               LiveOrder.created_at <= scope.window_end)
+    ).all()
+    tickers = {t for t, *_ in mine}
+    if not tickers:
+        return {"markets": 0, "filled_contracts": 0.0, "resolved_contracts": 0.0,
+                "fill_rate_pct": None}
+    shared = set(session.execute(
+        select(LiveOrder.market_ticker)
+        .where(LiveOrder.market_ticker.in_(tickers), LiveOrder.strategy.notin_(tags),
+               LiveOrder.action == "buy")
+        .distinct()
+    ).scalars().all())
+    filled = resolved = 0.0
+    for ticker, status, qty, _koid in mine:
+        st = (status or "").lower()
+        if ticker not in shared:
+            continue
+        if st in _FILLED_ORDER_STATUSES:
+            filled += float(qty or 0)
+            resolved += float(qty or 0)
+        elif st in _UNFILLED_RESOLVED_STATUSES:
+            resolved += float(qty or 0)
+    return {"markets": len(shared), "filled_contracts": filled,
+            "resolved_contracts": resolved,
+            "fill_rate_pct": round(100.0 * filled / resolved, 4) if resolved else None}
 
 
 def _ratio_stderr(per_market: list[tuple[float, float]], ratio: float) -> float | None:
@@ -1500,7 +1563,7 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
         "excluded_still_open_markets": agg["open_markets"],
         "excluded_unpriced_markets": agg["unpriced_markets"],
         "orders_that_never_held_a_position": agg["never_held_markets"],
-    }
+    } | _fill_attribution_provenance(agg)
 
     if key == "live_settled_markets":
         # The INDEPENDENT unit. Contracts on one market share one settlement, so a
@@ -1593,6 +1656,11 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
                 provenance=prov | fills,
             )
         pct = 100.0 * fills["filled_contracts"] / fills["ordered_contracts"]
+        if agg.get("attribution") == "fill":
+            # Queue self-competition telemetry (WS-027 2c): the same rate restricted to
+            # markets another tag also rested on, so a twin comparison can see what
+            # sharing a no-bid queue costs this arm. Diagnostic only; never the value.
+            fills = fills | {"shared_markets": _shared_market_fill_rate(session, scope)}
         return MetricValue(key, round(pct, 4), fills["ordered_contracts"], "%",
                            provenance=prov | fills)
 
@@ -1720,7 +1788,7 @@ def _twin_metric(session, key: str, scope: MetricScope) -> MetricValue:
     agg = _live_market_rows(session, scope.strategy_tags, scope)
     settled_live = agg["settled_tickers"]
     prov = prov | {"settled_live_markets": len(settled_live),
-                   "twin_markets_seen": len(twin)}
+                   "twin_markets_seen": len(twin)} | _fill_attribution_provenance(agg)
 
     if key == "twin_mirror_coverage_pct":
         # Denominator is markets ENTERED, not settled: the mirror fires at entry,
@@ -2241,6 +2309,13 @@ def compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
     definition = REGISTRY.get(key)
     revision = definition.effective_revision if definition else UNPROVIDED_REVISION
     mv = _compute_metric(session, key, scope)
+    if (mv.provenance or {}).get("live_attribution") == "fill":
+        # Fill attribution is a different implementation of the same metric, so the
+        # result binds to it: a verdict computed per fill never shares an identity with
+        # one computed per position, and the gate runner re-records on activation.
+        from .live_attribution import PROVIDER_REVISION
+
+        revision = PROVIDER_REVISION
     return replace(mv, provenance=(mv.provenance or {}) | {"provider_revision": revision})
 
 

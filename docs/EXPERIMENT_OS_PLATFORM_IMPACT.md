@@ -509,6 +509,22 @@ are excluded by `end_date`, whatever their stamp.
 **`Alimm1` is untouched.** The live runner reads `current_programs(now=...)`, which already
 drops ended programmes. No exposure, envelope, arm, epoch or Version changes.
 
+## Live P&L attributed per fill (Platform Change Review, 2026-10-16) — WS-027
+
+`METRICS_ENGINE:live_fill_attribution_2026_10`: every live metric prices each tag from its own
+fills, so a market two tags share is split by fills instead of excluded. Full record — the
+production measurements, the affected-experiment table, the Kmmsell10 ruling and the cutover
+order — in `docs/LIVE_FILL_ATTRIBUTION.md`; decision `DEC-037`.
+
+It adds three transport options, each opt-in and none able to change exposure, place an order,
+transition, record a verdict, fabricate a Version or force:
+
+| option | where | does |
+|---|---|---|
+| `normalization_ref` | a `RECORD_IMPACTS` row | carries the NAMED normalizer an I1/RECOMPUTE requires; validated by the engine. Before this an I1 was unrecordable in production |
+| `apply_accepted_recompute: true` | `CUTOVER` | applies the revision's accepted RECOMPUTE dispositions at the measured instant. Before this nothing could apply one, so an I1 left its experiment BLOCKED_PLATFORM after activation |
+| `expect_metrics_fingerprint` | `CUTOVER` | the METRICS_ENGINE analogue of the execution proof: defers on a worker whose `live_attribution.py` is not the reviewed one, and activates only a METRICS_ENGINE revision with that fingerprint |
+
 ## Scope boundary
 
 No Evo integration, no Claude session roles, no automatic promotions, no

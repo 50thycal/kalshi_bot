@@ -3,10 +3,11 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-10-15 (WS-026 global monitor opened on owner request; WS-020 paused by the owner to make room) · **Build OS v0.12**
+**Updated:** 2026-10-16 (WS-027 opened on the owner's 2026-10-15 design decision) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-027](WS-027-win-set-shared-canary.md) | WIN-set live canary beside Kmmsell10: fill-level live attribution, shared-market pair, combined bound | REVIEW | Active | Owner merges the WS-027 PR (hard stop: live safeguard). Then PCR: REGISTER_REVISION → `live_attribution_impact` report → RECORD_IMPACTS → owner confirms activation → CUTOVER. ARM_CANARY only after `docs/MMSELL_WIN_SET_CANARY.md` §6. Open: D1 per-book budgets, D2 clip size | WS-027 PR (this branch) |
 | [WS-026](WS-026-global-experiment-monitor.md) | Global experiment monitor: one snapshot, daily check-in, status page | REVIEW | Active | #637 merged; first production snapshot ran end to end. Owner merges the probe-fix PR; the routine's first 07:45 CT run (2026-10-16) closes check 5. Open: D1 catalog URL, D2 desk diagnostic secret | [#637](https://github.com/50thycal/kalshi_bot/pull/637) merged; probe-fix PR (this branch) |
 | [WS-025](WS-025-desk-service-v3.md) | Desk service 3.0: unattended desk agents (subscription runners, event wakes, dry-run week) | BUILDING | Active | PR A (service: cycle cap, wake signal, watchdog, dry run, ntfy; all off by default) in review; next PR B (ChatGPT runner + Claude routines), then the operator activation runbook (hard stops) | #580 merged (design); PR A (this branch) |
 | [WS-024](WS-024-railway-ram-budget.md) | Railway RAM budget: ≤ $15/month, $10 stretch | BUILDING | Active | Step 1 merged and live (programme discovery in `main`, 2026-10-08). Owner merges the step-3 PR (live-dash idle refresher); then sleep on live-dash, 24h check-1 + after-RAM, then D2 (catalog volume full in ~10–12 days) | [#547](https://github.com/50thycal/kalshi_bot/pull/547), [#553](https://github.com/50thycal/kalshi_bot/pull/553) merged; step-3 PR (this branch) |
@@ -117,3 +118,5 @@ WS-023 is admitted on Calvin’s explicit 2026-10-05 build request. This adds a 
 WS-023 now has a named external credential unblocker and is Blocked; the admission did not pause another row.
 
 WS-026 was admitted on Calvin's explicit 2026-10-15 request; asked which row pauses, he chose WS-020 (its shadow was already stopped). The board stays over its declared limit; no other row changed.
+
+WS-027 was admitted on the owner's explicit 2026-10-15 handoff (WIN-set canary beside Kmmsell10). It adds one Active row; no other row is paused by inference, and which row pauses remains the owner's call.

@@ -461,9 +461,16 @@ class LiveExecutor:
         if self._total_exposure_hit(session):
             self.summary.risk_blocked += 1
             return "gate:total_exposure"
-        # Per-ticker dedup + any in-flight order on this market.
+        # A NAMED shared-market pair (WS-027): None for every tag unless the operator listed
+        # this exact tag in MMSELL_LIVE_SHARED_MARKET_PAIRS, so all of the below is the
+        # shipped behaviour for every other book.
+        pair = s.mmsell_live_shared_pair_for(strategy)
+        partner = (pair.tags - {strategy}) if pair is not None else frozenset()
+        # Per-ticker dedup + any in-flight order on this market (a listed partner's resting
+        # order excepted: both books may rest at the same no-bid, and neither nets or
+        # cancels the other's — queue self-competition is recorded, not prevented).
         if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
-                or repo.live_open_order_exists(session, ticker):
+                or repo.live_open_order_exists(session, ticker, ignore_strategies=partner):
             self.summary.skipped_dedup += 1
             return "gate:dedup"
         # The ACCOUNT already holds this market — under another tag (XOS-000040). The dedup
@@ -472,7 +479,11 @@ class LiveExecutor:
         # draining tag still held: 3+3 contracts on one KXBTCD market settled at -$5.58
         # against a registered $3.00 per-market bound. MAX_MARKET_EXPOSURE does not catch it
         # because it is portfolio-wide (25 in production), not the book's per-market bound.
-        if s.mmsell_live_refuse_account_held and self._account_holds(session, ticker):
+        # A listed pair passes ONLY when every contract on the market is the partner's own
+        # (`_held_only_by_partner`); the combined bound below then caps the stack.
+        if s.mmsell_live_refuse_account_held and self._account_holds(session, ticker) \
+                and not (pair is not None
+                         and self._held_only_by_partner(session, ticker, strategy, pair)):
             self.summary.skipped_dedup += 1
             return "gate:held"
         # Cap the book's concurrent live footprint.
@@ -531,6 +542,12 @@ class LiveExecutor:
         if qty <= 0:
             self.summary.skipped_gate += 1
             return "gate:size"
+        # The pair's REGISTERED combined per-market bound: what both tags hold plus what
+        # they still have working, plus this clip, in contracts AND dollars.
+        if pair is not None and not self._within_shared_bound(session, ticker, pair,
+                                                              qty, price):
+            self.summary.risk_blocked += 1
+            return "gate:shared_bound"
 
         # Audit trail: record an (approved) risk event so the live decision is inspectable.
         # "hot_entry" flags a defensively-priced entry for later analysis — informational only,
@@ -541,6 +558,8 @@ class LiveExecutor:
         codes = ["hot_entry"] if hot else []
         if ab_arm is not None:
             codes.append(f"ab_arm:{ab_arm}/{offset}c")
+        if pair is not None:
+            codes.append(f"shared_pair:{pair.env_value()}")
         repo.insert_risk_event(session, None, ticker, RiskDecision(
             approved=True, reason_codes=codes,
             max_allowed_quantity=qty, max_allowed_price=price))
@@ -1145,6 +1164,41 @@ class LiveExecutor:
             return False
         qty = pos.quantity_fp if pos.quantity_fp is not None else pos.quantity
         return bool(qty) and abs(float(qty)) > 0
+
+    @staticmethod
+    def _held_only_by_partner(session, ticker: str, strategy: str, pair) -> bool:
+        """True when every contract the account holds on `ticker` is the listed partner's
+        own, by fill attribution (`live_attribution.holdings_by_tag`). Refuses — returns
+        False — when this tag already holds the market (a re-entry overrun of its own
+        clip, which `gate:held` has always refused), when any holder is outside the pair,
+        or when the account holds contracts no order of the pair explains."""
+        from ..experiment_os import live_attribution as la
+
+        held = la.holdings_by_tag(session, ticker)
+        if abs(held.get(strategy, 0.0)) > la.DUST:
+            return False
+        if any(tag not in pair.tags for tag in held):
+            return False
+        pos = repo.latest_position_snapshot(session, ticker)
+        account = 0.0
+        if pos is not None:
+            qty = pos.quantity_fp if pos.quantity_fp is not None else pos.quantity
+            account = abs(float(qty or 0))
+        return account <= sum(abs(v) for v in held.values()) + la.DUST
+
+    @staticmethod
+    def _within_shared_bound(session, ticker: str, pair, qty: int, price: int) -> bool:
+        from ..experiment_os import live_attribution as la
+
+        contracts = la.committed_contracts(session, ticker, pair.tags) + qty
+        dollars = la.committed_cost_usd(session, ticker, pair.tags) + qty * price / 100.0
+        ok = contracts <= pair.max_contracts + 1e-9 and dollars <= pair.max_usd + 1e-9
+        if not ok:
+            logger.info(
+                f"mmsell live entry refused — {ticker} would hold {contracts:g} contracts / "
+                f"${dollars:.2f} across {sorted(pair.tags)}, over the registered combined "
+                f"bound {pair.max_contracts} / ${pair.max_usd:.2f}")
+        return ok
 
     def _market_exposure(self, session, ticker: str) -> float:
         pos = repo.latest_position_snapshot(session, ticker)
@@ -2321,11 +2375,20 @@ class LiveExecutor:
                 # rather than guess; a shared ticker needs a human, not an automated closeout.
                 other = repo.other_live_no_strategies_on_ticker(session, ticker, prefix)
                 if other:
-                    logger.error(
-                        "mmsell closeout SKIPPED shared ticker (also held by another live "
-                        "strategy) -- resolve manually", extra={"extra_fields": {
-                            "ticker": ticker, "strategy": prefix, "also_held_by": other}})
-                    continue
+                    # A listed shared-market pair (WS-027) can close REDUCE-ONLY BY TAG: at
+                    # most what this tag's own fills hold, so it can never sell the
+                    # partner's contracts. Anything else stays skipped, as it always was.
+                    own = self._shared_closeout_qty(session, ticker, prefix, other)
+                    if own is None:
+                        logger.error(
+                            "mmsell closeout SKIPPED shared ticker (also held by another live "
+                            "strategy) -- resolve manually", extra={"extra_fields": {
+                                "ticker": ticker, "strategy": prefix, "also_held_by": other}})
+                        continue
+                    strategy, own_qty = own
+                    if own_qty <= 0:
+                        continue
+                    qty = min(qty, own_qty)
                 if repo.live_open_order_exists(session, ticker):
                     continue  # an order is already in flight -- let it resolve before retrying
                 if self._closeout_exhausted(session, ticker=ticker, prefix=prefix,
@@ -2405,6 +2468,23 @@ class LiveExecutor:
                                               kalshi_order_id=koid, raw=resp)
                 placed += 1
         return placed
+
+    def _shared_closeout_qty(self, session, ticker: str, prefix: str,
+                             other: list[str]) -> tuple[str, int] | None:
+        """(own tag, whole contracts it may close) on a market a listed pair shares, or
+        None when the share is not a listed pair. Whole contracts, rounded DOWN: a
+        closeout may leave dust, never touch a partner's contract."""
+        from ..experiment_os import live_attribution as la
+
+        held = la.holdings_by_tag(session, ticker)
+        mine = [t for t in held if t.startswith(prefix)]
+        if len(mine) != 1:
+            return None
+        pair = self.settings.mmsell_live_shared_pair_for(mine[0])
+        if pair is None or not set(other) <= pair.tags or any(t not in pair.tags
+                                                             for t in held):
+            return None
+        return mine[0], int(max(0.0, held[mine[0]]) + 1e-9)
 
     def close_theta_positions(self, session) -> int:
         """ONE-SHOT: close every open NO position for `theta_closeout_strategies`. Identical

@@ -256,6 +256,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         liquidity_incentive_mm,
         marktangle,
         marktangle2,
+        mmsell_win_set_canary,
         perp_v1,
         queue_aware_cancel,
         rain_season,
@@ -630,6 +631,29 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=successor_mmsell10_cell_size.ACTIVATION_VARS,
             strategy_tags=(successor_mmsell10_cell_size.LIVE_TAG,
                            successor_mmsell10_cell_size.TWIN_TAG),
+        ),
+        "mmsell-win-set-canary": ExperimentPackage(
+            name="mmsell-win-set-canary",
+            experiment_key=mmsell_win_set_canary.EXPERIMENT_KEY,
+            description=(
+                "A NEW live canary beside Kmmsell10 (WS-027, owner decision 2026-10-15): the "
+                "mmsell price-ceiling rule restricted to the WIN categories that won on paper "
+                "AND live (weather, index, Politics, mentions) — exactly the seven graduated, "
+                "unpaused series KXFEDMENTION, KXINX, KXINXU, KXNASDAQ100U, KXRAIN, KXTRUMPSAY, "
+                "KXWCMENTION — at a 3-lot. Registering creates the experiment in PAPER on "
+                "Pmmsell10 and touches no other experiment. Arming (Nmmsell10 + twin "
+                "Nmmsell10_pt4) is ARM_CANARY, an owner-confirmed hard stop, and needs the "
+                "METRICS_ENGINE:live_fill_attribution_2026_10 revision ACTIVE first so shared "
+                "markets are attributed per fill. The env step appends Nmmsell10 AFTER "
+                "Kmmsell10 in MMSELL_VARIANTS, adds it to LIVE_STRATEGIES and sets "
+                "MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Nmmsell10:6:6.00. "
+                "Plan: docs/MMSELL_WIN_SET_CANARY.md."
+            ),
+            register=mmsell_win_set_canary.register,
+            arm=mmsell_win_set_canary.arm,
+            activation_vars=mmsell_win_set_canary.ACTIVATION_VARS,
+            strategy_tags=(mmsell_win_set_canary.PAPER_TAG, mmsell_win_set_canary.LIVE_TAG,
+                           mmsell_win_set_canary.TWIN_TAG),
         ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",

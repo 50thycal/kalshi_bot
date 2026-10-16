@@ -389,7 +389,8 @@ def _record_impacts(session, env: _Envelope, now: datetime):
     for row in rows:
         if not isinstance(row, dict):
             raise PlatformCommandRejected("each impact row must be an object", "BAD_IMPACT_ROW")
-        unknown = sorted(set(row) - {"experiment", "impact_class", "action", "rationale"})
+        unknown = sorted(set(row) - {"experiment", "impact_class", "action", "rationale",
+                                     "normalization_ref"})
         if unknown:
             raise PlatformCommandRejected(
                 f"{len(unknown)} unrecognised field(s) in an impact row — names not "
@@ -407,6 +408,13 @@ def _record_impacts(session, env: _Envelope, now: datetime):
                 "an impact rationale is missing or too long", "BAD_IMPACT_RATIONALE"
             )
         experiment = _experiment_or_refuse(session, row["experiment"])
+        # I1/RECOMPUTE requires the NAMED normalizer (WS-027 found the transport
+        # could not carry one, so an I1 was unrecordable in production). It is
+        # validated by the engine against the canonical registry, never trusted.
+        norm = row.get("normalization_ref")
+        if norm is not None and (not isinstance(norm, str) or len(norm) > 120):
+            raise PlatformCommandRejected("a normalization_ref is malformed",
+                                          "BAD_NORMALIZATION_REF")
         record = platform_impact.propose_impact(
             session,
             revision,
@@ -416,6 +424,7 @@ def _record_impacts(session, env: _Envelope, now: datetime):
             rationale=rationale,
             decided_by=env.actor,
             decided_at=now,
+            normalization_ref=norm,
         )
         platform_impact.accept_impact(session, record, accepted_by=env.actor, at=now)
         recorded.append(record)
@@ -448,7 +457,17 @@ def _cutover(session, env: _Envelope, now: datetime):
     rolls back to the savepoint and the receipt says so.
     """
     revision = _revision_or_refuse(session, env.payload["revision"])
-    if "expect_execution_fingerprint" in env.payload:
+    if "expect_metrics_fingerprint" in env.payload:
+        # Same shape as the execution proof: the worker serving the cutover must run
+        # the reviewed provider (WS-027), and that proof activates only the
+        # METRICS_ENGINE revision whose immutable fingerprint names that code.
+        if (not env.payload["revision"].startswith("METRICS_ENGINE:")
+                or revision.fingerprint != env.payload["expect_metrics_fingerprint"]):
+            raise PlatformCommandRejected(
+                "metrics cutover must match the registered metrics revision",
+                "METRICS_REVISION_MISMATCH",
+            )
+    elif "expect_execution_fingerprint" in env.payload:
         # A matching checkout must never authorize a different component or a
         # revision whose immutable fingerprint describes different code.
         if (not env.payload["revision"].startswith("EXECUTION_ENGINE:")
@@ -486,6 +505,22 @@ def _cutover(session, env: _Envelope, now: datetime):
     service.activate_platform_revision(
         session, revision, activated_at=measured, actor=env.actor
     )
+    recomputed = []
+    if env.payload.get("apply_accepted_recompute") is True:
+        # WS-027: an accepted I1/RECOMPUTE licenses comparability only once APPLIED,
+        # and nothing in production could apply one — so activating a revision with
+        # I1 dispositions would have left every such experiment BLOCKED_PLATFORM.
+        # Applied here at the same measured instant, through the engine's own helper
+        # (which re-validates the named normalizer). Opt-in: other cutovers unchanged.
+        for record in session.scalars(
+            select(PlatformImpactAction).where(
+                PlatformImpactAction.revision_id == revision.id,
+                PlatformImpactAction.status == "accepted",
+                PlatformImpactAction.action == "RECOMPUTE",
+            )
+        ).all():
+            recomputed.append(platform_impact.apply_recompute(session, record,
+                                                              actor=env.actor))
     epochs = []
     for key in keys:
         experiment = _experiment_or_refuse(session, key)
@@ -505,7 +540,8 @@ def _cutover(session, env: _Envelope, now: datetime):
                 session, record, actor=env.actor, boundary=measured
             )
         )
-    return {"revision": revision, "epochs": epochs, "measured": measured}
+    return {"revision": revision, "epochs": epochs, "measured": measured,
+            "recomputed": recomputed}
 
 
 def _parse_instant(value) -> datetime:
@@ -554,7 +590,8 @@ ACTIONS: dict[str, _Action] = {
     "CUTOVER": _Action(
         required=frozenset({"revision"}),
         optional=frozenset({"new_epoch_experiments", "expect_taxonomy_fingerprint",
-                            "expect_execution_fingerprint", "expect_ownership_namespace"}),
+                            "expect_execution_fingerprint", "expect_ownership_namespace",
+                            "expect_metrics_fingerprint", "apply_accepted_recompute"}),
         run=_cutover,
         doc="Atomic pre-cycle cutover: activate at the measured boot instant and "
             "re-epoch the accepted NEW_EPOCH experiments at exactly that instant.",
@@ -576,6 +613,22 @@ def check_preconditions(env: _Envelope) -> None:
     armed rather than burned on a worker that is not serving the change.
     """
     if env.action != "CUTOVER":
+        return
+    if "expect_metrics_fingerprint" in env.payload:
+        others = {"expect_execution_fingerprint", "expect_taxonomy_fingerprint",
+                  "expect_ownership_namespace"} & set(env.payload)
+        if others:
+            raise PlatformCommandRejected("choose one cutover fingerprint", "AMBIGUOUS_FINGERPRINT")
+        expected = env.payload["expect_metrics_fingerprint"]
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise PlatformCommandRejected("invalid metrics fingerprint", "BAD_FINGERPRINT")
+        from .live_attribution import metrics_fingerprint
+
+        if metrics_fingerprint() != expected:
+            raise PlatformCommandDeferred(
+                "worker metrics provider does not match the reviewed revision",
+                "METRICS_NOT_DEPLOYED",
+            )
         return
     if "expect_execution_fingerprint" in env.payload:
         if "expect_taxonomy_fingerprint" in env.payload:
@@ -756,6 +809,10 @@ def _result_of(produced: Any) -> dict | None:
             "new_epochs": [
                 {"epoch_id": e.id, "started_at": str(e.started_at)}
                 for e in produced["epochs"]
+            ],
+            "recompute_applied": [
+                {"impact_id": r.id, "experiment_id": r.experiment_id}
+                for r in produced.get("recomputed") or []
             ],
         }
     return None

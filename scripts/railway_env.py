@@ -120,6 +120,11 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # WS-027: named tag PAIRS that may hold one market inside a registered combined bound
+    # (docs/MMSELL_WIN_SET_CANARY.md). Empty = the XOS-000040 held-market gate for every tag.
+    # Setting it is an owner-confirmed Live Ops act; it can only relax `gate:held` and the
+    # in-flight check for the two tags it names.
+    "MMSELL_LIVE_SHARED_MARKET_PAIRS",
     # Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md). MODE is off|shadow|live;
     # shadow records decisions and cancels nothing. Setting `live` sends cancels ONLY for
     # tags in LIVE_QUEUE_CANCEL_TAGS that are also registered to an active LIVE treatment
