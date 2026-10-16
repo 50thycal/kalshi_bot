@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "nucl-2", "sql": "select market_ticker, side, action, limit_price, quantity, filled_quantity, status, created_at from live_orders where strategy='Alimm1' and created_at > now() - interval '30 hours' and (market_ticker like '%NUCL%' or status not in ('resting','canceled','cancelled')) order by created_at"}
