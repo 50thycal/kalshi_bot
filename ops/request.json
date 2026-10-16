@@ -1,1 +1,1 @@
-{"type":"xos","command":"attribution-impact","id":"ws027-impact-2"}
+{"type":"xos","command":"package-preflight","args":["mmsell-win-set-canary"],"id":"ws027-preflight-1"}
