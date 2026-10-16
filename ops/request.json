@@ -1,1 +1,1 @@
-{"type": "env", "action": "set", "values": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"ws027-waiver-register-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell-win-set-owner-waiver\"},\"schema_version\":1}"}, "id": "ws027-waiver-register-1", "actor": "claude-code", "purpose": "WS-027 v2 owner waiver (PR #649)", "workstream": "WS-027"}
+{"type":"xos","command":"experiment-command-show","args":["ws027-waiver-register-1"],"id":"ws027-waiver-receipt-1"}
