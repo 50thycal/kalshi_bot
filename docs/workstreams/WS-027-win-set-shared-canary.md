@@ -95,6 +95,15 @@ written). v2 = `mmsell-win-set-owner-waiver`: the promotion bar only (paper not 
 $3.00 since v2), every live stop verbatim; `docs/MMSELL_WIN_SET_CANARY.md` §8. After merge:
 REGISTER_PACKAGE → ARM_CANARY (approved_by Calvin) → the env act → readback.
 
+**2026-10-16 14:11Z — ARMED.** PR #649 merged by the owner; `ws027-waiver-register-1` SUCCEEDED
+(v2); `ws027-arm-canary-2` SUCCEEDED (`ws027-arm-canary-1` was REJECTED on the approver string's
+format, nothing written) — `mmsell-winset-live-1` + `mmsell-winset-twin-1` at one instant, epoch 2,
+I2. Env act `ws027-env-arm-1` VERIFIED: `Nmmsell10` appended after `Kmmsell10` in
+`MMSELL_VARIANTS` (live value read, not retyped), `LIVE_STRATEGIES=Kmmsell10,Alimm1,Nmmsell10`,
+`MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Nmmsell10:6:6.00`; worker redeployed 14:14:58Z.
+`xos tag Nmmsell10` → LIVE_CANARY v2 e2. Open: the 24h silent-arm check and the first settled
+shared market's reconciliation (§6 line 6).
+
 **Side effect to route:** registering `mmsell-win-set` added it to the unaccounted list of the two
 other pending revisions (`EXECUTION_ENGINE:shared_primary_ownership_20260921`,
 `MARKET_TAXONOMY:football_coverage_2026_10_12`); whoever cuts those over must include it.
