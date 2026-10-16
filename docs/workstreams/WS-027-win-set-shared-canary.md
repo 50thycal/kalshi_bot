@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-10-16
-**Updated:** 2026-10-16 (#644 merged; impact report moved to `xos attribution-impact`)
+**Updated:** 2026-10-16 (revision registered, impacts recorded, WIN-set in PAPER)
 **Build OS:** v0.12
 
 ## Goal
@@ -73,7 +73,9 @@ a combined per-market bound.
 
 ## Next Step
 
-#644 merged 2026-10-16; D1/D2 decided by the owner as recommended (see Open Decisions). The impact report first failed in the ops `script`
-sandbox (no SQLAlchemy) and moved to `xos attribution-impact` (follow-up PR). Then Platform Change Review: `REGISTER_REVISION`, run the
-impact report, `RECORD_IMPACTS`; the owner confirms activation; `CUTOVER`. In parallel,
-`REGISTER_PACKAGE mmsell-win-set-canary` and the paper append of `Pmmsell10`.
+Done 2026-10-16: #644/#645 merged; impact report (0 verdicts move, 1,237/1,237 reconcile); revision
+#14 registered; impacts recorded (activation gate safe); `mmsell-win-set` registered in PAPER and
+`Pmmsell10` appended to `MMSELL_VARIANTS`. Next: **owner confirms activation** of
+`METRICS_ENGINE:live_fill_attribution_2026_10` → `CUTOVER` with `expect_metrics_fingerprint` and
+`apply_accepted_recompute`. Then ~10 days of paper on `Pmmsell10` → arming preflight
+(`docs/MMSELL_WIN_SET_CANARY.md` §6) → `ARM_CANARY` (owner).

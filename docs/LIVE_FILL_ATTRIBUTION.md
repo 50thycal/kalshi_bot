@@ -68,6 +68,38 @@ and prints every verdict and clause that differs, then the reconciliation of eve
 market. It runs after merge, before `RECORD_IMPACTS`, and its output goes into this table. A
 moved verdict on a LIVE_CANARY changes the disposition discussion with the owner, never silently.
 
+### 4a. Measured before activation (2026-10-16, ops `ws027-impact-2`, `xos attribution-impact`)
+
+- **Provider fingerprint** `63e5cbd0c092b6de60df3764e4c4ad7919402d4cb857ea9e352330ad502c62fc`, identical to the
+  merged file and to the registered revision.
+- **13 live gates evaluated, 0 verdicts move.** Every BLOCKED_PLATFORM gate stays blocked by the
+  other pending revisions; both HOLDs stay HOLD. The values that move:
+
+| gate | clause | shipped → per fill |
+|---|---|---|
+| cell-size (`Kmmsell10`) keep | `live_cents_per_contract` | −3.08 → −2.87 ¢/ct (115 → 117 contracts) |
+| cell-size keep | `live_realized_pnl_usd` | −$3.54 → −$3.35 (budget −$30) |
+| cell-size keep | `twin_live_winrate_gap_pp` | 4.08 → 3.72 pp |
+| size-split (`Jmmsell10`) keep | `live_realized_pnl_usd` | −$6.63 → −$9.22 (the XOS-000040 market enters; budget −$30) |
+| size-split keep | `live_cents_per_contract` | −1.50 → −2.06 ¢/ct |
+| both | `live_max_realized_loss_usd` | $2.82 → $2.82 (bound $3.00) |
+
+- **Reconciliation:** 1,237 of 1,237 settled live markets (45 days) reconcile, 5 of them shared by
+  two tags; **0 mismatches**.
+
+### 4b. Recorded (2026-10-16)
+
+- `REGISTER_REVISION` → revision #14, pending (`ws027-metrics-register-1`).
+- `RECORD_IMPACTS` (`ws027-metrics-impacts-1`), against the registry's own discovery of 14 affected
+  actives: 6 × I1/RECOMPUTE (`metric:live_cents_per_contract`) **accepted**, 8 × I0/NO_ACTION
+  **applied** (including the newly registered `mmsell-win-set`). `theta-tail-sell` is not pinned
+  to the superseded revision. Activation gate: **safe**.
+- **Cost of recording ahead of activation:** an accepted-but-unapplied RECOMPUTE blocks evidence,
+  so the six live canaries' gates read BLOCKED_PLATFORM until the CUTOVER applies them. Four
+  were already blocked by `EXECUTION_ENGINE:shared_primary_ownership_20260921`; the two newly
+  blocked are cell-size and size-split, whose keep gates read HOLD. Next time, record RECOMPUTE
+  rows in the same session as the CUTOVER.
+
 ## 5. Reconciliation is durable, and non-blocking
 
 On the designated writer, once the revision is active, each evaluation cycle reconciles markets
