@@ -1,11 +1,17 @@
 # ops request [READ]
-# type=db  id=cc-rmm-1016a
-# code 3a2f1c26b2af487eb3b9f5366d63f3a159435262 · started 2026-10-16T06:20:41Z
-strategy  status   n    pnl    losses  last_entry                      
---------  -------  ---  -----  ------  --------------------------------
-Rmmsell1  open     10   0.00   0       2026-10-16 06:16:57.927635+00:00
-Rmmsell1  settled  991  16.85  47      2026-10-16 02:59:01.036942+00:00
-Rmmsell2  open     10   0.00   0       2026-10-16 06:16:57.943352+00:00
-Rmmsell2  settled  652  6.95   35      2026-10-16 01:42:44.451775+00:00
+# type=db  id=cc-rmm-1016b
+# code 3a2f1c26b2af487eb3b9f5366d63f3a159435262 · started 2026-10-16T06:21:02Z
+ev                             legs                                     
+-----------------------------  -----------------------------------------
+KXITFMATCH-26OCT15ALVMCC       ALV:1:s:0.06 ALV:2:s:0.06                
+KXITFMATCH-26OCT15GOOBAS       GOO:1:s:0.07 GOO:2:s:0.07                
+KXITFMATCH-26OCT15JANANT       JAN:1:s:0.06 JAN:2:s:0.06                
+KXMLBSPREAD-26OCT151800TBCLE   TB2:1:s:0.07 TB3:1:s:0.07                
+KXMLBSPREAD-26OCT152000MILLAD  LAD6:1:s:0.06 LAD6:2:s:0.06 MIL3:1:s:0.06
+KXNASDAQ100U-26OCT15H1600      T29949.99:1:s:0.07 T29949.99:2:s:0.07    
+KXNFLTOTAL-26OCT15SEADEN       55:1:s:0.06 58:1:s:0.06                  
+KXNFLTOTAL-26OCT18CARPHI       58:1:o:- 58:2:o:-                        
+KXRAIN-26OCT16                 ATL:1:o:- ATL:2:o:-                      
+KXWTASETWINNER-26OCT15SVIKAR   2:1:o:- 2:2:o:-                          
 
-(4 rows)
+(10 rows)
