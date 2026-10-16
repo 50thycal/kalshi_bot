@@ -63,7 +63,7 @@ from sqlalchemy import select
 
 from . import enforcement, service
 from .lifecycle import ArmRole, LifecycleState
-from .models import ExperimentGate
+from .models import ExperimentEpoch, ExperimentGate, ExperimentGateResult
 from .read import get_experiment
 from .successor_mmsell10_cell_size import KEEP_GATE_SPEC as _INCUMBENT_KEEP
 from .successor_mmsell10_cell_size import LIVE_TAG as INCUMBENT_LIVE_TAG
@@ -333,6 +333,165 @@ def register(
     }
 
 
+#: v2's promotion bar — the OWNER WAIVER of v1's paper smoke bar. Owner instruction,
+#: 2026-10-16, session 01D3m7Af5FnpLDG5eDQ6JJRL: "don't wait 10 days to get the new live
+#: trading going for this, just make the new live canary trading please", then "you can arm
+#: it now ... as I give explicit permission". The 30-settled floor is waived; what stays is a
+#: paper blow-up check (the paper book has not lost more than one market's bound since this
+#: Version), so the gate still reads data. Every LIVE protection is unchanged: the keep gate
+#: (loss budget -$15, $3.00 per market, twin gaps), the envelope, the combined bound with
+#: Kmmsell10 and the account breakers.
+OWNER_WAIVER_REASON = (
+    "owner waiver 2026-10-16 (session 01D3m7Af5FnpLDG5eDQ6JJRL): arm the WIN-set canary now "
+    "rather than after ~30 settled paper trades; the case for the canary is check 1 of "
+    "docs/MMSELL_LIVE_CANARY_PATTERNS.md (277 independent paper markets, WIN +4.67c/contract)"
+)
+OWNER_WAIVER_PROMOTION_SPEC: dict = {
+    "description": (
+        "OWNER WAIVER of v1's 30-settled paper smoke bar (2026-10-16). Passes while the "
+        "Pmmsell10 paper book has not lost more than one market's $3.00 bound since this "
+        "Version. The evidence for arming is check 1 of docs/MMSELL_LIVE_CANARY_PATTERNS.md; "
+        "the live keep gate, carried verbatim, is what can stop the canary."
+    ),
+    "pass_all": [
+        {"metric": "realized_pnl_usd", "arm": ARM_KEY, "op": ">", "value": -3.0},
+    ],
+}
+#: The metric v1's bar decides on. The waiver refuses once it has been observed <= 0.
+PROMOTION_DECIDING_METRIC = "pnl_cents_per_contract"
+
+
+def apply_owner_waiver(
+    session,
+    *,
+    actor: str,
+    promotion_sample_floor: int | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Open v2 with the owner's waiver of v1's paper smoke bar. Arms nothing.
+
+    Same question, arm, tags, book, risk envelope and keep gate as v1 — only the promotion
+    bar changes, so v2 opens its own epoch and carries the Pmmsell10 paper deployment across
+    at one instant (the paper book never goes dark).
+
+    What keeps this from being a dial:
+      * PAPER only, and only from v1 — it runs once;
+      * it produces exactly OWNER_WAIVER_PROMOTION_SPEC, a literal in reviewed code;
+      * it REFUSES if v1's deciding metric has been observed at or below zero: an owner
+        waiver of a sample floor is not a licence to overrule negative paper evidence.
+    """
+    del actor  # the receipt names the actor; the version carries the owner's reason
+    from .read import latest_version
+
+    if promotion_sample_floor is not None:
+        raise service.ExperimentOsError(
+            "this package registers the owner-waiver bar and takes no sample floor — drop "
+            f"promotion_sample_floor={promotion_sample_floor!r} from the envelope."
+        )
+    at = now or _now()
+    experiment = get_experiment(session, EXPERIMENT_KEY)
+    if experiment is None:
+        raise service.ExperimentOsError(f"{EXPERIMENT_KEY} does not exist")
+    if experiment.state != LifecycleState.PAPER.value:
+        raise service.ExperimentOsError(
+            f"a contract may only be revised in PAPER; {EXPERIMENT_KEY} is {experiment.state}"
+        )
+    current = latest_version(session, experiment)
+    if current is None or current.version != 1:
+        raise service.ExperimentOsError(
+            f"the owner waiver revises v1 only; {EXPERIMENT_KEY} is at "
+            f"v{None if current is None else current.version}"
+        )
+    gate = session.scalar(
+        select(ExperimentGate).where(
+            ExperimentGate.version_id == current.id,
+            ExperimentGate.gate_key == PROMOTION_GATE_KEY,
+        )
+    )
+    if gate is None:
+        raise service.ExperimentOsError(f"v1 has no {PROMOTION_GATE_KEY} gate")
+    for result in session.scalars(
+        select(ExperimentGateResult).where(ExperimentGateResult.gate_id == gate.id)
+    ):
+        # A recorded result keeps each clause it evaluated under `clauses`.
+        for clause in (result.metrics_json or {}).get("clauses") or []:
+            if (clause.get("clause") or {}).get("metric") != PROMOTION_DECIDING_METRIC:
+                continue
+            observed = clause.get("value")
+            if observed is not None and observed <= 0:
+                raise service.ExperimentOsError(
+                    f"{PROMOTION_DECIDING_METRIC} was observed at {observed} on v1 — the "
+                    "paper book is not positive, and a waiver of the sample floor does not "
+                    "overrule negative evidence. The v1 bar stands."
+                )
+
+    epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == current.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    )
+    carrying = service.open_deployments(session, epoch) if epoch is not None else []
+
+    version = service.create_experiment_version(
+        session, experiment,
+        hypothesis=current.hypothesis,
+        universe_selector=current.universe_selector,
+        entry_rule=current.entry_rule,
+        exit_rule=current.exit_rule,
+        sizing_rule=current.sizing_rule,
+        execution_style=current.execution_style,
+        independent_variable=current.independent_variable,
+        held_constant=current.held_constant_json,
+        control_required=False,
+        control_exemption_reason=current.control_exemption_reason,
+        risk=RISK_ENVELOPE,
+        docs={"canary": "docs/MMSELL_WIN_SET_CANARY.md"},
+        change_reason=(
+            "Promotion bar only: " + OWNER_WAIVER_REASON + ". Arm, tags, book, risk "
+            "envelope and keep gate are v1's, unchanged."
+        ),
+        now=at,
+    )
+    service.add_arm(
+        session, version, arm_key=ARM_KEY, role=ArmRole.TREATMENT,
+        description="mmsell price-ceiling on the exact WIN-set series, 3-lot — unchanged",
+        params={"lo": 5, "hi": 10, "maxyes": 7, "size": CONTRACTS,
+                "onlyx": list(WIN_SERIES), "universe": "graduated"},
+        strategy_tag=PAPER_TAG,
+    )
+    promotion_gate = service.register_gate(
+        session, version, gate_key=PROMOTION_GATE_KEY, kind="promotion",
+        spec=OWNER_WAIVER_PROMOTION_SPEC,
+        from_state=LifecycleState.PAPER, to_state=LifecycleState.LIVE_CANARY,
+        registered_at=at, notes="owner waiver of v1's paper smoke bar",
+    )
+    keep_gate = service.register_gate(
+        session, version, gate_key=KEEP_GATE_KEY, kind="kill",
+        spec=KEEP_GATE_SPEC, registered_at=at, notes="v1's keep contract, verbatim",
+    )
+    service.freeze_version(session, version, now=at)
+    service.mark_gate_evidence_started(session, promotion_gate, at=at)
+    service.mark_gate_evidence_started(session, keep_gate, at=at)
+    new_epoch = service.open_epoch(
+        session, version,
+        reason="v2 (owner waiver of the paper smoke bar); the paper book carries across",
+        started_at=at,
+    )
+    if epoch is not None:
+        service.close_epoch(session, epoch, ended_at=at)
+    carried = service.carry_deployments_forward(
+        session, carrying, new_epoch, started_at=at,
+        reason="the Pmmsell10 paper book keeps running across the version revision",
+    )
+    return {
+        "experiment": experiment, "superseded_version": current.version,
+        "version": version, "promotion_gate": promotion_gate, "keep_gate": keep_gate,
+        "epoch": new_epoch, "carried_deployments": [d.deployment_key for d in carried],
+        "revised_at": at,
+    }
+
+
 def material_config() -> dict:
     """The drift baseline: the book's params AND the shared pair it was registered with."""
     return {
@@ -396,7 +555,8 @@ __all__ = [
     "ACTIVATION_VARS", "ARM_KEY", "BOOK_PARAMS", "CATEGORY_ARTIFACTS", "COMBINED_MAX_CONTRACTS",
     "COMBINED_MAX_USD", "CONTRACTS", "EXPERIMENT_KEY", "INCUMBENT_KEY", "INCUMBENT_LIVE_TAG",
     "KEEP_GATE_KEY", "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_DEPLOYMENT_KEY", "LIVE_TAG",
-    "PAPER_BOOK_SPEC", "PAPER_DEPLOYMENT_KEY", "PAPER_TAG", "PROMOTION_GATE_KEY",
+    "OWNER_WAIVER_PROMOTION_SPEC", "OWNER_WAIVER_REASON", "PAPER_BOOK_SPEC",
+    "PAPER_DEPLOYMENT_KEY", "PAPER_TAG", "PROMOTION_DECIDING_METRIC", "PROMOTION_GATE_KEY",
     "PROMOTION_GATE_SPEC", "RISK_ENVELOPE", "SHARED_PAIR_ENV", "TWIN_DEPLOYMENT_KEY", "TWIN_TAG",
-    "WIN_CATEGORIES", "WIN_SERIES", "arm", "material_config", "register",
+    "WIN_CATEGORIES", "WIN_SERIES", "apply_owner_waiver", "arm", "material_config", "register",
 ]

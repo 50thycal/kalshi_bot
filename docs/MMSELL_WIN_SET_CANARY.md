@@ -109,3 +109,22 @@ the twin gap are what separate the two.
   preflight line 4 as the guard; build them only if a breaker starts binding.
 - **D2 — clip size.** 3-lot (as registered) or 1-lot (≈$5/month, a third of the tail). The
   Version freezes it at registration, so this is decided at merge. Recommendation: 3-lot.
+
+## 8. v2 — the owner's waiver of the paper smoke bar (2026-10-16)
+
+The owner directed, in session `01D3m7Af5FnpLDG5eDQ6JJRL`, that the canary arm now rather than
+after ~30 settled paper trades ("don't wait 10 days … just make the new live canary trading";
+"you can arm it now … as I give explicit permission"). A frozen gate cannot be edited, so the
+waiver is a new Version: package `mmsell-win-set-owner-waiver`
+(`mmsell_win_set_canary.apply_owner_waiver`).
+
+- **Changes:** the promotion bar only. v2's bar passes while `Pmmsell10` paper has not lost
+  more than $3.00 (one market's bound) since v2. No sample floor.
+- **Unchanged, verbatim:** arm, tags, book spec, risk envelope, combined 6 / $6.00 bound, and
+  the live keep gate (loss budget −$15, $3.00 per market, twin gaps). Those are what stop the
+  canary; the waiver touches none of them.
+- **Refuses:** outside PAPER; past v1 (runs once); and once v1's deciding metric
+  (`pnl_cents_per_contract`) has been recorded at or below zero — a waiver of a sample floor
+  does not overrule negative paper evidence.
+- **Sequence:** `REGISTER_PACKAGE mmsell-win-set-owner-waiver` → `ARM_CANARY
+  mmsell-win-set-canary` (approved_by the owner) → the §6 line 5 env act → §6 line 6 readback.

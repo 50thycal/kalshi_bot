@@ -236,3 +236,95 @@ def test_register_then_arm_end_to_end(xos_session, xos_platform):
     assert live.started_at == twin.started_at
     assert live.config_json["material"]["shared_market_pair"] == ws.SHARED_PAIR_ENV
     assert get_experiment(s, ws.EXPERIMENT_KEY).state == "LIVE_CANARY"
+
+
+# --- v2: the owner waiver of v1's paper smoke bar ------------------------------------------
+
+
+def _settle(s, n, pnl, start):
+    from kalshi_bot.models import PaperTrade
+
+    for i in range(n):
+        s.add(PaperTrade(market_ticker=f"KXRAIN-26OCT{i:02d}-CHI", strategy=ws.PAPER_TAG,
+                         status="settled", pnl=pnl, quantity=3, side="no",
+                         created_at=start + timedelta(minutes=10 * i + 1),
+                         closed_at=start + timedelta(minutes=10 * i + 5)))
+    s.flush()
+
+
+def test_the_waiver_package_registers_and_arms_nothing():
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages()["mmsell-win-set-owner-waiver"]
+    assert pkg.experiment_key == ws.EXPERIMENT_KEY
+    assert pkg.register is ws.apply_owner_waiver
+    assert pkg.arm is None
+
+
+def test_the_waiver_changes_only_the_promotion_bar():
+    """Every live protection is v1's object: the keep gate and the envelope are not touched."""
+    assert ws.OWNER_WAIVER_PROMOTION_SPEC != ws.PROMOTION_GATE_SPEC
+    assert "sample" not in ws.OWNER_WAIVER_PROMOTION_SPEC
+    assert ws.OWNER_WAIVER_PROMOTION_SPEC["pass_all"] == [
+        {"metric": "realized_pnl_usd", "arm": ws.ARM_KEY, "op": ">", "value": -3.0}]
+    svc.validate_gate_spec(ws.OWNER_WAIVER_PROMOTION_SPEC)
+
+
+def test_the_waiver_refuses_a_sample_floor():
+    with pytest.raises(svc.ExperimentOsError, match="no sample floor"):
+        ws.apply_owner_waiver(object(), actor="cal", promotion_sample_floor=1, now=T0)
+
+
+def test_waiver_then_arm_end_to_end(xos_session, xos_platform):
+    """v1 refuses on thin paper; the waiver opens v2 with v1's keep gate and envelope, carries
+    the paper book across, and arming then passes at once — the live protections intact."""
+    from kalshi_bot.experiment_os.models import ExperimentGate
+    from kalshi_bot.experiment_os.read import get_experiment, latest_version
+
+    s = xos_session
+    ws.register(s, actor="cal", now=T0)
+    with pytest.raises(svc.ExperimentOsError, match="not PASS"):
+        ws.arm(s, approved_by="cal", started_at=T0 + timedelta(hours=2))
+
+    t1 = T0 + timedelta(hours=3)
+    out = ws.apply_owner_waiver(s, actor="cal", now=t1)
+    v2 = out["version"]
+    assert v2.version == 2 and out["superseded_version"] == 1
+    assert v2.risk_json == ws.RISK_ENVELOPE
+    assert [k.split("-e")[0] for k in out["carried_deployments"]] == [ws.PAPER_DEPLOYMENT_KEY]
+    gates = {g.gate_key: g for g in s.query(ExperimentGate).filter_by(version_id=v2.id)}
+    assert gates[ws.KEEP_GATE_KEY].spec_json == ws.KEEP_GATE_SPEC
+    assert gates[ws.PROMOTION_GATE_KEY].spec_json == ws.OWNER_WAIVER_PROMOTION_SPEC
+
+    # it runs once
+    with pytest.raises(svc.ExperimentOsError, match="v1 only"):
+        ws.apply_owner_waiver(s, actor="cal", now=t1 + timedelta(minutes=1))
+
+    armed = ws.arm(s, approved_by="Calvin", started_at=t1 + timedelta(minutes=5))
+    assert armed["live"].started_at == armed["twin"].started_at
+    assert latest_version(s, get_experiment(s, ws.EXPERIMENT_KEY)).version == 2
+    assert get_experiment(s, ws.EXPERIMENT_KEY).state == "LIVE_CANARY"
+
+
+def test_the_waiver_bar_still_refuses_a_paper_blowup(xos_session, xos_platform):
+    s = xos_session
+    ws.register(s, actor="cal", now=T0)
+    t1 = T0 + timedelta(hours=3)
+    ws.apply_owner_waiver(s, actor="cal", now=t1)
+    _settle(s, 4, -0.90, t1)  # -$3.60 since v2
+    with pytest.raises(svc.ExperimentOsError, match="not PASS"):
+        ws.arm(s, approved_by="Calvin", started_at=t1 + timedelta(hours=2))
+
+
+def test_the_waiver_does_not_overrule_negative_paper_evidence(xos_session, xos_platform):
+    """Once v1's deciding metric has been recorded at or below zero, the waiver refuses."""
+    from kalshi_bot.experiment_os.evaluator import evaluate_gate
+    from kalshi_bot.experiment_os.models import ExperimentGate
+
+    s = xos_session
+    out = ws.register(s, actor="cal", now=T0)
+    _settle(s, 30, -0.06, T0)
+    gate = s.get(ExperimentGate, out["promotion_gate"].id)
+    evaluate_gate(s, gate)
+    with pytest.raises(svc.ExperimentOsError, match="negative evidence"):
+        ws.apply_owner_waiver(s, actor="cal", now=T0 + timedelta(days=1))
