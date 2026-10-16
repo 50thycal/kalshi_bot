@@ -3003,3 +3003,13 @@ restart restarts it, which only delays an exit. Exposure is reduced, never added
 **Why the 10c cap stays.** It is the operator's fill-risk bound (§9.41: lopsided legs at 10–28c
 were ~$12.6 of ~$16 realised loss; 5c → 10c in §9.46) and it maximises score per dollar — the
 score is per contract, and $10 buys 100 contracts at 10c but only 20 at 50c.
+
+### 9.58 The out-of-band clock survives a restart (2026-10-16)
+
+§9.57 kept the clock in memory, so every redeploy (several a day, from any session's merge)
+restarted the hour. The clock is now persisted as a `limm_out_of_band` system event — on every
+change, and every 2 minutes while one runs — and restored once per process. A clock resumes only
+if its last out-of-band read is within `OUT_OF_BAND_MAX_GAP_SECONDS` (10 min); a longer gap —
+an outage, or books unreadable — restarts the hour, because the price could have come back inside
+the band unseen. The same gap rule applies inside a process. Unchanged: checked every cycle, a read
+inside the band resets the clock, cancels only.

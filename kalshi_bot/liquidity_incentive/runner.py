@@ -64,6 +64,9 @@ BOOK_REFUSAL_COOLDOWN_SECONDS = 3600.0
 #: the ranking (§9.44). Production redeploys several times a day as other work merges.
 COOLDOWN_COMPONENT = "limm_book_cooldown"
 COOLDOWN_PERSIST_EVERY_SECONDS = 300.0
+#: §9.58: the out-of-band clock is persisted the same way, so a restart resumes it.
+OUT_OF_BAND_COMPONENT = "limm_out_of_band"
+OUT_OF_BAND_PERSIST_EVERY_SECONDS = 120.0
 BOOK_REFUSAL_CODES = frozenset({
     limm.REFUSE_NO_BOOK, limm.REFUSE_NOT_TWO_SIDED, limm.REFUSE_TARGET_NOT_MET,
     limm.REFUSE_TOO_EXPENSIVE, limm.REFUSE_BOOK_TOO_DEEP, limm.REFUSE_POST_ONLY_CROSS,
@@ -226,9 +229,11 @@ class IncentiveLiveRunner:
         self._cooldown_saved_at: datetime | None = None
         #: No entries before this: Kalshi said the account has no free cash (see live.py).
         self._balance_backoff_until: datetime | None = None
-        #: §9.57: ticker -> when its resting bid was first seen out of the price band, in this
-        #: process. In memory on purpose: a restart restarts the clock, which only delays an exit.
-        self._out_of_band_since: dict[str, datetime] = {}
+        #: §9.57/§9.58: ticker -> (first seen out of the price band, last seen out of it).
+        #: Persisted as a system event and restored once per process, so a restart resumes it.
+        self._out_of_band: dict[str, tuple[datetime, datetime]] = {}
+        self._out_of_band_loaded = False
+        self._out_of_band_saved_at: datetime | None = None
         #: WS-024 D1 programme discovery: the GET-only client it runs through (built on first
         #: use), and when this process last attempted a pass — success or not, so a failing
         #: pass is retried on the discovery cadence, never every cycle.
@@ -611,8 +616,13 @@ class IncentiveLiveRunner:
         """§9.57: cancel a purely resting single bid whose side's reference price has been above
         MAX_PRICE_CENTS for OUT_OF_BAND_EXIT_SECONDS without a break. Such a bid scores ~nothing
         and cannot be re-priced inside the cap, so it only holds a slot. Checked every cycle; a
-        read inside the band resets the clock, an unreadable book leaves it as it was. Returns
-        the number cancelled."""
+        read inside the band resets the clock, an unreadable book adds no evidence, and a gap of
+        more than OUT_OF_BAND_MAX_GAP_SECONDS since the last out-of-band read restarts it. The
+        clock is persisted (§9.58), so a worker restart resumes it. Returns the number
+        cancelled."""
+        if not self._out_of_band_loaded:
+            self._load_out_of_band(session, now)
+        before = dict(self._out_of_band)
         held = self._stale_held_pairs(session, now, min_age_seconds=0.0)
         programs = {p.market_ticker: p for p in self._running_programs(session, now)}
         seen: set[str] = set()
@@ -624,28 +634,79 @@ class IncentiveLiveRunner:
             row = working[0]
             try:
                 ob = self.client.get_orderbook(ticker)
-            except Exception:  # noqa: BLE001 — unknown book: the clock neither runs nor resets
+            except Exception:  # noqa: BLE001 — unknown book: no evidence either way
                 continue
             c = candidate_from_book(programs[ticker], ob, now=now)
             ref = (c.get("reference_price_by_side") or {}).get(row.side)
             # Our own bid sits at or below the cap, so it can never lift the reference above it:
             # a reference above the cap is the rest of the book's doing.
             if ref is None or int(ref) <= limm.MAX_PRICE_CENTS:
-                self._out_of_band_since.pop(ticker, None)
+                self._out_of_band.pop(ticker, None)
                 continue
-            since = self._out_of_band_since.setdefault(ticker, now)
+            prev = self._out_of_band.get(ticker)
+            if prev is not None and \
+                    (now - prev[1]).total_seconds() <= limm.OUT_OF_BAND_MAX_GAP_SECONDS:
+                since = prev[0]
+            else:
+                since = now
+            self._out_of_band[ticker] = (since, now)
             if (now - since).total_seconds() < limm.OUT_OF_BAND_EXIT_SECONDS:
                 continue
             if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
                                                 reason="out_of_band"):
-                self._out_of_band_since.pop(ticker, None)
+                self._out_of_band.pop(ticker, None)
                 n += 1
                 logger.info(f"incentive book: out_of_band: cancelled resting {row.side} bid on "
                             f"{ticker} at {row.limit_price}c (reference {ref}c above "
                             f"{limm.MAX_PRICE_CENTS}c since {since.isoformat()})")
-        for t in [t for t in self._out_of_band_since if t not in seen]:
-            del self._out_of_band_since[t]
+        for t in [t for t in self._out_of_band if t not in seen]:
+            del self._out_of_band[t]
+        changed = {t: v[0] for t, v in before.items()} != \
+            {t: v[0] for t, v in self._out_of_band.items()}
+        self._save_out_of_band(session, now, force=changed)
         return n
+
+    def _load_out_of_band(self, session, now: datetime) -> None:
+        """Restore the out-of-band clocks from the newest saved copy, once per process. A clock
+        whose last out-of-band read is older than the gap allowance is dropped (it restarts).
+        Any failure leaves the map empty — clocks restart, which only delays an exit."""
+        self._out_of_band_loaded = True
+        try:
+            row = session.scalar(
+                select(m.SystemEvent)
+                .where(m.SystemEvent.component == OUT_OF_BAND_COMPONENT)
+                .order_by(m.SystemEvent.id.desc()).limit(1))
+            saved = (row.raw_json or {}).get("tickers", {}) if row is not None else {}
+            for ticker, v in saved.items():
+                since = _aware(datetime.fromisoformat(v["since"]))
+                last = _aware(datetime.fromisoformat(v["last"]))
+                if since is None or last is None:
+                    continue
+                if 0 <= (now - last).total_seconds() <= limm.OUT_OF_BAND_MAX_GAP_SECONDS:
+                    self._out_of_band[ticker] = (since, last)
+        except Exception:  # noqa: BLE001 — a bad saved copy must not stop the book
+            logger.warning("incentive live: out-of-band clock restore failed", exc_info=True)
+
+    def _save_out_of_band(self, session, now: datetime, *, force: bool) -> None:
+        """Persist the clocks when the set of clocks changed, else at most every
+        OUT_OF_BAND_PERSIST_EVERY_SECONDS while any is running (so a restored `last` is never
+        older than that plus the restart). Nothing is written while no clock runs."""
+        last = self._out_of_band_saved_at
+        if not force:
+            if not self._out_of_band:
+                return
+            if last is not None and \
+                    (now - last).total_seconds() < OUT_OF_BAND_PERSIST_EVERY_SECONDS:
+                return
+        self._out_of_band_saved_at = now
+        try:
+            repo.log_system_event(
+                session, level="info", component=OUT_OF_BAND_COMPONENT,
+                message=f"{len(self._out_of_band)} resting bids out of the price band",
+                raw={"tickers": {t: {"since": a.isoformat(), "last": b.isoformat()}
+                                 for t, (a, b) in self._out_of_band.items()}})
+        except Exception:  # noqa: BLE001 — persistence is a convenience, never the guard
+            logger.warning("incentive live: out-of-band clock save failed", exc_info=True)
 
     def _reprice_held(self, session, executor, now: datetime, account_state=None) -> int:
         """§9.49: a held single-side quote that has fallen BELOW its own market's reference

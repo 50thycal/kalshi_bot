@@ -1576,7 +1576,8 @@ def test_a_bid_out_of_the_band_for_an_hour_is_cancelled(live_db, settings):
         _resting(s, "KXTEST-OOB")
         ex = _exec(settings, client)
         assert runner._retire_out_of_band(s, ex, NOW) == 0          # clock starts
-        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=59)) == 0
+        for minute in range(5, 60, 5):
+            assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute)) == 0
         assert client.canceled == []
         assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=61)) == 1
     assert client.canceled == ["K-KXTEST-OOB"]
@@ -1594,8 +1595,8 @@ def test_a_return_inside_the_band_restarts_the_clock(live_db, settings):
         client.books["KXTEST-OOB"] = in_book
         runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=30))
         client.books["KXTEST-OOB"] = out_book
-        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=40)) == 0
-        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=95)) == 0
+        for minute in range(40, 100, 5):
+            assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute)) == 0
         assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=101)) == 1
 
 
@@ -1606,11 +1607,64 @@ def test_an_unreadable_book_neither_runs_nor_resets_the_clock(live_db, settings)
         _program(s, "KXTEST-OOB")
         _resting(s, "KXTEST-OOB")
         ex = _exec(settings, client)
-        runner._retire_out_of_band(s, ex, NOW)
+        for minute in range(0, 31, 5):
+            runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute))
         client.books["KXTEST-OOB"] = RuntimeError("down")
-        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=70)) == 0
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=35)) == 0
         client.books["KXTEST-OOB"] = out_book
-        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=71)) == 1
+        for minute in range(38, 60, 5):
+            assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute)) == 0
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=61)) == 1
+
+
+def test_a_long_gap_without_evidence_restarts_the_clock(live_db, settings):
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    client, runner = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        runner._retire_out_of_band(s, ex, NOW)
+        # 70 minutes with no read at all: the hour was never observed.
+        for minute in range(70, 130, 5):        # clock restarted at 70
+            assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute)) == 0
+        assert runner._retire_out_of_band(s, ex, NOW + timedelta(minutes=131)) == 1
+
+
+def test_a_restart_resumes_the_clock(live_db, settings):
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    client, first = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        for minute in range(0, 51, 5):
+            first._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute))
+    # A redeploy: a new process, same database, back 6 minutes after the last read.
+    second = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        ex = _exec(settings, client)
+        assert second._retire_out_of_band(s, ex, NOW + timedelta(minutes=56)) == 0
+        assert second._retire_out_of_band(s, ex, NOW + timedelta(minutes=61)) == 1
+    assert client.canceled == ["K-KXTEST-OOB"]
+
+
+def test_a_restart_after_a_long_outage_restarts_the_clock(live_db, settings):
+    out_book = _book([(23, 500)], [(30, 100), (3, 300)])
+    client, first = _oob_runner(settings, out_book)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-OOB")
+        _resting(s, "KXTEST-OOB")
+        ex = _exec(settings, client)
+        for minute in range(0, 31, 5):
+            first._retire_out_of_band(s, ex, NOW + timedelta(minutes=minute))
+    second = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        ex = _exec(settings, client)
+        # Down for 30 minutes: what the book did then is unknown, so the hour starts at 60.
+        assert second._retire_out_of_band(s, ex, NOW + timedelta(minutes=60)) == 0
+        assert second._retire_out_of_band(s, ex, NOW + timedelta(minutes=65)) == 0
+    assert client.canceled == []
 
 
 def test_a_bid_inside_the_band_is_left_alone(live_db, settings):

@@ -154,6 +154,10 @@ MIN_HOLD_SECONDS = 24 * 3600.0
 #: every cycle (~2 min), a return inside the band resets the clock — it is cancelled to free the
 #: slot, without waiting for MIN_HOLD_SECONDS.
 OUT_OF_BAND_EXIT_SECONDS = 3600.0
+#: The clock only runs on evidence: if the last out-of-band read is older than this (books
+#: unreadable, or the worker down across a restart), the hour starts again. Wider than one cycle
+#: (~2 min) plus a typical redeploy (~5 min), so a routine restart resumes the clock (§9.58).
+OUT_OF_BAND_MAX_GAP_SECONDS = 600.0
 
 _EVENT_DATE_RE = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
 _MONTHS = {m: i for i, m in enumerate(
