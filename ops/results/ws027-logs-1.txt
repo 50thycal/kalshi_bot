@@ -1,0 +1,6 @@
+# latest deployment 6aca5172-9eb8-47ee-8e20-8680dd859245 (status=SUCCESS, created=2026-10-16T14:14:58.613Z)
+# ops request [READ]
+# type=logs  service=main  id=ws027-logs-1
+# code 237abf737f8281e769027a26b87074b902f971c2 · started 2026-10-16T14:18:58Z
+# target service: main
+2026-10-16T14:18:13.010148616Z INFO  mmsell: live entry refused — real money paused on this series
