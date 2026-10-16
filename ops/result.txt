@@ -1,9 +1,18 @@
 # ops request [READ]
-# type=db  id=ws027-recon-4
-# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T02:57:29Z
-ntags  markets  within_1c  fill_pnl  pos_pnl   max_abs_diff  contracts_fp  contracts_int_col  markets_with_fractional
------  -------  ---------  --------  --------  ------------  ------------  -----------------  -----------------------
-1      2491     2490       -34.1760  -34.0383  0.1377        3068.81       3069               7                      
-2      16       16         -2.0770   -2.0770   0.0000        53.00         53                 0                      
+# type=db  id=ws027-contested-1
+# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T02:58:20Z
+tag              contested_settled_markets  contracts  pnl_usd  worst_market_usd  losing_markets  markets                                                                                                                                                                                         
+---------------  -------------------------  ---------  -------  ----------------  --------------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Emmsell10        1                          1.00       0.0600   0.0600            0               KXMLBHR-26SEP062210WSHLAD-LADMROJAS72-1                                                                                                                                                         
+Fmmsell10        3                          3.00       0.1988   0.0600            0               KXBTCD-26OCT0917-T89999.99 KXMLBHR-26SEP062210WSHLAD-LADMROJAS72-1 KXNFLTOTAL-26OCT04DALHOU-69                                                                                                  
+Hmmsell10        3                          5.00       -2.6600  -2.7900           1               KXBTCD-26OCT0417-T85749.99 KXBTCD-26OCT0917-T89999.99 KXTRUMPSAY-26OCT05-CEAS                                                                                                                   
+Jmmsell10        3                          5.00       -2.6612  -2.7900           1               KXBTCD-26OCT0417-T85749.99 KXNFLTOTAL-26OCT04DALHOU-69 KXTRUMPSAY-26OCT05-CEAS                                                                                                                  
+Lmmsell10        7                          14.00      1.0377   0.1377            0               KXBILLBOARDRUNNERUPSONG-26AUG22-BOS KXBTCD-26AUG1617-T63499.99 KXBTCD-26AUG1817-T64999.99 KXETH-26AUG1917-B2150 KXETHD-26AUG1717-T1929.99 KXNFLTOTAL-26AUG15MINNYG-60 KXTRUTHSOCIAL-26AUG15-T240
+Lmmsell8         4                          8.00       0.8800   0.1800            0               KXBTCD-26AUG1617-T63499.99 KXBTCD-26AUG1817-T64999.99 KXETH-26AUG1917-B2150 KXETHD-26AUG1717-T1929.99                                                                                           
+mmsell10         7                          14.00      0.8954   0.1200            0               KXBILLBOARDRUNNERUPSONG-26AUG22-BOS KXBTCD-26AUG0717-T65999.99 KXBTCD-26AUG0717-T66499.99 KXBTCD-26AUG0717-T66999.99 KXBTCD-26AUG0717-T67499.99 KXCPIYOY-26JUL-T3.5 KXNFLTOTAL-26AUG15MINNYG-60 
+mmsell10a        2                          2.00       0.1300   0.0600            0               KXBTCD-26AUG0717-T65999.99 KXTRUTHSOCIAL-26AUG15-T240                                                                                                                                           
+mmsell10b        4                          4.00       0.2291   0.0491            0               KXBTCD-26AUG0717-T66499.99 KXBTCD-26AUG0717-T66999.99 KXBTCD-26AUG0717-T67499.99 KXCPIYOY-26JUL-T3.5                                                                                            
+weather_fav_h14  3                          14.67      -9.2320  -3.1092           3               KXHIGHDEN-26JUN16-B90.5 KXHIGHLAX-26JUN16-B71.5 KXHIGHLAX-26JUN20-B71.5                                                                                                                         
+weather_fav_h20  3                          20.13      -5.9348  -3.0920           2               KXHIGHDEN-26JUN16-B90.5 KXHIGHLAX-26JUN16-B71.5 KXHIGHLAX-26JUN20-B71.5                                                                                                                         
 
-(2 rows)
+(11 rows)
