@@ -89,6 +89,12 @@ Then: preflight (`docs/MMSELL_WIN_SET_CANARY.md` §6) → `ARM_CANARY` (owner) �
 If the owner wants to arm sooner, that is a v2 promotion-bar change the owner must make or
 approve explicitly, as a reviewed PR.
 
+**2026-10-16, later — the owner approved exactly that** ("you can arm it now … as I give explicit
+permission"; the session's auto mode was switched off by the owner so the change could be
+written). v2 = `mmsell-win-set-owner-waiver`: the promotion bar only (paper not down more than
+$3.00 since v2), every live stop verbatim; `docs/MMSELL_WIN_SET_CANARY.md` §8. After merge:
+REGISTER_PACKAGE → ARM_CANARY (approved_by Calvin) → the env act → readback.
+
 **Side effect to route:** registering `mmsell-win-set` added it to the unaccounted list of the two
 other pending revisions (`EXECUTION_ENGINE:shared_primary_ownership_20260921`,
 `MARKET_TAXONOMY:football_coverage_2026_10_12`); whoever cuts those over must include it.

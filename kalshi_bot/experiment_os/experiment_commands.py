@@ -655,6 +655,21 @@ def _packages() -> dict[str, ExperimentPackage]:
             strategy_tags=(mmsell_win_set_canary.PAPER_TAG, mmsell_win_set_canary.LIVE_TAG,
                            mmsell_win_set_canary.TWIN_TAG),
         ),
+        "mmsell-win-set-owner-waiver": ExperimentPackage(
+            name="mmsell-win-set-owner-waiver",
+            experiment_key=mmsell_win_set_canary.EXPERIMENT_KEY,
+            description=(
+                "Opens v2 of mmsell-win-set with the OWNER's waiver of v1's 30-settled paper "
+                "smoke bar (owner instruction 2026-10-16: arm now, do not wait ~10 days). Only "
+                "the promotion bar changes — it passes while the Pmmsell10 paper book has not "
+                "lost more than $3.00 since v2. Arm, tags, book, risk envelope, combined bound "
+                "and the live keep gate (loss budget -$15, $3.00 per market) are v1's verbatim. "
+                "Carries the paper deployment across at one instant. Refuses outside PAPER, "
+                "past v1, or once v1's deciding metric was observed <= 0. Arms nothing — "
+                "ARM_CANARY on mmsell-win-set-canary then arms through arm_live_canary."
+            ),
+            register=mmsell_win_set_canary.apply_owner_waiver,
+        ),
         "mmsell-contestcap-epoch2": ExperimentPackage(
             name="mmsell-contestcap-epoch2",
             experiment_key=recut_mmsell10_contest_cap.EXPERIMENT_KEY,
