@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "nucl-5", "sql": "select at, best_yes_bid, yes_levels_json from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT20-NUCL' order by at desc limit 1"}
