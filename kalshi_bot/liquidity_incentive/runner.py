@@ -333,6 +333,17 @@ class IncentiveLiveRunner:
         if cooling:
             summary["cooling_down"] = len(cooling)
             candidates = [p for p in candidates if p.market_ticker not in self._book_refused_until]
+        # §9.59: drop markets of events this book already holds MAX_MARKETS_PER_EVENT of BEFORE
+        # spending the bounded book fetches. On 2026-10-16 the 30 newest programmes were all
+        # words of three capped Trump events, so every fetch was refused event_cap and a free
+        # slot stayed empty (the §9.39 failure, with the per-event cap as the filter).
+        own_per_event = repo.live_book_open_event_counts(session, limm.LIVE_TAG)
+        capped = {ev for ev, n in own_per_event.items() if n >= limm.MAX_MARKETS_PER_EVENT}
+        if capped:
+            n_before = len(candidates)
+            candidates = [p for p in candidates if (p.event_ticker or "") not in capped]
+            if len(candidates) < n_before:
+                summary["outcomes"][limm.REFUSE_EVENT_CAP] = n_before - len(candidates)
         max_fetch = max(1, int(getattr(self.settings,
                                        "liquidity_incentive_live_max_book_fetches", 8)))
         built: list[dict] = []
@@ -353,7 +364,6 @@ class IncentiveLiveRunner:
         # any live book holds a position on (the fleet's concentration).
         # §9.56: this book may rest in up to MAX_MARKETS_PER_EVENT markets of one event; an event
         # is blocked once it reaches that, or once any live book HOLDS a position on it.
-        own_per_event = repo.live_book_open_event_counts(session, limm.LIVE_TAG)
         blocked_events = {ev for ev, n in own_per_event.items()
                           if n >= limm.MAX_MARKETS_PER_EVENT}
         for c in built:

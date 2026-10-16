@@ -1676,3 +1676,29 @@ def test_a_bid_inside_the_band_is_left_alone(live_db, settings):
         runner._retire_out_of_band(s, ex, NOW)
         assert runner._retire_out_of_band(s, ex, NOW + timedelta(hours=5)) == 0
     assert client.canceled == []
+
+
+# --- §9.59: capped events do not spend the book-fetch budget ----------------------------------
+
+def test_markets_of_a_capped_event_are_not_fetched(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 10)
+    monkeypatch.setattr(limm, "MAX_STRATEGY_EXPOSURE_USD", 100.0)
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 1)
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXTEST-FULL-0": book, "KXTEST-FULL-1": book, "KXTEST-FULL-2": book,
+                         "KXTEST-OTHER": book})
+    with db.session_scope() as s:
+        # The held event is newest, so without the filter its words would take both fetches.
+        _program(s, "KXTEST-FULL-0", event="KXTEST-FULL", age_hours=30.0)
+        _program(s, "KXTEST-FULL-1", event="KXTEST-FULL", age_hours=1.0)
+        _program(s, "KXTEST-FULL-2", event="KXTEST-FULL", age_hours=1.0)
+        _program(s, "KXTEST-OTHER", event="KXTEST-OTHER", age_hours=20.0)
+        s.add(m.LiveOrder(market_ticker="KXTEST-FULL-0", event_ticker="KXTEST-FULL",
+                          strategy=limm.LIVE_TAG, side="no", action="buy", limit_price=3,
+                          quantity=300, status="resting", kalshi_order_id="K-held",
+                          client_order_id="K-held", created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert "KXTEST-FULL-1" not in client.asked and "KXTEST-FULL-2" not in client.asked
+    assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTEST-OTHER"

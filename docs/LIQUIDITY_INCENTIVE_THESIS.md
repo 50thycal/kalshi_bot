@@ -3013,3 +3013,14 @@ if its last out-of-band read is within `OUT_OF_BAND_MAX_GAP_SECONDS` (10 min); a
 an outage, or books unreadable — restarts the hour, because the price could have come back inside
 the band unseen. The same gap rule applies inside a process. Unchanged: checked every cycle, a read
 inside the band resets the clock, cancels only.
+
+### 9.59 Capped events no longer spend the book-fetch budget (2026-10-16)
+
+**Evidence.** After §9.57 freed slots, 06:46Z: 133 programmes considered, 30 books fetched, all 30
+refused `event_cap` — the newest programmes were all words of the three Trump events the book
+already held 3 markets of — so a free slot stayed empty. Same failure as §9.39 (excluded series).
+
+**Fix.** Before fetching, candidates whose event this book already holds `MAX_MARKETS_PER_EVENT`
+of are dropped (counted as `event_cap`). The cross-book "another live book holds a position on
+this event" check still runs after the fetch. No cap, size or price rule changes; this only lets
+an already-authorised slot be filled.
