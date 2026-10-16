@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=ws027-kfill-1
+# code 1508c9a07ee9257fba3f2324c0881a7488c85ae8 · started 2026-10-16T03:19:24Z
+grp         orders  filled_ct  resolved_ct  markets  first_day 
+----------  ------  ---------  -----------  -------  ----------
+other       151     94         161          121      2026-10-11
+WIN-series  26      41         64           25       2026-10-11
+
+(2 rows)
