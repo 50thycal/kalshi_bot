@@ -1,1 +1,1 @@
-{"type": "db", "id": "cc-rmm-1016b", "sql": "SELECT split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',2) AS ev, string_agg(split_part(market_ticker,'-',3)||':'||right(strategy,1)||':'||left(status,1)||':'||coalesce(round(pnl::numeric,2)::text,'-'),' ' ORDER BY market_ticker,strategy) legs FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') AND (created_at >= '2026-10-15 18:00' OR (pnl < 0 AND closed_at >= '2026-10-15 22:00')) GROUP BY 1 ORDER BY 1"}
+{"type":"noop"}
