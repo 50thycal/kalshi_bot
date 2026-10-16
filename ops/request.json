@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"ws027-ct-1"}
+{"type":"db","id":"ws027-fills-1","max_rows":200,"sql":"select lo.strategy, lo.side as o_side, lo.action as o_action, lo.status, f.side as f_side, f.action as f_action, count(distinct lo.id) as orders, count(f.id) as fills, sum(f.quantity) as fqty, round(avg(f.price),1) as avg_fpx, round(avg(lo.limit_price),1) as avg_lpx, sum(f.fee) as fees from live_orders lo left join fills f on f.kalshi_order_id = lo.kalshi_order_id where lo.created_at > now() - interval '21 days' group by 1,2,3,4,5,6 order by 1,4"}
