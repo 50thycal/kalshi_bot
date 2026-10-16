@@ -231,6 +231,12 @@ Three exclusions, each counted in provenance rather than dropped silently:
 | contested markets | `positions` is keyed by market, not strategy, so a market two arms traded cannot be split. The reference script attributes it fully to *both*; for an A/B promotion gate that is double-counting. |
 | closed-but-unpriced markets | a settled position with no `realized_pnl` is unknown, not zero. |
 
+**Superseded on activation of `METRICS_ENGINE:live_fill_attribution_2026_10`** (WS-027,
+`docs/LIVE_FILL_ATTRIBUTION.md`): contested markets are then INCLUDED, each arm priced from its
+own entry fills (order-side frame, `count_fp` contracts, the market's settlement `value`), and
+every live value records provider revision `live_fill_v1`. Until that revision is active the
+rules above are what run.
+
 Only **entry** fills count (`action='buy'`): a position is entered by buys and
 closed by sells, and both write fill rows, so counting both would double the
 denominator. Only the **newest** `positions` snapshot decides, because the table is

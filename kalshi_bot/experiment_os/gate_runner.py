@@ -253,8 +253,10 @@ def run_evaluation_cycle(
         "dry_run": dry_run, "started_at": str(_now()),
         "considered": 0, "evaluated": 0, "written": 0, "skipped_unchanged": 0,
         "errors": 0, "verdicts": {}, "written_rows": [], "skipped": [],
-        "failures": [],
+        "failures": [], "attribution_mismatches": 0,
     }
+    if not dry_run:
+        _record_attribution_mismatches(session, summary)
     for item in eligible_gates(session):
         exp, gate, epoch = item["experiment"], item["gate"], item["epoch"]
         if only_experiment and exp.key != only_experiment:
@@ -312,6 +314,30 @@ def run_evaluation_cycle(
             )
     summary["finished_at"] = str(_now())
     return summary
+
+
+def _record_attribution_mismatches(session, summary: dict) -> None:
+    """Fill-attribution reconciliation (WS-027), on the designated writer only and
+    only once `METRICS_ENGINE:live_fill_attribution_2026_10` is active. Recorded BEFORE
+    the gates evaluate so a verdict and the event explaining a market in it land in
+    the same cycle. Never raises: a reconciliation fault must not stop evaluation."""
+    from . import live_attribution
+
+    try:
+        if not live_attribution.fill_attribution_active(session):
+            return
+        recorded = live_attribution.record_mismatches(session)
+        session.commit()
+        summary["attribution_mismatches"] = len(recorded)
+        for rec in recorded:
+            logger.warning(
+                f"live attribution mismatch on {rec['ticker']}: per-tag "
+                f"{rec['attributed_usd']} vs account {rec['position_realized_usd']} "
+                f"({rec['reason'] or 'diff ' + str(rec['diff_usd'])})")
+    except Exception as exc:  # noqa: BLE001
+        session.rollback()
+        logger.error(f"live attribution reconciliation failed: {type(exc).__name__}: "
+                     f"{str(exc)[:300]}")
 
 
 # ---------------------------------------------------------------------------

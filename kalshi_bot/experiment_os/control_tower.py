@@ -344,6 +344,12 @@ INTEGRITY_OWNER: dict[str, str] = {
         "baseline, so drift on it cannot be detected) — nothing is known to have "
         "drifted; register the baseline and the comparison runs"
     ),
+    "LIVE_ATTRIBUTION_MISMATCH": (
+        "Platform Change Review (one settled market's per-tag live P&L does not sum "
+        "to the account's realized P&L — a fill the attribution missed, a fill no "
+        "order explains, or a settlement priced differently) — the gate is not "
+        "blocked; diagnose the market named in the event"
+    ),
 }
 
 

@@ -198,6 +198,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_canary_slices",
     "mmsell_contest_cap_audit",
     "live_book_truth",
+    "live_attribution_impact",
     "mmsell_crypto_study",
     "mmsell_supply_forecast",
     "mmsell_regime_backtest",

@@ -14,7 +14,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 
 from . import models as m
 from .experiment_os import enforcement as xos_enforcement
@@ -1784,13 +1784,19 @@ def count_exit_attempts(session, ticker: str, strategy: str) -> int:
     ) or 0)
 
 
-def live_open_order_exists(session, ticker: str) -> bool:
-    """Any in-flight live order on this market (for the risk existing_open_order gate)."""
+def live_open_order_exists(session, ticker: str, *, ignore_strategies=()) -> bool:
+    """Any in-flight live order on this market (for the risk existing_open_order gate).
+
+    `ignore_strategies` exempts EXACT tags — only a listed shared-market partner
+    (`mmsell_live_shared_market_pairs`, WS-027) ever passes one; every caller that does not
+    sees the original any-tag check."""
+    conds = [m.LiveOrder.market_ticker == ticker,
+             m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES)]
+    if ignore_strategies:
+        conds.append(or_(m.LiveOrder.strategy.is_(None),
+                         m.LiveOrder.strategy.notin_(list(ignore_strategies))))
     return session.scalar(
-        select(func.count()).select_from(m.LiveOrder).where(
-            m.LiveOrder.market_ticker == ticker,
-            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES),
-        )
+        select(func.count()).select_from(m.LiveOrder).where(*conds)
     ) > 0
 
 

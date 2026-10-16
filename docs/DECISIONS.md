@@ -1558,3 +1558,32 @@ pauses for the board slot.
 
 **Revisit if** a second actor exists who could own issue adoption from the routine without a
 worker redeploy, or if the issue transport gains a path that does not restart the worker.
+
+## DEC-037 — Live P&L is attributed per fill; a named pair may share a market inside a combined bound
+
+**Date:** 2026-10-16 UTC. **Workstream:** WS-027. **Owner direction (2026-10-15):** run a WIN-set
+canary beside Kmmsell10, let both hold a shared market, attribute per book, bound the combined
+size. Rulings below are Platform Change Review's (`docs/LIVE_FILL_ATTRIBUTION.md`).
+
+- **Per fill, not per position, and only on activation.** Each tag's live economics come from
+  its own entry fills, in the order's side frame, with `count_fp` contracts and the market's
+  settlement value — never a pro-rata split of `positions.realized_pnl`. Measured before any code
+  ran: 16/16 shared and 2,490/2,491 single-tag settled markets reconcile. The provider switches
+  only while `METRICS_ENGINE:live_fill_attribution_2026_10` is ACTIVE, so merging is not
+  activation and the owner's activation hard stop is real.
+- **I1, not I2.** The recorded world did not change; the computation did, exactly. Live canaries
+  RECOMPUTE in place and need a fresh post-boundary evaluation; paper books are NO_ACTION.
+- **Mismatches are durable and non-blocking.** `LIVE_ATTRIBUTION_MISMATCH`, one per (experiment,
+  market), owner PCR. Blocking would hold the KILL gate.
+- **A pair exception, not a loosening.** `MMSELL_LIVE_SHARED_MARKET_PAIRS` names exact tags and a
+  combined contracts/dollars bound no higher than the sum of their per-market bounds. Empty is
+  byte-identical to XOS-000040 for every tag; malformed entries are dropped.
+- **Kmmsell10 keeps its epoch.** The pair keeps its admissible markets identical and variant
+  order keeps its queue priority. A pre-registered fill-rate tripwire (64% → < 44% at ≥ 60
+  shared contracts) re-opens the ruling.
+- **Two transport gaps closed, opt-in:** `RECORD_IMPACTS` carries a `normalization_ref`;
+  `CUTOVER` can apply accepted RECOMPUTE dispositions at the measured instant.
+
+**Revisit if** fills stop carrying `count_fp`, a third tag needs to share a market (pairs only,
+by design), or the account breakers start binding with two live mmsell books armed.
+

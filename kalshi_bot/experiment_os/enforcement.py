@@ -455,7 +455,8 @@ def tag_admissible(session, tag: str) -> bool:
 MATERIAL_KEY = "material"
 
 
-def live_material_block(*, books: dict[str, tuple[str | None, str | None]]) -> dict:
+def live_material_block(*, books: dict[str, tuple[str | None, str | None]],
+                        shared_market_pair: str | None = None) -> dict:
     """The `material` block for a live canary deployment — the ONE builder.
 
     `books` maps each LIVE tag the deployment runs to `(twin_tag, book_params)`.
@@ -480,6 +481,12 @@ def live_material_block(*, books: dict[str, tuple[str | None, str | None]]) -> d
     A package passes its own literal constants; nothing here is derived from the
     running configuration, which is the whole point — a baseline recomputed from
     the runtime would match it by construction and check nothing.
+
+    A fourth, OPTIONAL fact (WS-027): `shared_market_pair`, the canonical
+    `A+B:contracts:dollars` entry of `MMSELL_LIVE_SHARED_MARKET_PAIRS` a book that shares
+    markets was registered with. It is the one runtime setting that widens what such a
+    book may hold, so a book carrying it compares it; every baseline without it is
+    unchanged.
     """
     if not books or not all(books):
         raise ValueError("a live deployment's material block needs its live tags")
@@ -490,11 +497,14 @@ def live_material_block(*, books: dict[str, tuple[str | None, str | None]]) -> d
         pairs[live_tag] = twin_tag
         if twin_tag:
             params[twin_tag] = None
-    return {
+    out = {
         "live_strategies_contains": sorted(books),
         "twin_pairs": pairs,
         "book_params": params,
     }
+    if shared_market_pair is not None:
+        out["shared_market_pair"] = shared_market_pair
+    return out
 
 
 def live_material_or_none(config: dict | None) -> dict | None:
@@ -559,6 +569,10 @@ def _material_runtime_config(settings, material: dict) -> dict:
         for tag in material["book_params"]:
             params[tag] = configured.get(tag)
         out["book_params"] = params
+    if "shared_market_pair" in material:
+        tags = material.get("live_strategies_contains") or []
+        pair = settings.mmsell_live_shared_pair_for(tags[0]) if tags else None
+        out["shared_market_pair"] = pair.env_value() if pair is not None else None
     return out
 
 
@@ -581,6 +595,11 @@ RECORDED_STATE_INTEGRITY_KINDS: frozenset[str] = frozenset({
 #: reason. Non-blocking and loud; never quiet.
 NON_BLOCKING_INTEGRITY_KINDS: frozenset[str] = RECORDED_STATE_INTEGRITY_KINDS | {
     "EXPERIMENT_CONFIG_UNVERIFIABLE",
+    # WS-027: one market's per-tag P&L does not reconcile to the account's realized
+    # P&L. Same reasoning as above — it is a claim about one market's attribution, the
+    # metric keeps the tag's own fill figure, and blocking would hold the KILL gate.
+    # Loud (a ticket candidate, owner PCR) and never silent.
+    "LIVE_ATTRIBUTION_MISMATCH",
 }
 
 
@@ -617,7 +636,10 @@ def _explained_by_stand_down(
     fourth is a real signal and is kept.)"""
 
     def _stripped(side: dict) -> dict:
-        out = {k: v for k, v in side.items() if k != "live_strategies_contains"}
+        # The shared-market pair (WS-027) only widens what an ARMED book may hold, so a
+        # stood-down book's pair is part of the stand-down, like its allowlist entry.
+        out = {k: v for k, v in side.items()
+               if k not in ("live_strategies_contains", "shared_market_pair")}
         pairs = out.get("twin_pairs")
         if isinstance(pairs, dict):
             out["twin_pairs"] = {

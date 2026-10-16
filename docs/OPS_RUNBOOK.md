@@ -607,6 +607,14 @@ To run a request:
      ANOMALIES. Mechanism + traps: `docs/LIVE_PAPER_TWIN.md`; the arm-and-audit procedure is the
      `live-paper-parallel` skill. **Standing policy: no strategy goes live without a twin.**
 
+   - **"what would per-fill live attribution change"** ->
+     `{"type":"script","name":"live_attribution_impact"}` — WS-027's pre-activation report:
+     every live gate evaluated twice as a dry run (shipped per-position provider, then
+     per-fill attribution forced on in its own process), every verdict and clause that would
+     move, then the reconciliation of every settled live market (per-tag fill P&L vs
+     `positions.realized_pnl`). Read-only; also prints the `expect_metrics_fingerprint` the
+     CUTOVER needs. Procedure: `docs/LIVE_FILL_ATTRIBUTION.md` §7.
+
    - **"what is this live book actually doing"** / **"real money P&L for <tag>"** ->
      `{"type":"script","name":"live_book_truth","args":["--tag","Fmmsell10"]}` — the real-money
      read for ONE live tag, from the sources that enforce it: exchange realized

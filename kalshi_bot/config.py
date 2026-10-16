@@ -9,6 +9,7 @@ Fail-closed by design:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal
 
@@ -27,6 +28,22 @@ VALID_ENVS = ("demo", "production")
 #: Upper bound on any one count in a book's `sizes=` split. A bound on the SPEC, not a risk
 #: limit: the live dollar cap (LIVE_MAX_ORDER_DOLLARS) is still what limits a real order.
 MAX_SPLIT_CONTRACTS = 10
+
+
+
+@dataclass(frozen=True)
+class SharedMarketPair:
+    """Two live mmsell tags allowed to hold one market, inside a combined bound
+    (`Settings.mmsell_live_shared_market_pairs`, WS-027)."""
+
+    tags: frozenset[str]
+    max_contracts: int
+    max_usd: float
+
+    def env_value(self) -> str:
+        """The canonical `A+B:contracts:dollars` spelling (tags sorted)."""
+        return f"{'+'.join(sorted(self.tags))}:{self.max_contracts}:{self.max_usd:.2f}"
+
 
 DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
 PRODUCTION_BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
@@ -392,6 +409,24 @@ class Settings(BaseSettings):
     #: partially filled order was cancelled, which is the same overrun of the per-market clip.
     #: Set to false to restore the pre-2026-10-11 behaviour.
     mmsell_live_refuse_account_held: bool = True
+    #: Named PAIRS of live mmsell tags allowed to hold the SAME market, each with a
+    #: registered COMBINED per-market bound (WS-027, docs/MMSELL_WIN_SET_CANARY.md).
+    #: Written `TAGA+TAGB:<max contracts>:<max dollars>`, `;`-separated, e.g.
+    #: `Kmmsell10+Nmmsell10:6:6.00`.
+    #:
+    #: WHAT IT RELAXES, AND ONLY FOR A LISTED PAIR: `gate:held` (the account holds the
+    #: market) and the any-tag in-flight-order check, so the second tag may enter a market
+    #: the first holds or rests on. Every other gate — switches, daily loss, total exposure,
+    #: per-tag dedup, the open cap, liquidity, spread, balance, `max_market_exposure`, the
+    #: tier bar and the series pauses — is untouched, and the pair's combined contracts and
+    #: dollars on the market (held + still working) must stay inside the bound or the entry
+    #: is refused as `gate:shared_bound`. A holder outside the pair, or contracts on the
+    #: market no order of the pair explains, still refuses as `gate:held`.
+    #:
+    #: WHY IT DEFAULTS EMPTY. Empty is byte-identical to the XOS-000040 behaviour for every
+    #: tag. A malformed entry is DROPPED, never half-parsed, so a typo leaves the stricter
+    #: gate in force. Setting it is a Live Ops act on the real-money path (owner-confirmed).
+    mmsell_live_shared_market_pairs: str = ""
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
@@ -1933,6 +1968,44 @@ class Settings(BaseSettings):
     def mmsell_live_skip_series_list(self) -> list[str]:
         """Series prefixes with real money paused (live mirror only). Empty disables the bar."""
         return [s.strip().upper() for s in self.mmsell_live_skip_series.split(",") if s.strip()]
+
+    @property
+    def mmsell_live_shared_pairs(self) -> tuple[SharedMarketPair, ...]:
+        """Parsed `mmsell_live_shared_market_pairs`. Fail-closed: an entry that does not
+        parse completely (two distinct non-twin tags, a positive integer contract bound,
+        a positive dollar bound) is dropped, and a tag named by two pairs drops BOTH —
+        ambiguity about which bound applies is not resolved by guessing."""
+        twins = {tt for _lt, tt in self.live_paper_twin_pairs}
+        parsed: list[SharedMarketPair] = []
+        for raw in (self.mmsell_live_shared_market_pairs or "").split(";"):
+            raw = raw.strip()
+            if not raw:
+                continue
+            parts = raw.split(":")
+            if len(parts) != 3:
+                continue
+            tags = tuple(t.strip() for t in parts[0].split("+") if t.strip())
+            try:
+                max_contracts = int(parts[1])
+                max_usd = float(parts[2])
+            except ValueError:
+                continue
+            if (len(tags) != 2 or tags[0] == tags[1] or max_contracts <= 0
+                    or not (max_usd > 0) or any(t in twins for t in tags)):
+                continue
+            parsed.append(SharedMarketPair(frozenset(tags), max_contracts, max_usd))
+        seen: dict[str, int] = {}
+        for p in parsed:
+            for t in p.tags:
+                seen[t] = seen.get(t, 0) + 1
+        return tuple(p for p in parsed if all(seen[t] == 1 for t in p.tags))
+
+    def mmsell_live_shared_pair_for(self, tag: str) -> SharedMarketPair | None:
+        """The pair `tag` belongs to, by EXACT tag (never the allowlist's prefix match)."""
+        for p in self.mmsell_live_shared_pairs:
+            if tag in p.tags:
+                return p
+        return None
 
     @property
     def mmsell_settlement_correlated_regimes_list(self) -> set[str]:
