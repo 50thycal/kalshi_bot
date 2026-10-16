@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-win-set"],"id":"ws027-show-2"}
+{"type":"env","action":"get","id":"ws027-env-1"}
