@@ -1,0 +1,42 @@
+# ops request [READ]
+# type=xos  id=ws027-impact-2
+# code 783a2b2daf4bc3c1b642c551f1347487507352bb · started 2026-10-16T09:08:39Z
+# live attribution impact — METRICS_ENGINE:live_fill_attribution_2026_10
+# revision active now: False
+# provider fingerprint (expect_metrics_fingerprint): 63e5cbd0c092b6de60df3764e4c4ad7919402d4cb857ea9e352330ad502c62fc
+
+== LIVE GATES: 13 evaluated, 0 verdict(s) would move ==
+  liquidity-incentive-mm               live_canary_keep         BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  liquidity-incentive-mm               paper_to_live_smoke      BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  liquidity-incentive-mm               shadow_instrument_ready  BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling                 live_canary_keep         BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling                 paper_to_live_canary     BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling-capacity        live_canary_keep         BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling-capacity        paper_to_live_canary     BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling-cell-size       live_canary_keep                     HOLD -> HOLD            
+      fail_any live_max_realized_loss_usd           2.8200 (n=90, pass=False) ->     2.8200 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      fail_any live_realized_pnl_usd               -3.5417 (n=90, pass=False) ->    -3.3549 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      fail_any twin_live_paired_gap_cents          -0.4566 (n=88, pass=False) ->    -0.1832 (n=91, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      fail_any twin_live_winrate_gap_pp             4.0799 (n=90, pass=False) ->     3.7214 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      hold_if  twin_mirror_coverage_pct            99.3100 (n=144, pass=False) ->    99.3200 (n=148, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      horizon  live_settled_contracts             115.0000 (n=90, pass=False) ->   117.0000 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      pass_all live_cents_per_contract             -3.0797 (n=115, pass=False) ->    -2.8674 (n=117, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      pass_all twin_live_winrate_gap_pp             4.0799 (n=90, pass=False) ->     3.7214 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+      sample   live_settled_contracts             115.0000 (n=90, pass=False) ->   117.0000 (n=93, pass=False)  [mmsell-price-ceiling-cell-size/v1/e2/mmsell10]
+  mmsell-price-ceiling-cell-size       paper_to_live_canary                 PASS -> PASS            
+  mmsell-price-ceiling-contest-cap     live_canary_keep         BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling-contest-cap     paper_to_live_canary     BLOCKED_PLATFORM -> BLOCKED_PLATFORM
+  mmsell-price-ceiling-size-split      live_canary_keep                     HOLD -> HOLD            
+      fail_any live_max_realized_loss_usd           2.8200 (n=215, pass=False) ->     2.8200 (n=219, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      fail_any live_realized_pnl_usd               -6.6272 (n=215, pass=False) ->    -9.2196 (n=219, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      fail_any twin_live_paired_gap_cents          -0.1038 (n=214, pass=False) ->    -0.1028 (n=218, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      fail_any twin_live_winrate_gap_pp             1.5621 (n=215, pass=False) ->     1.8658 (n=219, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      hold_if  twin_mirror_coverage_pct            99.6300 (n=272, pass=False) ->    99.6500 (n=283, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      horizon  live_settled_contracts             441.0000 (n=215, pass=False) ->   447.0000 (n=219, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      pass_all live_cents_per_contract             -1.5028 (n=441, pass=False) ->    -2.0626 (n=447, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      pass_all twin_live_winrate_gap_pp             1.5621 (n=215, pass=False) ->     1.8658 (n=219, pass=False)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+      sample   live_settled_contracts             441.0000 (n=215, pass=True) ->   447.0000 (n=219, pass=True)  [mmsell-price-ceiling-size-split/v1/e3/mmsell10]
+  mmsell-price-ceiling-size-split      paper_to_live_canary                 PASS -> PASS            
+
+== RECONCILIATION (live orders, last 45d) ==
+  settled markets checked 1237, reconcile 1237, shared by two tags 5, not checkable 627, MISMATCH 0 (tolerance $0.02)
