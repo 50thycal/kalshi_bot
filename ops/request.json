@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select i.id, e.key, i.kind, i.detected_at, left(i.detail::text,400) as detail from experiment_integrity_events i join experiments e on e.id=i.experiment_id where i.resolved_at is null order by i.id desc limit 5", "id": "ws027-integrity-1"}
+{"type": "db", "sql": "select i.id, e.key, i.kind, i.severity, i.detected_at, left(i.description,500) as description from experiment_integrity_events i join experiments e on e.id=i.experiment_id where i.resolved_at is null order by i.id desc limit 5", "id": "ws027-integrity-2"}
