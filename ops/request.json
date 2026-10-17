@@ -1,1 +1,1 @@
-{"type": "db", "id": "ceas-1", "sql": "select at, best_yes_bid, best_no_bid, yes_levels_json from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT19-CEAS' and at > '2026-10-17 01:30' order by at"}
+{"type":"noop"}
