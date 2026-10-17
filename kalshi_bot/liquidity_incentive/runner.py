@@ -99,6 +99,14 @@ def _is_resting_sell(row) -> bool:
     return (row.client_order_id or "").startswith(limm.RESTING_SELL_PREFIX)
 
 
+def _sell_role(row) -> str | None:
+    """§9.61: "a" (at the ask) or "b" (break-even) from a resting sell's client order id; None
+    for a §9.60 sell placed before the split."""
+    rest = (row.client_order_id or "")[len(limm.RESTING_SELL_PREFIX):]
+    role = rest.split(":", 1)[0] if ":" in rest else None
+    return role if role in (limm.RESTING_SELL_ROLE_ASK, limm.RESTING_SELL_ROLE_ENTRY) else None
+
+
 def _aware(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None
@@ -1060,37 +1068,68 @@ class IncentiveLiveRunner:
             else:
                 opp.pop(lvl, None)
         other_ask = 100 - max(opp) if opp else None
-        target = limm.resting_sell_price(entry_cents=entry, held_bid_cents=mark,
-                                         best_other_ask_cents=other_ask)
+        hours_left = (cutoff - now).total_seconds() / 3600.0
+        prices = limm.resting_sell_prices(entry_cents=entry, held_bid_cents=mark,
+                                          best_other_ask_cents=other_ask,
+                                          hours_to_cutoff=hours_left)
+        targets = None if prices is None else {limm.RESTING_SELL_ROLE_ASK: prices[0],
+                                               limm.RESTING_SELL_ROLE_ENTRY: prices[1]}
 
-        if len(sells) > 1 or (sells and remaining(sells[0]) > qty + 1e-9):
+        roles = [_sell_role(r) for r in sells]
+        if sells and (None in roles or len(set(roles)) < len(roles)):
+            # A §9.60 single sell (no role), or two of one role: re-place as the §9.61 split.
+            return "resting_sell:resplit" if cancel("resting_sell:resplit") \
+                else "resting_sell:cancel_pending"
+        held_by_sells = sum(remaining(r) for r in sells)
+        if held_by_sells > qty + 1e-9:
             # Larger than the position left: if it all filled it would open the other side.
             return "resting_sell:resized" if cancel("resting_sell:resize") \
                 else "resting_sell:cancel_pending"
-        if sells:
-            s = sells[0]
-            if target is None or s.limit_price is None or int(s.limit_price) == target:
-                return "resting_sell:resting"
-            if s.status != "resting" or not s.kalshi_order_id:
+        stale = [r for r in sells if targets is not None and r.limit_price is not None
+                 and int(r.limit_price) != targets[_sell_role(r)]]
+        if stale:
+            if any(r.status != "resting" or not r.kalshi_order_id for r in sells):
                 return "resting_sell:in_flight"
-            if (now - _aware(s.created_at)).total_seconds() < limm.RESTING_SELL_REPRICE_MIN_SECONDS:
+            youngest = max(_aware(r.created_at) for r in sells)
+            if (now - youngest).total_seconds() < limm.RESTING_SELL_REPRICE_MIN_SECONDS:
                 return "resting_sell:resting"
             if cancel("resting_sell:repriced"):
-                logger.info(f"incentive book: resting sell on {ticker} {s.limit_price}c -> "
-                            f"{target}c next cycle")
+                logger.info(f"incentive book: resting sells on {ticker} "
+                            + ", ".join(f"{_sell_role(r)} {r.limit_price}c->"
+                                        f"{targets[_sell_role(r)]}c" for r in stale)
+                            + " (re-placed next cycle)")
                 return "resting_sell:repricing"
             return "resting_sell:cancel_pending"
-        if target is None:
-            return "resting_sell:no_price"
+        if targets is None:
+            return "resting_sell:resting" if sells else "resting_sell:no_price"
+        # Place whichever role is missing, from the contracts no sell covers yet: the ask role
+        # takes half (rounded up), the break-even role the rest. After one role has filled, what
+        # is left is already covered and nothing more is placed.
+        free = int(round(qty - held_by_sells))
+        have = set(roles)
+        plan = []
+        if limm.RESTING_SELL_ROLE_ASK not in have and free > 0:
+            n = min(free, (qty + 1) // 2) if limm.RESTING_SELL_ROLE_ENTRY not in have else free
+            plan.append((limm.RESTING_SELL_ROLE_ASK, n))
+            free -= n
+        if limm.RESTING_SELL_ROLE_ENTRY not in have and free > 0:
+            plan.append((limm.RESTING_SELL_ROLE_ENTRY, free))
+        if not plan:
+            return "resting_sell:resting"
         cancelled_at = self._sell_cancelled_at.get(ticker)
         if cancelled_at is not None and _aware(snap.captured_at) <= cancelled_at:
             return "resting_sell:await_position"
-        res = executor.place_incentive_resting_sell(
-            session, strategy=limm.LIVE_TAG, ticker=ticker, held_side=held_side, qty=qty,
-            price=target)
-        if res == limm.REJECT_INSUFFICIENT_BALANCE:
-            self._switch_off_resting_sells(session, executor, now,
-                                           why=f"resting sell on {ticker} refused for cash")
+        res = "none"
+        for role, n in plan:
+            res = executor.place_incentive_resting_sell(
+                session, strategy=limm.LIVE_TAG, ticker=ticker, held_side=held_side, qty=n,
+                price=targets[role], role=role)
+            if res == limm.REJECT_INSUFFICIENT_BALANCE:
+                self._switch_off_resting_sells(session, executor, now,
+                                               why=f"resting sell on {ticker} refused for cash")
+                break
+            if res != "placed":
+                break
         return f"resting_sell:{res}"
 
     def _load_resting_sell_off(self, session) -> None:

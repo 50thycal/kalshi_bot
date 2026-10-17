@@ -3067,3 +3067,33 @@ for the sweep data").**
 **What would change our mind.** The resting sell is judged on its own fills: how often it fills
 before the stop or the event, and at what price against entry. If held legs still mostly end at
 the stop or ride into the event, it is not earning its complexity.
+
+### 9.61 The resting sell splits in two and steps down before the cutoff (2026-10-17)
+
+**Evidence.** §9.60 went live 12:54Z: PALE sell 100 @8c (bid 7), CEAS sell 200 @4c (bid 3),
+both accepted by Kalshi with no cash refusal. Joining the best ask nets a loss on these legs
+(entries 10c and 5c); nothing yet tries for break-even, and nothing makes a slow market more
+likely to fill before the position has to ride into the event.
+
+**Decision (operator, 2026-10-17: "proceeding with number one and number two, and then make a
+note about number three").**
+1. **Split** (`live.resting_sell_prices`, roles in the client order id `limmsell:a:` /
+   `limmsell:b:`). Half the held contracts (rounded up) rest at the other sellers' best ask ("a",
+   as §9.60); the rest at break-even, max(entry, that ask) ("b"). A missing role is placed only
+   from contracts no sell covers, so after one half fills nothing is re-added. A §9.60 single
+   sell is cancelled once and re-placed as the split (`resting_sell:resplit`). Any re-price
+   cancels both and re-places them next cycle after a fresh position read; the safety rules are
+   §9.60's, applied to the pair (their combined remaining size never exceeds the position).
+2. **Step down before the cutoff** (`RESTING_SELL_DECAY_HOURS` = 6). In the last six hours
+   before the pre-event cutoff both prices move down in a straight line with time: "a" from the
+   ask to the floor (one above the held bid and above the stop), "b" down to "a"; at the cutoff
+   both are at the floor, and then they come off as before.
+3. **Parked: sweep-aware pricing.** After a recorded sweep on a held market, do not step the sell
+   down (bids have not bounced after the sweeps seen so far). Not built. Ready when the §9.60
+   sweep log has ~2 weeks of data. The check: for `book_sweep` rows, the share whose
+   `book_sweep_followup` at 30/60 min shows `recovered`; if bids mostly do not recover, stepping
+   down after a sweep sells near the low and this rule is worth building.
+
+**Reward note.** The "a" sell at the ask is, on Kalshi's book, a bid on the other side at the top
+of that side (PALE: YES ask 8c == NO bid 92c, the best NO bid), so it scores at full credit. The
+"b" sell sits a few ticks behind and scores at the discount factor per tick.
