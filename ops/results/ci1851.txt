@@ -1,0 +1,24 @@
+# ops request [READ]
+# type=db  id=ci1851
+# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-17T18:51:52Z
+k                    market_ticker                 t                              v                                                                                                             
+-------------------  ----------------------------  -----------------------------  --------------------------------------------------------------------------------------------------------------
+order                KXTRUMPMENTION-26OCT25-SUPR   2026-10-17 17:54:19.153444+00  buy yes 2c x500 resting                                                                                       
+fill                 KXTRUMPMENTION-26OCT17-PALE   2026-10-17 17:49:28.642284+00  sell no 91c x21                                                                                               
+fill                 KXTRUMPMENTION-26OCT17-PALE   2026-10-17 17:53:25.6863+00    sell no 91c x4                                                                                                
+snap                 KXTRUMPMENTION-26OCT17-PALE   2026-10-17 17:44:19.277265+00  7/92                                                                                                          
+snap                 KXTRUMPMENTION-26OCT19-CEAS   2026-10-17 18:42:22.220182+00  3/96                                                                                                          
+book_sweep           KXTRUMPMENTION-26OCT19-FENT   2026-10-17 17:23:07.981898+00  {"side": "no", "levels": [[80, 50.0, 0.0], [79, 243.0, 50.0]], "prev_at": "2026-10-17T17:21:09.556099+00:00", 
+book_sweep           KXTRUMPMENTIONB-26OCT19-BEST  2026-10-17 17:25:01.044078+00  {"side": "yes", "levels": [[11, 19.0, 0.0], [10, 865.0, 190.0]], "prev_at": "2026-10-17T17:23:07.981898+00:00"
+book_sweep           KXTRUMPMENTION-26OCT17-PALE   2026-10-17 17:46:19.807088+00  {"side": "no", "levels": [[92, 275.0, 0.0]], "prev_at": "2026-10-17T17:44:19.277265+00:00", "top_after": [[91,
+book_sweep_followup  KXTRUMPMENTION-26OCT17-PALE   2026-10-17 16:55:26.908255+00  {"side": "yes", "minutes": 60, "sweep_at": "2026-10-17T15:54:17.284946+00:00", "recovered": true, "best_bid_no
+book_sweep_followup  KXTRUMPMENTION-26OCT19-FENT   2026-10-17 17:34:48.671008+00  {"side": "no", "minutes": 10, "sweep_at": "2026-10-17T17:23:07.981898+00:00", "recovered": true, "best_bid_now
+book_sweep_followup  KXTRUMPMENTIONB-26OCT19-BEST  2026-10-17 17:36:43.156972+00  {"side": "yes", "minutes": 10, "sweep_at": "2026-10-17T17:25:01.044078+00:00", "recovered": false, "best_bid_n
+book_sweep_followup  KXTRUMPMENTION-26OCT19-FENT   2026-10-17 17:54:06.813587+00  {"side": "no", "minutes": 30, "sweep_at": "2026-10-17T17:23:07.981898+00:00", "recovered": true, "best_bid_now
+book_sweep_followup  KXTRUMPMENTIONB-26OCT19-BEST  2026-10-17 17:56:06.327299+00  {"side": "yes", "minutes": 30, "sweep_at": "2026-10-17T17:25:01.044078+00:00", "recovered": false, "best_bid_n
+book_sweep_followup  KXTRUMPMENTION-26OCT19-FENT   2026-10-17 18:24:35.256421+00  {"side": "no", "minutes": 60, "sweep_at": "2026-10-17T17:23:07.981898+00:00", "recovered": true, "best_bid_now
+book_sweep_followup  KXTRUMPMENTIONB-26OCT19-BEST  2026-10-17 18:26:33.143933+00  {"side": "yes", "minutes": 60, "sweep_at": "2026-10-17T17:25:01.044078+00:00", "recovered": false, "best_bid_n
+live_sell            KXTRUMPMENTION-26OCT19-CEAS   2026-10-17 13:40:48.403531+00  4c x100 resting                                                                                               
+live_sell            KXTRUMPMENTION-26OCT19-CEAS   2026-10-17 13:40:48.444299+00  5c x100 resting                                                                                               
+
+(17 rows)
