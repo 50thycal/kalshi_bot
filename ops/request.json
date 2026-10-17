@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci_rest", "sql": "select id, strategy, market_ticker, side, action, limit_price, quantity, status, cancel_reason, created_at, left(client_order_id,12) coid from live_orders where created_at < '2026-10-13 09:34' and created_at > '2026-10-10' and (status in ('resting','submitted','partial','pending') or cancel_reason is not null or status='filled') order by created_at"}
