@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "pale-o1", "sql": "select id, side, action, limit_price, quantity, status, cancel_reason, created_at, client_order_id from live_orders where market_ticker='KXTRUMPMENTION-26OCT17-PALE' order by created_at"}
