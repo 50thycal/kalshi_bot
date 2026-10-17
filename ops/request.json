@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "te-1", "sql": "select market_ticker, count(*), max(received_at) from incentive_trade_events where market_ticker in ('KXTRUMPMENTION-26OCT17-PALE','KXTRUMPMENTION-26OCT19-CEAS') group by 1 union all select 'ALL', count(*), max(received_at) from incentive_trade_events where received_at > now() - interval '3 days'"}
