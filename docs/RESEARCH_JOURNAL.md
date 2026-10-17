@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## WIN-set expansion 2026-10-17 — commodities closed, KXTRUMPMENTION first, fast fills lose
+
+Research Lab read for the owner ([doc](MMSELL_WIN_SET_EXPANSION_RESEARCH.md)), read-only.
+- **Commodities:** clean on paper, losing live; filled markets lose 9.1% vs 0% for tried-unfilled
+  — the fill selects the losers. Closed for the maker entry.
+- **New series (full-history replay, control reproduced):** KXTRUMPMENTION 53 entries, 0 losses,
+  +6.6¢; KXAPRPOTUS +3.7¢; other mention series positive but thin. None is graduated.
+- **Rain:** the 3-city limit is the global rung cap for non-exclusive events; late entries (1–6h)
+  +1.1¢ better than the current rule at t 1.88 — a forward-test candidate.
+- **8–10¢:** only the index above/below pair holds on paper; live 39 fills / 3 losers.
+- **Lead:** on the WIN series every settled live loser filled within 30 min of placement (0 of 86
+  slower fills lost). Post hoc; forward test only.
+
 ## Temperature look-alikes 2026-10-14/15 — the rain cell replicates; one paper tape proposed
 
 Research Lab look-alike screen and replay ([doc](MMSELL_LOOKALIKE_PROBE.md),
