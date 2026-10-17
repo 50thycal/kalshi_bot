@@ -1929,3 +1929,21 @@ def test_a_sweep_is_recorded_with_follow_ups_and_changes_nothing(live_db, settin
     assert [f.detail_json["minutes"] for f in follow] == [10, 30, 60]
     assert all(f.detail_json["recovered"] is False for f in follow)
     assert client.placed == [] and client.canceled == []
+
+
+def test_a_re_price_keeps_each_halfs_size(live_db, settings):
+    """§9.62: the ask half already filled; the 50 break-even contracts left are re-priced as 50
+    break-even contracts, not re-split 25/25 (which would move half of them to the ask)."""
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    ex = _exec(settings, client)
+    runner = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        # 50 held at 14c, one break-even sell at 15c that is now stale (target 14c).
+        _held_mention(s, entry=14, qty=50, sells=(("b", 15, 50),))
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+        assert _managed(out) == {"resting_sell:repricing": 1}
+        _snap(s, 50, NOW + timedelta(minutes=1))
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=2))
+    assert _managed(out) == {"resting_sell:placed": 1}
+    assert [(o["price"], o["count"], o["client_order_id"][:11]) for o in client.placed] == [
+        ("0.1400", "50.00", "limmsell:b:")]

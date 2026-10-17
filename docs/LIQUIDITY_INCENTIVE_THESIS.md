@@ -3097,3 +3097,14 @@ note about number three").**
 **Reward note.** The "a" sell at the ask is, on Kalshi's book, a bid on the other side at the top
 of that side (PALE: YES ask 8c == NO bid 92c, the best NO bid), so it scores at full credit. The
 "b" sell sits a few ticks behind and scores at the discount factor per tick.
+
+### 9.62 A re-price keeps each half's size (2026-10-17)
+
+**Evidence.** PALE, 15:56Z: the ask half (50 @7c) had filled; the 50 break-even contracts left were
+re-priced by the §9.61 step-down (10c → 9c), and the re-placement re-split them 25 @7c / 25 @9c —
+moving half of the break-even half to the ask. The 25 @7c filled at 16:24Z. Each re-price would
+keep halving the break-even half, which is not the operator's "half at the ask, half at entry".
+
+**Fix.** When a re-price cancels the sells, each role's remaining size is remembered and the sells
+are re-placed at those sizes (capped by the position). Held in memory: a restart in between
+re-splits what is left, as before. No price, cap or safety rule changes.
