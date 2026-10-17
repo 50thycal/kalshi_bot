@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci_tsw", "sql": "select id, side, action, limit_price, quantity, status, cancel_reason, created_at, raw_order_json->>'side' as wire_side, raw_order_json->>'price' as wire_price from live_orders where strategy='Alimm1' and (client_order_id like 'limmexitleg:%' or (created_at between '2026-10-13 09:00' and '2026-10-13 11:00')) order by created_at limit 30"}
