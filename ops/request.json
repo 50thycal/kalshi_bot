@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "pale-p1", "sql": "select market_title, close_time, end_date, start_date, target_size, period_reward_usd from incentive_programs where market_ticker='KXTRUMPMENTION-26OCT17-PALE' order by last_seen_at desc limit 1"}
