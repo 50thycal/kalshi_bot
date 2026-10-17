@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=pale-f1
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T01:59:19Z
+filled_at                         side  action  price  quantity  fee     kalshi_order_id                     
+--------------------------------  ----  ------  -----  --------  ------  ------------------------------------
+2026-10-16 02:56:20.592043+00:00  yes   buy     10     5         0.0000  01a13f9c-3808-79b9-9954-dcdab806dab8
+2026-10-16 23:21:34.176431+00:00  yes   buy     10     95        0.0000  01a13f9c-3808-79b9-9954-dcdab806dab8
+
+(2 rows)
