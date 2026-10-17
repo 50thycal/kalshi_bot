@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T10:51:37Z
-(noop — nothing to do)
+# type=db  id=ci1051b
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T10:51:52Z
+market_ticker                 side  limit_price  quantity  status   cancel_reason  created_at                      
+----------------------------  ----  -----------  --------  -------  -------------  --------------------------------
+KXTRUMPMENTION-26OCT20-AI     yes   8            125       resting                 2026-10-17 08:05:21.962110+00:00
+KXTRUMPMENTIONB-26OCT19-FENT  yes   7            142       resting                 2026-10-17 09:57:15.315710+00:00
+
+(2 rows)
