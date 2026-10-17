@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci2051b", "sql": "select detail_json->>'minutes' m, count(*) n, sum(case when (detail_json->>'recovered')::boolean then 1 else 0 end) rec from incentive_collector_events where kind='book_sweep_followup' group by 1 order by 1"}
