@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "sweep-1", "sql": "with s as (select market_ticker, at, best_yes_bid b, lag(best_yes_bid) over w pb, lag(at) over w pat, yes_depth_total d, lag(yes_depth_total) over w pd from incentive_market_snapshots where market_ticker like 'KXTRUMPMENTION%' and at > now() - interval '7 days' window w as (partition by market_ticker order by at)) select market_ticker, pat, at, pb, b, pd - d as depth_gone from s where pb is not null and b <= pb - 2 and pb <= 20 and extract(epoch from at-pat) < 1800 order by at"}
