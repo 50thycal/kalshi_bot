@@ -97,6 +97,13 @@ this list is the bare register, not the argument.
   contest cap cost".
 - NFL preseason overs: MMSELL paper on KXNFLTOTAL was positive in every price band in August 2026
   only (`docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md` §5); pre-register an August 2027 cell before then.
+- Classify `KXNFL1HFT` (half-time/full-time double, truly `game_prop`) and `KXNFL1H` (would
+  shadow it by longest-prefix). Held out of `football_coverage_2026_10_12` because `game_prop` is in
+  `Kmmsell10`'s `bigtypes`; needs the cell-size experiment's decision first
+  (`docs/mmsell_taxonomy_repair/PLATFORM_IMPACT_20261012.md` §1).
+- Raise an Experiment OS issue for the unregistered 2026-09-06 `KXUE*` taxonomy change (commit
+  `d166fb26`): it moved `Tmmsell5`/`Tmmsell6` universes mid-epoch with no recorded boundary. Owner:
+  `mmsell-type-tight`'s owner; never back-dated by a revision (same doc, §4).
 - ITF men tour-level split (M15 vs M25) from catalog event titles; worth reading only if the
   KXITFMATCH forward test in the same document passes.
 

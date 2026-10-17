@@ -214,3 +214,84 @@ two arms, which is what keeps it off `mmsell-correlation-cap` entirely.
 
 **Neither step has been taken.** Registering arms is durable experiment state and changing
 `MMSELL_VARIANTS` redeploys production; both need the operator's explicit go.
+
+**Status, 2026-10-17:** both steps are done. The pair trades as experiment
+`mmsell-reviewed-universe` (v1, epoch 1, deployment `mmsell-reviewed-paper-1`, registered 2026-09-11).
+Its kill gate, `paper_keep`, reads **60 settlement days of daily stability**, so the first
+legitimate read falls around **2026-11-10**. Experiment OS holds the standing; this section does not.
+
+## Interim mechanism ledger, 2026-09-11 → 2026-10-16 (not a verdict)
+
+These are observations from an operator-session watch loop (480-minute check-ins, 10-04 → 10-17).
+They are **mechanism only**, written down so the 60-day reader does not have to rebuild them from
+`paper_trades`. They authorize nothing, and they must not be read as either arm winning.
+
+**Tape at 2026-10-16 22:26Z (ops `cc-rmm-1016e`):**
+
+| arm | settled | losses | P&L | open |
+|---|---:|---:|---:|---:|
+| `Rmmsell1` (uncapped) | 1,002 | 47 | +$17.56 | 11 |
+| `Rmmsell2` (capped) | 663 | 35 | +$7.66 | 9 |
+
+**Loss count against the 6.5% break-even.** A typical win is about +$0.06–0.07 and a typical loss
+about −$0.93, so the break-even loss rate is roughly 6.5%. Expected losses are n × 0.065, with
+sd = √(n × 0.065 × 0.935).
+
+| arm | expected | actual | below expected |
+|---|---:|---:|---:|
+| `Rmmsell1` | ~65 | 47 | ~2.2 sd (first crossed 2 sd on 10-04) |
+| `Rmmsell2` | ~43 | 35 | ~1.2 sd |
+
+Both are running totals, which the gate explicitly does not read.
+
+**What the cap did.** Here the cap is `contestcap=1,contestkey=split`, so `Rmmsell2` refuses a
+second leg in the same contest. Each time a refused leg settled, it fell into one of three
+classes:
+
+- **True binding: the refused leg LOST, so the cap avoided a loss.** There were **7**:
+  1. 09-12 `KXMLBSPREAD` COL–DET
+  2. 09-19 DET–CWS (a cross-series binding)
+  3. 09-20 `KXUFCMOV` TUI–DES
+  4. 09-21 `KXINXU` H1600
+  5. 10-04 `KXNFLTOTAL` DAL–HOU
+  6. 10-04 `KXNFLTOTAL` KC–LV
+  7. 10-12 MNF `KXNFLTOTAL` BUF–LAR (refused 64 and 67 both lost; −$1.87 avoided)
+- **Cap-hurts: the refused leg WON while the kept leg in the same event LOST.** There were **2**,
+  costing $0.06 each:
+  - 10-09 `KXWNBASPREAD` GS–LV: refused LV7 won; kept GS7 lost −$0.93.
+  - 10-13 `KXUCLGAME` VIK–BMU: refused VIK won; both arms held TIE, which lost −$0.94.
+- **Forgone win: the refused leg won and nothing was lost.** Counted since 10-08 only:
+  **59 legs, all won, about +$3.81 forgone.** This is the cap's steady cost, paid in small wins.
+
+So the cap's ledger has two sides of different shape. A few large avoided losses (7 × about
+$0.93, with #7 avoiding $1.87) stand against a steady trickle of forgone small wins. Netting them
+is the 60-day reader's job, over daily stability rather than totals.
+
+**NFL Sunday slates, classified as each one settled:**
+
+| slate | effect of the cap |
+|---|---|
+| 09-20 | neutral |
+| 09-27 | favorable |
+| 10-04 | favorable (bindings #5 and #6) |
+| 10-11 | neutral |
+
+10-18 was not classified; the watch loop was closed first.
+
+**Losses outside the bindings.** Every other loss since 09-28 was held on both arms ("matched"),
+so it says nothing about the cap. No day reached five losing games.
+
+**Operational gaps the reader must not mistake for edge:**
+
+| when | what happened |
+|---|---|
+| 09-21 → 09-24 | lapse |
+| 09-24 | worker crash-loop |
+| 09-27 | disk-full |
+| 10-02 → 10-04 | ~45 h without entries |
+
+All are closed, and they hit both arms at once.
+
+**Left open when the loop closed:** two `Rmmsell1`-only legs, `KXINXU-26OCT16H1600` T7689.9999 and
+T7694.9999. `Rmmsell2` holds T7714.9999, which `Rmmsell1` also holds. If a refused leg lost, it is
+true binding #8; if a refused leg won and the kept leg lost, it is cap-hurts #3.
