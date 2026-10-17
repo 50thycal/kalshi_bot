@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "pale-s1", "sql": "select date_trunc('hour', at) h, min(best_yes_bid) yb_min, max(best_yes_bid) yb_max, min(100-best_no_bid) ask_min, max(100-best_no_bid) ask_max, max(trades_last_5m) trades, count(*) n from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT17-PALE' and at > '2026-10-15 10:00' group by 1 order by 1"}
