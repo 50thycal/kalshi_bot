@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","id":"nm-r3-rain-replay-1","args":["--series","KXRAIN","--per-series","1800","--max-pages","40","--stratify","day","--timing"]}
+{"type":"script","name":"mmsell_lookalike_probe","id":"nm-r2-cands-2","args":["--series","KXTRUMPMENTION,KXAPRPOTUS,KXSECPRESSMENTION,KXBERNIEMENTION,KXMAMDANIMENTION,KXWORLDNEWSMENTION","--per-series","1500","--max-pages","60","--stratify","day"]}
