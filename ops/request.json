@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci0651", "sql": "select distinct on (ticker) ticker, at, best_yes_bid, best_no_bid from incentive_market_snapshots where ticker like '%PALE%' or ticker like '%CEAS%' order by ticker, at desc"}
+{"type":"noop"}
