@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_lookalike_probe","id":"nm-r2-cands-1","args":["--series","KXTRUMPMENTION,KXAPRPOTUS,KXWORLDNEWSMENTION,KXSECPRESSMENTION,KXBERNIEMENTION,KXMAMDANIMENTION,KXRAINWKND,KXNASDAQ100,KXTRUMPAPPROVE","--per-series","300","--max-pages","30","--timing"]}
+{"type":"script","name":"mmsell_lookalike_probe","id":"nm-r1-idx810-1","args":["--series","KXINXU,KXNASDAQ100U","--per-series","900","--max-pages","40","--lo","8","--hi","10","--maxyes","10","--no-control","--timing"]}
