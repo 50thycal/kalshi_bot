@@ -1,1 +1,1 @@
-{"type": "db", "id": "pale-pos", "sql": "select captured_at, quantity_fp from positions where market_ticker='KXTRUMPMENTION-26OCT17-PALE' order by captured_at desc limit 1"}
+{"type":"noop"}
