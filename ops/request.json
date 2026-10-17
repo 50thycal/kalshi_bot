@@ -1,1 +1,1 @@
-{"type": "db", "id": "snaps-all", "sql": "select market_ticker, to_char(at,'YYYY-MM-DD HH24:MI') t, best_yes_bid b, best_no_bid nb, left(yes_levels_json::text, 160) lv from incentive_market_snapshots where market_ticker like 'KXTRUMPMENTION%' and at > now() - interval '4 days' order by market_ticker, at"}
+{"type":"noop"}
