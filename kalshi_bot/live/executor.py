@@ -950,6 +950,72 @@ class LiveExecutor:
             side=limm_live.other_side(held_side), price=int(price), qty=int(qty),
             coid_prefix="limmexitleg:", reason=f"incentive_exit_leg:{held_side}")
 
+    def place_incentive_resting_sell(self, session, *, strategy: str, ticker: str,
+                                     held_side: str, qty: int, price: int) -> str:
+        """§9.60: rest a post-only SELL of a held leg at `price` (the held side's cents), sized
+        to the held contracts. Kalshi has no reduce-only here, so the caller sizes it to the
+        position and cancels it before any marketable exit; a sell larger than the position
+        would open the opposite side when it filled. Same wire shape as the marketable exit —
+        selling YES is an "ask", selling NO is a "bid" (buy YES) — but good-till-cancelled and
+        post-only, so it rests as a maker and never crosses."""
+        if not self._allowed(strategy) or not self._switches_on():
+            return "gate:switches"
+        if not (1 <= int(price) <= 99) or not (1 <= int(qty) <= limm_live.MAX_CONTRACTS_PER_ORDER):
+            return "gate:size"
+        if held_side == limm_live.SIDE_YES:
+            order_side, yes_price = "ask", int(price)
+        else:
+            order_side, yes_price = "bid", 100 - int(price)
+        coid = f"{limm_live.RESTING_SELL_PREFIX}{uuid.uuid4()}"
+        order = {
+            "ticker": ticker,
+            "client_order_id": coid,
+            "side": order_side,
+            "count": f"{int(qty):.2f}",
+            "price": f"{yes_price / 100.0:.4f}",
+            "time_in_force": "good_till_canceled",
+            "post_only": True,
+            "self_trade_prevention_type": "taker_at_cross",
+        }
+        row = repo.create_live_order(
+            session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
+            side=held_side, action="sell", limit_price=int(price), quantity=int(qty),
+            status="pending", client_order_id=coid, raw_order_json=order)
+        session.commit()  # durable intent before POST
+        try:
+            resp = self.client.create_events_order(order)
+        except AuthError:
+            repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+            raise
+        except TransientError as exc:
+            repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
+            return "unknown"
+        except KalshiAPIError as exc:
+            if getattr(exc, "status_code", None) == 409:
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                return "placed"
+            repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
+            self.summary.rejected += 1
+            logger.warning(f"incentive resting sell REJECTED {ticker}: {str(exc)[:300]}")
+            if "insufficient_balance" in str(exc):
+                return limm_live.REJECT_INSUFFICIENT_BALANCE
+            return "rejected"
+        except Exception as exc:  # noqa: BLE001 — one failure must not break the cycle
+            repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
+            logger.exception("incentive resting sell failed")
+            return "error"
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
+        repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
+        logger.info(f"incentive resting sell placed {ticker}: sell {qty} {held_side} at {price}c",
+                    extra={"extra_fields": {"ticker": ticker, "strategy": strategy,
+                                            "coid": coid, "kalshi_order_id": koid,
+                                            "payload": order}})
+        return "placed"
+
     # --- execution telemetry hooks (docs/MMSELL_QUEUE_FILL_TELEMETRY.md) -------------------
 
     def _write_decision_context(self, session, *, row, strategy, event_ticker, ticker, metrics,
