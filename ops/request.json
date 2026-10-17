@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci0651b", "sql": "select distinct on (market_ticker) market_ticker, at, best_yes_bid, best_no_bid from incentive_market_snapshots where at > now() - interval '1 hour' and (market_ticker like '%PALE%' or market_ticker like '%CEAS%') order by market_ticker, at desc"}
+{"type":"noop"}
