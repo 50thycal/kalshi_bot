@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=ci2051b
+# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-17T20:52:03Z
+m   n   rec
+--  --  ---
+10  10  2  
+30  7   4  
+60  5   4  
+
+(3 rows)

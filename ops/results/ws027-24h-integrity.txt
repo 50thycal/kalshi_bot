@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=ws027-24h-integrity
-# code 0b21ee6713c25f9e2571e49e08eeb1664b031c44 · started 2026-10-17T14:55:04Z
-key             kind                     severity  detected_at                       resolved_at                       description                                                                                                                                                     
---------------  -----------------------  --------  --------------------------------  --------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-mmsell-win-set  EXPERIMENT_CONFIG_DRIFT  error     2026-10-16 14:11:23.427903+00:00  2026-10-16 14:16:08.376896+00:00  runtime config for mmsell-winset-live-1 differs from the registered deployment — classify: harmless deployment revision, new epoch, new version, or platform imp
-
-(1 row)
