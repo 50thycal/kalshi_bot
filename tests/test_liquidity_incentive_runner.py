@@ -1702,3 +1702,180 @@ def test_markets_of_a_capped_event_are_not_fetched(live_db, settings, monkeypatc
         out = _cycle(client, settings, s)
     assert "KXTEST-FULL-1" not in client.asked and "KXTEST-FULL-2" not in client.asked
     assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTEST-OTHER"
+
+
+# --- §9.60: a held leg rests a sell at the current ask; sweeps are logged, never acted on -----
+
+MENTION = "KXTRUMPMENTION-26SEP20-PALE"
+
+
+def _held_mention(s, *, entry=10, qty=100, sell=None, sell_qty=None, sell_age_min=10,
+                  hours=48.0, snap_at=NOW):
+    _mention(s, MENTION, event="KXTRUMPMENTION-26SEP20", hours=hours)
+    s.add(m.LiveOrder(market_ticker=MENTION, event_ticker="KXTRUMPMENTION-26SEP20",
+                      strategy=limm.LIVE_TAG, side="yes", action="buy", limit_price=entry,
+                      quantity=qty, status="filled", kalshi_order_id="K-PALE",
+                      client_order_id="pale", created_at=NOW - timedelta(hours=5)))
+    s.add(m.Fill(kalshi_fill_id="F-PALE", kalshi_order_id="K-PALE", market_ticker=MENTION,
+                 side="yes", action="buy", price=entry, quantity=qty))
+    if sell is not None:
+        s.add(m.LiveOrder(market_ticker=MENTION, event_ticker=None, strategy=limm.LIVE_TAG,
+                          side="yes", action="sell", limit_price=sell,
+                          quantity=sell_qty or qty, status="resting", kalshi_order_id="K-SELL",
+                          client_order_id=f"{limm.RESTING_SELL_PREFIX}x",
+                          created_at=NOW - timedelta(minutes=sell_age_min)))
+    _snap(s, qty, snap_at)
+
+
+def _snap(s, qty, at):
+    s.add(m.Position(market_ticker=MENTION, captured_at=at, side="yes", quantity=qty,
+                     quantity_fp=qty, avg_price=10.0))
+    s.flush()
+
+
+def test_a_held_mention_leg_rests_a_sell_at_the_best_ask(live_db, settings):
+    # YES bid 8 (above the 5c stop, under the 15c take-profit); NO bid 88 == YES ask 12.
+    client = FakeClient({MENTION: _book([(8, 3), (7, 10)], [(88, 100), (85, 400)])})
+    with db.session_scope() as s:
+        _held_mention(s)
+        out = _cycle(client, settings, s)
+        row = s.scalar(sa_select(m.LiveOrder).where(m.LiveOrder.action == "sell"))
+    assert _managed(out) == {"resting_sell:placed": 1}
+    order = client.placed[0]
+    assert (order["side"], order["price"], order["count"], order["post_only"],
+            order["time_in_force"]) == ("ask", "0.1200", "100.00", True, "good_till_canceled")
+    assert (row.side, row.limit_price, row.quantity, row.status) == ("yes", 12, 100, "resting")
+    assert row.client_order_id.startswith(limm.RESTING_SELL_PREFIX)
+
+
+def test_the_resting_sell_never_goes_at_or_below_the_stop():
+    # A 10c entry stops at a 5c bid, so the sell floor is 6c even when another seller asks 4c.
+    assert limm.resting_sell_price(entry_cents=10, held_bid_cents=3, best_other_ask_cents=4) == 6
+    # Never at or below the held bid (post-only would cross).
+    assert limm.resting_sell_price(entry_cents=10, held_bid_cents=9, best_other_ask_cents=9) == 10
+    # No other seller: ask entry + take-profit.
+    assert limm.resting_sell_price(entry_cents=10, held_bid_cents=8,
+                                   best_other_ask_cents=None) == 15
+    assert limm.resting_sell_price(entry_cents=60, held_bid_cents=99,
+                                   best_other_ask_cents=None) is None
+
+
+def test_a_resting_sell_undercut_by_another_seller_is_moved_to_the_new_ask(live_db, settings):
+    # Ours: YES ask 12 (== NO bid 88 x100). Someone else now asks 10 (NO bid 90).
+    client = FakeClient({MENTION: _book([(8, 3)], [(90, 50), (88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, sell=12)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:repricing": 1}
+    assert client.canceled == ["K-SELL"] and client.placed == []
+
+
+def test_a_resting_sell_at_the_ask_is_kept(live_db, settings):
+    # Our own 100 at NO 88 is taken out of the book: the other sellers' best ask is still 12.
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 140), (85, 400)])})
+    with db.session_scope() as s:
+        _held_mention(s, sell=12)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:resting": 1}
+    assert client.canceled == [] and client.placed == []
+
+
+def test_a_young_resting_sell_is_not_churned(live_db, settings):
+    client = FakeClient({MENTION: _book([(8, 3)], [(90, 50), (88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, sell=12, sell_age_min=2)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:resting": 1} and client.canceled == []
+
+
+def test_a_resting_sell_larger_than_the_position_is_cancelled_at_once(live_db, settings):
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, qty=60, sell=12, sell_qty=100, sell_age_min=1)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:resized": 1} and client.canceled == ["K-SELL"]
+
+
+def test_the_stop_waits_for_a_position_read_after_the_sell_is_cancelled(live_db, settings):
+    """The sell may part-fill until it is cancelled: the marketable exit is sized only from a
+    position read taken after the cancel, or it could sell more than is held."""
+    client = FakeClient({MENTION: _book([(5, 30)], [(88, 100)])})      # bid 5: the stop
+    ex = _exec(settings, client)
+    runner = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        _held_mention(s, sell=12)
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+        assert _managed(out) == {"stop_loss:resting_sell_cancelled": 1}
+        assert client.canceled == ["K-SELL"] and client.placed == []
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=2))
+        assert _managed(out) == {"stop_loss:await_position": 1} and client.placed == []
+        _snap(s, 100, NOW + timedelta(minutes=3))
+        out = runner.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=4))
+    assert _managed(out) == {"stop_loss:placed": 1}
+    assert client.placed[0]["time_in_force"] == "immediate_or_cancel"
+
+
+def test_the_resting_sell_is_pulled_at_the_pre_event_cutoff(live_db, settings):
+    # The programme ends (== the event starts) in 10 minutes: past the 15-minute cutoff.
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, sell=12, hours=10 / 60)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:pulled": 1} and client.canceled == ["K-SELL"]
+
+
+def test_no_resting_sell_is_placed_after_the_cutoff(live_db, settings):
+    # Falls back to the pre-§9.60 rules: the opposite-side exit leg here costs 88c x100, over cap.
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, hours=10 / 60)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"holding:exit_leg_over_cap": 1} and client.placed == []
+
+
+class CashRefusingClient(FakeClient):
+    def create_events_order(self, order):
+        from kalshi_bot.kalshi.client import KalshiAPIError
+        raise KalshiAPIError(400, '{"error":{"code":"insufficient_balance"}}')
+
+
+def test_a_cash_refusal_switches_resting_sells_off_and_it_stays_off(live_db, settings):
+    client = CashRefusingClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s)
+        out = _cycle(client, settings, s)
+        assert _managed(out) == {"resting_sell:rejected:insufficient_balance": 1}
+    with db.session_scope() as s:
+        fresh = run.IncentiveLiveRunner(FakeClient({}), settings)
+        fresh._load_resting_sell_off(s)
+    assert fresh._resting_sell_off
+
+
+def test_a_sweep_is_recorded_with_follow_ups_and_changes_nothing(live_db, settings):
+    client = FakeClient({"KXTEST-SW": _book([(11, 200), (10, 300), (8, 100)], [(85, 100)])})
+    runner = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-SW")
+        s.add(m.LiveOrder(market_ticker="KXTEST-SW", event_ticker="KXTEST-SW",
+                          strategy=limm.LIVE_TAG, side="yes", action="buy", limit_price=10,
+                          quantity=100, status="resting", kalshi_order_id="K-SW",
+                          client_order_id="K-SW", created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        assert runner._record_sweeps(s, NOW) == 0
+        client.books["KXTEST-SW"] = _book([(8, 50), (7, 10)], [(85, 100)])
+        runner._data_books = {}
+        assert runner._record_sweeps(s, NOW + timedelta(minutes=2)) == 1
+        for mins in (12, 32, 62):
+            runner._data_books = {}
+            runner._record_sweeps(s, NOW + timedelta(minutes=mins))
+        rows = s.scalars(sa_select(m.IncentiveCollectorEvent)
+                         .order_by(m.IncentiveCollectorEvent.id)).all()
+    sweep = [r for r in rows if r.kind == run.EV_BOOK_SWEEP]
+    follow = [r for r in rows if r.kind == run.EV_BOOK_SWEEP_FOLLOWUP]
+    assert len(sweep) == 1
+    d = sweep[0].detail_json
+    assert (d["side"], d["best_bid_before"], d["best_bid_after"], d["contracts_removed"],
+            d["own_contracts_in_range"]) == ("yes", 11, 8, 550.0, 100.0)
+    assert [f.detail_json["minutes"] for f in follow] == [10, 30, 60]
+    assert all(f.detail_json["recovered"] is False for f in follow)
+    assert client.placed == [] and client.canceled == []

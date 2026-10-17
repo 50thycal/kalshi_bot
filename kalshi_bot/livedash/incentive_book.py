@@ -44,6 +44,8 @@ WORKING = ("pending", "submitted", "resting", "partial")
 #: and a marketable sell in flight (`LiveExecutor.place_incentive_exit_leg` / `close_incentive_position`).
 EXIT_LEG_PREFIX = "limmexitleg:"
 EXIT_SELL_PREFIX = "limmexit:"
+#: §9.60: the resting post-only sell of a held leg (`LiveExecutor.place_incentive_resting_sell`).
+RESTING_SELL_PREFIX = limm.RESTING_SELL_PREFIX
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -200,7 +202,14 @@ def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -
     leg = next((o for o in working if (o.client_order_id or "").startswith(EXIT_LEG_PREFIX)), None)
     closing = any((o.client_order_id or "").startswith(EXIT_SELL_PREFIX) for o in working)
     exit_order = None
-    if leg is not None and leg.limit_price is not None:
+    sell = next((o for o in working
+                 if (o.client_order_id or "").startswith(RESTING_SELL_PREFIX)), None)
+    if sell is not None and sell.limit_price is not None:
+        sq = int(sell.quantity or 0)
+        exit_order = {"side": sell.side, "price_cents": int(sell.limit_price), "quantity": sq,
+                      "kind": "resting_sell",
+                      "locks_usd": _r((int(sell.limit_price) - entry) * sq / 100.0)}
+    elif leg is not None and leg.limit_price is not None:
         lq = int(leg.quantity or 0)
         exit_order = {"side": leg.side, "price_cents": int(leg.limit_price), "quantity": lq,
                       "locks_usd": _r((100 - entry - int(leg.limit_price)) * lq / 100.0)}
@@ -263,7 +272,8 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
     cash_in, unconfirmed, cash_out, last_in = _rewards(session, tickers)
 
     working = [o for o in orders if (o.status or "").lower() in WORKING
-               and not (o.client_order_id or "").startswith(EXIT_LEG_PREFIX)]
+               and not (o.client_order_id or "").startswith(
+                   (EXIT_LEG_PREFIX, RESTING_SELL_PREFIX))]
     by_ticker = {}
     for p in progs.current_programs(session, liquidity_only=True):
         if p.market_ticker in set(tickers):

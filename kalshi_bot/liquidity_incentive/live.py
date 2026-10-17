@@ -229,6 +229,16 @@ EXIT_LEG_EDGE_CENTS = TAKE_PROFIT_CENTS
 MAX_EXIT_LEG_DOLLARS = MAX_ORDER_DOLLARS
 #: A marketable exit crosses this many cents past the touch so it fills rather than expires.
 EXIT_SLIPPAGE_CENTS = 2
+#: §9.60 (operator, 2026-10-17): a held leg rests a post-only SELL of exactly the held contracts
+#: at the current best ask — joining the sellers — instead of the opposite-side exit leg. Re-priced
+#: to the ask, never at or below the stop level; pulled at the pre-event cutoff; cancelled before
+#: any marketable stop / take-profit / pre-close exit. Off by setting this False.
+RESTING_SELL_ENABLED = True
+#: A resting sell is not moved to a new ask until it has rested this long (no churn on a flicker).
+#: A sell larger than the position left is cancelled at once, whatever its age.
+RESTING_SELL_REPRICE_MIN_SECONDS = 300.0
+#: Client-order-id prefix of a §9.60 resting sell (`LiveExecutor.place_incentive_resting_sell`).
+RESTING_SELL_PREFIX = "limmsell:"
 #: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
 EXIT_MAX_ATTEMPTS = 3
 #: An exit acts only on a position snapshot at most this old. Kalshi has no reduce-only for
@@ -653,6 +663,24 @@ def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | 
     cap = 100 - int(entry_cents) - EXIT_LEG_EDGE_CENTS
     price = cap if best_opposite_bid is None else min(int(best_opposite_bid), cap)
     return price if price >= 1 else None
+
+
+def resting_sell_price(*, entry_cents: int, held_bid_cents: int | None,
+                       best_other_ask_cents: int | None) -> int | None:
+    """§9.60: where a resting sell of a held leg goes, in the held side's own cents.
+
+    Join the best ask of the OTHER sellers (`best_other_ask_cents`, our own sell taken out of the
+    book). With no other seller, ask entry + TAKE_PROFIT_CENTS. Never at or below the stop level
+    (the stop sells the leg there anyway) and never at or below the held side's best bid, which a
+    post-only order would cross. None when no such price exists (e.g. a 99c bid)."""
+    entry = int(entry_cents)
+    price = (entry + TAKE_PROFIT_CENTS if best_other_ask_cents is None
+             else int(best_other_ask_cents))
+    floor = entry - stop_distance_cents(entry) + 1
+    if held_bid_cents is not None:
+        floor = max(floor, int(held_bid_cents) + 1)
+    price = max(price, floor)
+    return price if 1 <= price <= 99 else None
 
 
 # ------------------------------------------------------------------ ranking

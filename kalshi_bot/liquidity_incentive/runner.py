@@ -84,6 +84,21 @@ EXIT_LEG_PREFIX = "limmexitleg:"
 OWN_BOOK_SNAPSHOT_SECONDS = 600.0
 
 
+#: §9.60: the resting sell's off switch, persisted (see `_switch_off_resting_sells`).
+RESTING_SELL_OFF_COMPONENT = "limm_resting_sell_off"
+#: §9.60 sweep log: an own market's bid side losing at least this many contracts between two
+#: reads, from at or above the old best bid, with the best bid falling — recorded, never acted on.
+SWEEP_MIN_CONTRACTS = 150.0
+#: Follow-up reads of a recorded sweep, minutes after it (the best bid then, for recovery).
+SWEEP_FOLLOWUP_MINUTES = (10, 30, 60)
+EV_BOOK_SWEEP = "book_sweep"
+EV_BOOK_SWEEP_FOLLOWUP = "book_sweep_followup"
+
+
+def _is_resting_sell(row) -> bool:
+    return (row.client_order_id or "").startswith(limm.RESTING_SELL_PREFIX)
+
+
 def _aware(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None
@@ -234,6 +249,18 @@ class IncentiveLiveRunner:
         self._out_of_band: dict[str, tuple[datetime, datetime]] = {}
         self._out_of_band_loaded = False
         self._out_of_band_saved_at: datetime | None = None
+        #: §9.60: ticker -> when its resting sell was last cancelled. No order is sized from a
+        #: position read older than that (the sell may have part-filled until the cancel).
+        self._sell_cancelled_at: dict[str, datetime] = {}
+        #: §9.60: True once Kalshi refused cash while a resting sell was up; restored per process.
+        self._resting_sell_off = False
+        self._resting_sell_off_loaded = False
+        #: §9.60 sweep log: ticker -> {"yes": levels, "no": levels, "at": when} from the last read,
+        #: and the recorded sweeps still owed a follow-up read.
+        self._sweep_prev: dict[str, dict] = {}
+        self._sweep_pending: list[dict] = []
+        #: ticker -> parsed book, for this cycle's data readers only (`_data_book`).
+        self._data_books: dict[str, tuple] = {}
         #: WS-024 D1 programme discovery: the GET-only client it runs through (built on first
         #: use), and when this process last attempted a pass — success or not, so a failing
         #: pass is retried on the discovery cadence, never every cycle.
@@ -269,6 +296,7 @@ class IncentiveLiveRunner:
         outcomes, not exceptions."""
         now = now or datetime.now(timezone.utc)
         self._programs_memo = None
+        self._data_books = {}
         summary: dict = {"armed": False, "considered": 0, "fetched": 0, "placed": 0,
                          "twin_opened": 0, "outcomes": {}, "managed": {}}
 
@@ -283,6 +311,8 @@ class IncentiveLiveRunner:
             return summary
         summary["armed"] = True
 
+        if not self._resting_sell_off_loaded:
+            self._load_resting_sell_off(session)
         # Exits before entries: a cycle's first job is the capital already out, and an exit
         # frees the slot and the budget an entry below might use.
         summary["managed"] = self._manage_positions(session, executor, now)
@@ -304,6 +334,13 @@ class IncentiveLiveRunner:
         snapped = self._snapshot_own_books(session, now)
         if snapped:
             summary["book_snapshots"] = snapped
+        try:
+            sweeps = self._record_sweeps(session, now)
+        except Exception:  # noqa: BLE001 — a data log must never stop the book
+            logger.warning("incentive book: sweep log failed", exc_info=True)
+            sweeps = 0
+        if sweeps:
+            summary["sweeps"] = sweeps
 
         if self._balance_backoff_until is not None and now < self._balance_backoff_until:
             summary["outcomes"]["balance_backoff"] = 1
@@ -425,6 +462,10 @@ class IncentiveLiveRunner:
                 self._balance_backoff_until = now + timedelta(seconds=limm.BALANCE_BACKOFF_SECONDS)
                 logger.warning("incentive book: Kalshi reports insufficient balance; no entries "
                                f"for {limm.BALANCE_BACKOFF_SECONDS // 60} min")
+                if self._any_resting_sell(session):
+                    self._switch_off_resting_sells(
+                        session, executor, now,
+                        why=f"entry on {pair.market_ticker} refused for cash while a sell rested")
                 break
             if outcome == limm.GATE_NON_DEFAULT_SHARD:
                 # The shard is a property of the market, not of this minute's book: rest it so
@@ -467,7 +508,7 @@ class IncentiveLiveRunner:
             if close is not None and close <= now:
                 continue   # closed, awaiting settlement: nothing to price (and leave it alone)
             try:
-                yes_levels, no_levels = parse_orderbook(self.client.get_orderbook(ticker) or {})
+                yes_levels, no_levels = self._data_book(ticker)
                 yes_map = {int(p): float(q) for p, q in yes_levels}
                 no_map = {int(p): float(q) for p, q in no_levels}
                 prog = by_ticker.get(ticker)
@@ -910,6 +951,13 @@ class IncentiveLiveRunner:
                                                     ticker=ticker, reason="exit_leg_over_cap"):
                     return "exit_leg_over_cap:cancelled"
                 return "exit_leg_over_cap:cancel_pending"
+            if limm.RESTING_SELL_ENABLED and not self._resting_sell_off:
+                res = self._manage_resting_sell(
+                    session, executor, ticker, now, working=working, snap=snap,
+                    held_side=held_side, qty=qty, entry=entry, mark=mark,
+                    opposite_levels=no_levels if held_side == limm.SIDE_YES else yes_levels)
+                if res is not None:
+                    return res
             if working:
                 return "holding"
             price = limm.exit_leg_price(entry_cents=entry,
@@ -934,12 +982,250 @@ class IncentiveLiveRunner:
                              f"{limm.EXIT_MAX_ATTEMPTS} attempts ({rule}); holding to settlement "
                              "-- close it by hand if it matters")
             return f"{rule}:exhausted"
+        if any(_is_resting_sell(r) for r in working):
+            # §9.60: a resting sell may part-fill up to the moment it is cancelled, so the
+            # marketable exit waits for a position read taken AFTER the cancel — sizing it from
+            # an older one could sell more than is held and open the other side.
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason=f"resting_sell:{rule}"):
+                self._sell_cancelled_at[ticker] = now
+                return f"{rule}:resting_sell_cancelled"
+            return f"{rule}:cancel_pending"
+        cancelled_at = self._sell_cancelled_at.get(ticker)
+        if cancelled_at is not None and _aware(snap.captured_at) <= cancelled_at:
+            return f"{rule}:await_position"
         if not executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker):
             return f"{rule}:cancel_pending"
         res = executor.close_incentive_position(
             session, strategy=limm.LIVE_TAG, ticker=ticker, held_side=held_side, qty=qty,
             mark_bid_cents=mark, rule=rule)
         return f"{rule}:{res}"
+
+    def _manage_resting_sell(self, session, executor, ticker: str, now: datetime, *, working,
+                             snap, held_side: str, qty: int, entry: int, mark: int | None,
+                             opposite_levels) -> str | None:
+        """§9.60: keep one post-only sell of exactly the held contracts resting at the current
+        best ask while no exit rule fires. Only on event-tied mention markets with a running
+        programme, and only before the pre-event cutoff — at the event the sell comes off and the
+        position rides, as before. Returns an outcome code, or None to fall back to the old
+        opposite-side exit leg (a market outside that universe, e.g. TSWIF, is left as it was)."""
+        sells = [r for r in working if _is_resting_sell(r)]
+        others = [r for r in working if not _is_resting_sell(r)]
+
+        def cancel(reason: str) -> bool:
+            ok = executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                  ticker=ticker, reason=reason)
+            if ok:
+                self._sell_cancelled_at[ticker] = now
+            return ok
+
+        prog = next((p for p in self._running_programs(session, now)
+                     if p.market_ticker == ticker), None)
+        eligible = prog is not None and limm.is_event_mention(
+            prog.series_ticker or ticker.split("-", 1)[0], prog.event_ticker, prog.market_title)
+        cutoff = _pre_event_cutoff(prog) if eligible else None
+        if not eligible or cutoff is None or now >= cutoff:
+            if sells:
+                if cancel("resting_sell:pre_event"):
+                    logger.info(f"incentive book: resting sell pulled on {ticker} "
+                                "(event about to start, or programme gone)")
+                    return "resting_sell:pulled"
+                return "resting_sell:cancel_pending"
+            return None
+        if any((r.client_order_id or "").startswith(EXIT_LEG_PREFIX) for r in others):
+            # The opposite-side exit leg is what the resting sell replaces.
+            if cancel("replaced_by_resting_sell"):
+                return "resting_sell:exit_leg_cancelled"
+            return "resting_sell:cancel_pending"
+        if others:
+            return "holding"   # an entry bid still works here: the position may still grow
+
+        def remaining(r) -> float:
+            if not r.kalshi_order_id:
+                return float(r.quantity or 0)
+            done = sum(float(f.quantity or 0) for f in repo.fills_for_order(session,
+                                                                          r.kalshi_order_id))
+            return float(r.quantity or 0) - done
+
+        # The best ask of the OTHER sellers: a sell of our side at p is a bid at 100 - p on the
+        # opposite book, so take our own sell out of that level before reading it.
+        opp = {int(p): float(q) for p, q in opposite_levels}
+        for s in sells:
+            if s.limit_price is None:
+                continue
+            lvl = 100 - int(s.limit_price)
+            left = opp.get(lvl, 0.0) - remaining(s)
+            if left > 1e-9:
+                opp[lvl] = left
+            else:
+                opp.pop(lvl, None)
+        other_ask = 100 - max(opp) if opp else None
+        target = limm.resting_sell_price(entry_cents=entry, held_bid_cents=mark,
+                                         best_other_ask_cents=other_ask)
+
+        if len(sells) > 1 or (sells and remaining(sells[0]) > qty + 1e-9):
+            # Larger than the position left: if it all filled it would open the other side.
+            return "resting_sell:resized" if cancel("resting_sell:resize") \
+                else "resting_sell:cancel_pending"
+        if sells:
+            s = sells[0]
+            if target is None or s.limit_price is None or int(s.limit_price) == target:
+                return "resting_sell:resting"
+            if s.status != "resting" or not s.kalshi_order_id:
+                return "resting_sell:in_flight"
+            if (now - _aware(s.created_at)).total_seconds() < limm.RESTING_SELL_REPRICE_MIN_SECONDS:
+                return "resting_sell:resting"
+            if cancel("resting_sell:repriced"):
+                logger.info(f"incentive book: resting sell on {ticker} {s.limit_price}c -> "
+                            f"{target}c next cycle")
+                return "resting_sell:repricing"
+            return "resting_sell:cancel_pending"
+        if target is None:
+            return "resting_sell:no_price"
+        cancelled_at = self._sell_cancelled_at.get(ticker)
+        if cancelled_at is not None and _aware(snap.captured_at) <= cancelled_at:
+            return "resting_sell:await_position"
+        res = executor.place_incentive_resting_sell(
+            session, strategy=limm.LIVE_TAG, ticker=ticker, held_side=held_side, qty=qty,
+            price=target)
+        if res == limm.REJECT_INSUFFICIENT_BALANCE:
+            self._switch_off_resting_sells(session, executor, now,
+                                           why=f"resting sell on {ticker} refused for cash")
+        return f"resting_sell:{res}"
+
+    def _load_resting_sell_off(self, session) -> None:
+        self._resting_sell_off_loaded = True
+        try:
+            row = session.scalar(
+                select(m.SystemEvent)
+                .where(m.SystemEvent.component == RESTING_SELL_OFF_COMPONENT)
+                .order_by(m.SystemEvent.id.desc()).limit(1))
+            if row is not None and (row.raw_json or {}).get("off"):
+                self._resting_sell_off = True
+        except Exception:  # noqa: BLE001 — unreadable: stay as configured
+            logger.warning("incentive live: resting-sell switch restore failed", exc_info=True)
+
+    def _switch_off_resting_sells(self, session, executor, now: datetime, *, why: str) -> None:
+        """§9.60 self-test: whether Kalshi holds back cash for a resting sell of a held leg is
+        not documented to us (§9.54 suggests it may). The first time Kalshi refuses an order for
+        cash while one of ours is up, every resting sell comes off and the mechanic stays off —
+        persisted, so a restart does not re-arm it. Re-enabling is a deliberate change."""
+        if self._resting_sell_off:
+            return
+        self._resting_sell_off = True
+        n = 0
+        for ticker in sorted(repo.live_book_open_tickers(session, limm.LIVE_TAG)):
+            rows = repo.live_orders_on_ticker(session, ticker)
+            if any(r.strategy == limm.LIVE_TAG and r.status in repo.LIVE_NONTERMINAL_STATUSES
+                   and _is_resting_sell(r) for r in rows):
+                if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                    ticker=ticker, reason="resting_sell:off"):
+                    self._sell_cancelled_at[ticker] = now
+                    n += 1
+        logger.error(f"incentive book: resting sells SWITCHED OFF ({why}); {n} cancelled")
+        try:
+            repo.log_system_event(session, level="error", component=RESTING_SELL_OFF_COMPONENT,
+                                  message=f"resting sells switched off: {why}",
+                                  raw={"off": True, "why": why, "at": now.isoformat()})
+        except Exception:  # noqa: BLE001 — the in-process switch still holds
+            logger.warning("incentive live: resting-sell switch save failed", exc_info=True)
+
+    def _any_resting_sell(self, session) -> bool:
+        for ticker in repo.live_book_open_tickers(session, limm.LIVE_TAG):
+            if any(r.strategy == limm.LIVE_TAG and r.status in repo.LIVE_NONTERMINAL_STATUSES
+                   and _is_resting_sell(r) for r in repo.live_orders_on_ticker(session, ticker)):
+                return True
+        return False
+
+    # --- sweep log (§9.60, data only) -------------------------------------------
+
+    def _data_book(self, ticker: str):
+        """One parsed book per ticker per cycle for the two pure-data readers (the dashboard
+        snapshot and the sweep log), so they cost one GET between them, not two."""
+        if ticker not in self._data_books:
+            self._data_books[ticker] = parse_orderbook(self.client.get_orderbook(ticker) or {})
+        return self._data_books[ticker]
+
+    def _record_sweeps(self, session, now: datetime) -> int:
+        """Read the book of every market this book rests or holds in, and record a SWEEP: a bid
+        side that lost at least SWEEP_MIN_CONTRACTS from at or above its old best bid while the
+        best bid fell, between two reads at most OUT_OF_BAND_MAX_GAP_SECONDS apart. Each sweep
+        gets follow-up reads at SWEEP_FOLLOWUP_MINUTES (did the bid come back?). Data only:
+        nothing here places or cancels. Without a trade tape a pulled bid and a sale look the
+        same; the record says how many of the contracts were ours. Returns sweeps recorded."""
+        n = 0
+        own: dict[str, dict[str, dict[int, float]]] = {}
+        for ticker in sorted(repo.live_book_open_tickers(session, limm.LIVE_TAG)):
+            close = repo.market_close_time(session, ticker)
+            if close is not None and close <= now:
+                continue
+            try:
+                yes_levels, no_levels = self._data_book(ticker)
+            except Exception:  # noqa: BLE001 — no read, no evidence
+                continue
+            cur = {limm.SIDE_YES: {int(p): float(q) for p, q in yes_levels},
+                   limm.SIDE_NO: {int(p): float(q) for p, q in no_levels}}
+            mine: dict[str, dict[int, float]] = {limm.SIDE_YES: {}, limm.SIDE_NO: {}}
+            for r in repo.live_orders_on_ticker(session, ticker):
+                if r.strategy == limm.LIVE_TAG and r.action == "buy" \
+                        and r.status in repo.LIVE_NONTERMINAL_STATUSES and r.limit_price:
+                    lv = mine[r.side]
+                    lv[int(r.limit_price)] = lv.get(int(r.limit_price), 0.0) + float(r.quantity or 0)
+            own[ticker] = mine
+            prev = self._sweep_prev.get(ticker)
+            self._sweep_prev[ticker] = {"at": now, "levels": cur, "own": mine}
+            for p in [p for p in self._sweep_pending if p["ticker"] == ticker]:
+                due = [mm for mm in p["left"] if now >= p["at"] + timedelta(minutes=mm)]
+                if not due:
+                    continue
+                side_now = cur[p["side"]]
+                best_now = max(side_now) if side_now else None
+                for mm in due:
+                    p["left"].remove(mm)
+                    store.record_event(session, kind=EV_BOOK_SWEEP_FOLLOWUP, at=now,
+                                       ticker=ticker, detail_json={
+                                           "sweep_at": p["at"].isoformat(), "side": p["side"],
+                                           "minutes": mm, "best_bid_before": p["before"],
+                                           "best_bid_now": best_now,
+                                           "recovered": best_now is not None
+                                           and best_now >= p["before"]})
+            if prev is None or (now - prev["at"]).total_seconds() > limm.OUT_OF_BAND_MAX_GAP_SECONDS:
+                continue
+            for side in (limm.SIDE_YES, limm.SIDE_NO):
+                before, after = prev["levels"][side], cur[side]
+                if not before:
+                    continue
+                b0 = max(before)
+                b1 = max(after) if after else 0
+                if b1 >= b0:
+                    continue
+                gone = [(p, q, after.get(p, 0.0)) for p, q in sorted(before.items(), reverse=True)
+                        if p >= b1 and q > after.get(p, 0.0)]
+                removed = sum(q - a for _p, q, a in gone)
+                if removed < SWEEP_MIN_CONTRACTS:
+                    continue
+                ours = sum(q for p, q in prev["own"][side].items() if p >= b1)
+                store.record_event(session, kind=EV_BOOK_SWEEP, at=now, ticker=ticker,
+                                   detail_json={
+                                       "side": side, "prev_at": prev["at"].isoformat(),
+                                       "gap_seconds": round((now - prev["at"]).total_seconds()),
+                                       "best_bid_before": b0, "best_bid_after": b1 or None,
+                                       "contracts_removed": round(removed, 2),
+                                       "levels": [[p, q, a] for p, q, a in gone],
+                                       "own_contracts_in_range": round(ours, 2),
+                                       "top_before": sorted(before.items(), reverse=True)[:5],
+                                       "top_after": sorted(after.items(), reverse=True)[:5]})
+                logger.info(f"incentive book: sweep on {ticker} {side} bids {b0}c -> "
+                            f"{b1 or 'none'}c, {removed:.0f} contracts gone "
+                            f"({ours:.0f} ours) — recorded, no action")
+                self._sweep_pending.append({"ticker": ticker, "side": side, "at": now,
+                                            "before": b0, "left": list(SWEEP_FOLLOWUP_MINUTES)})
+                n += 1
+        live = set(own)
+        self._sweep_prev = {t: v for t, v in self._sweep_prev.items() if t in live}
+        self._sweep_pending = [p for p in self._sweep_pending if p["left"]
+                               and p["ticker"] in live]
+        return n
 
     @staticmethod
     def _own_position(session, ticker: str, ours: list) -> tuple[float, dict, bool]:

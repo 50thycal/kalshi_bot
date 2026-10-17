@@ -3024,3 +3024,46 @@ already held 3 markets of — so a free slot stayed empty. Same failure as §9.3
 of are dropped (counted as `event_cap`). The cross-book "another live book holds a position on
 this event" check still runs after the fetch. No cap, size or price rule changes; this only lets
 an already-authorised slot be filled.
+
+### 9.60 A filled leg rests a sell at the current ask; sweeps are logged (2026-10-17)
+
+**Evidence.** PALE (YES 100 @10c) and CEAS (YES 200 @5c) filled in single seller sweeps
+(PALE 11→8 on 2026-10-16 23:21Z, CEAS the whole 5c level 02:05Z) and sat with no exit order: the
+§9.53 opposite-side exit leg would tie up ~$85 and is refused by the §9.54 $10 cap. Only three
+sweeps of 150+ contracts in five days across ~18 watched markets, all Friday evening US time,
+1–3 days before the event, none bouncing back — consistent with sellers who know (or guess)
+something, not with anyone targeting this book.
+
+**Decision (operator, 2026-10-17: "go ahead and build the testing sell mechanic and the collecting
+for the sweep data").**
+1. **Resting sell** (`RESTING_SELL_ENABLED`, `runner._manage_resting_sell`). On a held leg in an
+   event-tied mention market with a running programme, before its pre-event cutoff, rest ONE
+   post-only good-till-cancelled SELL of exactly the held contracts at the best ask of the other
+   sellers (our own order taken out of the book); with no other seller, at entry + 5c. Never at
+   or below the stop level or the held bid (`live.resting_sell_price`). Moved to a new ask only
+   after resting `RESTING_SELL_REPRICE_MIN_SECONDS` (5 min); a sell larger than the position left
+   is cancelled at once. It replaces the opposite-side exit leg there (an existing one is
+   cancelled). The +5c take-profit, the stop and the pre-close flatten are unchanged and cancel
+   the sell first; because the sell can part-fill until cancelled, the marketable exit then waits
+   for a position read taken after the cancel. At the pre-event cutoff the sell comes off and the
+   position rides into the event, as before (a resting sell during the event fills only when the
+   word has been said — the worst time to sell). Markets outside that universe (TSWIF) keep the
+   pre-§9.60 rules. Unfilled bids and the pre-event pull are unchanged.
+2. **Self-test on cash.** Kalshi's docs were unreachable from the build sandbox, and §9.54's
+   evidence is mixed: the TSWIF NO 51c×499 exit leg was ACCEPTED with $62.80 of cash (so Kalshi did
+   not demand its full $254), yet entries were refused `insufficient_balance` while it rested. A
+   resting sell of a held YES is the same wire order (an "ask"). So the first time Kalshi refuses
+   an order for cash while a resting sell is up — the sell itself or an entry — every resting sell
+   is cancelled and the mechanic switches OFF, persisted (`limm_resting_sell_off`). Re-enabling is a
+   deliberate change.
+3. **Sweep log (data only).** Every cycle the book reads each market it rests or holds in (shared
+   with the dashboard snapshot, one GET per market) and records `book_sweep` in
+   `incentive_collector_events` when a bid side loses ≥150 contracts at or above its old best bid
+   while the best bid falls between two reads ≤10 min apart: prices before/after, contracts gone
+   per level, how many were ours. `book_sweep_followup` rows at +10/+30/+60 min record whether the
+   bid came back. Nothing reads these to trade. Without a trade tape, a pulled bid and a sale look
+   alike; follow-ups are held in memory, so a restart drops the pending ones.
+
+**What would change our mind.** The resting sell is judged on its own fills: how often it fills
+before the stop or the event, and at what price against entry. If held legs still mostly end at
+the stop or ride into the event, it is not earning its complexity.
