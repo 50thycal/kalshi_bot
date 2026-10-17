@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=pale-pos
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T02:01:27Z
+captured_at                       quantity_fp
+--------------------------------  -----------
+2026-10-17 02:00:27.080359+00:00  100.0000   
+
+(1 row)
