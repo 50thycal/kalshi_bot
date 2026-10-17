@@ -1,87 +1,11 @@
 # ops request [READ]
-# type=db  id=nm-series-live-1
-# code 996b159740124c66e8576db918db30b31cd773ef · started 2026-10-17T12:21:30Z
-series                 mkts  cts  settled  c_per_ct  losers
----------------------  ----  ---  -------  --------  ------
-KXMLBHR                466   515  465      -0.68     35    
-KXATPCHALLENGERMATCH   127   161  127      -1.83     11    
-KXITFWMATCH            125   160  125      -2.41     9     
-KXITFMATCH             122   154  122      2.52      5     
-KXMLBTOTAL             114   130  113      -4.17     14    
-KXMLBSPREAD            104   126  103      -3.18     13    
-KXBTCD                 101   141  99       -9.17     11    
-KXRAIN                 81    140  75       3.95      2     
-KXWCGOAL               44    44   44       3.30      2     
-KXWTI                  44    53   43       -4.67     6     
-KXMLBKS                41    49   41       2.45      2     
-KXWTACHALLENGERMATCH   40    46   40       1.02      3     
-KXNFLTOTAL             39    52   38       7.00      0     
-KXTRUMPSAY             38    64   36       5.45      1     
-KXMLBGAME              38    46   37       -4.85     6     
-KXWTAMATCH             37    49   37       1.38      3     
-KXATPMATCH             37    47   37       1.72      3     
-KXINXU                 32    37   32       4.32      1     
-KXUFCMOV               31    42   31       2.17      1     
-KXWNBASPREAD           30    36   30       -2.78     2     
-KXETHD                 29    42   29       -6.74     3     
-KXAAAGASD              29    36   29       -6.56     3     
-KXWNBATOTAL            28    39   28       -2.15     2     
-KXNFLSPREAD            26    33   26       -11.36    5     
-KXWCSCORE              25    25   25       -0.72     2     
-KXBTC                  23    30   23       0.27      2     
-KXLOLGAME              23    31   23       1.13      2     
-KXT20MATCH             23    26   23       -0.04     3     
-KXRT                   22    28   19       -8.80     4     
-KXMLSGAME              21    24   21       -9.13     4     
-KXMLBTEAMTOTAL         21    27   21       -10.56    4     
-KXCLUBFGAME            21    30   21       -5.70     3     
-KXODIMATCH             21    25   21       4.00      1     
-KXNPBGAME              21    25   21       7.68      0     
-KXCS2GAME              20    25   20       3.52      1     
-KXNCAAFSPREAD          20    20   20       7.77      0     
-KXWTIW                 18    20   18       -3.75     2     
-KXUCLTOTAL             16    17   16       -4.41     2     
-KXKBOGAME              16    24   16       7.83      0     
-KXARGPREMDIVGAME       16    24   16       3.42      1     
-KXNASDAQ100U           16    20   16       3.35      1     
-KXBRASILEIROGAME       15    23   15       -5.39     1     
-KXWNBAGAME             15    17   15       7.98      0     
-KXWCMENTION            15    15   15       1.80      1     
-KXLEAGUESCUPTOTAL      14    14   14       -6.29     2     
-KXNATGASD              13    15   13       7.47      0     
-KXAAAGASW              13    17   13       1.71      1     
-KXNCAAFTOTAL           13    13   13       8.40      0     
-KXLALIGASCORE          13    15   13       -0.13     1     
-KXARGPREMDIVTOTAL      12    15   12       0.67      1     
-KXLIGAMXGAME           12    15   12       7.87      0     
-KXLEAGUESCUPSPREAD     12    12   12       -9.25     2     
-KXBRENTD               12    14   12       -8.00     2     
-KXTESTMATCH            11    19   11       1.74      1     
-KXGOLDD                11    11   11       -10.55    2     
-KXMLBASGHR             11    11   11       8.91      0     
-KXWCSOA                10    10   10       -1.80     1     
-KXWCSPREAD             10    10   10       8.00      0     
-KXWCMOV                10    10   10       -11.40    2     
-KXEFLCHAMPIONSHIPGAME  10    12   10       7.00      0     
-KXMLSTOTAL             10    11   10       7.27      0     
-KXLALIGAGAME           10    10   10       7.57      0     
-KXMLBHRDERBYFORECAST   10    10   10       8.50      0     
-KXLEAGUESCUPSCORE      10    10   10       7.50      0     
-KXWCAST                9     9    9        8.00      0     
-KXLALIGATOTAL          9     12   9        6.08      0     
-KXPGATOUR              9     12   8        6.70      0     
-KXMLBASGMVP            9     9    9        8.00      0     
-KXUCLGAME              9     10   9        -2.92     1     
-KXLIGAMXTOTAL          9     11   9        7.27      0     
-KXDIMAYORGAME          9     11   9        -19.45    3     
-KXATPEXACTMATCH        8     9    8        7.78      0     
-KXVALORANTGAME         8     8    8        -4.25     1     
-KXBRASILEIROTOTAL      8     11   8        -20.18    1     
-KXECULPGAME            8     11   8        7.82      0     
-KXDPWORLDTOUR          8     14   8        7.07      0     
-KXNBASUMMERGAME        7     7    7        8.57      0     
-KXEPLTOTAL             7     7    7        7.43      0     
-KXLIGAMXSCORE          7     11   7        6.82      0     
-KXNCAAFGAME            7     7    7        -7.40     1     
+# type=db  id=nm-band-1
+# code 996b159740124c66e8576db918db30b31cd773ef · started 2026-10-17T12:22:23Z
+band     mkts  c_per_ct  losers  loss_pct
+-------  ----  --------  ------  --------
+a 93-95  493   4.88      8       1.6     
+b 90-92  373   4.17      17      4.6     
+c 85-89  189   9.82      4       2.1     
+d 96-98  5     2.75      0       0.0     
 
-(80 rows)
+(4 rows)
