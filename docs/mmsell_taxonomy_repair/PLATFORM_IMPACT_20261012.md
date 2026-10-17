@@ -111,3 +111,22 @@ though it had; there is no normalizer, so I2/NEW_EPOCH rather than I1/RECOMPUTE.
 - **No safeguard is weakened.** Tier bar, `KXNFLSPREAD` live pause, caps and kill switch untouched.
 - **No new type or mode name**, so every book spec validates exactly as before.
 - **Additive only**: no previously classified prefix moves (tested).
+
+## 8. Status (2026-10-17)
+
+Steps 1–3 are done:
+
+1. `REGISTER_REVISION` (`fbtx-register-20261012`): SUCCEEDED, revision pending.
+2. `RECORD_IMPACTS` (`fbtx-impacts-20261012`): SUCCEEDED.
+3. Merge and deploy: PR #599, merged 2026-10-13 00:04Z.
+
+Step 4, **`CUTOVER`, has not been sent.** It is awaiting the operator's explicit go. Until then
+`Tmmsell6` trades the 15 added football prefixes inside its old epoch. That is the pooling hazard
+§3 exists to prevent, and it grows each day the cutover waits. The payload is unchanged:
+
+- `revision = MARKET_TAXONOMY:football_coverage_2026_10_12`
+- `expect_taxonomy_fingerprint = 350e7f03ed72d68d3718dfa131aa90a5fb7cc54336c250c79df915c2ade322d1`
+- `new_epoch_experiments = ["mmsell-type-tight"]`
+- `actor_role = PLATFORM_CHANGE_REVIEW`
+
+It goes through `EXPERIMENT_OS_PLATFORM_COMMAND`, which redeploys the worker once.
