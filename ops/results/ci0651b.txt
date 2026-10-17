@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=ci0651b
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T06:53:39Z
+market_ticker                at                                best_yes_bid  best_no_bid
+---------------------------  --------------------------------  ------------  -----------
+KXTRUMPMENTION-26OCT17-PALE  2026-10-17 06:51:08.399555+00:00  6             93         
+KXTRUMPMENTION-26OCT19-CEAS  2026-10-17 06:51:08.399555+00:00  3             96         
+KXTRUMPMENTION-26OCT20-CEAS  2026-10-17 06:51:08.399555+00:00  5             93         
+
+(3 rows)
