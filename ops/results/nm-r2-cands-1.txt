@@ -1,0 +1,113 @@
+# ops request [READ]
+# type=script  id=nm-r2-cands-1
+# code 447539b57cd57df691d3e2131e570f45508714de · started 2026-10-17T13:09:19Z
+=== MMSELL look-alike probe — 10 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXTRUMPMENTION           6985    6727  2025-04..2026-10    285    99%
+  KXAPRPOTUS                779     762  2024-10..2026-10    296    75%
+  KXWORLDNEWSMENTION       1108    1108  2026-07..2026-10    300   100%
+  KXSECPRESSMENTION        1590    1549  2025-01..2026-10    270    97%
+  KXBERNIEMENTION          1091     906  2025-08..2026-10    300    92%
+  KXMAMDANIMENTION         2176    2142  2025-09..2026-09    295    90%
+  KXRAINWKND                202     179  2026-08..2026-10    179    99%
+  KXNASDAQ100             15030   14970  2024-10..2026-10    300    38%
+  KXTRUMPAPPROVE            414     405  2026-09..2026-10    294   100%
+  KXRAIN                   2182    2107  2026-07..2026-10    300    98%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXTRUMPMENTION             6     4    6.50    0.00     0   +6.50    +9.75   3.15 0/0   HOLD
+  KXAPRPOTUS                43    26    6.67    0.00     0   +6.67   +11.04   8.52 0/0   HOLD
+  KXWORLDNEWSMENTION         1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXSECPRESSMENTION         22     6    6.50    0.00     0   +6.50   +23.83   1.77 1/1   HOLD
+  KXBERNIEMENTION           12     6    7.00    0.00     0   +7.00   +14.00   5.48 0/0   HOLD
+  KXMAMDANIMENTION           3     3    6.67    0.00     0   +6.67    +6.67  20.00 0/0   HOLD
+  KXRAINWKND                 6     3    6.67    0.00     0   +6.67   +13.33   3.55 0/0   HOLD
+  KXNASDAQ100               22     9    6.82    9.09     2   -2.27    -5.56  -0.41 0/0   HOLD
+  KXTRUMPAPPROVE            90    32    6.62    4.44     4   +2.18    +6.12   1.10 2/2   HOLD
+  KXRAIN                    61    14    6.52    3.28     2   +3.25   +14.14   1.06 2/3   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXTRUMPAPPROVE            90    32    6.62    4.44     4   +2.18    +6.12   1.10 2/2   HOLD
+  KXRAIN                    61    14    6.52    3.28     2   +3.25   +14.14   1.06 2/3   HOLD
+  KXAPRPOTUS                43    26    6.67    0.00     0   +6.67   +11.04   8.52 0/0   HOLD
+  KXSECPRESSMENTION         22     6    6.50    0.00     0   +6.50   +23.83   1.77 1/1   HOLD
+  KXNASDAQ100               22     9    6.82    9.09     2   -2.27    -5.56  -0.41 0/0   HOLD
+  KXBERNIEMENTION           12     6    7.00    0.00     0   +7.00   +14.00   5.48 0/0   HOLD
+  KXTRUMPMENTION             6     4    6.50    0.00     0   +6.50    +9.75   3.15 0/0   HOLD
+  KXRAINWKND                 6     3    6.67    0.00     0   +6.67   +13.33   3.55 0/0   HOLD
+  KXMAMDANIMENTION           3     3    6.67    0.00     0   +6.67    +6.67  20.00 0/0   HOLD
+  KXWORLDNEWSMENTION         1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXAPRPOTUS             2025-01: 1 @ +7.0, 2025-02: 2 @ +7.0, 2025-03: 2 @ +6.0, 2025-04: 2 @ +6.0, 2025-06: 1 @ +7.0, 2025-08: 2 @ +7.0, 2025-09: 1 @ +7.0, 2025-10: 1 @ +7.0, 2025-11: 3 @ +7.0, 2025-12: 3 @ +7.0, 2026-01: 3 @ +6.7, 2026-02: 3 @ +6.3, 2026-03: 3 @ +6.7, 2026-05: 3 @ +6.3, 2026-06: 7 @ +6.6, 2026-07: 1 @ +7.0, 2026-08: 2 @ +6.5, 2026-09: 2 @ +7.0, 2026-10: 1 @ +7.0
+  KXBERNIEMENTION        2025-10: 1 @ +7.0, 2026-01: 1 @ +7.0, 2026-04: 2 @ +7.0, 2026-05: 3 @ +7.0, 2026-06: 2 @ +7.0, 2026-10: 3 @ +7.0
+  KXMAMDANIMENTION       2026-07: 1 @ +7.0, 2026-08: 1 @ +7.0, 2026-09: 1 @ +6.0
+  KXNASDAQ100            2025-05: 2 @ +7.0, 2025-06: 1 @ +7.0, 2025-08: 2 @ -43.0, 2025-10: 1 @ +7.0, 2025-11: 2 @ +7.0, 2026-02: 1 @ +7.0, 2026-03: 1 @ +7.0, 2026-05: 6 @ +7.0, 2026-06: 6 @ -10.3
+  KXRAIN                 2026-07: 24 @ +6.5, 2026-08: 14 @ +6.5, 2026-09: 14 @ -7.6, 2026-10: 9 @ +6.4
+  KXRAINWKND             2026-09: 5 @ +6.6, 2026-10: 1 @ +7.0
+  KXSECPRESSMENTION      2025-03: 1 @ +7.0, 2025-04: 1 @ +6.0, 2026-01: 2 @ +7.0, 2026-02: 3 @ +6.7, 2026-07: 1 @ +6.0, 2026-09: 14 @ +6.4
+  KXTRUMPAPPROVE         2026-09: 44 @ +4.4, 2026-10: 46 @ +0.1
+  KXTRUMPMENTION         2026-02: 1 @ +7.0, 2026-05: 1 @ +7.0, 2026-08: 1 @ +6.0, 2026-10: 3 @ +6.3
+  KXWORLDNEWSMENTION     2026-09: 1 @ +7.0
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXAPRPOTUS               222/296      75% FEASIBLE
+  KXBERNIEMENTION          275/300      92% FEASIBLE
+  KXMAMDANIMENTION         266/295      90% FEASIBLE
+  KXNASDAQ100              114/300      38% NOT FEASIBLE
+  KXRAIN                   294/300      98% FEASIBLE
+  KXRAINWKND               177/179      99% FEASIBLE
+  KXSECPRESSMENTION        261/270      97% FEASIBLE
+  KXTRUMPAPPROVE           294/294     100% FEASIBLE
+  KXTRUMPMENTION           283/285      99% FEASIBLE
+  KXWORLDNEWSMENTION       300/300     100% FEASIBLE
+
+  E. TIMING — entry window vs the first-entry rule, day-paired per family (BETTER/WORSE: |diff| >= 1c, |t| >= 2, >= 30 shared days)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXTRUMPAPPROVE first      90    32    6.62    4.44     4   +2.18    +6.12   1.10 2/2   HOLD
+  KXTRUMPAPPROVE early       0   vs first: +nanc t nan on 0 days -> THIN
+  KXTRUMPAPPROVE mid        70    31    6.64    2.86     2   +3.79    +8.55   1.88 2/2   HOLD   vs first: -0.04c t -0.02 on 31 days -> SAME
+  KXTRUMPAPPROVE late       49    28    6.55    6.12     3   +0.43    +0.75   0.14 1/2   HOLD   vs first: +0.73c t 0.37 on 28 days -> THIN
+  KXRAIN first              61    14    6.52    3.28     2   +3.25   +14.14   1.06 2/3   HOLD
+  KXRAIN early              19    11    6.53    0.00     0   +6.53   +11.27   6.34 0/0   HOLD   vs first: +2.57c t 0.98 on 11 days -> THIN
+  KXRAIN mid                31    14    6.45    6.45     2   +0.00    +0.00   0.00 1/1   HOLD   vs first: -2.78c t -1.02 on 14 days -> THIN
+  KXRAIN late               19    12    6.53    0.00     0   +6.53   +10.33   5.23 1/1   HOLD   vs first: +2.36c t 1.00 on 12 days -> THIN
+  KXAPRPOTUS first          43    26    6.67    0.00     0   +6.67   +11.04   8.52 0/0   HOLD
+  KXAPRPOTUS early          22    14    6.59    0.00     0   +6.59   +10.36   9.15 0/0   HOLD   vs first: +0.01c t 0.17 on 14 days -> THIN
+  KXAPRPOTUS mid            23    21    6.74    0.00     0   +6.74    +7.38  16.22 0/0   HOLD   vs first: -0.05c t -0.92 on 21 days -> THIN
+  KXAPRPOTUS late           10    10    6.60    0.00     0   +6.60    +6.60  40.42 0/0   HOLD   vs first: -0.21c t -1.00 on 10 days -> THIN
+  KXSECPRESSMENTION first    22     6    6.50    0.00     0   +6.50   +23.83   1.77 1/1   HOLD
+  KXSECPRESSMENTION early     3     2    6.00    0.00     0   +6.00    +9.00   3.00 0/0   HOLD   vs first: -0.55c t -4.60 on 2 days -> THIN
+  KXSECPRESSMENTION mid     17     5    6.59    0.00     0   +6.59   +22.40   1.60 1/1   HOLD   vs first: +0.08c t 1.25 on 5 days -> THIN
+  KXSECPRESSMENTION late    11     5    6.55    0.00     0   +6.55   +14.40   2.75 0/0   HOLD   vs first: -0.03c t -0.39 on 5 days -> THIN
+  KXNASDAQ100 first         22     9    6.82    9.09     2   -2.27    -5.56  -0.41 0/0   HOLD
+  KXNASDAQ100 early          4     3    7.00    0.00     0   +7.00    +9.33   4.00 0/0   HOLD   vs first: +16.67c t 1.00 on 3 days -> THIN
+  KXNASDAQ100 mid            7     5    6.71   28.57     2  -21.86   -30.60  -1.32 0/0   HOLD   vs first: -13.33c t -1.37 on 5 days -> THIN
+  KXNASDAQ100 late          11     7    6.82    0.00     0   +6.82   +10.71   4.45 0/0   HOLD   vs first: +2.38c t 1.00 on 7 days -> THIN
+  KXBERNIEMENTION first     12     6    7.00    0.00     0   +7.00   +14.00   5.48 0/0   HOLD
+  KXBERNIEMENTION early      1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +nanc t nan on 1 days -> THIN
+  KXBERNIEMENTION mid        7     4    7.00    0.00     0   +7.00   +12.25   3.66 0/0   HOLD   vs first: +0.00c t nan on 4 days -> THIN
+  KXBERNIEMENTION late       5     3    6.80    0.00     0   +6.80   +11.33   5.18 0/0   HOLD   vs first: -0.17c t -1.00 on 3 days -> THIN
+  KXTRUMPMENTION first       6     4    6.50    0.00     0   +6.50    +9.75   3.15 0/0   HOLD
+  KXTRUMPMENTION early       4     3    6.75    0.00     0   +6.75    +9.00   4.50 0/0   HOLD   vs first: +0.06c t 1.00 on 3 days -> THIN
+  KXTRUMPMENTION mid         1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +nanc t nan on 1 days -> THIN
+  KXTRUMPMENTION late        5     3    6.40    0.00     0   +6.40   +10.67   2.55 0/0   HOLD   vs first: +0.00c t nan on 3 days -> THIN
+  KXRAINWKND first           6     3    6.67    0.00     0   +6.67   +13.33   3.55 0/0   HOLD
+  KXRAINWKND early           2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +0.17c t 1.00 on 2 days -> THIN
+  KXRAINWKND mid             2     2    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD   vs first: -0.58c t -7.00 on 2 days -> THIN
+  KXRAINWKND late            2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +0.42c t 5.00 on 2 days -> THIN
+  KXMAMDANIMENTION first     3     3    6.67    0.00     0   +6.67    +6.67  20.00 0/0   HOLD
+  KXMAMDANIMENTION early     0   vs first: +nanc t nan on 0 days -> THIN
+  KXMAMDANIMENTION mid       1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +nanc t nan on 1 days -> THIN
+  KXMAMDANIMENTION late      3     3    6.67    0.00     0   +6.67    +6.67  20.00 0/0   HOLD   vs first: +0.00c t nan on 3 days -> THIN
+  KXWORLDNEWSMENTION first     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXWORLDNEWSMENTION early     0   vs first: +nanc t nan on 0 days -> THIN
+  KXWORLDNEWSMENTION mid     0   vs first: +nanc t nan on 0 days -> THIN
+  KXWORLDNEWSMENTION late     1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD   vs first: +nanc t nan on 1 days -> THIN
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
