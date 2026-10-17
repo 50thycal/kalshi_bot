@@ -260,6 +260,9 @@ class IncentiveLiveRunner:
         #: §9.60: ticker -> when its resting sell was last cancelled. No order is sized from a
         #: position read older than that (the sell may have part-filled until the cancel).
         self._sell_cancelled_at: dict[str, datetime] = {}
+        #: §9.62: ticker -> {role: contracts} of the resting sells a re-price just cancelled, so
+        #: they are re-placed at the same sizes. In memory: a restart re-splits what is left.
+        self._sell_sizes: dict[str, dict[str, int]] = {}
         #: §9.60: True once Kalshi refused cash while a resting sell was up; restored per process.
         self._resting_sell_off = False
         self._resting_sell_off_loaded = False
@@ -1025,6 +1028,7 @@ class IncentiveLiveRunner:
                                                   ticker=ticker, reason=reason)
             if ok:
                 self._sell_cancelled_at[ticker] = now
+                self._sell_sizes.pop(ticker, None)
             return ok
 
         prog = next((p for p in self._running_programs(session, now)
@@ -1093,7 +1097,11 @@ class IncentiveLiveRunner:
             youngest = max(_aware(r.created_at) for r in sells)
             if (now - youngest).total_seconds() < limm.RESTING_SELL_REPRICE_MIN_SECONDS:
                 return "resting_sell:resting"
+            sizes = {_sell_role(r): int(round(remaining(r))) for r in sells}
             if cancel("resting_sell:repriced"):
+                # Re-placed at the SAME sizes per role, so a re-price never re-splits what is
+                # left and moves contracts from the break-even half into the ask half.
+                self._sell_sizes[ticker] = sizes
                 logger.info(f"incentive book: resting sells on {ticker} "
                             + ", ".join(f"{_sell_role(r)} {r.limit_price}c->"
                                         f"{targets[_sell_role(r)]}c" for r in stale)
@@ -1108,11 +1116,18 @@ class IncentiveLiveRunner:
         free = int(round(qty - held_by_sells))
         have = set(roles)
         plan = []
-        if limm.RESTING_SELL_ROLE_ASK not in have and free > 0:
+        kept = self._sell_sizes.get(ticker) if not sells else None
+        if kept:
+            for role in (limm.RESTING_SELL_ROLE_ASK, limm.RESTING_SELL_ROLE_ENTRY):
+                n = min(int(kept.get(role) or 0), free)
+                if n > 0:
+                    plan.append((role, n))
+                    free -= n
+        elif limm.RESTING_SELL_ROLE_ASK not in have and free > 0:
             n = min(free, (qty + 1) // 2) if limm.RESTING_SELL_ROLE_ENTRY not in have else free
             plan.append((limm.RESTING_SELL_ROLE_ASK, n))
             free -= n
-        if limm.RESTING_SELL_ROLE_ENTRY not in have and free > 0:
+        if not kept and limm.RESTING_SELL_ROLE_ENTRY not in have and free > 0:
             plan.append((limm.RESTING_SELL_ROLE_ENTRY, free))
         if not plan:
             return "resting_sell:resting"
@@ -1130,6 +1145,8 @@ class IncentiveLiveRunner:
                 break
             if res != "placed":
                 break
+        else:
+            self._sell_sizes.pop(ticker, None)
         return f"resting_sell:{res}"
 
     def _load_resting_sell_off(self, session) -> None:
