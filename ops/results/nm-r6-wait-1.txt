@@ -1,0 +1,16 @@
+# ops request [READ]
+# type=db  id=nm-r6-wait-1
+# code 0b21ee6713c25f9e2571e49e08eeb1664b031c44 · started 2026-10-17T14:43:41Z
+grp    wait       mkts  losers  loss_pct
+-----  ---------  ----  ------  --------
+other  a <1m      5     1       20.0    
+other  b 1-5m     1126  91      8.1     
+other  c 5-30m    931   79      8.5     
+other  d 30-120m  453   43      9.5     
+other  e 2h+      189   13      6.9     
+win7   b 1-5m     35    3       8.6     
+win7   c 5-30m    67    3       4.5     
+win7   d 30-120m  55    0       0.0     
+win7   e 2h+      31    0       0.0     
+
+(9 rows)
