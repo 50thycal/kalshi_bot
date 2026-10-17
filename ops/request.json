@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci_bal", "sql": "select at, balance_cents from incentive_balance_observations where at between '2026-10-13 07:45' and '2026-10-13 11:30' order by at"}
+{"type":"noop"}
