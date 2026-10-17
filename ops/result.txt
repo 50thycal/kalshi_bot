@@ -1,4 +1,10 @@
 # ops request [READ]
-# type=noop
-# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T03:18:46Z
-(noop — nothing to do)
+# type=db  id=sweep-2
+# code 51f341b8175c60122c640050f86055a4c54340b7 · started 2026-10-17T03:19:05Z
+tk                           t            dow  pb  b   gone  b2h  b8h
+---------------------------  -----------  ---  --  --  ----  ---  ---
+KXTRUMPMENTION-26OCT20-HOTT  10-16 21:15  5    91  74  677   74      
+KXTRUMPMENTION-26OCT17-PALE  10-16 23:22  5    11  8   552   8       
+KXTRUMPMENTION-26OCT19-CEAS  10-17 02:12  6    5   4   718           
+
+(3 rows)
