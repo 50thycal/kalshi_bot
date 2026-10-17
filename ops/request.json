@@ -1,1 +1,1 @@
-{"type": "db", "id": "pale-s2", "sql": "(select at, best_yes_bid, best_no_bid, yes_levels_json, trades_last_5m, last_trade_yes_price from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT17-PALE' and at between '2026-10-16 21:50' and '2026-10-16 23:40' order by at) union all (select at, best_yes_bid, best_no_bid, yes_levels_json, trades_last_5m, last_trade_yes_price from (select * from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT17-PALE' order by at desc limit 1) z) order by at"}
+{"type":"noop"}
