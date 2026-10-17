@@ -1,1 +1,1 @@
-{"type": "db", "id": "pale-f1", "sql": "select filled_at, side, action, price, quantity, fee, kalshi_order_id from fills where market_ticker='KXTRUMPMENTION-26OCT17-PALE' order by filled_at"}
+{"type":"noop"}
