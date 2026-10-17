@@ -1710,7 +1710,7 @@ MENTION = "KXTRUMPMENTION-26SEP20-PALE"
 
 
 def _held_mention(s, *, entry=10, qty=100, sell=None, sell_qty=None, sell_age_min=10,
-                  hours=48.0, snap_at=NOW):
+                  hours=48.0, snap_at=NOW, sell_role="a", sells=()):
     _mention(s, MENTION, event="KXTRUMPMENTION-26SEP20", hours=hours)
     s.add(m.LiveOrder(market_ticker=MENTION, event_ticker="KXTRUMPMENTION-26SEP20",
                       strategy=limm.LIVE_TAG, side="yes", action="buy", limit_price=entry,
@@ -1719,10 +1719,13 @@ def _held_mention(s, *, entry=10, qty=100, sell=None, sell_qty=None, sell_age_mi
     s.add(m.Fill(kalshi_fill_id="F-PALE", kalshi_order_id="K-PALE", market_ticker=MENTION,
                  side="yes", action="buy", price=entry, quantity=qty))
     if sell is not None:
+        sells = ((sell_role, sell, sell_qty or qty),) + tuple(sells)
+    for i, (role, price, n) in enumerate(sells):
+        coid = f"{limm.RESTING_SELL_PREFIX}{role + ':' if role else ''}x{i}"
         s.add(m.LiveOrder(market_ticker=MENTION, event_ticker=None, strategy=limm.LIVE_TAG,
-                          side="yes", action="sell", limit_price=sell,
-                          quantity=sell_qty or qty, status="resting", kalshi_order_id="K-SELL",
-                          client_order_id=f"{limm.RESTING_SELL_PREFIX}x",
+                          side="yes", action="sell", limit_price=price, quantity=n,
+                          status="resting", kalshi_order_id="K-SELL" if i == 0 else f"K-SELL{i}",
+                          client_order_id=coid,
                           created_at=NOW - timedelta(minutes=sell_age_min)))
     _snap(s, qty, snap_at)
 
@@ -1737,15 +1740,19 @@ def test_a_held_mention_leg_rests_a_sell_at_the_best_ask(live_db, settings):
     # YES bid 8 (above the 5c stop, under the 15c take-profit); NO bid 88 == YES ask 12.
     client = FakeClient({MENTION: _book([(8, 3), (7, 10)], [(88, 100), (85, 400)])})
     with db.session_scope() as s:
-        _held_mention(s)
+        _held_mention(s, entry=14)
         out = _cycle(client, settings, s)
-        row = s.scalar(sa_select(m.LiveOrder).where(m.LiveOrder.action == "sell"))
+        rows = s.scalars(sa_select(m.LiveOrder).where(m.LiveOrder.action == "sell")
+                         .order_by(m.LiveOrder.id)).all()
     assert _managed(out) == {"resting_sell:placed": 1}
-    order = client.placed[0]
-    assert (order["side"], order["price"], order["count"], order["post_only"],
-            order["time_in_force"]) == ("ask", "0.1200", "100.00", True, "good_till_canceled")
-    assert (row.side, row.limit_price, row.quantity, row.status) == ("yes", 12, 100, "resting")
-    assert row.client_order_id.startswith(limm.RESTING_SELL_PREFIX)
+    # §9.61: half at the 12c ask, half at the 14c entry (break-even).
+    assert [(o["side"], o["price"], o["count"], o["post_only"], o["time_in_force"])
+            for o in client.placed] == [
+        ("ask", "0.1200", "50.00", True, "good_till_canceled"),
+        ("ask", "0.1400", "50.00", True, "good_till_canceled")]
+    assert [(r.side, r.limit_price, r.quantity, r.status) for r in rows] == [
+        ("yes", 12, 50, "resting"), ("yes", 14, 50, "resting")]
+    assert [r.client_order_id[:11] for r in rows] == ["limmsell:a:", "limmsell:b:"]
 
 
 def test_the_resting_sell_never_goes_at_or_below_the_stop():
@@ -1786,6 +1793,49 @@ def test_a_young_resting_sell_is_not_churned(live_db, settings):
         _held_mention(s, sell=12, sell_age_min=2)
         out = _cycle(client, settings, s)
     assert _managed(out) == {"resting_sell:resting": 1} and client.canceled == []
+
+
+def test_a_pre_split_single_sell_is_replaced_by_the_split(live_db, settings):
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, sell=12, sell_role=None)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:resplit": 1} and client.canceled == ["K-SELL"]
+
+
+def test_the_split_sells_step_down_in_the_last_hours_before_the_cutoff():
+    # 14c entry, 8c held bid, 12c ask: floor 9c (one above the bid; the stop is at 7c).
+    far = limm.resting_sell_prices(entry_cents=14, held_bid_cents=8, best_other_ask_cents=12,
+                                   hours_to_cutoff=10.0)
+    half = limm.resting_sell_prices(entry_cents=14, held_bid_cents=8, best_other_ask_cents=12,
+                                    hours_to_cutoff=3.0)
+    end = limm.resting_sell_prices(entry_cents=14, held_bid_cents=8, best_other_ask_cents=12,
+                                   hours_to_cutoff=0.1)
+    assert far == (12, 14)
+    assert half == (10, 12)      # halfway: a 12 -> 10 (1.5 rounds up), b 14 -> 12 (toward a)
+    assert end[0] == 9 and end[1] <= 10
+    # Never under the stop floor: 10c entry stops at 5c, so 6c minimum.
+    assert limm.resting_sell_prices(entry_cents=10, held_bid_cents=2, best_other_ask_cents=7,
+                                    hours_to_cutoff=0.0) == (6, 6)
+
+
+def test_after_the_ask_sell_fills_the_break_even_sell_is_left_alone(live_db, settings):
+    # 50 sold at 12 (role a gone); 50 held, covered by the 14c break-even sell: nothing to add.
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100), (86, 50)])})
+    with db.session_scope() as s:
+        _held_mention(s, entry=14, qty=50, sells=(("b", 14, 50),))
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:resting": 1}
+    assert client.placed == [] and client.canceled == []
+
+
+def test_a_missing_split_half_is_placed_from_the_uncovered_contracts(live_db, settings):
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, entry=14, sells=(("a", 12, 50),))
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:placed": 1}
+    assert [(o["price"], o["count"]) for o in client.placed] == [("0.1400", "50.00")]
 
 
 def test_a_resting_sell_larger_than_the_position_is_cancelled_at_once(live_db, settings):

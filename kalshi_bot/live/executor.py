@@ -951,7 +951,8 @@ class LiveExecutor:
             coid_prefix="limmexitleg:", reason=f"incentive_exit_leg:{held_side}")
 
     def place_incentive_resting_sell(self, session, *, strategy: str, ticker: str,
-                                     held_side: str, qty: int, price: int) -> str:
+                                     held_side: str, qty: int, price: int,
+                                     role: str = "a") -> str:
         """§9.60: rest a post-only SELL of a held leg at `price` (the held side's cents), sized
         to the held contracts. Kalshi has no reduce-only here, so the caller sizes it to the
         position and cancels it before any marketable exit; a sell larger than the position
@@ -966,7 +967,7 @@ class LiveExecutor:
             order_side, yes_price = "ask", int(price)
         else:
             order_side, yes_price = "bid", 100 - int(price)
-        coid = f"{limm_live.RESTING_SELL_PREFIX}{uuid.uuid4()}"
+        coid = f"{limm_live.RESTING_SELL_PREFIX}{role}:{uuid.uuid4()}"
         order = {
             "ticker": ticker,
             "client_order_id": coid,

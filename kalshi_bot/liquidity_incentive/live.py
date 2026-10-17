@@ -239,6 +239,15 @@ RESTING_SELL_ENABLED = True
 RESTING_SELL_REPRICE_MIN_SECONDS = 300.0
 #: Client-order-id prefix of a §9.60 resting sell (`LiveExecutor.place_incentive_resting_sell`).
 RESTING_SELL_PREFIX = "limmsell:"
+#: §9.61 (operator, 2026-10-17): the held contracts rest as TWO sells — half (rounded up) at the
+#: other sellers' best ask ("a"), the rest at break-even, max(entry, that ask) ("b") — tagged by
+#: role after the prefix (`limmsell:a:` / `limmsell:b:`).
+RESTING_SELL_ROLE_ASK = "a"
+RESTING_SELL_ROLE_ENTRY = "b"
+#: §9.61: in the last this-many hours before the pre-event cutoff both sells step down in a
+#: straight line — "a" from the ask to the floor, "b" down to "a" — so a slow market still has a
+#: chance to fill before the position must ride into the event.
+RESTING_SELL_DECAY_HOURS = 6.0
 #: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
 EXIT_MAX_ATTEMPTS = 3
 #: An exit acts only on a position snapshot at most this old. Kalshi has no reduce-only for
@@ -681,6 +690,36 @@ def resting_sell_price(*, entry_cents: int, held_bid_cents: int | None,
         floor = max(floor, int(held_bid_cents) + 1)
     price = max(price, floor)
     return price if 1 <= price <= 99 else None
+
+
+def _half_up(x: float) -> int:
+    return int(math.floor(x + 0.5))
+
+
+def resting_sell_prices(*, entry_cents: int, held_bid_cents: int | None,
+                        best_other_ask_cents: int | None,
+                        hours_to_cutoff: float | None) -> tuple[int, int] | None:
+    """§9.61: the (ask-role, break-even-role) prices of a held leg's two resting sells.
+
+    Outside the last RESTING_SELL_DECAY_HOURS before the cutoff: "a" at `resting_sell_price`,
+    "b" at max(entry, a). Inside it both step down linearly with time — "a" towards the floor
+    (above the stop and the held bid), "b" towards "a" — reaching them at the cutoff. None when
+    no valid price exists."""
+    a = resting_sell_price(entry_cents=entry_cents, held_bid_cents=held_bid_cents,
+                           best_other_ask_cents=best_other_ask_cents)
+    if a is None:
+        return None
+    entry = int(entry_cents)
+    floor = entry - stop_distance_cents(entry) + 1
+    if held_bid_cents is not None:
+        floor = max(floor, int(held_bid_cents) + 1)
+    b = max(entry, a)
+    w = 0.0
+    if hours_to_cutoff is not None and hours_to_cutoff < RESTING_SELL_DECAY_HOURS:
+        w = min(1.0, max(0.0, 1.0 - hours_to_cutoff / RESTING_SELL_DECAY_HOURS))
+    a = max(floor, a - _half_up((a - floor) * w))
+    b = max(a, b - _half_up((b - a) * w))
+    return min(a, 99), min(b, 99)
 
 
 # ------------------------------------------------------------------ ranking
