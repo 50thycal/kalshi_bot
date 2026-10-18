@@ -162,19 +162,66 @@ found after looking, so it is a **lead for a forward test**, not a rule. It is d
 the killed flow veto and reactive cancel (`docs/MMSELL_FLOW_VETO_THESIS.md`), which read trade
 flow; this reads only how fast our own resting order was taken.
 
+### 6a. Follow-up (2026-10-18): the timing effect is a regime, the spread effect is not
+
+Asked by the owner to dig further. Every live mmsell fill with placement context
+(`execution_order_context`, recorded from September), all series.
+
+**Fill speed** (`ff-all-agg-1`, since 08-20, 1,342 settled markets): losers 8.9% under 5 min,
+7.4% at 5–30, 6.8% at 30–120, 1.7% at 2h+ — monotonic. **But not stable by month**
+(`ff-month-1`):
+
+| month | < 30 min | 30–120 min | 2h+ |
+|---|---|---|---|
+| Aug | 72 of 880 lost | 28 of 283 | **11 of 111 (as bad)** |
+| Sep | 49 of 617 | 11 of 153 | 2 of 70 |
+| Oct | 29 of 319 | 4 of 59 | 0 of 33 |
+
+August shows no effect. This is the pattern `docs/MMSELL_REPLAY_PROBES_20261003.md` already
+named — time-based levers flip between windows on this book — so fill speed is a regime
+property, not a rule. A fill cannot be refused anyway; the only usable form would be a
+pre-trade proxy.
+
+**What fast fills look like at placement** (`ff-win-rows-2`, WIN series): a short queue ahead
+(median 30 contracts vs 100 for slow fills), thinner bid depth (62 vs 300), and a 1¢ spread.
+4 of the 6 WIN losers were at a 1¢ spread; 4 had ≤ 5 contracts ahead.
+
+**Spread is the stable signal** (`ff-month-1`, all series):
+
+| month | 1¢ spread | 2¢ or wider |
+|---|---|---|
+| Sep | 253 mkts, 7.1% lost, +0.3¢/mkt | 107, **0.9%**, +6.2¢/mkt |
+| Oct | 289, 9.7% lost, −5.9¢/mkt | 122, **4.1%**, +5.6¢/mkt |
+
+Same direction both months; queue length alone is weak (0–10 ahead 8.4% vs 100+ 6.8%). A 1¢
+spread means the market is efficiently priced and heavily traded — our 7¢ is roughly the fair
+price there and the fills that arrive are informed. Caveats:
+- found after looking (a 1¢ vs 2¢+ split), and **overlapping the window of the pre-registered
+  P-SPREAD forward test** (≥ 3¢ vs ≤ 2¢, floor 80 fills from 10-01). That test's gate is
+  untouched and must be read on its own terms, not through this split;
+- 2¢+ is only ~30% of fills — a filter would cut trade count about 70%, though the cut trades
+  run near zero or negative;
+- `cents_per_mkt` mixes clip sizes; the loss rates are the cleaner read.
+
+**Recommendation:** pre-register "skip entries at a 1¢ spread" as its own forward test (paper
+book on the same universe, plus the live twin tape), judged after P-SPREAD reads out. Do not
+build a fill-speed rule.
+
 ## 7. Recommended order (each needs its own owner decision)
 
 1. **KXTRUMPMENTION** into the WIN set — strongest replay, largest supply, same contract shape
-   as KXTRUMPSAY. Hard stop: graduation also opens it to `Kmmsell10`.
-2. **Rain late-entry window** — pre-register the late (1–6h) rule as a forward paper test; it
+   as KXTRUMPSAY. Hard stop: graduation also opens it to `Kmmsell10`. **Parked** in
+   `docs/workstreams/ACTIVE.md` (owner, 2026-10-18: add eventually).
+2. **Spread ≥ 2¢ filter** — forward test (§6a); the stable signal of this research.
+3. **Rain late-entry window** — pre-register the late (1–6h) rule as a forward paper test; it
    sits at t 1.88 today.
-3. **Fast-fill lead** — pre-register and measure forward on the twin/live tape before any rule.
 4. **Index 8–10¢** — only as a 1-lot live arm with a twin.
-5. **Do not pursue:** commodities with this entry, scanning deeper, the rain cap on its own.
+5. **Do not pursue:** commodities with this entry, scanning deeper, the rain cap on its own, a
+   fill-speed rule (§6a).
 
 ## Ops reads (all read-only, 2026-10-17)
 
 `nm-series-paper-1/2`, `nm-series-live-1`, `nm-band-1/2`, `nm-commod-1`, `nm-adverse-1`,
 `nm-r1-idx810-1`, `nm-r1-idx-adv-1`, `nm-r2-cands-1` (void), `nm-r2-cands-2`, `nm-r2-rules-1`,
 `nm-r3-rain-time-1`, `nm-r3-rain-replay-1`, `nm-r4-commod-time-1`, `nm-r5-scan-1`, `nm-r5-fed-1`,
-`nm-r6-filltime-1`, `nm-r6-wait-1`.
+`nm-r6-filltime-1`, `nm-r6-wait-1`. 2026-10-18: `ff-win-rows-2`, `ff-all-agg-1`, `ff-month-1`.

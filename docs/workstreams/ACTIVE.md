@@ -68,6 +68,7 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
+- WIN-set series additions for `Nmmsell10`, **KXTRUMPMENTION first**, then KXAPRPOTUS and the other mention series as their samples grow: needs a `SERIES_TYPES` entry, a manifest graduation (which also opens the series to `Kmmsell10` — a real-money change) and a new `mmsell-win-set` Version. Evidence: `docs/MMSELL_WIN_SET_EXPANSION_RESEARCH.md` §2 (Calvin, 2026-10-18: "add that in eventually").
 - `Alimm1` sweep-aware resting sell: after a recorded `book_sweep` on a held market, hold the resting sell's price instead of stepping it down. Ready when the `book_sweep` / `book_sweep_followup` log (§9.60) has ~2 weeks and enough sweeps to say whether bids recover; thesis §9.61 "Parked" has the check to run (Calvin, 2026-10-17).
 - `docs/PROJECT_MODEL.md` incentive section says nothing in the trading path reads `incentive_*`; stale — `Alimm1` and the executor close-time slot rule read `incentive_programs` (PR #547, 2026-10-07).
 - `Hmmsell10` readout script: compute S0–S3 (size arms recomputed by `ticker_size`) and the contest-key report from `docs/MMSELL_SIZE_SPLIT_CANARY.md` §5, ops-allowlisted; needed before the first readout, ~2–3 weeks after arming (WS-007, PR #518, 2026-10-03).
