@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=ci0051
-# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-18T00:51:52Z
-k     market_ticker                t                              v              
-----  ---------------------------  -----------------------------  ---------------
-snap  KXTRUMPMENTION-26OCT19-CEAS  2026-10-18 00:48:13.591319+00  3/96           
-cnt   book_sweep                   2026-10-17 21:40:55.880172+00  17             
-cnt   book_sweep_followup          2026-10-17 22:04:52.268007+00  34             
-sell  KXTRUMPMENTION-26OCT19-CEAS  2026-10-17 13:40:48.403531+00  4c x100 resting
-sell  KXTRUMPMENTION-26OCT19-CEAS  2026-10-17 13:40:48.444299+00  5c x100 resting
-
-(5 rows)
+# type=noop
+# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-18T00:52:11Z
+(noop — nothing to do)
