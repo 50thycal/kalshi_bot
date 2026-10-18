@@ -1,21 +1,207 @@
 # ops request [READ]
-# type=db  id=ff-win-rows-1
-# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-18T02:14:51Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 643, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 639, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 456, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 500, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
-    cur.execute(sql)
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.QueryCanceled: canceling statement due to statement timeout
+# type=db  id=ff-win-rows-2
+# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-18T02:15:51Z
+series        market_ticker                        px  wait_min  hot    spread  dbid    dask    vol     htc    ahead0  hr_et  lost
+------------  -----------------------------------  --  --------  -----  ------  ------  ------  ------  -----  ------  -----  ----
+KXFEDMENTION  KXFEDMENTION-26JUL-TRUM              93  1                                                               14     0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-GOLB       94  1                                                               17     0   
+KXINXU        KXINXU-26AUG12H1600-T7774.9999       94  1                                                               11     0   
+KXRAIN        KXRAIN-26SEP18-DC                    94  1         False  2       20      42      10802   15.1   42      9      0   
+KXINXU        KXINXU-26SEP25H1600-T7779.9999       93  1         False  4       20000   25000   2196    4.0    0       12     0   
+KXWCMENTION   KXWCMENTION-26JUL15ENGARG-EQUA       90  1                                                               16     1   
+KXWCMENTION   KXWCMENTION-26JUL15ENGARG-GOLB       94  1                                                               16     0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-SOCC       92  1                                                               17     0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-EQUA       91  1                                                               17     0   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-TRUM         91  2                                                               17     0   
+KXINXU        KXINXU-26OCT01H1200-T7674.9999       93  2         False  2       1       100000  40007   1.6            10     0   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-ISHO         92  2                                                               15     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP21H1600-T30179.99  93  2         False  1       20000   5       8062    7.1    5       8      1   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-CROS         92  2                                                               17     0   
+KXRAIN        KXRAIN-26OCT10-SEA                   94  2         False  1       20      71      23742   11.1           16     1   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-ZOHR         94  2                                                               15     0   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-WHATS        90  2                                                               17     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT05-AUTO              94  3         False  2       51      39      18964   20.1   39      13     0   
+KXRAIN        KXRAIN-26SEP19-MIA                   93  3         False  3       32      241     135079  1.1    98      23     0   
+KXWCMENTION   KXWCMENTION-MENWORLDCUP-ADID         90  3                                                               15     0   
+KXFEDMENTION  KXFEDMENTION-26JUL-ADP               94  3                                                               14     0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-GOAT       90  3                                                               17     0   
+KXFEDMENTION  KXFEDMENTION-26JUL-RECE              93  3                                                               15     0   
+KXRAIN        KXRAIN-26OCT17-ATL                   93  3         False  3       20      72      8889    24.9   72      0          
+KXRAIN        KXRAIN-26OCT17-ATL                   93  3         False  3       20      72      8889    24.9   75      0          
+KXTRUMPSAY    KXTRUMPSAY-26SEP07-CUBA              94  3                                                               14     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT05-NOBE              93  3         False  1       10      170     18387   19.9   170     14     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT05-CEAS              94  3         False  2       33      34      21738   19.9   34      14     0   
+KXNASDAQ100U  KXNASDAQ100U-26OCT15H1600-T29949.99  93  3         False  4       100000  4117    5324    1.0    107     14     0   
+KXRAIN        KXRAIN-26AUG13-ATL                   90  3                                                               20     0   
+KXRAIN        KXRAIN-26AUG12-DC                    93  3                                                               22     0   
+KXRAIN        KXRAIN-26OCT16-DAL                   90  4         True   2       134     5       27860   20.8   3       5      0   
+KXRAIN        KXRAIN-26SEP09-LAX                   93  4                                                       31      6      0   
+KXINXU        KXINXU-26SEP16H1600-T7689.9999       93  4         False  1       3520    1       164     2.1    1       13     0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-ZLAT       93  4                                                               18     0   
+KXRAIN        KXRAIN-26OCT16-AUS                   93  4         False  2       38      50      17330   15.2   0       10     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP09H1600-T29609.99  94  4                                                       0       11     0   
+KXINXU        KXINXU-26AUG12H1600-T7769.9999       93  5                                                               12     0   
+KXRAIN        KXRAIN-26OCT17-EWR                   94  5         False  2       1       72      27118   17.3   72      7          
+KXRAIN        KXRAIN-26OCT08-MIN                   93  5         False  1       32      27      26276   7.7    27      18     0   
+KXFEDMENTION  KXFEDMENTION-26JUL-GOLD              93  6                                                               14     0   
+KXINXU        KXINXU-26SEP21H1600-T7749.9999       94  6         False  2       2500    1       2730    5.0    1       11     1   
+KXRAIN        KXRAIN-26OCT04-BOS                   91  6         True   1       11      2       49212   6.8    76      18     0   
+KXFEDMENTION  KXFEDMENTION-26JUL-SHUT              93  6                                                               14     0   
+KXRAIN        KXRAIN-26AUG29-NOLA                  91  6                                                       0       10     0   
+KXNASDAQ100U  KXNASDAQ100U-26AUG10H1600-T29869.99  94  6                                                               11     0   
+KXRAIN        KXRAIN-26SEP07-SATX                  93  6                                                       30      9      0   
+KXWCMENTION   KXWCMENTION-26JUL18FRAENG-SHAK       90  6                                                               18     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG17-NEWS              93  7                                                       24      11     0   
+KXWCMENTION   KXWCMENTION-26JUL15ENGARG-FALC       90  7                                                               16     0   
+KXRAIN        KXRAIN-26OCT17-EWR                   94  7         False  2       1       72      27118   17.3   75      7          
+KXRAIN        KXRAIN-26AUG11-HOU                   90  7                                                               18     0   
+KXINXU        KXINXU-26SEP14H1600-T7634.9999       93  8                                                       0       11     0   
+KXRAIN        KXRAIN-26SEP26-HOU                   94  8         False  1       46      3       10197   12.6   3       13     0   
+KXRAIN        KXRAIN-26AUG10-ATL                   93  9                                                               20     0   
+KXTRUMPSAY    KXTRUMPSAY-26JUL20-URAN              94  9                                                               21     0   
+KXRAIN        KXRAIN-26SEP02-ATL                   93  9                                                       0       8      0   
+KXRAIN        KXRAIN-26OCT17-LAX                   94  9         False  1       22      847     24540   6.6    834     21         
+KXRAIN        KXRAIN-26OCT17-LAX                   94  9         False  1       22      847     24540   6.6    831     21         
+KXINXU        KXINXU-26OCT16H1600-T7714.9999       94  10        False  2       1       4000    645     2.7    1       13     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP29H1100-T30509.99  93  10        False  4       100000  100000  4828    1.2    100000  9      0   
+KXRAIN        KXRAIN-26AUG12-CHI                   90  10                                                              13     0   
+KXINXU        KXINXU-26OCT16H1600-T7714.9999       94  10        False  2       1       4000    645     2.7    4000    13     0   
+KXINXU        KXINXU-26SEP30H1000-T7724.9999       93  11        False  3       12      100000  105     1.1    100000  8      0   
+KXINX         KXINX-26AUG10H1600-B7787             91  11                                                              12     0   
+KXINXU        KXINXU-26OCT13H1600-T7819.9999       93  11        False  3       116     4001    1559    3.6    4001    12     0   
+KXINXU        KXINXU-26SEP30H1100-T7729.9999       93  11        False  4       100000  100000  140     1.2    100000  9      0   
+KXNASDAQ100U  KXNASDAQ100U-26OCT02H1600-T31179.99  90  11        True   2       2000    100000  9519    7.1    2000    8      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-AMER              94  11                                                              17     0   
+KXRAIN        KXRAIN-26SEP02-BOS                   93  11                                                      10      16     0   
+KXNASDAQ100U  KXNASDAQ100U-26AUG10H1600-T29739.99  93  12                                                              14     0   
+KXINX         KXINX-26AUG11H1600-B7687             94  12                                                              14     0   
+KXRAIN        KXRAIN-26OCT13-MIN                   94  13        False  1       71      246     1059    40.6   246     9      1   
+KXINXU        KXINXU-26SEP17H1600-T7649.9999       94  13        False  1       1       1050    6278    1.3    1050    14     0   
+KXRAIN        KXRAIN-26AUG15-DC                    93  13                                                      48      9      0   
+KXRAIN        KXRAIN-26AUG08-DC                    93  14                                                              19     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-CRYP              94  15                                                              17     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-MARI              93  15                                                              17     0   
+KXINXU        KXINXU-26SEP10H1600-T7634.9999       93  15                                                      0       10     0   
+KXINXU        KXINXU-26OCT08H1600-T7779.9999       91  16        True   1       1       2000    3295    2.5    0       13     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-STUP              93  16                                                              9      0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP30H1000-T30639.99  93  17        False  4       100000  102000  116     1.1    100000  8      0   
+KXRAIN        KXRAIN-26AUG12-NOLA                  95  17                                                              19     0   
+KXINXU        KXINXU-26OCT09H1600-T7829.9999       93  18        False  2       87      1       2153    3.4    1       12     0   
+KXRAIN        KXRAIN-26OCT12-CHI                   94  19        False  1       1055    392     1927    25.3   392     0      0   
+KXRAIN        KXRAIN-26SEP22-BOS                   94  19        False  1       21      1       1485    22.4   1       2          
+KXRAIN        KXRAIN-26AUG09-ATL                   93  19                                                              22     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP14H1600-T29179.99  93  19                                                      0       9      0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT12-CYBE              93  20        False  2       28      307     13055   22.5   307     11     0   
+KXRAIN        KXRAIN-26OCT09-MIA                   90  20        True   2       278     149     144841  4.5    600     20     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-ZOHR              93  20                                                              14     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT12-PEAC              93  21        False  1       51      51      403     154.1  51      23     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT12-MARI              94  21        False  1       62      5       308     154.1  5       23     1   
+KXRAIN        KXRAIN-26OCT10-ABQ                   93  22        False  1       48      2       9707    15.3   2       11     0   
+KXRAIN        KXRAIN-26OCT16-ATL                   93  22        False  2       650     23      5562    13.3   23      11     0   
+KXRAIN        KXRAIN-26AUG11-LV                    91  22                                                              21     0   
+KXRAIN        KXRAIN-26AUG12-LV                    91  22                                                              19     0   
+KXRAIN        KXRAIN-26AUG10-SATX                  93  23                                                              0      0   
+KXRAIN        KXRAIN-26OCT14-DET                   90  23        True   2       1011    27      17584   16.8   330     8      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-GOLD              93  25                                                              17     0   
+KXINXU        KXINXU-26AUG10H1600-T7764.9999       91  25                                                              14     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-PEAC              91  25                                                              13     0   
+KXINXU        KXINXU-26AUG11H1600-T7754.9999       94  26                                                              13     0   
+KXRAIN        KXRAIN-26AUG11-AUS                   94  26                                                              3      0   
+KXRAIN        KXRAIN-26OCT07-NOLA                  94  26        False  2       95      3       4726    27.1   3       22     0   
+KXRAIN        KXRAIN-26AUG12-BOS                   93  26                                                              8      0   
+KXRAIN        KXRAIN-26SEP14-BOS                   93  26                                                      70      23     0   
+KXRAIN        KXRAIN-26OCT12-PIT                   93  26        False  1       707     2       3317    25.4   2       23     0   
+KXRAIN        KXRAIN-26OCT09-SFO                   93  27        False  3       20      111     7155    24.5   111     3      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-UFO               93  28                                                              18     0   
+KXRAIN        KXRAIN-26OCT15-CLL                   93  28        False  1       93      23      5461    23.5   23      2      0   
+KXRAIN        KXRAIN-26OCT05-MIN                   94  29        False  2       50      104     3098    25.1   104     0      0   
+KXRAIN        KXRAIN-26SEP21-SFO                   94  29        False  1       48      362     1497    24.4   362     3          
+KXRAIN        KXRAIN-26OCT15-NYC                   93  32        False  2       45      12      2785    19.8   12      5      0   
+KXRAIN        KXRAIN-26OCT06-HOU                   93  33        False  1       11      8       4630           8       23     0   
+KXRAIN        KXRAIN-26AUG10-LV                    93  33                                                              23     0   
+KXINX         KXINX-26AUG17H1600-B7812             94  34                                                      0       11     0   
+KXRAIN        KXRAIN-26AUG12-HOU                   90  35                                                              8      0   
+KXRAIN        KXRAIN-26SEP12-SATX                  94  35                                                      271     9      0   
+KXNASDAQ100U  KXNASDAQ100U-26AUG17H1600-T30289.99  90  36                                                      0       10     0   
+KXINXU        KXINXU-26AUG10H1600-T7819.9999       95  36                                                              19     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-BIBI              91  37                                                              22     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT19-MAKE              93  38        False  2       124     12      1204    140.6  12      13         
+KXINXU        KXINXU-26AUG10H1600-T7799.9999       90  38                                                              10     0   
+KXNASDAQ100U  KXNASDAQ100U-26AUG17H1600-T30299.99  90  38                                                      0       10     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT05-ZOHR              94  39        False  1       329     202     10789   35.6   202     22     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT05-CEAS              94  40        False  1       28      23      16370   26.1   23      7      0   
+KXNASDAQ100U  KXNASDAQ100U-26OCT09H1600-T30969.99  90  42        True   4       100000  100000  266     1.8    0       14     0   
+KXRAIN        KXRAIN-26OCT08-NOLA                  93  45        False  1       21      75      6810    33.3   75      16     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP29H1000-T30529.99  90  45        True   4       100000  100000  8793    1.2    0       8      0   
+KXRAIN        KXRAIN-26SEP28-HOU                   91  47        True   1       292     301     12277   12.3   227     13     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-PEAC              93  47                                                              11     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-AMER              94  47                                                              10     0   
+KXRAIN        KXRAIN-26OCT04-SATX                  93  47        False  1       9       382     16510   10.3   372     15     0   
+KXRAIN        KXRAIN-26OCT16-ATL                   94  48        False  1       41      189     2332    25.5   189     23     0   
+KXRAIN        KXRAIN-26AUG10-MIA                   93  51                                                              16     0   
+KXRAIN        KXRAIN-26AUG16-MIN                   91  52                                                      5       6      0   
+KXRAIN        KXRAIN-26AUG13-HOU                   91  52                                                              8      0   
+KXRAIN        KXRAIN-26SEP04-ATL                   94  60                                                      78      1      0   
+KXRAIN        KXRAIN-26OCT13-SGF                   93  62        False  1       1       313     115     40.1   313     9      0   
+KXRAIN        KXRAIN-26SEP24-SATX                  94  65        False  2       555     585     1483    20.2   585     5      0   
+KXRAIN        KXRAIN-26AUG09-SATX                  94  65                                                              23     0   
+KXRAIN        KXRAIN-26OCT11-DEN                   93  66        False  3       32      71      8704    25.8   71      1      0   
+KXRAIN        KXRAIN-26OCT14-ABQ                   93  67        False  1       76      288     1275    33.5   288     17     0   
+KXINX         KXINX-26AUG12H1600-B7787             95  67                                                              12     0   
+KXINXU        KXINXU-26SEP24H1600-T7739.9999       93  67        False  3       2500    2500    322     2.5    0       13     0   
+KXRAIN        KXRAIN-26AUG18-DC                    94  69                                                      79      2      0   
+KXRAIN        KXRAIN-26OCT14-MKE                   93  69        False  1       1453    251     1912    31.9   251     18     0   
+KXRAIN        KXRAIN-26AUG11-MIA                   93  72                                                              13     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP30H1600-T30799.99  90  74        True   4       100000  2000    150            0       8      0   
+KXINXU        KXINXU-26SEP28H1600-T7719.9999       90  75        True   3       100000  2000    907     5.0    27      11     0   
+KXRAIN        KXRAIN-26SEP16-SFO                   94  78                                                      231     3      0   
+KXRAIN        KXRAIN-26AUG09-DC                    93  79                                                              2      0   
+KXRAIN        KXRAIN-26AUG09-PHIL                  90  81                                                              7      0   
+KXRAIN        KXRAIN-26SEP20-NOLA                  93  82        False  1       922     546     752            546     8      0   
+KXINXU        KXINXU-26OCT07H1600-T7824.9999       93  82        False  2       210     22      2345    4.0    22      11     0   
+KXRAIN        KXRAIN-26AUG10-CHI                   90  84                                                              22     0   
+KXINX         KXINX-26AUG14H1600-B7837             91  84                                                              8      0   
+KXRAIN        KXRAIN-26AUG16-MIA                   93  86                                                      75      5      0   
+KXRAIN        KXRAIN-26SEP13-ATL                   93  97                                                      728     23     0   
+KXRAIN        KXRAIN-26OCT10-NOLA                  93  98        False  1       68      253     19863   18.6   253     7      0   
+KXINXU        KXINXU-26AUG10H1600-T7804.9999       93  101                                                             9      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-CUBA              93  105                                                             15     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-TIKT              93  110                                                             12     0   
+KXRAIN        KXRAIN-26OCT01-TTN                   94  110       False  2       81      127     897     24.5   127     0      0   
+KXINXU        KXINXU-26SEP02H1600-T7694.9999       94  116                                                     0       12     0   
+KXINXU        KXINXU-26OCT05H1600-T7789.9999       93  119       False  4       100000  105002  836     5.3    100000  10     0   
+KXTRUMPSAY    KXTRUMPSAY-26SEP07-EPST              94  119                                                     120     7      0   
+KXRAIN        KXRAIN-26SEP08-DAL                   91  120                                                     48      16     0   
+KXINXU        KXINXU-26AUG10H1600-T7829.9999       95  121                                                             20     0   
+KXRAIN        KXRAIN-26AUG13-DC                    93  129                                                             2      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-TDS               91  130                                                             20     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG31-STUP              93  131                                                     122     10     0   
+KXINXU        KXINXU-26SEP29H1600-T7699.9999       94  131       False  1       102181  5       20318   3.5    5       12     0   
+KXRAIN        KXRAIN-26SEP30-NOLA                  93  137       False  3       76      464     963     24.5   464     1      0   
+KXRAIN        KXRAIN-26SEP27-PIT                   93  141       False  1       408     340     8054    22.3   266     2      0   
+KXNASDAQ100U  KXNASDAQ100U-26OCT01H1600-T30659.99  93  146       False  2       4000    100000  8511    5.0    0       10     0   
+KXINXU        KXINXU-26OCT01H1600-T7699.9999       93  149       False  4       102000  102100  106     5.0    100     10     0   
+KXINXU        KXINXU-26AUG13H1600-T7814.9999       90  155                                                             12     0   
+KXRAIN        KXRAIN-26OCT13-NYC                   94  157       False  1       2306    589     122     37.5   589     11     0   
+KXNASDAQ100U  KXNASDAQ100U-26SEP16H1600-T29529.99  94  158                                                     1050    8      0   
+KXTRUMPSAY    KXTRUMPSAY-26SEP07-PRED              93  163                                                     502     7      0   
+KXINXU        KXINXU-26SEP30H1600-T7749.9999       93  164       False  3       43      6077    1013    10.2   77      5      0   
+KXRAIN        KXRAIN-26AUG09-AUS                   90  165                                                             21     0   
+KXINXU        KXINXU-26AUG11H1600-T7809.9999       94  167                                                             4      0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT19-URAN              93  169       False  1       37      799     2996           799     14         
+KXRAIN        KXRAIN-26AUG10-DAL                   91  185                                                             22     0   
+KXINXU        KXINXU-26AUG10H1600-T7774.9999       90  191                                                             12     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG10-MAR               93  197                                                             13     0   
+KXINX         KXINX-26OCT02H1600-B7537             94  203       False  1       20      100000  21234          100000  15     0   
+KXRAIN        KXRAIN-26AUG12-MIN                   93  205                                                             10     0   
+KXTRUMPSAY    KXTRUMPSAY-26SEP21-PRED              94  216                                                     238     23     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT12-ANTI              93  224       False  2       300     345     5417    22.5   345     11     0   
+KXTRUMPSAY    KXTRUMPSAY-26OCT12-PRED              93  224       False  1       58      5       221     154.1  5       23     0   
+KXRAIN        KXRAIN-26SEP11-PHX                   94  242                                                     10      3      0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-ANTI              93  261                                                             16     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-URAN              90  392                                                             18     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-NEWS              90  635                                                             13     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-KARO              90  755                                                             21     0   
+KXTRUMPSAY    KXTRUMPSAY-26AUG03-PRED              94  984                                                             2      0   
+
+(200 rows)
