@@ -1,0 +1,18 @@
+# ops request [READ]
+# type=db  id=ci1745
+# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T17:46:29Z
+k     market_ticker                 t                              v                       
+----  ----------------------------  -----------------------------  ------------------------
+new   KXTRUMPMENTION-26OCT20-FRAU   2026-10-19 15:53:16.705679+00  buy yes 8c x125 resting 
+new   KXTRUMPMENTION-26OCT23-CHEA   2026-10-19 16:07:07.43359+00   buy no 7c x142 resting  
+open  KXTRUMPMENTION-26OCT22-TRAN   2026-10-17 20:33:14.483825+00  buy no 2c x500          
+open  KXTRUMPMENTION-26OCT25-PEAC   2026-10-18 16:52:57.785104+00  buy yes 2c x500         
+open  KXTRUMPMENTION-26OCT22-HEAL   2026-10-18 23:51:30.029989+00  buy no 5c x200          
+open  KXTRUMPMENTION-26OCT25-CANA   2026-10-19 03:29:46.036164+00  buy no 10c x100         
+open  KXTRUMPMENTION-26OCT22-DIVI   2026-10-19 04:00:33.855178+00  buy no 6c x166          
+open  KXMAMDANIMENTION-26NOV18-NQE  2026-10-19 09:30:39.310659+00  buy yes 1c x500         
+open  KXTRUMPMENTION-26OCT25-HOTT   2026-10-19 14:44:37.021335+00  buy no 9c x111          
+open  KXTRUMPMENTION-26OCT20-FRAU   2026-10-19 15:53:16.705679+00  buy yes 8c x125         
+open  KXTRUMPMENTION-26OCT23-CHEA   2026-10-19 16:07:07.43359+00   buy no 7c x142          
+
+(11 rows)
