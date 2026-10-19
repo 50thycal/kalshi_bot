@@ -1,9 +1,24 @@
 # ops request [READ]
-# type=db  id=ws027-status-1019
-# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:42:16Z
-strategy   filled_mkts  contracts  settled  losers  open_mkts  shared  twin_settled  twin_open  twin_pnl
----------  -----------  ---------  -------  ------  ---------  ------  ------------  ---------  --------
-Kmmsell10  58           80         54       2       4          9       10            7          -0.96   
-Nmmsell10  12           36         8        0       4          9       10            7          -0.96   
+# type=db  id=ws027-detail-1019
+# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:43:03Z
+market_ticker                   twin_status  twin_px  twin_pnl  live_filled  live_qty  live_px  acct_pos  acct_realized
+------------------------------  -----------  -------  --------  -----------  --------  -------  --------  -------------
+KXFEDMENTION-26OCT-TRUM         open         93                 False        0         93                              
+KXINXU-26OCT16H1600-T7714.9999  settled      94       0.18      True         3         94       0         0.2400       
+KXRAIN-26OCT16-ATL              settled      93       0.21      True         3         93       0         0.3900       
+KXRAIN-26OCT16-AUS              settled      93       0.21      True         3         93       0         0.2100       
+KXRAIN-26OCT16-SGF              settled      90       0.30      False        0         90       0         0.0750       
+KXRAIN-26OCT17-ATL              settled      93       0.21      True         3         93       0         0.4200       
+KXRAIN-26OCT17-EWR              settled      94       0.18      True         3         94       0         0.3600       
+KXRAIN-26OCT17-LAX              settled      94       0.18      True         3         94       0         0.3600       
+KXRAIN-26OCT18-ABQ              settled      93       -2.79     False        0         93                              
+KXRAIN-26OCT18-LV               settled      94       0.18      True         3         94       0         0.3600       
+KXRAIN-26OCT18-TPA              settled      93       0.21      True         3         93       0         0.4200       
+KXRAIN-26OCT19-DEN              open         94                 True         3         94       -6.0000   0.0000       
+KXRAIN-26OCT19-PHX              open         91                 True         3         91       -6.0000   0.0000       
+KXRAIN-26OCT19-SFO              open         93                 True         3         93       -6.0000   0.0000       
+KXTRUMPSAY-26OCT19-MARI         open         94                 False        0         94                              
+KXTRUMPSAY-26OCT19-SOLE         open         93                 False        0         93                              
+KXTRUMPSAY-26OCT19-URAN         open         93                 True         3         93       -5.6800   0.0000       
 
-(2 rows)
+(17 rows)
