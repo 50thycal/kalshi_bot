@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1019b", "sql": "select f.market_ticker, o.action, o.side, o.limit_price, sum(f.quantity) q, min(f.filled_at)::text first_at, max(f.filled_at)::text last_at from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1' and f.filled_at > '2026-10-17 22:50' group by 1,2,3,4 order by 6"}
+{"type":"noop"}
