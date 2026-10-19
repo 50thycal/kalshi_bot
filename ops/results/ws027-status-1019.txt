@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=ws027-status-1019
+# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:42:16Z
+strategy   filled_mkts  contracts  settled  losers  open_mkts  shared  twin_settled  twin_open  twin_pnl
+---------  -----------  ---------  -------  ------  ---------  ------  ------------  ---------  --------
+Kmmsell10  58           80         54       2       4          9       10            7          -0.96   
+Nmmsell10  12           36         8        0       4          9       10            7          -0.96   
+
+(2 rows)

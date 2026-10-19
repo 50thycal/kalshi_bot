@@ -1,26 +1,9 @@
 # ops request [READ]
-# type=db  id=ff-month-1
-# code 4698499a019bba6a9ab2a1f6e81716c165f85467 · started 2026-10-18T02:18:34Z
-mon         dim     bucket     mkts  losers  cents_per_mkt
-----------  ------  ---------  ----  ------  -------------
-2026-07-01  spread  z ?        366   28      1.5          
-2026-08-01  spread  z ?        1274  111     -1.8         
-2026-09-01  spread  a 1c       253   18      0.3          
-2026-09-01  spread  b 2c+      107   1       6.2          
-2026-09-01  spread  z ?        480   43      -1.8         
-2026-10-01  spread  a 1c       289   28      -5.9         
-2026-10-01  spread  b 2c+      122   5       5.6          
-2026-07-01  wait    a <30m     357   28      1.1          
-2026-07-01  wait    b 30-120m  4     0       12.4         
-2026-07-01  wait    c 2h+      5     0       15.6         
-2026-08-01  wait    a <30m     880   72      -1.0         
-2026-08-01  wait    b 30-120m  283   28      -4.1         
-2026-08-01  wait    c 2h+      111   11      -2.6         
-2026-09-01  wait    a <30m     617   49      -0.7         
-2026-09-01  wait    b 30-120m  153   11      0.0          
-2026-09-01  wait    c 2h+      70    2       4.1          
-2026-10-01  wait    a <30m     319   29      -3.2         
-2026-10-01  wait    b 30-120m  59    4       -5.9         
-2026-10-01  wait    c 2h+      33    0       11.1         
+# type=db  id=ws027-status-1019
+# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:42:16Z
+strategy   filled_mkts  contracts  settled  losers  open_mkts  shared  twin_settled  twin_open  twin_pnl
+---------  -----------  ---------  -------  ------  ---------  ------  ------------  ---------  --------
+Kmmsell10  58           80         54       2       4          9       10            7          -0.96   
+Nmmsell10  12           36         8        0       4          9       10            7          -0.96   
 
-(19 rows)
+(2 rows)
