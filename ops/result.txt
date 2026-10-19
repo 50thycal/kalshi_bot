@@ -1,11 +1,4 @@
 # ops request [READ]
-# type=db  id=ci2346
-# code 9d031c6df3f07c7c376a8788525dba7e46b2aaef · started 2026-10-19T23:46:39Z
-k     market_ticker                t                              v                      
-----  ---------------------------  -----------------------------  -----------------------
-chg   KXTRUMPMENTION-26OCT23-CHEA  2026-10-19 22:20:09.668196+00  buy no 10c x100 resting
-chg   KXTRUMPMENTION-26OCT24-FRAU  2026-10-19 22:41:21.806951+00  buy yes 8c x125 resting
-cxl   KXTRUMPMENTION-26OCT20-FRAU  2026-10-19 15:53:16.705679+00  pre_event              
-open  count                                                       7                      
-
-(4 rows)
+# type=noop
+# code 9d031c6df3f07c7c376a8788525dba7e46b2aaef · started 2026-10-19T23:47:00Z
+(noop — nothing to do)
