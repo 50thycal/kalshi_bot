@@ -1,91 +1,17 @@
 # ops request [READ]
-# type=db  id=ci1019
-# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:43:36Z
-k     market_ticker                    t                              v                                     
-----  -------------------------------  -----------------------------  --------------------------------------
-fill  KXTRUMPMENTION-26OCT19-CEAS      2026-10-18 03:55:12.482533+00  sell yes @4c x46 limmsell:a:          
-fill  KXTRUMPMENTION-26OCT19-CEAS      2026-10-18 05:06:11.848028+00  sell yes @4c x54 limmsell:a:          
-fill  KXTRUMPMENTION-26OCT19-CEAS      2026-10-18 16:47:32.893706+00  sell yes @1c x100 limmexit:st         
-fill  KXTRUMPMENTION-26OCT25-CEAS      2026-10-18 16:47:32.899657+00  buy yes @3c x333 1abce747-88          
-fill  KXTRUMPMENTION-26OCT25-CEAS      2026-10-18 16:51:57.15724+00   sell yes @1c x333 limmexit:st         
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:36:00.619818+00  sell yes @6c x4 limmsell:a:           
-fill  KXTRUMPMENTION-26OCT25-PEAC      2026-10-18 22:02:33.639569+00  buy yes @2c x5 5c077098-d0            
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:00:46.464113+00  buy yes @6c x166 b0c21154-a8          
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:45:01.79557+00   sell yes @6c x6 limmsell:a:           
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:45:01.801138+00  sell yes @6c x31 limmsell:a:          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 04:57:01.598439+00  buy yes @7c x79 141a8879-2d           
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 06:14:14.589613+00  buy yes @7c x10 141a8879-2d           
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 07:52:29.296101+00  buy yes @7c x41 141a8879-2d           
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:58:24.601203+00  sell yes @1c x74 limmexit:st          
-fill  KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:58:24.608045+00  sell yes @1c x50 limmexit:st          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 05:26:11.810188+00  buy yes @7c x12 141a8879-2d           
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 12:47:58.347519+00  sell yes @6c x6 limmsell:a:           
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 13:03:03.152082+00  sell yes @6c x31 limmsell:a:          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 14:38:07.258553+00  sell yes @6c x4 limmsell:b:           
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 14:38:07.26338+00   sell yes @6c x26 limmsell:a:          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 14:51:10.105564+00  sell yes @6c x28 limmsell:b:          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 12:36:34.221041+00  sell yes @6c x40 limmsell:a:          
-fill  KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 14:45:43.677701+00  sell yes @6c x8 limmsell:b:           
-cxl   KXTRUMPMENTION-26OCT25-CEAS      2026-10-18 02:28:18.396823+00  buy yes 3c x333 filled                
-cxl   KXTRUMPMENTION-26OCT22-DIVI      2026-10-18 05:57:44.639111+00  buy no 5c x200 repriced               
-cxl   KXTRUMPMENTION-26OCT20-AI        2026-10-18 06:23:28.278897+00  buy yes 9c x111 repriced              
-cxl   KXTRUMPMENTION-26OCT20-AI        2026-10-18 07:25:05.020822+00  buy yes 10c x100 out_of_band          
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-18 15:04:08.623876+00  buy yes 6c x166 filled                
-cxl   KXTRUMPMENTION-26OCT19-CEAS      2026-10-18 16:46:21.628251+00  sell yes 1c x100 filled               
-cxl   KXTRUMPMENTION-26OCT22-HEAL      2026-10-18 16:48:26.111764+00  buy no 3c x333 repriced               
-cxl   KXTRUMPMENTION-26OCT25-CEAS      2026-10-18 16:48:12.880006+00  sell yes 1c x333 filled               
-cxl   KXTRUMPMENTION-26OCT25-PEAC      2026-10-18 16:52:57.785104+00  buy yes 2c x500 resting               
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:01:27.925425+00  sell yes 6c x83 resting_sell:resize   
-cxl   KXTRUMPMENTION-26OCT22-HEAL      2026-10-18 23:51:30.029989+00  buy no 5c x200 resting                
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:01:27.989311+00  sell yes 6c x83 resting_sell:resize   
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:47:53.01336+00   sell yes 6c x62 resting_sell:stop_loss
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:56:58.471509+00  sell yes 1c x124 filled               
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 13:48:57.715284+00  sell yes 6c x39 filled                
-cxl   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 01:47:52.943379+00  sell yes 6c x62 resting_sell:stop_loss
-cxl   KXTRUMPMENTION-26OCT25-HOTT      2026-10-19 03:27:31.433518+00  buy no 6c x166 repriced               
-cxl   KXTRUMPMENTION-26OCT25-CANA      2026-10-18 09:28:41.486219+00  buy no 9c x111 repriced               
-cxl   KXTRUMPMENTION-26OCT25-CANA      2026-10-19 03:29:46.036164+00  buy no 10c x100 resting               
-cxl   KXTRUMPMENTION-26OCT22-DIVI      2026-10-19 04:00:33.855178+00  buy no 6c x166 resting                
-cxl   KXTRUMPMENTION-26OCT23-DATA      2026-10-19 04:15:09.666956+00  buy yes 6c x166 out_of_band           
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 04:57:38.426119+00  sell yes 10c x39 resting_sell:repriced
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 05:05:12.844209+00  sell yes 9c x39 resting_sell:repriced 
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 04:57:38.367518+00  sell yes 10c x40 resting_sell:repriced
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 05:05:12.780336+00  sell yes 9c x40 resting_sell:repriced 
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 05:19:27.313294+00  sell yes 8c x40 resting_sell:repriced 
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 05:19:27.372006+00  sell yes 8c x39 resting_sell:repriced 
-cxl   KXMAMDANIMENTION-26NOV18-TRUM    2026-10-19 05:23:22.410901+00  buy no 7c x142 repriced               
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 07:53:06.166172+00  sell yes 7c x40 resting_sell:repriced 
-cxl   KXMAMDANIMENTION-26NOV18-TRUM    2026-10-19 06:25:06.636651+00  buy no 9c x111 out_of_band            
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 07:53:06.218885+00  sell yes 7c x39 resting_sell:repriced 
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 08:06:48.67769+00   sell yes 6c x40 filled                
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 08:06:48.735271+00  sell yes 7c x39 resting_sell:repriced 
-cxl   KXMAMDANIMENTION-26NOV18-NQE     2026-10-19 09:30:39.310659+00  buy yes 1c x500 resting               
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 12:37:10.244938+00  sell yes 6c x63 resting_sell:repriced 
-cxl   KXTRUMPMENTION-26OCT25-HOTT      2026-10-19 14:44:37.021335+00  buy no 9c x111 resting                
-cxl   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 13:48:57.633285+00  sell yes 6c x26 filled                
-cxl   KXTRUMPMENTION-26OCT20-FRAU      2026-10-19 14:52:05.143252+00  buy yes 6c x166 resting               
-open  KXTRUMPMENTION-26OCT22-TRAN      2026-10-17 20:33:14.483825+00  buy no 2c x500 resting                
-open  KXTRUMPMENTION-26OCT25-PEAC      2026-10-18 16:52:57.785104+00  buy yes 2c x500 resting               
-open  KXTRUMPMENTION-26OCT22-HEAL      2026-10-18 23:51:30.029989+00  buy no 5c x200 resting                
-open  KXTRUMPMENTION-26OCT25-CANA      2026-10-19 03:29:46.036164+00  buy no 10c x100 resting               
-open  KXTRUMPMENTION-26OCT22-DIVI      2026-10-19 04:00:33.855178+00  buy no 6c x166 resting                
-open  KXMAMDANIMENTION-26NOV18-NQE     2026-10-19 09:30:39.310659+00  buy yes 1c x500 resting               
-open  KXTRUMPMENTION-26OCT25-HOTT      2026-10-19 14:44:37.021335+00  buy no 9c x111 resting                
-open  KXTRUMPMENTION-26OCT20-FRAU      2026-10-19 14:52:05.143252+00  buy yes 6c x166 resting               
-pos   KXMCDSBIGMAC-26NOV02-T6.08       2026-10-19 15:41:08.710727+00  -0.2100                               
-pos   KXRAIN-26OCT19-DEN               2026-10-19 15:41:08.684345+00  -6.0000                               
-pos   KXRAIN-26OCT19-PHX               2026-10-19 15:41:08.688476+00  -6.0000                               
-pos   KXRAIN-26OCT19-SFO               2026-10-19 15:41:08.686307+00  -6.0000                               
-pos   KXRT-CLA-90                      2026-10-19 15:41:08.708584+00  -1.0000                               
-pos   KXTOP10BBSPOTS-26OCT24-TSWIF-10  2026-10-19 15:41:08.704588+00  499.0000                              
-pos   KXTRUMPMENTION-26OCT25-PEAC      2026-10-19 15:41:08.692873+00  5.0900                                
-pos   KXTRUMPMENTIONB-26OCT19-FENT     2026-10-19 15:41:08.677457+00  0.0100                                
-pos   KXTRUMPMENTIONB-26OCT19-NQE      2026-10-19 15:41:08.679866+00  0.5800                                
-pos   KXTRUMPSAY-26OCT19-EPST          2026-10-19 15:41:08.700502+00  -1.5600                               
-pos   KXTRUMPSAY-26OCT19-MAKE          2026-10-19 15:41:08.698496+00  -3.0000                               
-pos   KXTRUMPSAY-26OCT19-URAN          2026-10-19 15:41:08.696674+00  -5.6800                               
-pos   KXTRUTHSOCIAL-26OCT17-B230       2026-10-19 15:41:08.702581+00  -3.0000                               
-pos   KXWTI-26OCT1914-T100.99          2026-10-19 15:41:08.68225+00   -1.0000                               
-now                                    2026-10-19 15:43:37.809468+00                                        
+# type=db  id=ci1019b
+# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T15:44:29Z
+market_ticker                 action  side  limit_price  q    first_at                       last_at                      
+----------------------------  ------  ----  -----------  ---  -----------------------------  -----------------------------
+KXTRUMPMENTION-26OCT19-CEAS   sell    yes   4            100  2026-10-18 03:55:12.482533+00  2026-10-18 05:06:11.848028+00
+KXTRUMPMENTION-26OCT19-CEAS   sell    yes   1            100  2026-10-18 16:47:32.893706+00  2026-10-18 16:47:32.893706+00
+KXTRUMPMENTION-26OCT25-CEAS   buy     yes   3            333  2026-10-18 16:47:32.899657+00  2026-10-18 16:47:32.899657+00
+KXTRUMPMENTION-26OCT25-CEAS   sell    yes   1            333  2026-10-18 16:51:57.15724+00   2026-10-18 16:51:57.15724+00 
+KXTRUMPMENTION-26OCT25-PEAC   buy     yes   2            5    2026-10-18 22:02:33.639569+00  2026-10-18 22:02:33.639569+00
+KXTRUMPMENTIONB-26OCT19-NQE   buy     yes   6            166  2026-10-19 01:00:46.464113+00  2026-10-19 01:00:46.464113+00
+KXTRUMPMENTIONB-26OCT19-NQE   sell    yes   6            41   2026-10-19 01:36:00.619818+00  2026-10-19 01:45:01.801138+00
+KXTRUMPMENTIONB-26OCT19-NQE   sell    yes   1            124  2026-10-19 01:58:24.601203+00  2026-10-19 01:58:24.608045+00
+KXTRUMPMENTIONB-26OCT19-FENT  buy     yes   7            142  2026-10-19 04:57:01.598439+00  2026-10-19 07:52:29.296101+00
+KXTRUMPMENTIONB-26OCT19-FENT  sell    yes   6            143  2026-10-19 12:36:34.221041+00  2026-10-19 14:51:10.105564+00
 
-(84 rows)
+(10 rows)
