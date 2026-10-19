@@ -3108,3 +3108,29 @@ keep halving the break-even half, which is not the operator's "half at the ask, 
 **Fix.** When a re-price cancels the sells, each role's remaining size is remembered and the sells
 are re-placed at those sizes (capped by the position). Held in memory: a restart in between
 re-splits what is left, as before. No price, cap or safety rule changes.
+
+### 9.63 Bids step aside 48h before the event; a fill pulls its event and its word (2026-10-19)
+
+**Evidence (live, 2026-10-13 → 10-19).** Six mention-market fills, all on a seller sweep:
+OIL (same day as the event, −$6.89), NQE (~16h before, −$4.72), FENT (~12h, −$1.36), PALE
+(~42h, −$2.50), CEAS Oct 19 (~2 days, −$4.14), CEAS Oct 25 (~7 days, −$6.89). Five of six came
+within ~2 days of the event (−$19.6 of −$26.5). Fills cluster: NQE then FENT 4h later in one event;
+CEAS Oct 19 then CEAS Oct 25 a day later on one word. After the stops, prices did not come back
+(NQE bid stayed 1–2c for 14h), so the loss is taken at the fill — the stop only realises it.
+Rewards over the same days: +$3.74 (operator screenshot, lifetime $14.65).
+
+**Decision (operator, 2026-10-19: "go build one and two").**
+1. **Step aside 48h out** (`ENTRY_STEP_ASIDE_HOURS` = 48, `live.entry_cutoff`). A resting bid is
+   cancelled (`pre_event`) once its event is within 48h of the §9.55 cutoff, and no new bid is
+   placed there (the `MIN_HOURS_BEFORE_EVENT` margin now counts from this cutoff). A held leg's
+   resting sells (§9.60–9.62) still run to the §9.55 cutoff. Cost: each programme's last two days
+   of reward.
+2. **Fill contagion** (`FILL_CONTAGION_HOURS` = 12, `runner._retire_contagion`). For 12h after one
+   of our bids fills, our other resting bids in the same event, and on the same word
+   (`live.market_word`, the ticker after its event) in other events, are cancelled
+   (`fill_contagion`) and no new bid goes there. Read from the fills table every cycle, so a
+   restart keeps it. A fill that hits two markets in the same second is not prevented.
+
+The stop-loss is unchanged (§9.53). **What would change our mind:** over the next two weeks, fill
+losses per week should fall well below confirmed reward per week; if fills simply move earlier
+(more than 48h out), the window or the universe is wrong.

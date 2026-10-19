@@ -113,6 +113,12 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _entry_cutoff(row) -> datetime | None:
+    """§9.63: `_pre_event_cutoff` less ENTRY_STEP_ASIDE_HOURS — when a resting BID steps aside."""
+    cutoff = _pre_event_cutoff(row)
+    return None if cutoff is None else cutoff - timedelta(hours=limm.ENTRY_STEP_ASIDE_HOURS)
+
+
 def _pre_event_cutoff(row) -> datetime | None:
     """`live.pre_event_cutoff` for a programme row (§9.55)."""
     return limm.pre_event_cutoff(
@@ -260,6 +266,9 @@ class IncentiveLiveRunner:
         #: §9.60: ticker -> when its resting sell was last cancelled. No order is sized from a
         #: position read older than that (the sell may have part-filled until the cancel).
         self._sell_cancelled_at: dict[str, datetime] = {}
+        #: §9.63: (events, words) with a fill of one of our bids in the last FILL_CONTAGION_HOURS,
+        #: refreshed every cycle from the fills table.
+        self._contagion: tuple[set[str], set[str]] = (set(), set())
         #: §9.62: ticker -> {role: contracts} of the resting sells a re-price just cancelled, so
         #: they are re-placed at the same sizes. In memory: a restart re-splits what is left.
         self._sell_sizes: dict[str, dict[str, int]] = {}
@@ -339,6 +348,10 @@ class IncentiveLiveRunner:
         stepped = self._retire_before_event(session, executor, now)
         if stepped:
             summary["outcomes"].update(stepped)
+        self._load_contagion(session, now)
+        contagion = self._retire_contagion(session, executor, now)
+        if contagion:
+            summary["outcomes"]["fill_contagion"] = contagion
         out_of_band = self._retire_out_of_band(session, executor, now)
         if out_of_band:
             summary["outcomes"]["out_of_band"] = out_of_band
@@ -663,7 +676,7 @@ class IncentiveLiveRunner:
             row = programs.get(ticker)
             if row is None:
                 continue            # programme gone: `_retire_unpaid_pairs` owns that case
-            cutoff = _pre_event_cutoff(row)
+            cutoff = _entry_cutoff(row)     # §9.63: ENTRY_STEP_ASIDE_HOURS before the event
             if cutoff is not None and now < cutoff:
                 continue
             reason = "pre_event" if cutoff is not None else "out_of_universe"
@@ -673,6 +686,51 @@ class IncentiveLiveRunner:
                 logger.info(f"incentive book: {reason}: cancelled resting bid on {ticker}"
                             + (f" (cutoff {cutoff.isoformat()})" if cutoff else ""))
         return out
+
+    def _load_contagion(self, session, now: datetime) -> None:
+        """§9.63: the events and words where one of our BIDS filled in the last
+        FILL_CONTAGION_HOURS, read from the fills themselves (so a restart keeps them)."""
+        self._contagion = (set(), set())
+        if limm.FILL_CONTAGION_HOURS <= 0:
+            return
+        since = now - timedelta(hours=limm.FILL_CONTAGION_HOURS)
+        rows = session.execute(
+            select(m.LiveOrder.market_ticker, m.LiveOrder.event_ticker)
+            .join(m.Fill, m.Fill.kalshi_order_id == m.LiveOrder.kalshi_order_id)
+            .where(m.LiveOrder.strategy == limm.LIVE_TAG, m.LiveOrder.action == "buy",
+                   m.Fill.filled_at >= since)).all()
+        events, words = self._contagion
+        for ticker, event in rows:
+            if event:
+                events.add(event)
+            word = limm.market_word(ticker, event)
+            if word:
+                words.add(word)
+
+    def _contagion_blocks(self, ticker: str | None, event_ticker: str | None) -> bool:
+        events, words = self._contagion
+        if event_ticker and event_ticker in events:
+            return True
+        word = limm.market_word(ticker, event_ticker)
+        return bool(word and word in words)
+
+    def _retire_contagion(self, session, executor, now: datetime) -> int:
+        """§9.63: cancel a purely resting bid in an event, or on a word, where one of our bids
+        filled in the last FILL_CONTAGION_HOURS. Held positions are left to the exit rules."""
+        if not self._contagion[0] and not self._contagion[1]:
+            return 0
+        n = 0
+        for ticker, working in self._stale_held_pairs(session, now, min_age_seconds=0.0).items():
+            event = next((r.event_ticker for r in working if r.event_ticker), None)
+            if not self._contagion_blocks(ticker, event):
+                continue
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="fill_contagion"):
+                n += 1
+                logger.info(f"incentive book: fill_contagion: cancelled resting bid on {ticker} "
+                            f"(a bid in its event or on its word filled in the last "
+                            f"{limm.FILL_CONTAGION_HOURS:.0f}h)")
+        return n
 
     def _retire_out_of_band(self, session, executor, now: datetime) -> int:
         """§9.57: cancel a purely resting single bid whose side's reference price has been above
@@ -1425,10 +1483,12 @@ class IncentiveLiveRunner:
             if limm.EVENT_MENTION_ONLY:
                 # §9.55: event-tied mention markets only, and only with time left to earn
                 # before the bot must step aside for the event.
-                cutoff = _pre_event_cutoff(row)
+                cutoff = _entry_cutoff(row)
                 if cutoff is None or (cutoff - now).total_seconds() / 3600.0 \
                         < limm.MIN_HOURS_BEFORE_EVENT:
                     continue
+            if self._contagion_blocks(row.market_ticker, row.event_ticker):
+                continue            # §9.63: a recent fill in this event or on this word
             end = _aware(row.end_date)
             if end is None:
                 continue

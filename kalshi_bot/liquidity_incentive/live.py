@@ -202,6 +202,34 @@ def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str
     d = event_date(event_ticker)
     return datetime(d.year, d.month, d.day, EVENT_DATE_FALLBACK_HOUR_UTC, tzinfo=timezone.utc)
 
+#: §9.63 (operator, 2026-10-19): entries step aside this long before the pre-event cutoff, not
+#: just at it. 5 of the 6 mention-market fills since 2026-10-13 came within ~2 days of the event
+#: (−$19.6 of −$26.5). Unfilled bids are cancelled and no new bid is placed inside the window; a
+#: held leg's resting sells still run to `pre_event_cutoff`.
+ENTRY_STEP_ASIDE_HOURS = 48.0
+#: §9.63: after one of our bids fills, our other resting bids in the same event and on the same
+#: word in other events are cancelled, and no new bid goes there, for this long. A fill is the
+#: sign of a seller who knows something (NQE then FENT, one event, 4h apart; CEAS Oct 19 then
+#: CEAS Oct 25, one word, a day apart).
+FILL_CONTAGION_HOURS = 12.0
+
+
+def entry_cutoff(**kw):
+    """§9.63: the last moment a bid may rest or be placed — `pre_event_cutoff` less
+    ENTRY_STEP_ASIDE_HOURS. None outside the event-mention universe."""
+    cutoff = pre_event_cutoff(**kw)
+    return None if cutoff is None else cutoff - timedelta(hours=ENTRY_STEP_ASIDE_HOURS)
+
+
+def market_word(ticker: str | None, event_ticker: str | None) -> str | None:
+    """The word a mention market is about — the ticker's suffix after its event
+    (`KXTRUMPMENTION-26OCT19-CEAS` -> `CEAS`). None when the ticker is not `<event>-<word>`."""
+    t, ev = (ticker or ""), (event_ticker or "")
+    if ev and t.startswith(ev + "-") and len(t) > len(ev) + 1:
+        return t[len(ev) + 1:].upper()
+    return None
+
+
 #: How an entry is quoted (§9.48, operator decision 2026-10-04, probe LIMM-PLACEMENT P1):
 #:   "cheap_side" — ONE bid, on the side whose reference price is <= MAX_PRICE_CENTS (the
 #:                  cheaper if both), AT that reference price, so it scores full credit;

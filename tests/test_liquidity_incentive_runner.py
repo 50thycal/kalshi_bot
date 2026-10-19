@@ -65,6 +65,9 @@ def _generic_universe(monkeypatch):
     monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 2)
     monkeypatch.setattr(limm, "MAX_STRATEGY_EXPOSURE_USD", 50.0)
     monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 1)
+    # §9.55–9.62 tests were written against the 15-minute cutoff; §9.63's 48h step-aside has
+    # its own tests at the end of this file.
+    monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 0.0)
 
 
 def _book(yes, no):
@@ -1947,3 +1950,102 @@ def test_a_re_price_keeps_each_halfs_size(live_db, settings):
     assert _managed(out) == {"resting_sell:placed": 1}
     assert [(o["price"], o["count"], o["client_order_id"][:11]) for o in client.placed] == [
         ("0.1400", "50.00", "limmsell:b:")]
+
+
+# --- §9.63: bids step aside 48h before the event; a fill pulls its event and word -------------
+
+def test_a_bid_steps_aside_48h_before_its_event(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 48.0)
+    client = FakeClient({})
+    with db.session_scope() as s:
+        # Programme ends (== event) in 40h: inside 48h, so the resting bid goes.
+        _mention(s, "KXTRUMPMENTION-26SEP20-SOON", event="KXTRUMPMENTION-26SEP20", hours=40.0)
+        _resting(s, "KXTRUMPMENTION-26SEP20-SOON")
+        # Event in 100h: outside the window, kept.
+        _mention(s, "KXTRUMPMENTION-26SEP22-LATE", event="KXTRUMPMENTION-26SEP22", hours=100.0)
+        _resting(s, "KXTRUMPMENTION-26SEP22-LATE")
+        runner = run.IncentiveLiveRunner(client, settings)
+        out = runner._retire_before_event(s, _exec(settings, client), NOW)
+    assert out == {"pre_event": 1}
+    assert client.canceled == ["K-KXTRUMPMENTION-26SEP20-SOON"]
+
+
+def test_no_entry_inside_the_48h_window(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 48.0)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXTRUMPMENTION-26SEP20-NEAR": book, "KXTRUMPMENTION-26SEP25-FAR": book})
+    with db.session_scope() as s:
+        _mention(s, "KXTRUMPMENTION-26SEP20-NEAR", event="KXTRUMPMENTION-26SEP20", hours=50.0)
+        _mention(s, "KXTRUMPMENTION-26SEP25-FAR", event="KXTRUMPMENTION-26SEP25", hours=120.0)
+        out = _cycle(client, settings, s)
+    # NEAR's entry cutoff is 2h out (< MIN_HOURS_BEFORE_EVENT): never fetched.
+    assert client.asked == ["KXTRUMPMENTION-26SEP25-FAR"]
+    assert out["placed"] == 1
+
+
+def _filled_bid(s, ticker, event, *, minutes_ago=30):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
+                      side="yes", action="buy", limit_price=5, quantity=200, status="filled",
+                      kalshi_order_id=f"K-F-{ticker}", client_order_id=f"F-{ticker}",
+                      created_at=NOW - timedelta(hours=2)))
+    s.add(m.Fill(kalshi_fill_id=f"FF-{ticker}", kalshi_order_id=f"K-F-{ticker}",
+                 market_ticker=ticker, side="yes", action="buy", price=5, quantity=200,
+                 filled_at=NOW - timedelta(minutes=minutes_ago)))
+    s.flush()
+
+
+def _resting_in(s, ticker, event):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
+                      side="yes", action="buy", limit_price=3, quantity=300, status="resting",
+                      kalshi_order_id=f"K-{ticker}", client_order_id=f"K-{ticker}",
+                      created_at=NOW - timedelta(hours=2)))
+    s.flush()
+
+
+def test_a_fill_pulls_bids_in_its_event_and_on_its_word(live_db, settings):
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _filled_bid(s, "KXTRUMPMENTION-26OCT19-NQE", "KXTRUMPMENTION-26OCT19")
+        _resting_in(s, "KXTRUMPMENTION-26OCT19-FENT", "KXTRUMPMENTION-26OCT19")   # same event
+        _resting_in(s, "KXTRUMPMENTION-26OCT25-NQE", "KXTRUMPMENTION-26OCT25")    # same word
+        _resting_in(s, "KXTRUMPMENTION-26OCT25-PEAC", "KXTRUMPMENTION-26OCT25")   # neither
+        runner = run.IncentiveLiveRunner(client, settings)
+        runner._load_contagion(s, NOW)
+        n = runner._retire_contagion(s, _exec(settings, client), NOW)
+    assert n == 2
+    assert sorted(client.canceled) == ["K-KXTRUMPMENTION-26OCT19-FENT",
+                                       "K-KXTRUMPMENTION-26OCT25-NQE"]
+
+
+def test_an_old_fill_blocks_nothing(live_db, settings):
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _filled_bid(s, "KXTRUMPMENTION-26OCT19-NQE", "KXTRUMPMENTION-26OCT19",
+                    minutes_ago=int(limm.FILL_CONTAGION_HOURS * 60) + 5)
+        _resting_in(s, "KXTRUMPMENTION-26OCT19-FENT", "KXTRUMPMENTION-26OCT19")
+        runner = run.IncentiveLiveRunner(client, settings)
+        runner._load_contagion(s, NOW)
+        assert runner._retire_contagion(s, _exec(settings, client), NOW) == 0
+    assert client.canceled == []
+
+
+def test_no_new_bid_in_a_contagion_blocked_event_or_word(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 10)
+    monkeypatch.setattr(limm, "MAX_STRATEGY_EXPOSURE_USD", 100.0)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXTRUMPMENTION-26OCT25-NQE": book, "KXTRUMPMENTION-26OCT25-PEAC": book})
+    with db.session_scope() as s:
+        _filled_bid(s, "KXTRUMPMENTION-26OCT19-NQE", "KXTRUMPMENTION-26OCT19")
+        _program(s, "KXTRUMPMENTION-26OCT25-NQE", event="KXTRUMPMENTION-26OCT25")
+        _program(s, "KXTRUMPMENTION-26OCT25-PEAC", event="KXTRUMPMENTION-26OCT25B")
+        out = _cycle(client, settings, s)
+    assert "KXTRUMPMENTION-26OCT25-NQE" not in client.asked
+    assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTRUMPMENTION-26OCT25-PEAC"
+
+
+def test_market_word():
+    assert limm.market_word("KXTRUMPMENTION-26OCT19-CEAS", "KXTRUMPMENTION-26OCT19") == "CEAS"
+    assert limm.market_word("KXTEST-A", "KXTEST-A") is None
+    assert limm.market_word("KXTEST-A", None) is None
