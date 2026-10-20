@@ -130,3 +130,10 @@ Step 4, **`CUTOVER`, has not been sent.** It is awaiting the operator's explicit
 - `actor_role = PLATFORM_CHANGE_REVIEW`
 
 It goes through `EXPERIMENT_OS_PLATFORM_COMMAND`, which redeploys the worker once.
+
+**2026-10-20.** Four experiments registered after §3 have been added as I0/NO_ACTION and applied:
+`mmsell-rain-season`, `mmsell-temperature-season`, `mmsell-weather-bands` and `mmsell-win-set`
+(`pcr-fbtx-impacts-20261020`, impacts #44–#47). The activation gate now reads `safe`. The taxonomy
+fingerprint on `b3ee7fb` is still `350e7f03…`, so the payload above is unchanged and the cutover
+can run. It still needs the operator's go. The reasons for each row are in
+`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`.
