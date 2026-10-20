@@ -1,4 +1,22 @@
 # ops request [READ]
-# type=noop
-# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:47:02Z
-(noop — nothing to do)
+# type=db  id=ci1346b
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:47:08Z
+k     market_ticker                 t                              v                       
+----  ----------------------------  -----------------------------  ------------------------
+chg   KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 12:21:39.258482+00  buy yes 4c x250 repriced
+chg   KXMAMDANIMENTION-26NOV18-NQE  2026-10-20 13:14:59.72005+00   buy yes 2c x500 resting 
+chg   KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 13:23:53.325728+00  buy yes 10c x100 resting
+open  KXTRUMPMENTION-26OCT24-FRAU   2026-10-19 22:41:21.806951+00  buy yes 8c x125 resting 
+open  KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting  
+open  KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting  
+open  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.396416+00  sell no 6c x71 resting  
+open  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.45522+00   sell no 7c x71 resting  
+open  KXTRUMPMENTIONB-26OCT27-NQE   2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting 
+open  KXTRUMPMENTIONB-26OCT27-CRYP  2026-10-20 08:31:09.145052+00  buy yes 1c x500 resting 
+open  KXTRUMPMENTION-26OCT27-CEAS   2026-10-20 08:35:07.982992+00  buy yes 3c x333 resting 
+open  KXTRUMPMENTION-26OCT27-SAVE   2026-10-20 11:13:51.49815+00   buy no 8c x125 resting  
+open  KXMAMDANIMENTION-26NOV18-NQE  2026-10-20 13:14:59.72005+00   buy yes 2c x500 resting 
+open  KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 13:23:53.325728+00  buy yes 10c x100 resting
+snap  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 13:37:04.594493+00  94/5                    
+
+(15 rows)
