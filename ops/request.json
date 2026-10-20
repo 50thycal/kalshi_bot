@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci0546d", "sql": "select market_ticker, event_ticker, action, side, limit_price, quantity, status, coalesce(cancel_reason,'') cr, created_at::text from live_orders where strategy='Alimm1' and (status in ('resting','partial','submitted') or (market_ticker like '%26OCT22%' and created_at > '2026-10-17')) order by market_ticker, created_at"}
+{"type":"noop"}
