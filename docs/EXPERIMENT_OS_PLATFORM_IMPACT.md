@@ -525,6 +525,87 @@ transition, record a verdict, fabricate a Version or force:
 | `apply_accepted_recompute: true` | `CUTOVER` | applies the revision's accepted RECOMPUTE dispositions at the measured instant. Before this nothing could apply one, so an I1 left its experiment BLOCKED_PLATFORM after activation |
 | `expect_metrics_fingerprint` | `CUTOVER` | the METRICS_ENGINE analogue of the execution proof: defers on a worker whose `live_attribution.py` is not the reviewed one, and activates only a METRICS_ENGINE revision with that fingerprint |
 
+## Six new experiments on two pending revisions (Platform Change Review, 2026-10-20)
+
+Two PENDING revisions predated six active experiments, so the Control Tower read both as "NOT
+safe to activate — unaccounted". Every row below is recorded and APPLIED. Both revisions now read
+`unaccounted=[]`, `safe=true` (ops `pcr-own-review-2`, `pcr-fb-review-2`). Nothing was activated.
+
+```
+PLATFORM CHANGE: MARKET_TAXONOMY settlement_repair_2026_08_24 → football_coverage_2026_10_12 (#13)
+                 EXECUTION_ENGINE live_executor_2026_08 → shared_primary_ownership_20260921 (#12)
+SEMANTIC EFFECT: #13 adds 24 NCAAF/NFL prefixes, all in_play; no existing prefix moves.
+                 #12 adds a market-ownership register keyed by ACTOR (main/chatgpt/claude). The
+                 worker claims every market it writes as `main` and hides desk-owned records.
+AFFECTED (new):  rain-season, temperature-season, weather-bands, win-set (both revisions);
+                 cell-size, size-split (#12 only). Discovery is `affected_experiments()`.
+HISTORICAL RECOMPUTATION: none needed; every row is I0.
+CUTOVER PLAN:    unchanged, and not taken. Both are owner hard stops. #12 cannot cut over as
+                 registered (see below).
+```
+
+| revision | experiment | state | class | impact # | reason, in one line |
+|---|---|---|---|---|---|
+| #13 | `mmsell-rain-season` | PAPER | I0 | 44 | `onlyx=KXRAIN` is exact. No type or mode key. KXRAIN's classification is unchanged |
+| #13 | `mmsell-temperature-season` | PAPER | I0 | 45 | `only=KXHIGH+KXLOW` is a substring match, and none of the 24 contains either |
+| #13 | `mmsell-weather-bands` | PAPER | I0 | 46 | `only=KXHIGH`, `only=KXHIGHT`, `onlyx=KXRAIN`, so none admits a football series |
+| #13 | `mmsell-win-set` | LIVE_CANARY | I0 | 47 | `onlyx` = 7 exact series plus `universe=graduated`, with no type or regime key. The 24 move only to IN_REVIEW |
+| #12 | rain / temperature / bands | PAPER | I0 | 48–50 | paper only. Ownership acts on authenticated `/portfolio/` and order paths only. Same as #14–#18 |
+| #12 | `mmsell-price-ceiling-cell-size` | LIVE_CANARY | I0 | 51 | see the ruling below. 246 of 246 live markets in epoch 2 are claimed `main` |
+| #12 | `mmsell-price-ceiling-size-split` | LIVE_CANARY | I0 | 52 | 283 of 283 in epoch 3 |
+| #12 | `mmsell-win-set` | LIVE_CANARY | I0 | 53 | 20 of 20 in epoch 2. The WS-027 pair is tag-level and both tags claim `main` |
+
+Recorded by `RECORD_IMPACTS` `pcr-fbtx-impacts-20261020` and `pcr-own-impacts-20261020`, both
+SUCCEEDED. Each row carries its full written rationale.
+
+**The #13 check** ran against `kalshi_bot/mmsell/market_types.py` on `b3ee7fb`. No football series
+equals an `onlyx` entry or contains an `only` token. No football prefix is a prefix of any series
+these books admit, so `classify()` returns the same value for everything they read. None of the
+four books has `mtype`, `xmtype`, `mode` or `bigtypes`. For win-set, `category_of` was a screen
+used at registration time, not a runtime selector, so no market-type or regime path exists that
+could admit a football series.
+
+### Why #12 is I0 for three live canaries when #10–#13 are I2
+
+The precedent (#10–#13, 2026-09-21) recorded I2 for the four live canaries that existed then. Its
+reasoning was that the register *can* exclude markets a desk has claimed, and that its first
+deployment (PRs #449/#452) was never recorded as a boundary. We measured both points again on
+2026-10-20:
+
+| measure | read | result |
+|---|---|---|
+| claims by owner, namespace `kalshi-primary` | `pcr-own-db-1` | 1,117 claims, **all `main`**, and **zero desk claims ever**. The desks run on isolated subaccounts (DEC-023) |
+| markets each current live epoch traded that are claimed `main` | `pcr-own-db-3` | size-split 283/283 (since 10-04), cell-size 246/246 (10-11), win-set 20/20 (10-16). For comparison, contest-cap is 374/1,042 and liquidity-incentive 198/209 |
+
+1. **The register changes nothing between tags.** Every main-worker tag claims as `main`, so it
+   cannot refuse or hide one main tag's market from another. The WS-027 sharing between `Kmmsell10`
+   and `Nmmsell10`, and its per-fill attribution and gating, sit entirely outside it.
+2. **The one effect it could have, excluding desk-claimed markets, has never happened.**
+3. **The register was live for each of these three epochs from its first order.** The cutover
+   would close the epoch at an instant where nothing these books run under changed. The epoch rule
+   needs a world change, so I2 does not fit, and an applied I0 says exactly what is true. The four
+   older epochs straddle the unrecorded first deployment, which is the case their I2 exists for.
+
+This record does not cover any desk claim in `kalshi-primary`. That would be a new execution
+change and would need its own review.
+
+### Found on the way: #12 cannot cut over as registered
+
+`CUTOVER` for an `EXECUTION_ENGINE` revision has two conditions. The worker's
+`execution_fingerprint()` must equal `expect_execution_fingerprint`, and that value must equal the
+fingerprint registered on the revision. #12 registered `5eeb269b…`. The current default branch
+computes `f1e295bc…`, because 15 commits since 2026-09-21 touched the six hashed files. The
+result:
+
+- If the registered value is sent, the command defers on every boot and never runs.
+- If the current value is sent, it is REJECTED with `EXECUTION_REVISION_MISMATCH`.
+
+An accepted-but-unapplied I2 blocks evidence whatever the revision's status. The transport also has
+no exempt action. So #10–#13 have no path to clear, and four gate families stay `BLOCKED_PLATFORM`
+indefinitely. One of them is `liquidity-incentive-mm`'s live keep gate, a KILL gate on a live book.
+This is an owner decision, not something this session fixed. #13's taxonomy fingerprint still
+matches (`350e7f03…`), so its cutover can run.
+
 ## Scope boundary
 
 No Evo integration, no Claude session roles, no automatic promotions, no

@@ -107,3 +107,6 @@ shared market's reconciliation (§6 line 6).
 **Side effect to route:** registering `mmsell-win-set` added it to the unaccounted list of the two
 other pending revisions (`EXECUTION_ENGINE:shared_primary_ownership_20260921`,
 `MARKET_TAXONOMY:football_coverage_2026_10_12`); whoever cuts those over must include it.
+**Routed and recorded 2026-10-20:** I0/NO_ACTION on both revisions (#47 and #53, applied). The
+win-set gates are unaffected. See `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`, "Six new experiments
+on two pending revisions".
