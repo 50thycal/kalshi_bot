@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "b3ee7fb085fafe5637f4cdcd355dd06eb1b18060",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-20T13:22:54Z",
+  "id": "pcr-own-env-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_PLATFORM_COMMAND": {
+        "after": "<redacted 4902 bytes, sha256:8686998cabf0fcd7>",
+        "before": "<redacted 2513 bytes, sha256:6045e9b840144509>",
+        "requested": "<redacted 4902 bytes, sha256:8686998cabf0fcd7>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_PLATFORM_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_PLATFORM_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_PLATFORM_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "platform-change-review",
+    "purpose": "RECORD_IMPACTS shared_primary_ownership_20260921 (6 x I0)"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-own-env-1.receipt.json",
+  "result_file": "ops/results/pcr-own-env-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/39429845409",
+  "service": "main",
+  "started_at": "2026-10-20T13:22:48Z",
+  "targets": [
+    "EXPERIMENT_OS_PLATFORM_COMMAND"
+  ],
+  "type": "env"
+}
