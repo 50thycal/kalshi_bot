@@ -1,1 +1,1 @@
-{"type":"xos","command":"platform","args":["review","MARKET_TAXONOMY:football_coverage_2026_10_12"],"id":"pcr-fb-review-1","actor":"platform-change-review"}
+{"type":"db","id":"pcr-own-db-1","actor":"platform-change-review","max_rows":50,"sql":"select owner, namespace, count(*) as n from kalshi_market_ownership group by owner, namespace order by owner"}
