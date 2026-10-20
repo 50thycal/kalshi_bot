@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=db  id=pcr-own-fp-1
-# actor=platform-change-review
-# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:35:07Z
-id  version                            fingerprint                                                       status   created_at                      
---  ---------------------------------  ----------------------------------------------------------------  -------  --------------------------------
-12  shared_primary_ownership_20260921  5eeb269bbd4d3177748228c1bf23f1e2f47bf118234b04f92bd13ef025021d74  pending  2026-09-21 12:47:43.139514+00:00
-13  football_coverage_2026_10_12       350e7f03ed72d68d3718dfa131aa90a5fb7cc54336c250c79df915c2ade322d1  pending  2026-10-12 23:40:11.195398+00:00
-
-(2 rows)
+# type=noop
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:36:48Z
+(noop — nothing to do)
