@@ -234,6 +234,21 @@
     .pnlp.fs .seg button{flex:none;padding:4px 8px}
   }
 
+  /* ---- Liquidity-incentive book chart -------------------------------------------------
+     The same three validated mark colours as the pair chart, assigned by entity in fixed
+     order: net = blue, reward credits = amber, fill P&L = purple. */
+  .incp{--c-net:#6a87f5;--c-rew:#bb8a2c;--c-fill:#bb63ca}
+  .incbox{position:relative;height:clamp(260px,44vh,480px);min-height:0}
+  .incbox.dimmed svg{opacity:.45;transition:opacity .2s}
+  .incbox svg,.incday svg{display:block;touch-action:pan-y}
+  .incbox .empty{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center}
+  .incday-hd{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px}
+  .incday{position:relative;height:92px}
+  .est{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--warn);border:1px solid #4a3c1c;border-radius:5px;padding:0 4px;margin-left:2px}
+  #inctable table{font-size:12px} #inctable td,#inctable th{padding:4px 8px}
+  #inctable{max-height:320px;overflow:auto}
+
   @media(max-width:700px){
     .pnlp{padding:10px}
     .fsbtn .fslbl{display:none}
@@ -348,6 +363,29 @@
   </div>
   </div>
 
+  <!-- 3b. the live liquidity-incentive book: book-level, not a pair (it has no paper twin) -->
+  <div class="m-chart" id="incsec">
+  <h2>Liquidity-incentive book <span class="tag live" id="inctag" style="text-transform:none;letter-spacing:0"></span>
+    <span class="dim" style="text-transform:none;letter-spacing:0">— overall P&amp;L: fills + reward credits, all markets</span></h2>
+  <section class="panel pnlp incp" id="incpanel" aria-label="Liquidity-incentive book P&L over time">
+    <div class="pnl-top"><div class="pnl-stats" id="incstats"></div></div>
+    <div class="pnl-ctl">
+      <div class="seg" id="incrange" role="group" aria-label="Time window"></div>
+      <div class="chips" id="incseries" role="group" aria-label="Lines shown"></div>
+    </div>
+    <div class="incbox" id="incchart"></div>
+    <div class="incday-hd"><span>Net per day (UTC) — rewards in, fill P&amp;L booked</span><span id="incdaymeta"></span></div>
+    <div class="incday" id="incdaily"></div>
+    <div class="pnl-foot">
+      <span class="dim" id="incmeta"></span>
+      <details class="pnlmore"><summary>About this chart</summary>
+        <div class="note" id="incnote"></div></details>
+      <details class="pnlmore"><summary>Data table</summary>
+        <div class="scroll" id="inctable"></div></details>
+    </div>
+  </section>
+  </div>
+
   <!-- 4. divergence -->
   <div class="m-compare">
   <h2>Divergence analysis</h2>
@@ -423,6 +461,7 @@
   </div>
 </div>
 <div class="tip" id="tip" role="status"></div>
+<div class="tip" id="inctip" role="status"></div>
 
 <script>
 "use strict";
@@ -1131,6 +1170,292 @@ function renderPriceChart(){
   $("#pricenote").innerHTML = esc(pr.note) + (evs ? `<div style="margin-top:6px">${evs}</div>` : "");
 }
 
+/* ============ Liquidity-incentive book: overall P&L ============
+   Book-level, not a pair: this book has no paper twin, and most of its money is the reward for
+   resting, which the pair chart cannot see. The series is livedash.incentive_pnl; the last point
+   of Net is the landing-page card's all-time net. Three reading aids beyond the curve:
+   the parts (reward credits vs fill P&L -- the thesis is the first outrunning the second), the
+   fills and payouts on the time axis (which fill made which drop), and the net per day with a
+   7-day pace (an ESTIMATE, labelled) beside the $100/month goal. The book tag comes from the
+   payload; none is written here. */
+const INC_WINDOWS = [["24","1D"],["72","3D"],["168","1W"],["336","2W"],["720","1M"],["","All"]];
+const INC_SERIES = [
+  {id:"net",     label:"Net (fills + rewards)",    col:"--c-net",  dash:"",        w:2.25, k:"net"},
+  {id:"rewards", label:"Reward credits",           col:"--c-rew",  dash:"",        w:2,    k:"rewards"},
+  {id:"fills",   label:"Fill P&L (realized)",      col:"--c-fill", dash:"",        w:2,    k:"realized"},
+  {id:"total",   label:"Net incl. open positions", col:"--c-net",  dash:"1.5 3.5", w:1.75, k:"total"},
+];
+const INC = {win:"", on:new Set(["net","rewards","fills"]), events:true, data:null, view:null, seq:0};
+try{
+  const saved = JSON.parse(localStorage.getItem("livedash.inc") || "null");
+  if(saved){
+    if(INC_WINDOWS.some(w => w[0] === saved.win)) INC.win = saved.win;
+    if(Array.isArray(saved.on)){
+      const on = saved.on.filter(i => INC_SERIES.some(x => x.id === i));
+      if(on.length) INC.on = new Set(on);
+    }
+    if(typeof saved.events === "boolean") INC.events = saved.events;
+  }
+}catch(e){ /* storage unavailable: defaults */ }
+function saveIncPrefs(){
+  try{ localStorage.setItem("livedash.inc", JSON.stringify({win:INC.win, on:[...INC.on], events:INC.events})); }
+  catch(e){ /* storage unavailable */ }
+}
+
+function renderIncControls(){
+  $("#incrange").innerHTML = INC_WINDOWS.map(([v,l]) =>
+    `<button type="button" data-win="${v}" aria-pressed="${INC.win===v}">${l}</button>`).join("");
+  const panel = $("#incpanel");
+  $("#incseries").innerHTML = INC_SERIES.map(x =>
+    `<button type="button" class="chip" data-ser="${x.id}" aria-pressed="${INC.on.has(x.id)}">${dashIcon(cssv(panel, x.col), x.dash, 2)}${esc(x.label)}</button>`
+  ).join("") + `<span class="chipsep" aria-hidden="true"></span>` +
+    `<button type="button" class="chip opt" data-events="1" aria-pressed="${INC.events}" title="Fills and reward payouts along the time axis">Fills &amp; payouts</button>`;
+}
+
+async function loadInc(){
+  const seq = ++INC.seq;
+  const box = $("#incchart"); if(box.querySelector("svg")) box.classList.add("dimmed");
+  const since = INC.win ? new Date(Date.now()-Number(INC.win)*3600e3).toISOString() : "";
+  try{
+    const d = await getJSON("/api/incentives/book/pnl" + qs({since, points: INC.win && Number(INC.win) < 72 ? 300 : 600}));
+    if(seq !== INC.seq) return;          // a newer window was asked for meanwhile
+    INC.data = d;
+    renderInc();
+  }catch(e){
+    if(seq !== INC.seq) return;
+    box.classList.remove("dimmed");
+    box.innerHTML = `<div class="secerr">Could not load the incentive book — ${esc(e.message)}</div>`;
+  }
+}
+
+function renderInc(){
+  const d = INC.data; if(!d) return;
+  $("#inctag").textContent = d.book || "";
+  renderIncControls();
+  renderIncStats();
+  drawInc();
+  renderIncTable();
+  const pts = d.points || [];
+  $("#incmeta").textContent = pts.length
+    ? `${pts.length} points · ${fmtWhen(new Date(pts[0].at))} → ${fmtWhen(new Date(pts[pts.length-1].at))}` : "";
+  $("#incnote").innerHTML = esc(d.note || "") +
+    `<br>Reward credits step up when the balance ledger sees the payout; fill P&amp;L steps when a
+     market's position snapshot first shows it flat. The 7-day pace is an <b>estimate</b>: the last
+     seven days' net scaled to 30 days, a run rate and not a forecast. The $100/month goal is for
+     all books together, shown for scale. Times are in your local time zone; days are UTC.`;
+}
+
+function renderIncStats(){
+  const st = INC.data.stats, panel = $("#incpanel");
+  if(!st){ $("#incstats").innerHTML = `<span class="dim">${esc(INC.data.note || "No data yet.")}</span>`; return; }
+  const k = (label, col) => `<span class="k"><i style="background:${cssv(panel,col)}"></i>${esc(label)}</span>`;
+  const winLabel = (INC_WINDOWS.find(w => w[0] === INC.win) || [,"window"])[1];
+  const pace = st.est_pace_per_month_usd;
+  $("#incstats").innerHTML =
+    `<div class="stat">${k("Net, all time","--c-net")}
+       <span class="v1 ${sign(st.net_usd)}">${esc(smoney(st.net_usd))}</span>
+       <span class="sub">${esc(smoney(st.net_change_in_window_usd))} over ${esc(winLabel === "All" ? `${st.running_days} days` : winLabel)}</span></div>
+     <div class="stat">${k("Reward credits","--c-rew")}
+       <span class="v2 ${sign(st.rewards_usd)}">${esc(smoney(st.rewards_usd))}</span>
+       <span class="sub">${esc(st.reward_payouts)} payouts${st.unconfirmed_rewards_usd ? ` · ${esc(money2(st.unconfirmed_rewards_usd))} unconfirmed, not counted` : ""}</span></div>
+     <div class="stat">${k("Fill P&L","--c-fill")}
+       <span class="v2 ${sign(st.realized_usd)}">${esc(smoney(st.realized_usd))}</span>
+       <span class="sub">${esc(st.fills)} fills · open ${esc(smoney(st.unrealized_usd))} on ${esc(st.held_markets)} held</span></div>
+     <div class="stat"><span class="k">7-day pace <span class="est">estimate</span></span>
+       <span class="v2 ${sign(pace)}">${has(pace) ? esc(smoney(pace)) + "/mo" : "—"}</span>
+       <span class="sub">goal ${esc(money2(st.goal_per_month_usd))}/mo, all books</span></div>`;
+  $("#incstats").querySelector(".stat:last-child .sub").title =
+    `last ${st.pace_days} days net ${smoney(st.pace_week_net_usd)}, scaled to 30 days`;
+}
+
+function drawInc(){
+  const d = INC.data, el = $("#incchart");
+  el.classList.remove("dimmed");
+  if(!d) return;
+  const pts = (d.points || []).map(p => ({...p, t:new Date(p.at).getTime()}));
+  const W = Math.max(280, Math.floor(el.clientWidth)), H = Math.max(200, Math.floor(el.clientHeight));
+  if(!pts.length){
+    el.innerHTML = `<div class="empty"><b>No data yet.</b> ${esc(d.note || "")}</div>`;
+    $("#incdaily").innerHTML = ""; INC.view = null; return;
+  }
+  const panel = $("#incpanel");
+  const shown = INC_SERIES.filter(x => INC.on.has(x.id)).map(x => ({...x, color:cssv(panel, x.col)}));
+  const narrow = W < 520;
+  const L = narrow ? 50 : 60, R = narrow ? 58 : 70, T = 10;
+  const B = 26 + (INC.events ? 16 : 0);
+  const pw = W - L - R, ph = H - T - B;
+  const x0 = pts[0].t, x1 = Math.max(pts[pts.length-1].t, x0 + 1);
+  let vals = [];
+  for(const x of shown) for(const p of pts) if(has(p[x.k])) vals.push(p[x.k]);
+  if(!vals.length) vals = [0];
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const near = (hi - lo || 1) / 3;
+  if(lo > 0 && lo <= near) lo = 0;
+  if(hi < 0 && -hi <= near) hi = 0;
+  if(hi - lo < 0.5){ const c = (hi+lo)/2; lo = c - 0.25; hi = c + 0.25; }
+  const nY = Math.max(3, Math.min(8, Math.floor(ph / 52)));
+  const ys = niceStep((hi - lo) / nY);
+  lo = Math.floor(lo / ys) * ys; hi = Math.ceil(hi / ys) * ys;
+  const X = t => L + (t - x0) / (x1 - x0) * pw;
+  const Y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
+  const f = n => n.toFixed(1);
+  const ink = {grid:"#232837", zero:"#4a5169", axis:"#7d8696"};
+  let g = "";
+  const dec = ys < 0.1 ? 2 : ys < 1 ? (ys % 0.5 ? 2 : 1) : 0;
+  for(let v = lo; v <= hi + ys/2; v += ys){
+    const y = f(Y(v)), z = Math.abs(v) < ys/1000;
+    g += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${z?ink.zero:ink.grid}" stroke-width="1"/>`;
+    g += `<text x="${L-8}" y="${f(Y(v)+4)}" fill="${ink.axis}" font-size="11" text-anchor="end" style="font-variant-numeric:tabular-nums">${esc((v<0?"−$":"$")+Math.abs(z?0:v).toFixed(dec))}</text>`;
+  }
+  const {ticks, step} = timeTicks(x0, x1, Math.max(2, Math.floor(pw / (narrow ? 70 : 92))));
+  for(const t of ticks){
+    const x = f(X(t));
+    g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ph}" stroke="${ink.grid}" stroke-width="1"/>`;
+    g += `<text x="${x}" y="${H-8}" fill="${ink.axis}" font-size="11" text-anchor="middle">${esc(tickLabel(t, step))}</text>`;
+  }
+  // Data gaps only matter to the line that depends on marks.
+  if(INC.on.has("total")){
+    let start = null;
+    pts.forEach((p, i) => {
+      if(p.partial && start === null) start = i;
+      if((!p.partial || i === pts.length-1) && start !== null){
+        const end = p.partial ? i : i - 1;
+        const xa = X(pts[Math.max(0,start-1)].t), xb = X(pts[Math.min(pts.length-1,end+1)].t);
+        g += `<rect x="${f(xa)}" y="${T}" width="${f(Math.max(2, xb-xa))}" height="${f(ph)}" fill="#8a93a3" opacity=".08"><title>Data gap: a held market had no fresh book to mark it</title></rect>`;
+        start = null;
+      }
+    });
+  }
+  // Cumulative figures are step functions: each value holds until the next record changes it.
+  const pathOf = x => { let dd = "", prev = null;
+    for(const p of pts){ if(!has(p[x.k])){ prev = null; continue; }
+      const px = f(X(p.t)), py = f(Y(p[x.k]));
+      dd += prev === null ? `M${px},${py}` : `H${px}V${py}`; prev = py; } return dd; };
+  const net = shown.find(x => x.id === "net");
+  if(net){
+    const base = f(Math.min(T + ph, Math.max(T, Y(Math.max(lo, Math.min(hi, 0))))));
+    g += `<defs><linearGradient id="incfill" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="${net.color}" stop-opacity=".20"/><stop offset="1" stop-color="${net.color}" stop-opacity="0"/></linearGradient></defs>`;
+    g += `<path d="${pathOf(net)}H${f(X(pts[pts.length-1].t))}V${base}H${f(X(pts[0].t))}Z" fill="url(#incfill)"/>`;
+  }
+  const order = [...shown].sort((a,b) => (a.id==="net")-(b.id==="net"));
+  for(const x of order)
+    g += `<path d="${pathOf(x)}" fill="none" stroke="${x.color}" stroke-width="${x.w}" stroke-dasharray="${x.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if(INC.events){
+    const by = T + ph + 8, cFill = cssv(panel,"--c-fill"), cRew = cssv(panel,"--c-rew");
+    for(const mk of d.markers || []){
+      const t = new Date(mk.at).getTime(); if(t < x0 || t > x1) continue;
+      const x = X(t);
+      const mark = mk.kind === "reward"
+        ? `<circle cx="${f(x)}" cy="${by+3}" r="3.5" fill="${cRew}" stroke="#181b24" stroke-width="1.5"/>`
+        : mk.kind === "fill"
+          ? `<path d="M${f(x-4)},${by}L${f(x+4)},${by}L${f(x)},${by+7}Z" fill="${cFill}"/>`
+          : `<circle cx="${f(x)}" cy="${by+3}" r="3" fill="none" stroke="${cFill}" stroke-width="1.5"/>`;
+      g += `<g>${mark}<circle cx="${f(x)}" cy="${by+3}" r="8" fill="transparent"><title>${esc(fmtWhen(t) + " · " + mk.label)}</title></circle></g>`;
+    }
+  }
+  const ends = [];
+  for(const x of shown)
+    for(let i = pts.length-1; i >= 0; i--) if(has(pts[i][x.k])){ ends.push({x, v:pts[i][x.k], y:Y(pts[i][x.k])}); break; }
+  ends.sort((a,b) => a.y - b.y);
+  for(let i = 1; i < ends.length; i++) if(ends[i].y - ends[i-1].y < 14) ends[i].y = ends[i-1].y + 14;
+  const over = ends.length ? ends[ends.length-1].y - (T + ph) : 0;
+  if(over > 0) ends.forEach(e => e.y -= over);
+  for(const e of ends){
+    g += `<line x1="${W-R+2}" x2="${W-R+9}" y1="${f(e.y)}" y2="${f(e.y)}" stroke="${e.x.color}" stroke-width="2" stroke-dasharray="${e.x.dash}"/>`;
+    g += `<text x="${W-R+12}" y="${f(e.y+4)}" fill="#e6e8ee" font-size="11" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(smoney(e.v))}</text>`;
+  }
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Liquidity-incentive book profit and loss over time, ${esc(shown.map(x=>x.label).join(", "))}">${g}
+      <g id="inchover" pointer-events="none"></g></svg>`;
+  const evAt = {};
+  for(const mk of d.markers || []) (evAt[new Date(mk.at).getTime()] ||= []).push(mk);
+  INC.view = {pts, shown, X, Y, L, R, T, ph, pw, W, x0, x1, evAt};
+  bindIncHover(el);
+  drawIncDaily();
+}
+
+function placeTip(tip, box, x, clientY){
+  const tw = tip.offsetWidth, th = tip.offsetHeight, cx = box.left + x;
+  let left = cx + 14; if(left + tw > window.innerWidth - 8) left = cx - tw - 14;
+  tip.style.left = Math.max(8, left) + "px";
+  tip.style.top = Math.max(8, Math.min(window.innerHeight - th - 8, clientY - th/2)) + "px";
+}
+function bindIncHover(el){
+  const svg = el.querySelector("svg"), hov = svg.querySelector("#inchover"), tip = $("#inctip");
+  let hideTimer = null;
+  const hide = () => { hov.innerHTML = ""; tip.style.display = "none"; };
+  const show = ev => {
+    const v = INC.view; if(!v) return;
+    const box = svg.getBoundingClientRect(), px = ev.clientX - box.left;
+    if(px < v.L - 4 || px > v.W - v.R + 4){ hide(); return; }
+    const t = v.x0 + (Math.min(Math.max(px, v.L), v.L + v.pw) - v.L) / v.pw * (v.x1 - v.x0);
+    const p = pnlNearest(v.pts, t), x = v.X(p.t).toFixed(1);
+    let h = `<line x1="${x}" x2="${x}" y1="${v.T}" y2="${v.T+v.ph}" stroke="#9aa3b2" stroke-width="1" opacity=".6"/>`;
+    for(const s of v.shown) if(has(p[s.k]))
+      h += `<circle cx="${x}" cy="${v.Y(p[s.k]).toFixed(1)}" r="4" fill="${s.color}" stroke="#181b24" stroke-width="2"/>`;
+    hov.innerHTML = h;
+    const rows = v.shown.map(s =>
+      `<div class="row"><i style="background:${s.color}"></i><span>${esc(s.label)}</span><b>${esc(smoney(p[s.k]))}</b></div>`).join("");
+    const evs = (v.evAt[p.t] || []).map(mk => `<div class="dim" style="margin-top:3px">${esc(mk.label)}</div>`).join("");
+    tip.innerHTML = `<b>${esc(fmtWhen(p.t))}</b>${rows}` +
+      `<div class="row"><span>Open positions (marked)</span><b>${esc(smoney(p.unrealized))}</b></div>` + evs +
+      (p.partial && INC.on.has("total") ? `<div style="color:var(--warn);margin-top:4px">partial: a held market had no fresh book</div>` : "");
+    tip.style.display = "block";
+    placeTip(tip, box, Number(x), ev.clientY);
+  };
+  svg.addEventListener("pointermove", e => { clearTimeout(hideTimer); show(e); });
+  svg.addEventListener("pointerdown", e => { clearTimeout(hideTimer); show(e); });
+  svg.addEventListener("pointerleave", e => { if(e.pointerType === "mouse") hide(); });
+  svg.addEventListener("pointerup", e => { if(e.pointerType !== "mouse"){ clearTimeout(hideTimer); hideTimer = setTimeout(hide, 2500); } });
+  svg.addEventListener("pointercancel", hide);
+}
+
+// Daily bars on the same time axis as the curve above: one bar per UTC day, net of that day's
+// reward credits and booked fill P&L. Direction from the zero line carries the sign.
+function drawIncDaily(){
+  const v = INC.view, el = $("#incdaily"), d = INC.data;
+  if(!v || !d){ el.innerHTML = ""; return; }
+  const DAYMS = 86400e3;
+  const days = (d.daily || []).map(x => ({...x, t0:Date.parse(x.day + "T00:00:00Z")}))
+    .filter(x => x.t0 + DAYMS > v.x0 && x.t0 <= v.x1);
+  const W = v.W, H = Math.max(60, Math.floor(el.clientHeight)), T = 6, Bm = 6, ph = H - T - Bm;
+  if(!days.length){ el.innerHTML = ""; $("#incdaymeta").textContent = ""; return; }
+  const top = Math.max(0, ...days.map(x => x.net_usd)), bot = Math.min(0, ...days.map(x => x.net_usd));
+  const span = (top - bot) || 1;
+  const Y = val => T + (top - val) / span * ph;
+  const color = cssv($("#incpanel"), "--c-net");
+  const f = n => n.toFixed(1);
+  let g = `<line x1="${v.L}" x2="${W - v.R}" y1="${f(Y(0))}" y2="${f(Y(0))}" stroke="#4a5169" stroke-width="1"/>`;
+  g += `<text x="${v.L-8}" y="${f(T+9)}" fill="#7d8696" font-size="10" text-anchor="end">${esc(money2(top))}</text>`;
+  if(bot < 0) g += `<text x="${v.L-8}" y="${f(T+ph)}" fill="#7d8696" font-size="10" text-anchor="end">${esc(money2(bot))}</text>`;
+  for(const x of days){
+    const xa = v.X(Math.max(x.t0, v.x0)), xb = v.X(Math.min(x.t0 + DAYMS, v.x1));
+    const w = Math.max(1, xb - xa - 2);
+    if(!x.net_usd) continue;
+    const y0 = Y(0), y1 = Y(x.net_usd), y = Math.min(y0, y1), h = Math.max(1, Math.abs(y1 - y0));
+    g += `<rect x="${f(xa + 1)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${Math.min(2, w/2).toFixed(1)}" fill="${color}"><title>${esc(x.day)} UTC · net ${smoney(x.net_usd)} (rewards ${smoney(x.rewards_usd)}, fill P&L ${smoney(x.realized_usd)})</title></rect>`;
+  }
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net profit and loss per UTC day">${g}</svg>`;
+  const green = days.filter(x => x.net_usd > 0).length, red = days.filter(x => x.net_usd < 0).length;
+  $("#incdaymeta").textContent = `${green} up · ${red} down · ${days.length - green - red} flat`;
+}
+
+function renderIncTable(){
+  const box = $("#inctable"), pts = (INC.data.points || []);
+  if(!pts.length){ box.innerHTML = `<div class="empty">No data.</div>`; return; }
+  const stepN = Math.max(1, Math.ceil(pts.length / 120)), rows = [];
+  for(let i = pts.length - 1; i >= 0; i -= stepN) rows.push(pts[i]);
+  const evs = [...(INC.data.markers || [])].reverse();
+  box.innerHTML = `<table><thead><tr><th>Time</th><th class="r">Net</th><th class="r">Rewards</th>
+    <th class="r">Fill P&amp;L</th><th class="r">Open (marked)</th><th class="r">Incl. open</th></tr></thead><tbody>` +
+    rows.map(p => `<tr><td>${esc(fmtWhen(new Date(p.at)))}${p.partial?' <span class="dim">·gap</span>':""}</td>
+      <td class="r">${money(p.net)}</td><td class="r">${money(p.rewards)}</td><td class="r">${money(p.realized)}</td>
+      <td class="r">${money(p.unrealized)}</td><td class="r">${money(p.total)}</td></tr>`).join("") +
+    `</tbody></table>` + (evs.length ? `<table style="margin-top:10px"><thead><tr><th>Event</th><th>When</th></tr></thead><tbody>` +
+    evs.map(mk => `<tr><td>${esc(mk.label)}</td><td>${esc(fmtWhen(new Date(mk.at)))}</td></tr>`).join("") + `</tbody></table>` : "");
+}
+
 /* ============ divergence ============ */
 
 // Same market family, summed: every MLB spread game or BTC-5pm-window instance
@@ -1561,7 +1886,7 @@ const reload = (sel, fn) => section(GEN, sel, fn);
 
 $("#runsel").onchange = e => selectRun(e.target.value);
 $("#showretired").onchange = () => renderRunOptions();
-$("#refresh").onclick = () => selectRun(S.tag);
+$("#refresh").onclick = () => { if(MODE === "chart") loadInc(); if(S.tag) selectRun(S.tag); };
 $("#pnlrange").addEventListener("click", e => {
   const b = e.target.closest("button[data-win]"); if(!b || b.dataset.win === S.serWin) return;
   S.serWin = b.dataset.win; savePnlPrefs(); renderPnlControls();
@@ -1592,6 +1917,25 @@ document.addEventListener("fullscreenchange", () => {
   else window.addEventListener("resize", redraw);
 }
 renderPnlControls();
+$("#incrange").addEventListener("click", e => {
+  const b = e.target.closest("button[data-win]"); if(!b || b.dataset.win === INC.win) return;
+  INC.win = b.dataset.win; saveIncPrefs(); renderIncControls(); loadInc();
+});
+$("#incseries").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.ser){
+    if(INC.on.has(b.dataset.ser)){ if(INC.on.size > 1) INC.on.delete(b.dataset.ser); }
+    else INC.on.add(b.dataset.ser);
+  } else if(b.dataset.events){ INC.events = !INC.events; }
+  else return;
+  saveIncPrefs();
+  if(INC.data) renderInc(); else renderIncControls();
+});
+{ let raf = 0;
+  const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if(INC.data && MODE === "chart") drawInc(); }); };
+  if(window.ResizeObserver) new ResizeObserver(redraw).observe($("#incchart"));
+  else window.addEventListener("resize", redraw);
+}
 $("#tickersel").onchange = e => { S.ticker = e.target.value; reload("#pricechart", loadSeries); };
 $("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0;
   reload("#ordbody", g => loadOrders(false, g)); };
@@ -1618,11 +1962,16 @@ function tickClock(){
     now.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
 }
 renderTabs(); tickClock(); boot();
+// The incentive book's chart belongs to no pair: it loads beside the picker, not after it,
+// and still draws when no pair is running at all.
+const refreshInc = () => { if(MODE === "chart" && !document.hidden) loadInc(); };
+if(MODE === "chart"){ renderIncControls(); skeleton("#incchart",1,true); loadInc(); }
 setInterval(tickClock, 1000);
 setInterval(refreshInPlace, 60000);
+setInterval(refreshInc, 60000);
 // A tab left in the background skips its refreshes; catch up on the way back in rather
 // than showing figures that stopped updating an hour ago.
-document.addEventListener("visibilitychange", () => { if(!document.hidden) refreshInPlace(); });
+document.addEventListener("visibilitychange", () => { if(!document.hidden){ refreshInPlace(); refreshInc(); } });
 </script>
 </body>
 </html>

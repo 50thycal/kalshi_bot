@@ -236,3 +236,118 @@ def test_attributable_reward_rules():
     assert not attributable_reward(275, NOW, [NOW + timedelta(hours=1)])  # before the end
     assert not attributable_reward(275, NOW, [NOW - timedelta(hours=30)]) # too long after
     assert not attributable_reward(75, NOW, [end])                        # not a transfer at all
+
+
+# --- the book's overall P&L chart (`livedash.incentive_pnl`) ------------------------------
+
+from kalshi_bot.livedash import incentive_pnl as ipnl  # noqa: E402
+
+HELD = "KXHELD-CHART"
+
+
+def _held_leg(s, *, settle_at=None):
+    """NO 10c x100 filled 8h ago; the collector's book marks NO at 6c from 6h ago on."""
+    s.add(m.LiveOrder(kalshi_order_id="o-hc", client_order_id="c-hc", market_ticker=HELD,
+                      strategy=limm.LIVE_TAG, created_at=NOW - timedelta(hours=9), side="no",
+                      action="buy", limit_price=10, quantity=100, status="filled"))
+    s.add(m.Fill(kalshi_fill_id="f-hc", kalshi_order_id="o-hc", market_ticker=HELD,
+                 filled_at=NOW - timedelta(hours=8), side="no", action="buy", price=10,
+                 quantity=100))
+    s.add(m.Position(market_ticker=HELD, captured_at=NOW - timedelta(hours=7, minutes=55),
+                     side="no", quantity=-100, quantity_fp=-100, avg_price=10.0))
+    for h in range(6, 0, -1):
+        s.add(m.IncentiveMarketSnapshot(market_ticker=HELD, at=NOW - timedelta(hours=h),
+                                        book_valid=True, best_yes_bid=90, best_no_bid=6))
+    if settle_at is not None:
+        s.add(m.Position(market_ticker=HELD, captured_at=settle_at, side="no", quantity=0,
+                         quantity_fp=0, realized_pnl=-10.0))
+    s.flush()
+
+
+def _at(points, when):
+    """The last point at or before `when`."""
+    return [p for p in points if datetime.fromisoformat(p["at"]) <= when][-1]
+
+
+def test_the_net_line_ends_on_the_cards_all_time_net(session):
+    _setup(session)
+    _held_leg(session)
+    card = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
+    x = ipnl.build_book_pnl(session, now=NOW)
+    last = x["points"][-1]
+    assert last["net"] == pytest.approx(card["net_all_time_usd"])          # -7.79
+    assert last["realized"] == pytest.approx(card["realized_all_time_usd"])
+    assert last["rewards"] == pytest.approx(card["reward_credits_usd"])
+    assert last["unrealized"] == pytest.approx(card["positions_unrealized_usd"])  # -4.00
+    assert last["total"] == pytest.approx(-11.79)
+    s = x["stats"]
+    assert (s["net_usd"], s["rewards_usd"], s["reward_payouts"], s["fills"]) == (-7.79, 2.21, 1, 1)
+
+
+def test_each_part_moves_only_when_its_record_exists(session):
+    _setup(session)
+    _held_leg(session)
+    pts = ipnl.build_book_pnl(session, now=NOW)["points"]
+    # The old market's -$10 lands at the snapshot that first shows it flat, not at its fill.
+    assert _at(pts, NOW - timedelta(days=19, minutes=1))["realized"] == 0.0
+    assert _at(pts, NOW - timedelta(days=19))["realized"] == -10.0
+    # The reward lands when the ledger saw it.
+    assert _at(pts, NOW - timedelta(days=5, minutes=1))["rewards"] == 0.0
+    assert _at(pts, NOW - timedelta(days=5))["rewards"] == 2.21
+    # Before the fill: nothing held. Filled but no book yet: a gap, not a move.
+    before = _at(pts, NOW - timedelta(hours=8, minutes=1))
+    assert (before["held_markets"], before["unrealized"], before["partial"]) == (0, 0.0, False)
+    gap = _at(pts, NOW - timedelta(hours=8))
+    assert (gap["held_markets"], gap["unrealized"], gap["partial"]) == (1, 0.0, True)
+    marked = _at(pts, NOW - timedelta(hours=5))   # the book marks NO at 6c from 6h ago
+    assert (marked["unrealized"], marked["partial"]) == (-4.0, False)
+
+
+def test_a_settled_leg_leaves_the_open_line_and_joins_realized(session):
+    _setup(session)
+    _held_leg(session, settle_at=NOW - timedelta(hours=3))
+    pts = ipnl.build_book_pnl(session, now=NOW)["points"]
+    open_ = _at(pts, NOW - timedelta(hours=3, minutes=1))
+    assert (open_["unrealized"], open_["realized"]) == (-4.0, -10.0)
+    done = _at(pts, NOW - timedelta(hours=3))
+    assert (done["unrealized"], done["held_markets"], done["realized"]) == (0.0, 0, -20.0)
+
+
+def test_a_window_cuts_the_curve_but_not_the_all_time_figures(session):
+    _setup(session)
+    _held_leg(session)
+    x = ipnl.build_book_pnl(session, now=NOW, since=NOW - timedelta(days=1), max_points=50)
+    assert datetime.fromisoformat(x["points"][0]["at"]) == NOW - timedelta(days=1)
+    assert x["stats"]["net_usd"] == -7.79 and x["stats"]["net_change_in_window_usd"] == 0.0
+    # Events in the window only: the fill 8h ago, not the reward 5 days ago.
+    assert [mk["kind"] for mk in x["markers"]] == ["fill"]
+    assert x["markers"][0]["market"] == HELD and x["markers"][0]["cost_usd"] == 10.0
+    assert len(x["points"]) <= 50 + 3
+
+
+def test_daily_net_and_the_estimated_pace(session):
+    _setup(session)
+    x = ipnl.build_book_pnl(session, now=NOW)
+    daily = {d["day"]: d for d in x["daily"]}
+    assert x["daily"][0]["day"] == (NOW - timedelta(days=20)).date().isoformat()
+    assert x["daily"][-1]["day"] == NOW.date().isoformat()
+    assert daily[(NOW - timedelta(days=19)).date().isoformat()]["net_usd"] == -10.0
+    assert daily[(NOW - timedelta(days=5)).date().isoformat()]["rewards_usd"] == 2.21
+    s = x["stats"]
+    # Only the reward falls in the last 7 days: $2.21 a week, ~$9.47 a month.
+    assert s["pace_week_net_usd"] == 2.21
+    assert s["est_pace_per_month_usd"] == pytest.approx(2.21 * 30 / 7, abs=0.01)
+    assert s["goal_per_month_usd"] == 100.0
+
+
+def test_a_book_with_no_orders_draws_nothing(session):
+    x = ipnl.build_book_pnl(session, now=NOW)
+    assert x["points"] == [] and x["stats"] is None
+
+
+def test_the_cache_reloads_after_its_ttl(session):
+    _setup(session)
+    cache = ipnl.BookPnlCache(ttl=0.0)
+    assert cache.build(session, now=NOW)["stats"]["fills"] == 0
+    _held_leg(session)
+    assert cache.build(session, now=NOW)["stats"]["fills"] == 1
