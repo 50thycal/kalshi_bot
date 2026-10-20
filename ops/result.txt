@@ -1,7 +1,9 @@
-# latest deployment 28e1b356-ebe0-44fa-ac5b-dca1af6109bc (status=SUCCESS, created=2026-10-20T13:22:50.532Z)
 # ops request [READ]
-# type=logs  service=main  id=pcr-own-logs-1
+# type=db  id=pcr-own-rcpt-3
 # actor=platform-change-review
-# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:24:10Z
-# target service: main
-2026-10-20T13:24:01.885674188Z INFO  experiment OS platform command
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:24:49Z
+command_id                status     completed_at                      result                                                                                                                                                                                                  
+------------------------  ---------  --------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+pcr-own-impacts-20261020  SUCCEEDED  2026-10-20 13:24:01.870282+00:00  {"kind": "impact_records", "count": 6, "records": [{"action": "NO_ACTION", "status": "applied", "record_id": 48, "impact_class": "I0", "experiment_id": 42}, {"action": "NO_ACTION", "status": "applied…
+
+(1 row)
