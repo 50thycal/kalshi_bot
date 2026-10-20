@@ -1,0 +1,59 @@
+# ops request [READ]
+# type=db  id=ci1346
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:46:43Z
+k     market_ticker                 t                              v                                   
+----  ----------------------------  -----------------------------  ------------------------------------
+chg   KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 12:21:39.258482+00  buy yes 4c x250 repriced            
+chg   KXMAMDANIMENTION-26NOV18-NQE  2026-10-20 13:14:59.72005+00   buy yes 2c x500 resting             
+chg   KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 13:23:53.325728+00  buy yes 10c x100 resting            
+snap  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 13:37:04.594493+00  94/5                                
+open  KXTRUMPMENTION-26OCT24-FRAU   2026-10-19 22:41:21.806951+00  buy yes 8c x125 resting             
+open  KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting              
+open  KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting              
+open  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.396416+00  sell no 6c x71 resting              
+open  KXTRUMPMENTIONB-26OCT27-NQE   2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting             
+open  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.45522+00   sell no 7c x71 resting              
+open  KXTRUMPMENTION-26OCT27-CEAS   2026-10-20 08:35:07.982992+00  buy yes 3c x333 resting             
+open  KXTRUMPMENTIONB-26OCT27-CRYP  2026-10-20 08:31:09.145052+00  buy yes 1c x500 resting             
+open  KXTRUMPMENTION-26OCT27-SAVE   2026-10-20 11:13:51.49815+00   buy no 8c x125 resting              
+open  KXMAMDANIMENTION-26NOV18-NQE  2026-10-20 13:14:59.72005+00   buy yes 2c x500 resting             
+open  KXTRUMPMENTIONB-26OCT27-BLOC  2026-10-20 13:23:53.325728+00  buy yes 10c x100 resting            
+boot  limm_out_of_band              2026-10-20 12:09:43.440184+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:09:51.600351+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 12:14:05.032624+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 12:21:27.681311+00  0 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:21:36.104749+00  61 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 12:38:11.952794+00  57 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 12:44:44.255112+00  57 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 12:50:18.331383+00  57 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 12:55:52.943114+00  57 markets cooling down             
+boot  limm_out_of_band              2026-10-20 11:42:03.597343+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 11:42:14.789646+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 11:50:20.237633+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 11:52:19.966918+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 11:55:46.487088+00  2 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 11:55:58.979227+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 11:57:47.176108+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 11:44:02.63161+00   1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 11:46:04.050979+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 11:48:21.408796+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 11:48:32.858729+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 12:01:09.047604+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:01:20.411882+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 12:03:09.711232+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 12:07:26.995364+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:07:40.253234+00  46 markets cooling down             
+boot  limm_out_of_band              2026-10-20 12:15:56.570037+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:16:04.842491+00  45 markets cooling down             
+boot  limm_out_of_band              2026-10-20 12:19:41.390587+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 12:27:02.803757+00  59 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 12:32:40.611149+00  59 markets cooling down             
+boot  limm_out_of_band              2026-10-20 13:33:23.928724+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 13:37:12.412395+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 13:44:28.875711+00  1 resting bids out of the price band
+boot  limm_book_cooldown            2026-10-20 13:01:25.470541+00  57 markets cooling down             
+boot  limm_book_cooldown            2026-10-20 13:07:08.021568+00  57 markets cooling down             
+boot  limm_out_of_band              2026-10-20 13:29:44.737523+00  1 resting bids out of the price band
+boot  limm_out_of_band              2026-10-20 13:40:59.768303+00  1 resting bids out of the price band
+
+(52 rows)
