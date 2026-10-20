@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=ci1946
-# code 8a16c95cf80f4d1a404562d250147015113f1be4 · started 2026-10-19T19:46:47Z
-k     market_ticker  t  v
-----  -------------  -  -
-open  count             9
-
-(1 row)
