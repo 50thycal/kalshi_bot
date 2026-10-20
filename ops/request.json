@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "rw2", "sql": "select o.event_ticker, string_agg(distinct split_part(o.market_ticker,'-',3),' ') words, max(p.end_date)::text pend, left(max(p.raw_json::text),0)||max(coalesce(p.extra_params_json->>'event_title', p.market_raw_json->>'title', p.market_title)) title from live_orders o left join incentive_programs p on p.market_ticker=o.market_ticker and p.incentive_type='liquidity' where o.strategy='Alimm1' and o.action='buy' and o.created_at > '2026-10-08' and o.created_at < '2026-10-20' group by 1 order by 3"}
