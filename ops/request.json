@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-own-fp-1","actor":"platform-change-review","max_rows":5,"sql":"select id, version, fingerprint, status, created_at from platform_revisions where id in (12,13)"}
+{"type":"noop"}
