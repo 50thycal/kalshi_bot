@@ -1,0 +1,21 @@
+# ops request [READ]
+# type=db  id=ci0546
+# code 1992c2c4ccdeb5369364f07384a06ae03a455ebd · started 2026-10-20T05:46:31Z
+k     market_ticker                 t                              v                                   
+----  ----------------------------  -----------------------------  ------------------------------------
+fill  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 04:06:00.988822+00  buy no lim 7 fill no 7c x10         
+fill  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:00:03.47398+00   buy no lim 7 fill no 7c x132        
+chg   KXTRUMPMENTION-26OCT27-ICE    2026-10-20 04:06:58.368661+00  buy yes 3c x333 repriced            
+chg   KXTRUMPMENTIONB-26OCT27-GULF  2026-10-20 04:07:01.644298+00  buy yes 2c x500 resting             
+chg   KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting              
+chg   KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting              
+chg   KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:00:57.308327+00  sell no 7c x71 resting_sell:repriced
+chg   KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:00:57.386128+00  sell no 7c x71 resting_sell:repriced
+chg   KXTRUMPMENTION-26OCT27-ICE    2026-10-20 05:07:25.264935+00  buy yes 6c x166 resting             
+chg   KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.396416+00  sell no 6c x71 resting              
+chg   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting             
+chg   KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 05:09:19.45522+00   sell no 7c x71 resting              
+cxl   KXTRUMPMENTION-26OCT20-FRAU   2026-10-19 15:53:16.705679+00  pre_event                           
+open  count                                                        11                                  
+
+(14 rows)
