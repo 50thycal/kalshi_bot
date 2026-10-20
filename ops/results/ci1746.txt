@@ -1,0 +1,23 @@
+# ops request [READ]
+# type=db  id=ci1746
+# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-20T17:47:04Z
+k     market_ticker                  t                              v                           
+----  -----------------------------  -----------------------------  ----------------------------
+chg   KXMAMDANIMENTION-26NOV18-FREE  2026-10-20 16:38:00.218369+00  buy yes 7c x142 resting     
+chg   KXTRUMPMENTION-26OCT23-INSU    2026-10-20 16:40:20.601353+00  buy no 10c x100 resting     
+fill  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 16:39:00.645975+00  buy yes lim 2 fill yes 2c x1
+open  KXTRUMPMENTION-26OCT24-FRAU    2026-10-19 22:41:21.806951+00  buy yes 8c x125 resting     
+open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting      
+open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting      
+open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 05:09:19.396416+00  sell no 6c x71 resting      
+open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 05:09:19.45522+00   sell no 7c x71 resting      
+open  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting     
+open  KXTRUMPMENTIONB-26OCT27-CRYP   2026-10-20 08:31:09.145052+00  buy yes 1c x500 resting     
+open  KXMAMDANIMENTION-26NOV18-NQE   2026-10-20 13:14:59.72005+00   buy yes 2c x500 resting     
+open  KXTRUMPMENTIONB-26OCT27-BLOC   2026-10-20 13:23:53.325728+00  buy yes 10c x100 resting    
+open  KXMAMDANIMENTION-26NOV18-FREE  2026-10-20 16:38:00.218369+00  buy yes 7c x142 resting     
+open  KXTRUMPMENTION-26OCT23-INSU    2026-10-20 16:40:20.601353+00  buy no 10c x100 resting     
+snap  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 17:38:36.745356+00  94/5                        
+snap  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 17:38:36.745356+00  2/97                        
+
+(16 rows)
