@@ -4,18 +4,18 @@
   "code_sha": "b3ee7fb085fafe5637f4cdcd355dd06eb1b18060",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-10-20T13:33:24Z",
-  "id": "pcr-own-review-2",
+  "finished_at": "2026-10-20T13:34:21Z",
+  "id": "pcr-fb-review-2",
   "outcome": "SUCCEEDED",
   "provenance": {
     "actor": "platform-change-review"
   },
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/pcr-own-review-2.receipt.json",
-  "result_file": "ops/results/pcr-own-review-2.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/39431337164",
+  "receipt_file": "ops/results/pcr-fb-review-2.receipt.json",
+  "result_file": "ops/results/pcr-fb-review-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/39431469610",
   "service": null,
-  "started_at": "2026-10-20T13:33:11Z",
+  "started_at": "2026-10-20T13:34:08Z",
   "targets": [],
   "type": "xos"
 }
