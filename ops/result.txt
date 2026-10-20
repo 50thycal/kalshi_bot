@@ -1,7 +1,7 @@
 # ops request [READ]
-# type=db  id=pcr-own-rcpt-1
+# type=db  id=pcr-own-rcpt-2
 # actor=platform-change-review
-# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:23:20Z
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:23:44Z
 command_id                 action          status     completed_at                      error  result                                                                                                                                                                                                  
 -------------------------  --------------  ---------  --------------------------------  -----  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 pcr-fbtx-impacts-20261020  RECORD_IMPACTS  SUCCEEDED  2026-10-20 13:22:04.445272+00:00         {"kind": "impact_records", "count": 4, "records": [{"action": "NO_ACTION", "status": "applied", "record_id": 44, "impact_class": "I0", "experiment_id": 42}, {"action": "NO_ACTION", "status": "applied…
