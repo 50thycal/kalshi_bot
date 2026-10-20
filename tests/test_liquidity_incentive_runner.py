@@ -1985,6 +1985,22 @@ def test_no_entry_inside_the_48h_window(live_db, settings, monkeypatch):
     assert out["placed"] == 1
 
 
+def test_a_new_bid_gets_a_day_before_it_steps_aside(live_db, settings, monkeypatch):
+    """§9.64: an event 60h out leaves 12h before the 48h step-aside — too short to enter."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 48.0)
+    assert limm.MIN_HOURS_BEFORE_EVENT == 24.0
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXTRUMPMENTION-26SEP21-SHORT": book,
+                         "KXTRUMPMENTION-26SEP23-DAY": book})
+    with db.session_scope() as s:
+        _mention(s, "KXTRUMPMENTION-26SEP21-SHORT", event="KXTRUMPMENTION-26SEP21", hours=60.0)
+        _mention(s, "KXTRUMPMENTION-26SEP23-DAY", event="KXTRUMPMENTION-26SEP23", hours=80.0)
+        out = _cycle(client, settings, s)
+    assert client.asked == ["KXTRUMPMENTION-26SEP23-DAY"]
+    assert out["placed"] == 1
+
+
 def _filled_bid(s, ticker, event, *, minutes_ago=30):
     s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
                       side="yes", action="buy", limit_price=5, quantity=200, status="filled",

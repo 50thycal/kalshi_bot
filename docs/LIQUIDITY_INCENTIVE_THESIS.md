@@ -3134,3 +3134,28 @@ Rewards over the same days: +$3.74 (operator screenshot, lifetime $14.65).
 The stop-loss is unchanged (§9.53). **What would change our mind:** over the next two weeks, fill
 losses per week should fall well below confirmed reward per week; if fills simply move earlier
 (more than 48h out), the window or the universe is wrong.
+
+### 9.64 Rewards reconciled; a new bid gets a day before it steps aside (2026-10-20)
+
+**Payouts (operator screenshots 2026-10-19 and 10-20; lifetime $46.38).** Ten payouts added to
+`reward_ledger.CONFIRMED_REWARD_PAYOUTS`: CPI (KXCPI-26OCT) $2.04 on Oct 17; Kentucky rally
+(KXTRUMPMENTION-26OCT17) $1.70 on Oct 18; executive-order announcement (KXTRUMPMENTIONB-26OCT19)
+$3.59 + $11.21 + $1.13 + $4.82 and Wichita rally (KXTRUMPMENTION-26OCT19) $2.65 + $3.93 + $1.27 +
+$3.13 on Oct 20. The balance ledger had already seen them as 204c, 170c and one 3173c step.
+
+**Against the model.** On 2026-10-16 the dashboard's `estimate_reward_per_day` projected the paying
+bids at NQE ~$11.21, CATT ~$6.61, CHIN ~$6.51, BEST ~$6.46, PALE ~$2.30 (~$33.1). Kalshi paid
+$33.43 on those three events. Per market it is less exact: NQE matched to the cent, BEST and CHIN
+paid less (they left early on out_of_band), and the rally's other words (CEAS, SOCI, FENT) made up
+the difference. Each $100 programme over ~4 days in a thin 2–10c book gives a $10 bid a 5–11% share.
+
+**What §9.63 gives up.** These payouts were earned before §9.63 (live ~21Z Oct 19). From snapshot
+counts of our time in book, roughly a quarter of them (~$9: NQE about half its time, FENT-B, PALE,
+part of CEAS) came from the last 48h. Those same windows held the NQE, FENT, CEAS and PALE fills
+(−$12.7). The step-aside gives up the larger reward share to avoid the larger loss; still a
+rough proxy, re-read after two weeks of §9.63 data.
+
+**Change.** `MIN_HOURS_BEFORE_EVENT` 6h → 24h, still counted from the §9.63 entry cutoff: no new
+bid unless it can rest at least a day before it must step aside (a bid could otherwise be placed
+54h before an event and cancelled 6h later). Narrows entry only; no cap, price or safety rule
+changes.

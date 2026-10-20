@@ -144,7 +144,9 @@ EVENT_DATE_FALLBACK_HOUR_UTC = 11
 #: (Kalshi stops paying when the event starts; the market stays open for resolution).
 PROGRAM_ENDS_AT_EVENT_MIN_GAP_HOURS = 1.0
 #: No new entry with less than this left before its pre-event cutoff: too little time to earn.
-MIN_HOURS_BEFORE_EVENT = 6.0
+#: Counted from the §9.63 step-aside, so a new bid always rests at least a day before it is
+#: pulled (§9.64; was 6h, which allowed a bid to be placed and cancelled six hours later).
+MIN_HOURS_BEFORE_EVENT = 24.0
 #: A held quote is never swapped for a better market before it has rested this long (§9.55; the
 #: book swapped gas -> IASAND -> gas inside two hours on 2026-10-14, resetting time-in-book).
 MIN_HOLD_SECONDS = 24 * 3600.0
