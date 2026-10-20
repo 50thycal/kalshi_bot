@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1545b", "sql": "select market_ticker, created_at::text, client_order_id, action, side, limit_price, quantity, status, cancel_reason from live_orders where strategy='Alimm1' and (market_ticker like 'KXTRUMPMENTION-26OCT27-%' or market_ticker like '%-SAVE') and created_at > '2026-10-20' order by created_at; select at::text, best_yes_bid, best_no_bid, no_levels_json::text from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT27-SAVE' and at > '2026-10-20 14:15' order by at limit 8"}
