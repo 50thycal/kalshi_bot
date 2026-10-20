@@ -1,4 +1,385 @@
 # ops request [READ]
-# type=noop
-# code 1992c2c4ccdeb5369364f07384a06ae03a455ebd · started 2026-10-20T11:56:05Z
-(noop — nothing to do)
+# type=xos  id=pcr-own-review-1
+# actor=platform-change-review
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:15:30Z
+{
+  "component": "EXECUTION_ENGINE",
+  "revision": {
+    "id": 12,
+    "version": "shared_primary_ownership_20260921",
+    "status": "pending",
+    "reason": "DEC-020/021 worker protection, PR449/452; execution proof transport PR456. Registration does not establish the historical deployment boundary or authorize desk live trading.",
+    "safety_class": "safety_critical",
+    "pr_ref": "https://github.com/50thycal/kalshi_bot/pull/456",
+    "activated_at": null,
+    "boundary_established": false
+  },
+  "supersedes": {
+    "id": 4,
+    "version": "live_executor_2026_08",
+    "status": "active"
+  },
+  "affected": {
+    "active_on_superseded": [
+      {
+        "key": "liquidity-incentive-mm",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 22,
+        "epoch_id": 30,
+        "epoch_number": 2,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-correlation-cap",
+        "state": "PAPER",
+        "legacy": null,
+        "version_id": 18,
+        "epoch_id": 21,
+        "epoch_number": 1,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-price-ceiling",
+        "state": "LIVE_CANARY",
+        "legacy": "ACTIVE_PAPER",
+        "version_id": 10,
+        "epoch_id": 12,
+        "epoch_number": 2,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-price-ceiling-capacity",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 13,
+        "epoch_id": 16,
+        "epoch_number": 2,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-price-ceiling-cell-size",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 24,
+        "epoch_id": 37,
+        "epoch_number": 2,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-price-ceiling-contest-cap",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 19,
+        "epoch_id": 24,
+        "epoch_number": 3,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-price-ceiling-size-split",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 23,
+        "epoch_id": 35,
+        "epoch_number": 3,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-rain-season",
+        "state": "PAPER",
+        "legacy": null,
+        "version_id": 25,
+        "epoch_id": 38,
+        "epoch_number": 1,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-reviewed-universe",
+        "state": "PAPER",
+        "legacy": null,
+        "version_id": 21,
+        "epoch_id": 26,
+        "epoch_number": 1,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-temperature-season",
+        "state": "PAPER",
+        "legacy": null,
+        "version_id": 26,
+        "epoch_id": 39,
+        "epoch_number": 1,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-type-tight",
+        "state": "PAPER",
+        "legacy": "ACTIVE_PAPER",
+        "version_id": 9,
+        "epoch_id": 10,
+        "epoch_number": 2,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-weather-bands",
+        "state": "PAPER",
+        "legacy": null,
+        "version_id": 27,
+        "epoch_id": 40,
+        "epoch_number": 1,
+        "snapshot_id": 2,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-wide-control",
+        "state": "PAPER",
+        "legacy": "ACTIVE_PAPER",
+        "version_id": 4,
+        "epoch_id": 4,
+        "epoch_number": 1,
+        "snapshot_id": 1,
+        "pinned_revision_id": 4
+      },
+      {
+        "key": "mmsell-win-set",
+        "state": "LIVE_CANARY",
+        "legacy": null,
+        "version_id": 29,
+        "epoch_id": 43,
+        "epoch_number": 2,
+        "snapshot_id": 4,
+        "pinned_revision_id": 4
+      }
+    ],
+    "already_on_new": [],
+    "no_pinned_epoch": [
+      "theta-tail-sell"
+    ],
+    "retired": [
+      "freeze-dark-window-pin",
+      "live-shape-probe",
+      "marktangle-2-conditional-dependence",
+      "marktangle-conditional-reversion",
+      "mmsell10-queue-aware-cancel",
+      "mmsell11-no-late-entry",
+      "mmsell4-skip-list",
+      "mmsell-anchor-stops",
+      "mmsell-anchor-strangle",
+      "mmsell-anchor-vol-entry",
+      "mmsell-first-cohort",
+      "mmsell-maker-offset-ab",
+      "mmsell-scan-depth",
+      "mmsell-scheduled-settle-live",
+      "mmsell-type-tight-retired",
+      "mmsell-type-wide",
+      "mmsell-variants-2026-07",
+      "origin-scanner-books",
+      "perp-v1",
+      "pin15",
+      "tfav",
+      "theta4-fat-tail",
+      "wcprop",
+      "weather-consensus",
+      "weather-consensus-city",
+      "weather-legacy-cells",
+      "xgame"
+    ]
+  },
+  "impact_records": [
+    {
+      "id": 10,
+      "experiment": "liquidity-incentive-mm",
+      "impact_class": "I2",
+      "action": "NEW_EPOCH",
+      "status": "accepted",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Shared ownership can exclude desk-claimed markets from live execution and portfolio management; carry live/twin deployments into a fresh prospective epoch under the same scientific contract and risk. PR449/452 first deployment boundary was not recorded: prior epoch retains that uncertain interval and is not pooled with the new epoch; this cutover measures the reviewed prospective regime, not the historical first deployment.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 14,
+      "experiment": "mmsell-correlation-cap",
+      "impact_class": "I0",
+      "action": "NO_ACTION",
+      "status": "applied",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Pinned dependency reviewed: current study has paper deployments, uses public market data and its simulated ledger. Ownership enforcement is confined to authenticated portfolio/write paths and live executor callers; simulated eligibility, fills, fees and settlement rules are unchanged. No live/twin deployment for this experiment is being licensed by this disposition.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 11,
+      "experiment": "mmsell-price-ceiling",
+      "impact_class": "I2",
+      "action": "NEW_EPOCH",
+      "status": "accepted",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Shared ownership can exclude desk-claimed markets from live execution and portfolio management; carry live/twin deployments into a fresh prospective epoch under the same scientific contract and risk. PR449/452 first deployment boundary was not recorded: prior epoch retains that uncertain interval and is not pooled with the new epoch; this cutover measures the reviewed prospective regime, not the historical first deployment.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 12,
+      "experiment": "mmsell-price-ceiling-capacity",
+      "impact_class": "I2",
+      "action": "NEW_EPOCH",
+      "status": "accepted",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Shared ownership can exclude desk-claimed markets from live execution and portfolio management; carry live/twin deployments into a fresh prospective epoch under the same scientific contract and risk. PR449/452 first deployment boundary was not recorded: prior epoch retains that uncertain interval and is not pooled with the new epoch; this cutover measures the reviewed prospective regime, not the historical first deployment.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 13,
+      "experiment": "mmsell-price-ceiling-contest-cap",
+      "impact_class": "I2",
+      "action": "NEW_EPOCH",
+      "status": "accepted",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Shared ownership can exclude desk-claimed markets from live execution and portfolio management; carry live/twin deployments into a fresh prospective epoch under the same scientific contract and risk. PR449/452 first deployment boundary was not recorded: prior epoch retains that uncertain interval and is not pooled with the new epoch; this cutover measures the reviewed prospective regime, not the historical first deployment.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 15,
+      "experiment": "mmsell-reviewed-universe",
+      "impact_class": "I0",
+      "action": "NO_ACTION",
+      "status": "applied",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Pinned dependency reviewed: current study has paper deployments, uses public market data and its simulated ledger. Ownership enforcement is confined to authenticated portfolio/write paths and live executor callers; simulated eligibility, fills, fees and settlement rules are unchanged. No live/twin deployment for this experiment is being licensed by this disposition.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 16,
+      "experiment": "mmsell-type-tight",
+      "impact_class": "I0",
+      "action": "NO_ACTION",
+      "status": "applied",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Pinned dependency reviewed: current study has paper deployments, uses public market data and its simulated ledger. Ownership enforcement is confined to authenticated portfolio/write paths and live executor callers; simulated eligibility, fills, fees and settlement rules are unchanged. No live/twin deployment for this experiment is being licensed by this disposition.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 17,
+      "experiment": "mmsell-variants-2026-07",
+      "impact_class": "I0",
+      "action": "NO_ACTION",
+      "status": "applied",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Pinned dependency reviewed: current study has paper deployments, uses public market data and its simulated ledger. Ownership enforcement is confined to authenticated portfolio/write paths and live executor callers; simulated eligibility, fills, fees and settlement rules are unchanged. No live/twin deployment for this experiment is being licensed by this disposition.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    },
+    {
+      "id": 18,
+      "experiment": "mmsell-wide-control",
+      "impact_class": "I0",
+      "action": "NO_ACTION",
+      "status": "applied",
+      "blocks_activation": false,
+      "normalization_ref": null,
+      "rationale": "Pinned dependency reviewed: current study has paper deployments, uses public market data and its simulated ledger. Ownership enforcement is confined to authenticated portfolio/write paths and live executor callers; simulated eligibility, fills, fees and settlement rules are unchanged. No live/twin deployment for this experiment is being licensed by this disposition.",
+      "decided_by": "chatgpt-platform-review",
+      "accepted_by": "chatgpt-platform-review",
+      "resulting_epoch_id": null,
+      "resulting_version_id": null
+    }
+  ],
+  "activation": {
+    "affected_active": [
+      "liquidity-incentive-mm",
+      "mmsell-correlation-cap",
+      "mmsell-price-ceiling",
+      "mmsell-price-ceiling-capacity",
+      "mmsell-price-ceiling-cell-size",
+      "mmsell-price-ceiling-contest-cap",
+      "mmsell-price-ceiling-size-split",
+      "mmsell-rain-season",
+      "mmsell-reviewed-universe",
+      "mmsell-temperature-season",
+      "mmsell-type-tight",
+      "mmsell-weather-bands",
+      "mmsell-wide-control",
+      "mmsell-win-set"
+    ],
+    "already_on_new": [],
+    "retired_ignored": [
+      "freeze-dark-window-pin",
+      "live-shape-probe",
+      "marktangle-2-conditional-dependence",
+      "marktangle-conditional-reversion",
+      "mmsell10-queue-aware-cancel",
+      "mmsell11-no-late-entry",
+      "mmsell4-skip-list",
+      "mmsell-anchor-stops",
+      "mmsell-anchor-strangle",
+      "mmsell-anchor-vol-entry",
+      "mmsell-first-cohort",
+      "mmsell-maker-offset-ab",
+      "mmsell-scan-depth",
+      "mmsell-scheduled-settle-live",
+      "mmsell-type-tight-retired",
+      "mmsell-type-wide",
+      "mmsell-variants-2026-07",
+      "origin-scanner-books",
+      "perp-v1",
+      "pin15",
+      "tfav",
+      "theta4-fat-tail",
+      "wcprop",
+      "weather-consensus",
+      "weather-consensus-city",
+      "weather-legacy-cells",
+      "xgame"
+    ],
+    "unaccounted": [
+      "mmsell-price-ceiling-cell-size",
+      "mmsell-price-ceiling-size-split",
+      "mmsell-rain-season",
+      "mmsell-temperature-season",
+      "mmsell-weather-bands",
+      "mmsell-win-set"
+    ],
+    "blocking_unapplied": [],
+    "safe": false
+  }
+}
