@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=pcr-own-db-1
+# actor=platform-change-review
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:17:34Z
+owner  namespace       n   
+-----  --------------  ----
+main   kalshi-primary  1117
+
+(1 row)
