@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci0546c", "sql": "select market_ticker, at::text, best_yes_bid, best_no_bid from (select distinct on (market_ticker) * from incentive_market_snapshots where market_ticker='KXTRUMPMENTION-26OCT22-DIVI' order by market_ticker, at desc) x"}
