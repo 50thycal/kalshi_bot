@@ -1,0 +1,13 @@
+# ops request [READ]
+# type=db  id=ci0946
+# code 1992c2c4ccdeb5369364f07384a06ae03a455ebd · started 2026-10-20T09:46:54Z
+k     market_ticker                 t                              v                      
+----  ----------------------------  -----------------------------  -----------------------
+chg   KXTRUMPMENTION-26OCT27-CEAS   2026-10-20 08:35:07.982992+00  buy yes 3c x333 resting
+chg   KXTRUMPMENTIONB-26OCT27-SUPR  2026-10-20 08:39:09.62237+00   buy yes 6c x166 resting
+chg   KXTRUMPMENTION-26OCT27-SAVE   2026-10-20 08:20:01.825863+00  buy no 5c x200 resting 
+chg   KXTRUMPMENTIONB-26OCT27-CRYP  2026-10-20 08:31:09.145052+00  buy yes 1c x500 resting
+snap  KXTRUMPMENTION-26OCT22-DIVI   2026-10-20 09:37:22.815965+00  94/5                   
+open  count                                                        11                     
+
+(6 rows)
