@@ -224,6 +224,10 @@ def test_confirmed_reward_matches_the_rewards_page():
     assert not confirmed_reward(330, oct11 + timedelta(days=3))
     # 2026-10-14 KXTRUMPMENTION-26OCT13, observed as a 331c residual at 10:29Z
     assert confirmed_reward(331, datetime(2026, 10, 14, 10, 29, tzinfo=timezone.utc))
+    # §9.64: CPI and Kentucky as single steps; eight Oct 20 payouts as ONE 3173c step
+    assert confirmed_reward(204, datetime(2026, 10, 17, 10, 43, tzinfo=timezone.utc))
+    assert confirmed_reward(170, datetime(2026, 10, 18, 10, 36, tzinfo=timezone.utc))
+    assert confirmed_reward(3173, datetime(2026, 10, 20, 10, 40, tzinfo=timezone.utc))
     assert not confirmed_reward(None, oct10)
 
 
