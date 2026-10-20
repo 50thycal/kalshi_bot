@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci0546b", "sql": "select f.market_ticker, f.filled_at::text t, o.action, o.side, o.limit_price, f.side fs, f.price, f.quantity from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1' and f.filled_at > '2026-10-20 01:40' order by 2"}
+{"type":"noop"}
