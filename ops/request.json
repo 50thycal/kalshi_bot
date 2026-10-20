@@ -1,1 +1,1 @@
-{"type":"xos","command":"platform","args":["review","MARKET_TAXONOMY:football_coverage_2026_10_12"],"id":"pcr-fb-review-2","actor":"platform-change-review"}
+{"type":"db","id":"pcr-own-fp-1","actor":"platform-change-review","max_rows":5,"sql":"select id, version, fingerprint, status, created_at from platform_revisions where id in (12,13)"}
