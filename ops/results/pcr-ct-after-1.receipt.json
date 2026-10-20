@@ -1,0 +1,21 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "b3ee7fb085fafe5637f4cdcd355dd06eb1b18060",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-20T13:32:30Z",
+  "id": "pcr-ct-after-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "platform-change-review"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-ct-after-1.receipt.json",
+  "result_file": "ops/results/pcr-ct-after-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/39430197949",
+  "service": null,
+  "started_at": "2026-10-20T13:25:15Z",
+  "targets": [],
+  "type": "xos"
+}

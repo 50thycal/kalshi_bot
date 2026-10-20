@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=ci0546c
-# code 1992c2c4ccdeb5369364f07384a06ae03a455ebd · started 2026-10-20T05:47:48Z
-market_ticker                at                             best_yes_bid  best_no_bid
----------------------------  -----------------------------  ------------  -----------
-KXTRUMPMENTION-26OCT22-DIVI  2026-10-20 05:38:53.921278+00  94            5          
-
-(1 row)
