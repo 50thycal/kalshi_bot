@@ -16,6 +16,7 @@ Routes:
   GET /api/incentives/active          active programs + opportunity ranking (read-only)
   GET /api/incentives/history         daily program counts, pools, outcomes by cell
   GET /api/incentives/headline        "had this run at $X" per fill model
+  GET /api/incentives/book/pnl        the live incentive book's overall P&L over time (Charts)
 
 Read-only by construction: only `do_GET`/`do_HEAD` exist, so every other verb gets
 a 501 from BaseHTTPRequestHandler, and the data layer contains no write. There is
@@ -52,7 +53,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..db import session_scope
 from ..liquidity_incentive import report as incentive_report
-from . import data
+from . import data, incentive_pnl
 from . import execution as execution_mod
 from . import overview as overview_mod
 from .events import CATEGORIES, DEFAULT_CATEGORY, ENVIRONMENTS
@@ -89,6 +90,7 @@ def _build_overview() -> dict:
 # The landing page reads this, never the database directly: `serve` starts its refresher, and
 # the first request after start builds inline if the refresher has not finished yet.
 OVERVIEW = overview_mod.OverviewCache(_build_overview)
+BOOK_PNL = incentive_pnl.BookPnlCache()
 
 
 def _one(params: dict, key: str) -> str | None:
@@ -249,6 +251,13 @@ class LiveDashHandler(BaseHTTPRequestHandler):
         if path == "/api/incentives/headline":
             with session_scope() as session:
                 self._json(incentive_report.build_headline(session, days=_int(params, "days", 14) or 14))
+            return True
+        # The live incentive book's overall P&L (livedash.incentive_pnl): book-level, not a pair.
+        if path == "/api/incentives/book/pnl":
+            with session_scope() as session:
+                self._json(BOOK_PNL.build(
+                    session, since=_dt(params, "since"),
+                    max_points=max(20, min(_int(params, "points", 500) or 500, 1000))))
             return True
         # Execution research view (docs/MMSELL_QUEUE_FILL_TELEMETRY.md): read-only diagnostics
         # over the queue/fill telemetry tables. No score, no probability — by design.

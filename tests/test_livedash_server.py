@@ -60,6 +60,7 @@ def live_server(monkeypatch):
     monkeypatch.setattr(srv, "session_scope", lambda: _Scope())
     # A fresh overview cache per test: the module-level one would serve another test's build.
     monkeypatch.setattr(srv, "OVERVIEW", srv.overview_mod.OverviewCache(srv._build_overview))
+    monkeypatch.setattr(srv, "BOOK_PNL", srv.incentive_pnl.BookPnlCache())
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), srv.LiveDashHandler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -99,6 +100,27 @@ def test_page_and_health(live_server):
     assert "mm10_pt" not in body and "mmsell10" not in body
     with urllib.request.urlopen(base + "/healthz", timeout=10) as r:
         assert r.read() == b"ok"
+
+
+def test_the_incentive_book_pnl_route(live_server):
+    base, session = live_server
+    from kalshi_bot.liquidity_incentive import live as limm
+    code, empty = _get(base, "/api/incentives/book/pnl")
+    assert code == 200 and empty["points"] == [] and empty["stats"] is None
+    session.add(m.LiveOrder(kalshi_order_id="o-inc", market_ticker="KXINC-1",
+                            strategy=limm.LIVE_TAG, created_at=T0, side="yes", action="buy",
+                            limit_price=3, quantity=300, status="resting"))
+    session.commit()
+    srv.BOOK_PNL.ttl = 0.0
+    since = (T0 + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    code, x = _get(base, f"/api/incentives/book/pnl?since={since}&points=30")
+    assert code == 200 and x["book"] == limm.LIVE_TAG
+    assert x["points"][0]["at"].startswith((T0 + timedelta(hours=1)).isoformat()[:16])
+    assert x["stats"]["net_usd"] == 0.0 and len(x["daily"]) >= 1
+    # The page that draws it carries no book tag: the tag comes from the payload.
+    with urllib.request.urlopen(base + "/chart", timeout=10) as r:
+        page = r.read().decode()
+    assert "/api/incentives/book/pnl" in page and limm.LIVE_TAG not in page
 
 
 def test_all_routes_answer(live_server):
