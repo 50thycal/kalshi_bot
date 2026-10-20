@@ -1,11 +1,7 @@
+# latest deployment 28e1b356-ebe0-44fa-ac5b-dca1af6109bc (status=SUCCESS, created=2026-10-20T13:22:50.532Z)
 # ops request [READ]
-# type=db  id=pcr-own-rcpt-2
+# type=logs  service=main  id=pcr-own-logs-1
 # actor=platform-change-review
-# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:23:44Z
-command_id                 action          status     completed_at                      error  result                                                                                                                                                                                                  
--------------------------  --------------  ---------  --------------------------------  -----  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-pcr-fbtx-impacts-20261020  RECORD_IMPACTS  SUCCEEDED  2026-10-20 13:22:04.445272+00:00         {"kind": "impact_records", "count": 4, "records": [{"action": "NO_ACTION", "status": "applied", "record_id": 44, "impact_class": "I0", "experiment_id": 42}, {"action": "NO_ACTION", "status": "applied…
-ws027-metrics-cutover-1    CUTOVER         SUCCEEDED  2026-10-16 09:34:12.055585+00:00         {"kind": "cutover", "status": "active", "new_epochs": [], "revision_id": 14, "activated_at": "2026-10-16 09:34:11.715118+00:00", "measured_boundary": "2026-10-16 09:34:11.715118+00:00", "recompute_ap…
-ws027-metrics-impacts-1    RECORD_IMPACTS  SUCCEEDED  2026-10-16 09:24:00.630342+00:00         {"kind": "impact_records", "count": 14, "records": [{"action": "RECOMPUTE", "status": "accepted", "record_id": 30, "impact_class": "I1", "experiment_id": 39}, {"action": "RECOMPUTE", "status": "accep…
-
-(3 rows)
+# code b3ee7fb085fafe5637f4cdcd355dd06eb1b18060 · started 2026-10-20T13:24:10Z
+# target service: main
+2026-10-20T13:24:01.885674188Z INFO  experiment OS platform command
