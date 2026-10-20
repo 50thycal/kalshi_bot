@@ -1,0 +1,25 @@
+# ops request [READ]
+# type=db  id=rw3
+# code 1992c2c4ccdeb5369364f07384a06ae03a455ebd · started 2026-10-20T11:54:47Z
+e                        w     b       n    hmin  hmax  yscore  nscore  qual
+-----------------------  ----  ------  ---  ----  ----  ------  ------  ----
+KXTRUMPMENTION-26OCT17   CEAS  early   3    92    93    2051    495     1.00
+KXTRUMPMENTION-26OCT17   NQE   early   11   90    91    2584    8202    1.00
+KXTRUMPMENTION-26OCT17   PALE  early   60   48    58    1134    2691    1.00
+KXTRUMPMENTION-26OCT17   PALE  last48  244  3     48    1576    2406    1.00
+KXTRUMPMENTION-26OCT19   CATT  early   85   88    103   1462    493     1.00
+KXTRUMPMENTION-26OCT19   CEAS  early   236  48    91    1420    4000    1.00
+KXTRUMPMENTION-26OCT19   CEAS  last48  90   31    48    2295    13837   1.00
+KXTRUMPMENTION-26OCT19   FENT  early   194  53    88    569     944     1.00
+KXTRUMPMENTION-26OCT19   MADE  early   67   91    103   622     661     1.00
+KXTRUMPMENTION-26OCT19   SOCI  early   236  48    91    712     498     1.00
+KXTRUMPMENTION-26OCT19   SOCI  last48  33   42    48    802     494     1.00
+KXTRUMPMENTIONB-26OCT19  BEST  early   266  48    97    1122    576     1.00
+KXTRUMPMENTIONB-26OCT19  BEST  last48  25   43    48    821     460     1.00
+KXTRUMPMENTIONB-26OCT19  CHIN  early   74   83    97    1060    567     1.00
+KXTRUMPMENTIONB-26OCT19  FENT  early   38   48    55    1154    1134    1.00
+KXTRUMPMENTIONB-26OCT19  FENT  last48  247  2     48    905     909     0.98
+KXTRUMPMENTIONB-26OCT19  NQE   early   266  48    97    1174    1366    1.00
+KXTRUMPMENTIONB-26OCT19  NQE   last48  253  1     48    816     2258    0.83
+
+(18 rows)
