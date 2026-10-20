@@ -1,1 +1,1 @@
-{"type": "db", "id": "pcr-own-rcpt-2", "actor": "platform-change-review", "max_rows": 10, "sql": "select command_id, action, status, completed_at, error, left(result_json::text, 500) as result from experiment_os_platform_commands order by id desc limit 3"}
+{"type":"logs","id":"pcr-own-logs-1","actor":"platform-change-review","filter":"platform command"}
