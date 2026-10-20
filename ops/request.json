@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"pcr-ct-after-1","actor":"platform-change-review"}
+{"type":"xos","command":"platform","args":["review","EXECUTION_ENGINE:shared_primary_ownership_20260921"],"id":"pcr-own-review-2","actor":"platform-change-review"}
