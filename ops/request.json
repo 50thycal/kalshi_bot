@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "rw4", "sql": "select at::text, residual_cents, presumed_transfer, notes_json->>'residual_untrustworthy' u from incentive_balance_observations where at > '2026-10-15' and residual_cents is not null and abs(residual_cents) >= 50 order by at"}
