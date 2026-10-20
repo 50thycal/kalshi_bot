@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=ci0346
+# code 9d031c6df3f07c7c376a8788525dba7e46b2aaef · started 2026-10-20T03:46:16Z
+k     market_ticker                  t                              v                       
+----  -----------------------------  -----------------------------  ------------------------
+chg   KXMAMDANIMENTION-26NOV18-FREE  2026-10-20 02:32:00.521076+00  buy yes 10c x100 resting
+chg   KXTRUMPMENTIONB-26OCT27-SUPR   2026-10-20 03:32:44.092323+00  buy yes 1c x500 resting 
+cxl   KXTRUMPMENTION-26OCT20-FRAU    2026-10-19 15:53:16.705679+00  pre_event               
+open  count                                                         9                       
+
+(4 rows)
