@@ -1,4 +1,12 @@
 # ops request [READ]
-# type=noop
-# code 9d031c6df3f07c7c376a8788525dba7e46b2aaef · started 2026-10-19T23:47:00Z
-(noop — nothing to do)
+# type=db  id=ci0146
+# code 9d031c6df3f07c7c376a8788525dba7e46b2aaef · started 2026-10-20T01:46:33Z
+k     market_ticker                  t                              v                          
+----  -----------------------------  -----------------------------  ---------------------------
+chg   KXMAMDANIMENTION-26NOV18-AFFO  2026-10-20 00:28:09.600342+00  buy no 9c x111 out_of_band 
+chg   KXMAMDANIMENTION-26NOV18-FREE  2026-10-20 00:28:13.242704+00  buy yes 8c x125 out_of_band
+chg   KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 00:51:49.467006+00  buy no 7c x142 resting     
+cxl   KXTRUMPMENTION-26OCT20-FRAU    2026-10-19 15:53:16.705679+00  pre_event                  
+open  count                                                         7                          
+
+(5 rows)
