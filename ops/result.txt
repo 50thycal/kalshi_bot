@@ -1,28 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1021a0946
-# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-21T09:46:48Z
-k     market_ticker                  t                              v                       
-----  -----------------------------  -----------------------------  ------------------------
-chg   KXTRUMPMENTION-26OCT27-PALE    2026-10-21 07:42:49.960631+00  buy yes 6c x166 repriced
-chg   KXTRUMPMENTION-26OCT27-PEAC    2026-10-21 08:37:25.425481+00  buy yes 3c x333 resting 
-chg   KXTRUMPMENTION-26OCT27-CEAS    2026-10-21 08:37:32.35046+00   buy yes 3c x333 resting 
-chg   KXTRUMPMENTION-26OCT27-PALE    2026-10-21 08:44:02.48951+00   buy yes 10c x100 resting
-chg   KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.52941+00   sell no 5c x71 resting  
-chg   KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.597467+00  sell no 7c x70 resting  
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting  
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting  
-open  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting 
-open  KXTRUMPMENTION-26OCT24-STOC    2026-10-20 18:27:30.766696+00  buy no 8c x125 resting  
-open  KXTRUMPMENTION-26OCT23-DIVI    2026-10-20 19:19:00.512996+00  buy no 6c x166 resting  
-open  KXTRUMPMENTION-26OCT23-TRAN    2026-10-20 20:20:38.231804+00  buy no 2c x500 resting  
-open  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 01:57:28.392336+00  buy no 10c x100 resting 
-open  KXTRUMPMENTION-26OCT27-PEAC    2026-10-21 08:37:25.425481+00  buy yes 3c x333 resting 
-open  KXTRUMPMENTION-26OCT27-CEAS    2026-10-21 08:37:32.35046+00   buy yes 3c x333 resting 
-open  KXTRUMPMENTION-26OCT27-PALE    2026-10-21 08:44:02.48951+00   buy yes 10c x100 resting
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.52941+00   sell no 5c x71 resting  
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.597467+00  sell no 7c x70 resting  
-snap  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:44:53.902923+00  95/4                    
-snap  KXTRUMPMENTION-26OCT25-PEAC    2026-10-21 09:44:53.902923+00  2/97                    
-snap  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-21 09:44:53.902923+00  3/95                    
-
-(21 rows)
+# type=noop
+# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-21T09:47:09Z
+(noop — nothing to do)
