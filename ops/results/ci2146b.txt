@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=ci2146b
-# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-20T21:47:04Z
-market_ticker                status    cancel_reason
----------------------------  --------  -------------
-KXTRUMPMENTION-26OCT24-FRAU  canceled  out_of_band  
-
-(1 row)
