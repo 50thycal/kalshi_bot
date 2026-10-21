@@ -1045,6 +1045,21 @@ class Store:
             "volume_total_bytes": volume.total,
         }
 
+    @classmethod
+    def _retention_summary(cls, db):
+        """Retention (DEC-038) without the dry run's per-series table, which runs to thousands of
+        rows: the last report keeps its top 30."""
+        passes = {}
+        for mode in ("dry_run", "execute"):
+            progress = cls._state_in(db, "retention:" + mode)
+            if progress:
+                passes[mode] = {key: value for key, value in progress.items() if key != "by_series"}
+        return {
+            "passes": passes,
+            "last_report": cls._state_in(db, "retention:last_report"),
+            "backup_retired": cls._state_in(db, "retention:backup_retired"),
+        }
+
     def status(self):
         with self.connect() as db:
             counts = {
@@ -1057,7 +1072,10 @@ class Store:
             }
             states = {
                 row[0]: json.loads(row[1])
-                for row in db.execute("SELECT * FROM state WHERE key NOT LIKE 'assessment_input:%'")
+                for row in db.execute(
+                    "SELECT * FROM state WHERE key NOT LIKE 'assessment_input:%' "
+                    "AND key NOT LIKE 'retention:%'"
+                )
             }
             assessments = db.execute("SELECT count(*) FROM current_assessments").fetchone()[0]
             reviewed = db.execute(
@@ -1087,6 +1105,7 @@ class Store:
             from .selection import status_in
 
             history_policy = status_in(db)
+            retention = self._retention_summary(db)
         return {
             "captured_at": now(),
             "objects": counts,
@@ -1095,6 +1114,7 @@ class Store:
             "assessment_contexts": assessments,
             "contract_archive": archive,
             "history_policy": history_policy,
+            "retention": retention,
             "jobs": states,
             "backfill": {
                 source: {
