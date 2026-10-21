@@ -325,3 +325,14 @@ def test_bulk_guard_counts_reusable_pages_but_critical_tier_does_not(store, monk
     assert not measure(store)["bulk_paused"]  # 3 + 3 GiB clears the 5 GiB resume point
     usage.free = GIB // 2
     assert measure(store)["writes_paused"]  # freelist pages never satisfy the critical floor
+
+
+def test_status_reports_retention_without_the_per_series_table(world):
+    run(world, "dry_run")
+    status = world.status()
+    assert not any(key.startswith("retention:") for key in status["jobs"])
+    summary = status["retention"]
+    assert "by_series" not in summary["passes"]["dry_run"]
+    assert summary["passes"]["dry_run"]["revisions"]["markets_eligible"] == 2
+    assert summary["last_report"]["top_series"]
+    assert summary["backup_retired"] is None
