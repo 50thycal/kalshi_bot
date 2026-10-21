@@ -612,3 +612,18 @@ Readings:
   - paper pools about 30 book variants per series, so it carries a multiple-comparison risk;
   - a family member's P&L sums all books on one game;
   - paper P&L is as recorded.
+
+## Retention continuation — 2026-10-21 (DEC-038)
+
+The owner chose to thin data after the disk audit; bulk discovery had been paused since free
+space fell under its floor. Built `catalog/retention.py`:
+- off / dry run / execute modes;
+- the backup retired;
+- superseded assessments;
+- settled, unselected market revisions as notes or `final_only`;
+- the bulk guard counts freelist pages.
+
+Audit figures, mechanics and rollout are in
+[selective history § Retention](../MARKET_CATALOG_SELECTIVE_HISTORY.md#retention--owner-decision-2026-10-21-dec-038).
+Next: the dry-run report, then the owner's choice of treatment and execute.
+

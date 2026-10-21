@@ -923,10 +923,13 @@ class Store:
             return [unpack(row[0]) for row in rows]
 
     def backup_before_compression(self):
-        """Keep one consistent pre-upgrade backup; publish only a complete copy."""
+        """Keep one consistent pre-upgrade backup; publish only a complete copy. None once
+        retention has retired it (DEC-038): compression is complete and it is not rebuilt."""
         destination = Path(self.path + ".before-compression-v1")
         if destination.exists():
             return destination
+        if self.state("retention:backup_retired"):
+            return None
         required = Path(self.path).stat().st_size + 64 * 1024 * 1024
         if shutil.disk_usage(destination.parent).free < required:
             raise RuntimeError("Insufficient storage for catalog backup")

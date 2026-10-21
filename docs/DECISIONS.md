@@ -1587,3 +1587,27 @@ size. Rulings below are Platform Change Review's (`docs/LIVE_FILL_ATTRIBUTION.md
 **Revisit if** fills stop carrying `count_fp`, a third tag needs to share a market (pairs only,
 by design), or the account breakers start binding with two live mmsell books armed.
 
+## DEC-038 — Thin superseded catalog history; keep current state and everything selected
+
+**Date:** 2026-10-21 UTC. **Workstream:** WS-023 (disk side of WS-024 D2). **Owner direction:**
+after the catalog audit, Calvin chose to free space by thinning data rather than resizing ("A,
+build it and show me the dry run").
+
+- **Scope:** the pre-compression backup file; assessments that no current pointer references,
+  older than 7 days; and the revisions of settled markets that no selection covers.
+  - Current objects stay.
+  - Open, traded, reviewed and registry markets stay.
+  - Event and series history, evidence, reviews and contract documents stay.
+  - This narrows rule 7 of DEC-034's specification for that class only.
+- **Two treatments, chosen after a dry run:** compact notes (the approved idea), or `final_only`
+  (delete the snapshots when no rule change was ever observed).
+  - Measured first: compact notes are not smaller than storage-encoding-v2 full rows.
+  - The dry run prices both treatments before anything is removed.
+- **The bulk storage guard counts reusable freelist pages;** the critical tier does not. Without
+  this, deleted rows would free no headroom and discovery would stay paused, since there is no
+  room for a VACUUM.
+- **Default off.** `dry_run` changes nothing. `execute` is a separate owner step.
+
+**Revisit if** a strategy needs historical quote snapshots of untraded markets (use exchange
+candles instead), or a free-space margin large enough for a VACUUM appears.
+
