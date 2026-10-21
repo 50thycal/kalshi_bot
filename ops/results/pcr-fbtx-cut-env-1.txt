@@ -1,0 +1,16 @@
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# pre-state unreadable (GraphQL errors: [{"message": "Not Authorized", "locations": [{"line": 1, "column": 41}], "path": ["variables"], "extensions": {"code": "INTERNAL_SERVER_ERROR"}, "traceId": "1907764072918036061"}]) — the change will be applied but cannot be compared
+# guard INCONCLUSIVE: EXPERIMENT_OS_PLATFORM_COMMAND: the current value could not be read, so whether it holds unconsumed work is unknown
+  FAILED EXPERIMENT_OS_PLATFORM_COMMAND: GraphQL errors: [{"message": "Not Authorized", "locations": [{"line": 1, "column": 41}], "path": ["variableUpsert"], "extensions": {"code": "INTERNAL_SERVER_ERROR"}, "traceId": "7981431645031674905"}]
+# NOT set (re-run to retry; idempotent): ['EXPERIMENT_OS_PLATFORM_COMMAND']
+# post-state unreadable: GraphQL errors: [{"message": "Not Authorized", "locations": [{"line": 1, "column": 41}], "path": ["variables"], "extensions": {"code": "INTERNAL_SERVER_ERROR"}, "traceId": "3379438213980762300"}]
+# the change is NOT confirmed — re-read with {"type":"env"} before acting on it
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_PLATFORM_COMMAND  id=pcr-fbtx-cut-env-1
+# actor=platform-change-review  purpose=CUTOVER MARKET_TAXONOMY:football_coverage_2026_10_12 (owner confirmed 2026-10-21)
+# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-21T12:51:54Z
+# target service: main
+# 0/1 variables set
+# VERDICT: FAILED
