@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
-from . import selection
+from . import retention, selection
 from .documents import ContractCapture
 from .evaluators import refresh
 from .headroom import StorageDeferred, measure, require_space
@@ -590,7 +590,10 @@ def main():
     server = make_server(store, token, ("::", int(os.environ.get("PORT", "8080"))))
     LOG.info("catalog_backup status=starting")
     backup = store.backup_before_compression()
-    LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
+    if backup is None:
+        LOG.info("catalog_backup status=retired")
+    else:
+        LOG.info("catalog_backup status=ready bytes=%s", backup.stat().st_size)
     seed(store)
     apply_approvals(store)
     # Read-only and off the start path: it decorates every traded market of each series.
@@ -604,6 +607,11 @@ def main():
         daemon=True,
     )
     thread.start()
+    if retention.MODE in retention.MODES:
+        # Its own thread and connections, in short transactions: collection never waits on it.
+        threading.Thread(
+            target=retention.run, args=(store, stopped), name="catalog-retention", daemon=True
+        ).start()
 
     def stop(_signum, _frame):
         stopped.set()

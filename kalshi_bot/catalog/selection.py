@@ -196,8 +196,12 @@ def _has_compact(db, kind, ticker):
 
 
 def _needs_hydration(db, scope, ticker):
-    """Only history that was actually written compact has anything to recover."""
-    if not (_state(db, "history:writes") or {}).get("compact"):
+    """Only history that was actually written (or thinned, DEC-038) compact has anything to
+    recover."""
+    thinned = ((_state(db, "retention:execute") or {}).get("revisions") or {}).get(
+        "rows_compacted"
+    )
+    if not (_state(db, "history:writes") or {}).get("compact") and not thinned:
         return False
     if scope == "series":
         return True
@@ -620,6 +624,10 @@ def coverage_in(db, kind, ticker, document=None, limit=500):
     missing = ["historical_contract_document_binding_unverified"]
     if compact:
         missing.append("compact_revisions_without_full_payload")
+    if not rows:
+        # Upserts always write a revision; none left means retention kept only the current
+        # object (DEC-038, `final_only`).
+        missing.append("revisions_retired_current_object_only")
     if late:
         missing.append("observed_after_exchange_creation")
     if truncated:
@@ -636,7 +644,7 @@ def coverage_in(db, kind, ticker, document=None, limit=500):
         "revisions_truncated": truncated,
         "first_full_snapshot_at": first_full,
         "last_compact_observation_at": last_compact,
-        "full_payload_history_complete": not compact and not truncated,
+        "full_payload_history_complete": bool(rows) and not compact and not truncated,
         "observed_from": first_seen,
         "exchange_created_at": created,
         "observed_after_exchange_creation": late,

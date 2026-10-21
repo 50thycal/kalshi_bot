@@ -299,3 +299,77 @@ Validation: catalog, selection, documents, readiness, economics and headroom tes
 full repository suite; Ruff; JavaScript syntax; a headless-Chromium render of the dashboard at
 1280 px and 390 px (scope panel rendered, no script errors, no horizontal scroll). Remote tree and
 final-head CI are recorded on PR #586. This does not complete WS-023.
+
+## Retention — owner decision 2026-10-21 (DEC-038)
+
+The owner chose to thin superseded history after the 2026-10-21 audit. That reverses rule 7 above
+("no background job may delete existing ... revisions") for one narrow class only. Code:
+`kalshi_bot/catalog/retention.py`; tests: `tests/test_catalog_retention.py`.
+
+**Audit (catalog logs, 2026-10-21 ~12:55Z).**
+- The volume is 39.4 GB with 9.7 GB free. Bulk discovery has been paused since free space fell
+  below its 20% floor; it resumes at 25% (9.85 GB).
+- The database file is 28.4 GB:
+
+| Table or file | On disk | Rows |
+|---|---|---|
+| `revisions` (+ primary key) | 17.0 + 1.8 GB | 13.2M |
+| `objects` (+ indexes) | 7.3 + 0.6 GB | 6.97M (6.08M markets, 873k events, 15k series) |
+| `assessments` | 0.68 GB | 554k (161k current contexts) |
+| contract PDFs | 0.65 GB | 5.3k blobs |
+| other tables | ~0.3 GB | — |
+| `catalog.sqlite3.before-compression-v1` (outside the DB) | 1.27 GB | — |
+
+- Selection covers 47,208 markets plus 140 series. Every other market is inventory.
+- 5.63M full revisions were written in the 9 days to 10-21, under policy `broad_full`.
+
+**What a pass may remove.** All three items are gated by `CATALOG_RETENTION_MODE`.
+1. **The pre-compression backup.** Removed only once `storage:compression.complete` is set.
+   `backup_before_compression` then returns `None` instead of rebuilding a full-size copy.
+2. **Superseded assessments.** These are rows no `current_assessments` entry points at, with
+   `as_of` older than `CATALOG_RETENTION_ASSESSMENT_DAYS` (default 7).
+3. **Revisions of settled, unselected markets.** A market qualifies only if its status is
+   `finalized` or `settled` and no active member covers it, by market, event or series. The
+   treatment comes from `CATALOG_RETENTION_REVISIONS`:
+   - `notes` turns each full snapshot into the compact observation above.
+   - `final_only` deletes the snapshots, but only when all of them carry the current object's
+     rules hash, so no rule or parent change was ever observed. The current object's full final
+     document is then the record, and `coverage_in` reports
+     `revisions_retired_current_object_only`.
+   - A market with a rule change is untouched under `final_only`.
+
+**What every pass keeps.**
+- Current objects.
+- Every open market.
+- Every selected market, event and series.
+- All event and series revisions.
+- Evidence, reviews, current assessments and contract documents.
+
+**Measured before building (why both treatments exist).** On a realistic market layout, a full
+snapshot under storage encoding v2 is about 520 bytes. A rule-bearing compact note is about
+710 bytes and a lifecycle note about 350 bytes: the hashes they carry compress poorly, and the
+v2 dictionary was built for full layouts. Notes therefore save little on v2 rows and somewhat
+more on older v1 rows, and only the dry run can measure it. The same measurement means
+`CATALOG_HISTORY_POLICY=selective` is not a meaningful disk lever under v2.
+
+**Mechanics.**
+- One background thread runs a resumable pass in ticker order, 100 markets per short write
+  transaction. In execute mode the pass state is stored in that same transaction.
+- Rows are deleted, and for notes re-inserted in their original order. An in-place `UPDATE` that
+  shrinks a row frees no page; measured on a 20k-row table, the freelist stayed at 0.
+- Freed pages go to the freelist and are reused before the file grows. `headroom.measure` counts
+  them for the **bulk** tier only; the critical writes tier still reads the volume alone. The file
+  shrinks only with a VACUUM, which needs free space about equal to the result, and none is run.
+
+**Rollout.**
+1. Merge. Set `CATALOG_RETENTION_MODE=dry_run`, then read `catalog_retention_report` (also
+   stored as `retention:last_report`). Nothing changes.
+2. The owner picks a treatment. Then set `CATALOG_RETENTION_REVISIONS` and
+   `CATALOG_RETENTION_MODE=execute`. Optionally set `CATALOG_RETENTION_REPEAT_HOURS=24`, so newly
+   settled inventory is thinned daily.
+3. Verify:
+   - `reusable_bytes` rising in `catalog_storage`;
+   - `bulk_headroom_bytes` above the resume point in the storage guard;
+   - `discovery:*` running again.
+4. Rollback: unset the mode. Removed rows are not recoverable from the catalog. Kalshi serves
+   only current market state, which the current object already holds.
