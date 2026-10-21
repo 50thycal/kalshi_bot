@@ -1,23 +1,4 @@
 # ops request [READ]
-# type=db  id=ci0146
-# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-21T01:46:23Z
-k     market_ticker                  t                              v                           
-----  -----------------------------  -----------------------------  ----------------------------
-chg   KXTRUMPMENTION-26OCT24-CHEA    2026-10-21 00:12:15.913267+00  buy no 9c x111 resting      
-chg   KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 00:20:28.696087+00  buy no 9c x111 resting      
-fill  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-21 00:10:55.892703+00  buy yes lim 2 fill yes 2c x9
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting      
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting      
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 05:09:19.396416+00  sell no 6c x71 resting      
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20 05:09:19.45522+00   sell no 7c x71 resting      
-open  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting     
-open  KXTRUMPMENTION-26OCT24-STOC    2026-10-20 18:27:30.766696+00  buy no 8c x125 resting      
-open  KXTRUMPMENTION-26OCT23-DIVI    2026-10-20 19:19:00.512996+00  buy no 6c x166 resting      
-open  KXTRUMPMENTION-26OCT23-TRAN    2026-10-20 20:20:38.231804+00  buy no 2c x500 resting      
-open  KXTRUMPMENTION-26OCT24-FENT    2026-10-20 23:18:22.548045+00  buy yes 9c x111 resting     
-open  KXTRUMPMENTION-26OCT24-CHEA    2026-10-21 00:12:15.913267+00  buy no 9c x111 resting      
-open  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 00:20:28.696087+00  buy no 9c x111 resting      
-snap  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 01:45:51.057639+00  94/5                        
-snap  KXTRUMPMENTION-26OCT25-PEAC    2026-10-21 01:45:51.057639+00  2/97                        
-
-(16 rows)
+# type=noop
+# code a1461356696b1affc77125056ce702d3730ed1da · started 2026-10-21T01:46:42Z
+(noop — nothing to do)
