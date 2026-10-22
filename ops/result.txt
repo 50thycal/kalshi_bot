@@ -1,4 +1,12 @@
 # ops request [READ]
-# type=noop
-# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T23:43:04Z
-(noop — nothing to do)
+# type=db  id=ci1022a2346
+# code 6645eae5b90258bbd775c1de1ddb73dcb6e232c6 · started 2026-10-22T23:46:39Z
+k     market_ticker                t                              v                      
+----  ---------------------------  -----------------------------  -----------------------
+open  KXTRUMPMENTION-26OCT25-PEAC  2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting 
+open  KXTRUMPMENTION-26OCT25-PEAC  2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting 
+open  KXTRUMPMENTION-26OCT27-PEAC  2026-10-21 08:37:25.425481+00  buy yes 3c x333 resting
+open  KXTRUMPMENTION-26OCT27-CEAS  2026-10-21 08:37:32.35046+00   buy yes 3c x333 resting
+open  KXTRUMPMENTION-26OCT27-NQE   2026-10-21 14:01:20.470755+00  buy yes 3c x333 resting
+
+(5 rows)
