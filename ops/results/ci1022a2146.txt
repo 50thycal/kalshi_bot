@@ -1,0 +1,16 @@
+# ops request [READ]
+# type=db  id=ci1022a2146
+# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T21:46:10Z
+k     market_ticker                  t                              v                      
+----  -----------------------------  -----------------------------  -----------------------
+gone  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-20 00:28:09.600342+00  canceled out_of_band   
+gone  KXTRUMPMENTION-26OCT24-STOC    2026-10-20 18:27:30.766696+00  canceled incentive_exit
+gone  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 00:20:28.696087+00  canceled repriced      
+gone  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 01:57:28.392336+00  canceled out_of_band   
+open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting 
+open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting 
+open  KXTRUMPMENTION-26OCT27-PEAC    2026-10-21 08:37:25.425481+00  buy yes 3c x333 resting
+open  KXTRUMPMENTION-26OCT27-CEAS    2026-10-21 08:37:32.35046+00   buy yes 3c x333 resting
+open  KXTRUMPMENTION-26OCT27-NQE     2026-10-21 14:01:20.470755+00  buy yes 3c x333 resting
+
+(9 rows)
