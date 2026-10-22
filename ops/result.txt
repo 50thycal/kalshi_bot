@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=desks  id=desk-pause-precheck-202610222342
-# actor=claude  purpose=read-only pre-check before operator pauses desk-service (cost)
-# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T23:42:31Z
-DESK SERVICE DIAGNOSTIC (read-only)
-========================================================================
-DIAGNOSTIC : FAILED — not_configured
-VERDICT    : UNKNOWN — this is NOT a health result; the desk was not assessed
-DETAIL     : The DESKS_DIAGNOSTIC_TOKEN secret is not available to the ops runner. Provisioning steps: docs/desks/DIAGNOSTICS.md.
-elapsed 0 ms · one attempt, no retry
+# type=noop
+# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T23:43:04Z
+(noop — nothing to do)
