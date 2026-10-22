@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1022a2150", "sql": "select event_ticker, count(*) mkts, to_char(min(end_date),'MM-DD HH24:MI') pend, round(extract(epoch from min(end_date)-now())/3600) hrs_left from incentive_programs where incentive_type='liquidity' and superseded_at is null and disappeared_at is null and end_date > now() and (series_ticker ilike '%MENTION%' or market_ticker ilike '%MENTION%') group by 1 order by min(end_date)"}
+{"type":"noop"}
