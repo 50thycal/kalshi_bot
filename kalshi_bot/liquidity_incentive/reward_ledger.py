@@ -98,6 +98,11 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-10-20", 393, "KXTRUMPMENTION-26OCT19"),
     ("2026-10-20", 127, "KXTRUMPMENTION-26OCT19"),
     ("2026-10-20", 313, "KXTRUMPMENTION-26OCT19"),
+    # Operator screenshot 2026-10-22: Greenville NC rally, observed as one 796c step.
+    ("2026-10-22", 389, "KXTRUMPMENTION-26OCT20"),
+    ("2026-10-22", 116, "KXTRUMPMENTION-26OCT20"),
+    ("2026-10-22", 102, "KXTRUMPMENTION-26OCT20"),
+    ("2026-10-22", 189, "KXTRUMPMENTION-26OCT20"),
 )
 
 
