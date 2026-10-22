@@ -1,21 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1022a0345
-# code d988ae11b2063b03c1ce4699348febd7d90158e9 · started 2026-10-22T03:46:26Z
-k     market_ticker                  t                              v                      
-----  -----------------------------  -----------------------------  -----------------------
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:43.983369+00  sell yes 3c x3 resting 
-open  KXTRUMPMENTION-26OCT25-PEAC    2026-10-20 04:08:44.052962+00  sell yes 3c x2 resting 
-open  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-20 05:29:07.898321+00  buy yes 2c x500 resting
-open  KXTRUMPMENTION-26OCT24-STOC    2026-10-20 18:27:30.766696+00  buy no 8c x125 resting 
-open  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21 01:57:28.392336+00  buy no 10c x100 resting
-open  KXTRUMPMENTION-26OCT27-PEAC    2026-10-21 08:37:25.425481+00  buy yes 3c x333 resting
-open  KXTRUMPMENTION-26OCT27-CEAS    2026-10-21 08:37:32.35046+00   buy yes 3c x333 resting
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.52941+00   sell no 5c x71 resting 
-open  KXTRUMPMENTION-26OCT22-DIVI    2026-10-21 09:26:30.597467+00  sell no 7c x70 resting 
-open  KXTRUMPMENTION-26OCT27-NQE     2026-10-21 14:01:20.470755+00  buy yes 3c x333 resting
-snap  KXTRUMPMENTION-26OCT22-DIVI    2026-10-22 03:37:02.983338+00  95/4                   
-snap  KXTRUMPMENTION-26OCT24-STOC    2026-10-22 03:37:02.983338+00  87/8                   
-snap  KXTRUMPMENTION-26OCT25-PEAC    2026-10-22 03:37:02.983338+00  2/97                   
-snap  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-22 03:37:02.983338+00  2/95                   
-
-(14 rows)
+# type=noop
+# code d988ae11b2063b03c1ce4699348febd7d90158e9 · started 2026-10-22T03:46:44Z
+(noop — nothing to do)
