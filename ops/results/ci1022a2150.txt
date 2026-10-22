@@ -1,0 +1,15 @@
+# ops request [READ]
+# type=db  id=ci1022a2150
+# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T21:46:40Z
+event_ticker                mkts  pend         hrs_left
+--------------------------  ----  -----------  --------
+KXWORLDNEWSMENTION-26OCT22  15    10-22 23:00  1       
+KXTRUMPMENTION-26OCT22      40    10-23 02:00  4       
+KXTRUMPMENTION-26OCT23      31    10-23 21:00  23      
+KXTRUMPMENTION-26OCT24      32    10-25 02:00  52      
+KXTRUMPMENTION-26OCT25      32    10-25 22:00  72      
+KXTRUMPMENTION-26OCT27      35    11-10 15:00  449     
+KXTRUMPMENTIONB-26OCT27     35    11-10 15:00  449     
+KXMAMDANIMENTION-26NOV18    19    11-19 01:00  651     
+
+(8 rows)
