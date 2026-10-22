@@ -1,1 +1,1 @@
-{"type": "db", "id": "rw1022a1", "sql": "select at::text, residual_cents, presumed_transfer from incentive_balance_observations where at > '2026-10-20 12:00' and residual_cents is not null and abs(residual_cents) >= 50 order by at"}
+{"type":"noop"}
