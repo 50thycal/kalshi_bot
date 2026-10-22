@@ -1,13 +1,18 @@
 # ops request [READ]
-# type=db  id=hdl-audit-1022a
-# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T22:38:23Z
-strategy   n_counted_oct  n_flat_before_oct  raw_pnl_counted_oct  raw_pnl_flat_before_oct  n_from_positions_feed  earliest_first_flat             
----------  -------------  -----------------  -------------------  -----------------------  ---------------------  --------------------------------
-Alimm1     12             0                  -41.94               0.00                     8                      2026-10-01 22:07:07.676548+00:00
-Fmmsell10  77             0                  4.53                 0.00                     0                      2026-10-01 00:27:16.199055+00:00
-Hmmsell10  17             0                  -3.75                0.00                     0                      2026-10-04 03:01:31.004826+00:00
-Jmmsell10  221            0                  -11.61               0.00                     0                      2026-10-04 20:04:36.582873+00:00
-Kmmsell10  196            0                  3.96                 0.00                     0                      2026-10-11 20:00:36.789381+00:00
-Nmmsell10  18             0                  6.20                 0.00                     0                      2026-10-16 23:03:28.639602+00:00
+# type=db  id=hdl-audit-1022b
+# code 18a0b44ddd526621891722c512526e8a907b1cf5 · started 2026-10-22T22:39:31Z
+on_dash  books                n_tickers  realized_oct
+-------  -------------------  ---------  ------------
+False    Fmmsell10            75         4.26        
+False    Fmmsell10+Hmmsell10  1          0.13        
+False    Hmmsell10            14         1.58        
+True     Alimm1               12         -41.94      
+True     Fmmsell10+Jmmsell10  1          0.14        
+True     Hmmsell10+Jmmsell10  2          -5.46       
+True     Jmmsell10            218        -6.29       
+True     Kmmsell10            180        -1.96       
+True     Kmmsell10+Nmmsell10  16         5.91        
+True     Nmmsell10            2          0.29        
+                              521        -43.34      
 
-(6 rows)
+(11 rows)
