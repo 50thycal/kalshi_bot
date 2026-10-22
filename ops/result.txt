@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code d988ae11b2063b03c1ce4699348febd7d90158e9 · started 2026-10-22T15:47:09Z
-(noop — nothing to do)
+# type=db  id=rw1022a1
+# code d988ae11b2063b03c1ce4699348febd7d90158e9 · started 2026-10-22T17:28:47Z
+at                             residual_cents  presumed_transfer
+-----------------------------  --------------  -----------------
+2026-10-22 17:04:34.586218+00  796             True             
+
+(1 row)
