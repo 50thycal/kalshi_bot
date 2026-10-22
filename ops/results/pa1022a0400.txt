@@ -1,0 +1,20 @@
+# ops request [READ]
+# type=db  id=pa1022a0400
+# code d988ae11b2063b03c1ce4699348febd7d90158e9 · started 2026-10-22T03:56:57Z
+market_ticker                    first_buy    bq   cost   sq   proceeds  kinds                        
+-------------------------------  -----------  ---  -----  ---  --------  -----------------------------
+KXMILLERLITEPOS-26NOV03-T84      10-12 21:39  100  10.00  100  5.00      7a302fc0-,limmexit:          
+KXTOP10BBSPOTS-26OCT24-TSWIF-10  10-13 05:13  500  5.00   1    0.01      86997a56-,limmexit:          
+KXTRUMPMENTION-26OCT13-OIL       10-13 09:15  333  9.99   333  3.33      4ed3c194-,limmexit:          
+KXTRUMPMENTION-26OCT17-PALE      10-16 02:56  100  10.00  100  7.50      b85e71cc-,limmsell:          
+KXTRUMPMENTION-26OCT19-CEAS      10-17 02:05  200  10.00  200  6.00      56d005eb-,limmexit:,limmsell:
+KXTRUMPMENTION-26OCT25-CEAS      10-18 16:47  333  9.99   333  3.33      1abce747-,limmexit:          
+KXTRUMPMENTION-26OCT25-PEAC      10-18 22:02  6    0.12                  5c077098-                    
+KXTRUMPMENTIONB-26OCT19-NQE      10-19 01:00  166  9.96   165  5.44      b0c21154-,limmexit:,limmsell:
+KXTRUMPMENTIONB-26OCT19-FENT     10-19 04:57  142  9.94   143  8.58      141a8879-,limmsell:          
+KXTRUMPMENTION-26OCT22-DIVI      10-20 04:06  142  9.94   0    0.00      956ab9bc-,limmsell:          
+KXTRUMPMENTION-26OCT27-SAVE      10-20 14:32  125  10.00  125  4.00      bde9ab6a-,limmexit:          
+KXTRUMPMENTIONB-26OCT27-NQE      10-21 00:10  9    0.18                  0b2c048b-                    
+KXTRUMPMENTION-26OCT24-STOC      10-21 19:42  1    0.08                  14237456-                    
+
+(13 rows)
