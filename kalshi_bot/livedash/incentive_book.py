@@ -122,6 +122,29 @@ def _program_ends(session, tickers: list[str]) -> list[datetime]:
     return sorted({_aware(e) for e in rows})
 
 
+def _trusted(row) -> bool:
+    return row.residual_cents is not None and not (row.notes_json or {}).get(
+        "residual_untrustworthy")
+
+
+def _confirmed_credit(row) -> bool:
+    """A balance step that is a payout listed on Kalshi's Rewards page (see `_rewards`)."""
+    return _trusted(row) and int(row.residual_cents) > 0 and confirmed_reward(
+        int(row.residual_cents), _aware(row.at))
+
+
+def reward_credits(session, since: datetime) -> list[tuple[datetime, float]]:
+    """Confirmed reward payouts that reached the balance at or after `since`, as (when, dollars).
+
+    The landing page counts these toward the month's goal (DEC-039): a reward is realized cash
+    the same as a settlement. Dated by when the balance moved, not by Kalshi's local payout date.
+    Unconfirmed credits are never included."""
+    rows = session.scalars(select(m.IncentiveBalanceObservation)
+                           .where(m.IncentiveBalanceObservation.at >= since)
+                           .order_by(m.IncentiveBalanceObservation.at))
+    return [(_aware(r.at), int(r.residual_cents) / 100.0) for r in rows if _confirmed_credit(r)]
+
+
 def _rewards(session, tickers: list[str] | None = None
              ) -> tuple[float, float, float, datetime | None]:
     """(rewards, unconfirmed, cash out, last reward time) from the reward ledger.
@@ -135,10 +158,10 @@ def _rewards(session, tickers: list[str] | None = None
     last_in = None
     ends = _program_ends(session, tickers or [])
     for row in session.scalars(select(m.IncentiveBalanceObservation)):
-        if row.residual_cents is None or (row.notes_json or {}).get("residual_untrustworthy"):
+        if not _trusted(row):
             continue
         cents, at = int(row.residual_cents), _aware(row.at)
-        if cents > 0 and confirmed_reward(cents, at):
+        if _confirmed_credit(row):
             cash_in += cents / 100.0
             if last_in is None or (at and at > last_in):
                 last_in = at
@@ -347,3 +370,8 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
 
 def is_incentive_book(book: str) -> bool:
     return limm.owns_tag(book)
+
+
+#: The book reward credits are attributed to. The ledger is account-wide and only this book
+#: quotes for rewards, so its live tag owns every confirmed payout.
+REWARD_BOOK = limm.LIVE_TAG

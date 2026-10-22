@@ -17,7 +17,8 @@ An automated trading system for [Kalshi](https://kalshi.com) event contracts, ow
 operated by one person. It scans the exchange, runs strategy "books" against the market
 tape, records paper trades, and — under explicit operator arming — places real orders.
 
-Its north star is **$100/month realized profit**. Research that proves a book is −EV
+Its north star is **$100/month realized profit**: settled trading after fees plus confirmed
+liquidity rewards (DEC-039). Research that proves a book is −EV
 counts: the system is built to retire ideas as readily as it adopts them, which is why so
 much of it is machinery for deciding whether an edge is real.
 

@@ -10,9 +10,9 @@ stale within a day.
 
 ## North star
 
-**$100/month in realized profit** across all strategies. Not win rate, not book
-count, not research volume. Research proving a book is −EV is still a win — it
-tells us what to stop trading.
+**$100/month in realized profit** across all strategies — settled trading after fees plus
+confirmed liquidity rewards (`DEC-039`). Not win rate, not book count, not research volume.
+Research proving a book is −EV is still a win — it tells us what to stop trading.
 
 ## Source of truth, in order
 

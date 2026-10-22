@@ -182,7 +182,7 @@ function renderHeadline(){
   const peakLine = h => {
     if(!h.month_peak_at) return `<span>peak <b>$0.00</b> · no gain banked yet</span>`;
     const when = new Date(h.month_peak_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
-    return `<span title="Highest the realized total reached this month (settled, after fees)">peak <b>${usd(h.month_peak_usd)}</b> on ${esc(when)} · ${
+    return `<span title="Highest the realized total reached this month (settled after fees, plus rewards)">peak <b>${usd(h.month_peak_usd)}</b> on ${esc(when)} · ${
       h.below_peak_usd > 0.004 ? `<b>${usd(h.below_peak_usd)}</b> below it` : "at the peak now"}</span>`;
   };
   const books = h.books.map(b => {
@@ -194,17 +194,19 @@ function renderHeadline(){
     if(hl.tape && !hl.lights.length && hl.candidates_last_hour)
       lights.push(`<span class="light on" title="No loss stop or cap refused an order in the last hour">
         <span class="dot"></span>no stops, no caps</span>`);
-    if(!hl.tape)
+    if(b.active === false)
+      lights.push(`<span class="light off" title="No orders in the last two weeks; it is here because it has money this month">
+        <span class="dot"></span>stopped trading — counted for this month</span>`);
+    else if(!hl.tape)
       lights.push(`<span class="light off" title="This book has no open twin, so there is no gate tape to read">
         <span class="dot"></span>stops/caps not tracked</span>`);
     const link = b.twin_tag ? `<a class="dim" style="font-size:12px" href="/compare?run=${encodeURIComponent(b.twin_tag)}">details →</a>` : "";
     return `<div class="panel pad book">
       <div class="top"><span class="tag">${esc(b.live_tag)}</span>${link}
-        ${b.incentive
-          ? `<span class="amt ${sgn(b.incentive.net_all_time_usd)}" title="All time: every settled market after fees, plus rewards Kalshi paid">${usd(b.incentive.net_all_time_usd)} <small class="dim" style="font-size:11px;font-weight:400">all time</small></span>`
-          : `<span class="amt ${sgn(b.total_pnl_usd)}" title="Realized this month + unrealized on open positions">${usd(b.total_pnl_usd)}</span>`}</div>
+        <span class="amt ${sgn(b.total_pnl_usd)}" title="This month: realized (trading + rewards) + unrealized on open positions">${usd(b.total_pnl_usd)}</span></div>
       <div class="pnl3">
-        <div><div class="k">Realized (month)</div><div class="v ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</div></div>
+        <div><div class="k">Realized (month)</div><div class="v ${sgn(b.month_realized_usd)}">${usd(b.month_realized_usd)}</div>${b.month_rewards_usd
+          ? `<div class="dim" style="font-size:11px">trading ${usd(b.month_trading_usd)} · rewards ${usd(b.month_rewards_usd)}</div>` : ""}</div>
         <div><div class="k">Unrealized (open)</div><div class="v ${sgn(b.unrealized_usd)}">${usd(b.unrealized_usd)}${b.open_unpriced ? `<span class="dim" title="open positions with no current price"> +${b.open_unpriced}?</span>` : ""}</div></div>
         <div><div class="k">Trades</div><div class="v">${b.trades_this_month} <span class="dim" style="font-weight:400">month · ${b.trades_all_time} all</span></div></div>
       </div>
@@ -236,7 +238,9 @@ function renderHeadline(){
       <div class="tiles">
         <div class="tile"><div class="k">Realized this month</div>
           <div class="v ${sgn(h.month_realized_usd)}">${usd(h.month_realized_usd)}</div>
-          <div class="s">settled, after fees</div></div>
+          <div class="s">${h.month_rewards_usd
+            ? `trading ${usd(h.month_trading_usd)} · rewards ${usd(h.month_rewards_usd)}`
+            : "settled, after fees"}</div></div>
         <div class="tile"><div class="k">Unrealized now</div>
           <div class="v ${sgn(h.unrealized_usd)}">${usd(h.unrealized_usd)}</div>
           <div class="s">open positions at the current bid${h.open_unpriced ? ` · ${h.open_unpriced} with no price yet` : ""}</div></div>
@@ -247,7 +251,7 @@ function renderHeadline(){
           <div class="v">${h.trades_this_month}</div>
           <div class="s">this month · ${h.trades_all_time} all time</div></div>
       </div>
-      <div class="note">The goal bar counts realized money only — settled markets, after the fees Kalshi charged. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on. Peak is the highest the realized total reached this month; the faint green tick on the bar marks it.
+      <div class="note">The goal bar counts realized money only — settled markets after the fees Kalshi charged, plus liquidity rewards that match a payout on Kalshi's Rewards page. A book that stopped trading stays on the page while it has money this month, so the book cards add up to the total. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on. Peak is the highest the realized total reached this month; the faint green tick on the bar marks it.
         ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
     </div>
     <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;

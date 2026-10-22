@@ -428,3 +428,79 @@ def test_a_month_that_only_lost_has_a_zero_peak_and_no_peak_time(session):
     h = ov.build_overview(session, now=NOW)["headline"]
     assert (h["month_peak_usd"], h["month_peak_at"]) == (0.0, None)
     assert h["below_peak_usd"] == pytest.approx(0.93)
+
+
+# --- every dollar this month is on a card (2026-10-22 audit, DEC-039) ---------------------
+
+
+def test_a_book_that_stopped_trading_still_counts_what_settled_this_month(session):
+    """Fbook's last order is outside the two-week active window, but its market settled in
+    October: the money is on the headline, on its own card, and a market it shared with the
+    active book is split, not handed whole to the successor."""
+    old = NOW - timedelta(days=20)
+    _order(session, "KXR-1", book="Fbook", filled=1, at=old)
+    _settle(session, "KXR-1", 0.07, at=NOW - timedelta(days=2))
+    _order(session, "KXR-2", book="Fbook", filled=1, at=old)
+    _order(session, "KXR-2", book="Hbook", filled=3, qty=3, at=NOW - timedelta(days=1))
+    _settle(session, "KXR-2", -2.00, at=NOW - timedelta(hours=3))
+
+    p = ov.build_overview(session, now=NOW)
+    f, hb = _book(p, "Fbook"), _book(p, "Hbook")
+    assert (f["active"], hb["active"]) == (False, True)
+    assert f["month_realized_usd"] == pytest.approx(0.07 - 0.50)
+    assert hb["month_realized_usd"] == pytest.approx(-1.50)
+    assert p["headline"]["month_realized_usd"] == pytest.approx(-1.93)
+    assert sum(b["month_realized_usd"] for b in p["headline"]["books"]) == pytest.approx(-1.93)
+
+
+def test_a_stopped_book_with_nothing_this_month_gets_no_card(session):
+    _order(session, "KXQ-1", book="Fbook", filled=1, at=NOW - timedelta(days=30))
+    _settle(session, "KXQ-1", 0.07, at=datetime(2026, 9, 20, tzinfo=timezone.utc))
+    _order(session, "KXQ-2", filled=1)
+    p = ov.build_overview(session, now=NOW)
+    assert [b["live_tag"] for b in p["headline"]["books"]] == ["Hbook"]
+
+
+def _ledger(s, cents, at, *, transfer=False):
+    s.add(m.IncentiveBalanceObservation(at=at, balance_cents=1, residual_cents=cents,
+                                        presumed_transfer=transfer))
+    s.flush()
+
+
+def test_confirmed_rewards_count_toward_the_goal_and_the_peak(session):
+    """A reward Kalshi lists on its Rewards page is realized cash: it is in the goal figure, the
+    reward book's card and the peak replay. Last month's payout and an unconfirmed credit are
+    not."""
+    from kalshi_bot.liquidity_incentive import live as limm
+
+    now = datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
+    _order(session, "KXW-1", filled=1, at=now - timedelta(days=4))
+    _settle(session, "KXW-1", -0.93, at=now - timedelta(days=3))       # Oct 9
+    _ledger(session, 221, datetime(2026, 9, 29, 18, tzinfo=timezone.utc))  # September payout
+    _ledger(session, 209, datetime(2026, 10, 10, 18, tzinfo=timezone.utc))  # listed Oct 10
+    _ledger(session, 275, now - timedelta(hours=5), transfer=True)          # never listed
+    _order(session, "KXW-2", book=limm.LIVE_TAG, status="resting", at=now - timedelta(hours=1))
+
+    h = ov.build_overview(session, now=now)["headline"]
+    assert (h["month_trading_usd"], h["month_rewards_usd"]) == (
+        pytest.approx(-0.93), pytest.approx(2.09))
+    assert h["month_realized_usd"] == pytest.approx(1.16)
+    assert h["progress_pct"] == pytest.approx(1.2)
+    r = _book({"headline": h}, limm.LIVE_TAG)
+    assert (r["month_rewards_usd"], r["month_realized_usd"], r["total_pnl_usd"]) == (
+        pytest.approx(2.09), pytest.approx(2.09), pytest.approx(2.09))
+    assert _book({"headline": h}, "Hbook")["month_rewards_usd"] == 0
+    assert sum(b["month_realized_usd"] for b in h["books"]) == pytest.approx(1.16)
+    # -0.93 on Oct 9, then +2.09 on Oct 10: the month peaked at the reward.
+    assert h["month_peak_usd"] == pytest.approx(1.16) and h["below_peak_usd"] == 0
+
+
+def test_a_reward_keeps_its_book_on_the_page_after_it_stops_quoting(session):
+    from kalshi_bot.liquidity_incentive import live as limm
+
+    now = datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
+    _ledger(session, 209, datetime(2026, 10, 10, 18, tzinfo=timezone.utc))
+    h = ov.build_overview(session, now=now)["headline"]
+    r = _book({"headline": h}, limm.LIVE_TAG)
+    assert r["active"] is False and r["month_realized_usd"] == pytest.approx(2.09)
+    assert h["month_realized_usd"] == pytest.approx(2.09)

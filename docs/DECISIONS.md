@@ -1611,3 +1611,27 @@ build it and show me the dry run").
 **Revisit if** a strategy needs historical quote snapshots of untraded markets (use exchange
 candles instead), or a free-space margin large enough for a VACUUM appears.
 
+
+## DEC-039 — Confirmed liquidity rewards count toward the $100/month north star
+
+**Date:** 2026-10-22 UTC. **Workstream:** none (simple change; owner-directed fix after a Live
+Ops audit of the landing-page headline). **Owner direction:** "rewards count towards 100 dollar
+goal".
+
+- **Realized profit is trading plus rewards.** It is the settled trading P&L after fees, plus
+  every reward credit that matches a payout on Kalshi's Rewards page
+  (`reward_ledger.CONFIRMED_REWARD_PAYOUTS`).
+  - A reward is dated by when the balance moved.
+  - Unconfirmed credits (the §9.49 attribution test alone) never count.
+- **Where it applies:** the live dashboard's headline (`livedash/overview.py`), its peak and
+  pace, and the reward book's card. Every book card now means the same thing (this month,
+  realized + unrealized), so the cards add up to the headline.
+- **The headline reads every book with a fill in the window,** not only books that ordered in
+  the last two weeks. A book that stopped trading keeps its card while it has money this month,
+  and the pro-rata split of a shared market includes it.
+- **Not a metric-engine change.** Experiment OS metrics, gates and live attribution
+  (DEC-037) are untouched; this decides what the operator's goal figure counts.
+
+**Revisit if** Kalshi starts reporting reward credits per market (attribute them from the API
+rather than the balance ledger), or a second book quotes for rewards (the ledger can no longer
+assign a payout to one book).

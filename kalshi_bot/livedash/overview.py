@@ -1,8 +1,10 @@
 """The landing page: three answers an operator wants before anything else.
 
 1. **Headline** — real money realized this calendar month (UTC) against the $100/month north
-   star, per live book, with a health light per book: is it trading, has a loss stop tripped,
-   is a cap refusing its orders.
+   star: settled trading after fees plus confirmed liquidity rewards (DEC-039), per live book,
+   with a health light per book: is it trading, has a loss stop tripped, is a cap refusing its
+   orders. A book that stopped trading keeps its card while it has anything this month, so the
+   cards always add up to the headline.
 2. **Order board** — every live order still working plus the last day's, labelled RESTING /
    PARTIAL / FILLED / EXPIRED, with its age next to the book's typical time-to-fill, so "eight
    orders never filled" can be read as "eight orders are 40 minutes into a 2-hour wait".
@@ -22,7 +24,9 @@ Attribution rules — the same chain as `legs.live_leg`, with one addition:
   (`quantity=0` with `realized_pnl` = settled, net of the fees Kalshi charged);
 * **a ticker two books both filled is split pro rata by filled contracts.** `positions` is
   account-wide per ticker, so without the split a draining book and its successor holding the
-  same market would each claim the whole of it and the month total would double-count.
+  same market would each claim the whole of it and the month total would double-count. The
+  split reads every book with a fill in the window, active or not, or a stopped book's share
+  would land on its successor.
 
 The month a settlement belongs to is the snapshot's `captured_at` — the reconcile loop writes
 the settlement row once, the cycle it first sees it.
@@ -133,6 +137,24 @@ def _books(session, now: datetime) -> tuple[list[str], dict[str, pairs_mod.Pair]
         if pair.is_open and pair.live_tag not in open_pairs:
             open_pairs[pair.live_tag] = pair
     return sorted(recent | set(open_pairs)), open_pairs
+
+
+def _lapsed_books(session, active, since: datetime) -> set[str]:
+    """Books with a filled buy inside the read window that are no longer active.
+
+    A book that stops ordering still settles what it filled, and that money is this month's.
+    Reading only active books dropped it from the headline (2026-10-22 audit) and handed a
+    successor book the whole of every market the two had shared."""
+    filled = session.scalars(
+        select(m.LiveOrder.strategy)
+        .join(m.Fill, m.Fill.kalshi_order_id == m.LiveOrder.kalshi_order_id)
+        .where(
+            m.LiveOrder.strategy.is_not(None),
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.created_at >= since,
+        ).distinct()
+    )
+    return set(filled) - set(active)
 
 
 def _orders(session, books: list[str], since: datetime) -> list[m.LiveOrder]:
@@ -316,8 +338,16 @@ def month_peak(events: list[tuple[datetime, float]]) -> dict:
     return {"usd": best, "at": best_at}
 
 
-def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) -> dict:
+def build_headline(session, books, open_pairs, orders, fills, snaps, held, now, *,
+                   active=None, rewards=()) -> dict:
+    """`books` is every book read; `active` (default: all of them) the ones that are trading.
+    A book outside `active` gets a card only while it has something this month — a settlement,
+    a trade, an open position or a reward — so every dollar in the total is on a card.
+    `rewards` are this month's confirmed reward credits (`incentive_book.reward_credits`); they
+    count toward the goal like a settlement and belong to `incentive_book.REWARD_BOOK`."""
     start = month_start(now)
+    active = set(books) if active is None else set(active)
+    reward_usd = sum(usd for _, usd in rewards)
     marks = _open_marks(session, snaps, now)
     all_time = _trade_counts(session, books)
     # A trade belongs to the month its first fill landed in.
@@ -341,9 +371,9 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
     for o in orders:
         last_order[o.strategy] = o.created_at
     rows = []
-    month_total = unreal_total = 0.0
+    trading_total = unreal_total = 0.0
     unpriced_total = 0
-    settled_events: list[tuple[datetime, float]] = []
+    settled_events: list[tuple[datetime, float]] = list(rewards)
     for book in books:
         month_pnl, settled_month, wins = 0.0, 0, 0
         open_n, open_cost, unreal, unpriced = 0, 0.0, 0.0, 0
@@ -372,22 +402,29 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             if o.strategy == book and (o.status or "").lower() in LIVE_WORKING
             and not fills.get(o.kalshi_order_id or "")
         )
-        month_total += month_pnl
+        trades_month = sum(1 for (b, _), at in first_fill.items() if b == book and at >= start)
+        book_rewards = reward_usd if book == incentive_book.REWARD_BOOK else 0.0
+        if book not in active and not (settled_month or open_n or trades_month or book_rewards):
+            continue
+        trading_total += month_pnl
         unreal_total += unreal
         unpriced_total += unpriced
-        trades_month = sum(1 for (b, _), at in first_fill.items() if b == book and at >= start)
         pair = open_pairs.get(book)
         rows.append({
             "live_tag": book,
             "twin_tag": pair.twin_tag if pair else None,
-            "month_realized_usd": _r(month_pnl),
+            "active": book in active,
+            # Realized = settled trading after fees + confirmed rewards (DEC-039).
+            "month_trading_usd": _r(month_pnl),
+            "month_rewards_usd": _r(book_rewards),
+            "month_realized_usd": _r(month_pnl + book_rewards),
             "settled_this_month": settled_month,
             "wins_this_month": wins,
             "open_positions": open_n,
             "open_cost_usd": _r(open_cost),
             "unrealized_usd": _r(unreal),
             "open_unpriced": unpriced,
-            "total_pnl_usd": _r(month_pnl + unreal),
+            "total_pnl_usd": _r(month_pnl + book_rewards + unreal),
             "trades_this_month": trades_month,
             "trades_all_time": all_time.get(book, 0),
             "resting_orders": resting,
@@ -395,6 +432,7 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
             "health": _health(session, book, pair, last_order.get(book), now),
             "incentive": _incentive_block(session, book, now),
         })
+    month_total = trading_total + reward_usd
     peak = month_peak(settled_events)
     days_in = (now - start).total_seconds() / 86400
     next_month = (start + timedelta(days=32)).replace(day=1)
@@ -402,7 +440,10 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now) 
     return {
         "month": start.strftime("%Y-%m"),
         "goal_usd": MONTHLY_GOAL_USD,
+        # The goal figure: settled trading after fees plus confirmed rewards (DEC-039).
         "month_realized_usd": _r(month_total),
+        "month_trading_usd": _r(trading_total),
+        "month_rewards_usd": _r(reward_usd),
         # Open positions marked to the bid now. Not counted toward the goal: it is what the
         # book would book if it could sell everything at once, not money it has made.
         "unrealized_usd": _r(unreal_total),
@@ -680,9 +721,15 @@ def build_scorecard(session, pair, orders, fills, snaps, held, now) -> dict | No
 def build_overview(session, *, now: datetime | None = None) -> dict:
     now = _aware(now) or datetime.now(timezone.utc)
     t0 = time.perf_counter()
-    books, open_pairs = _books(session, now)
+    active, open_pairs = _books(session, now)
     since = min(month_start(now), now - timedelta(days=FILL_TIME_DAYS)) - timedelta(
         days=ENTRY_LOOKBACK_DAYS)
+    rewards = incentive_book.reward_credits(session, month_start(now))
+    lapsed = _lapsed_books(session, active, since)
+    if rewards:
+        # The book a reward belongs to has a card this month even if it stopped quoting.
+        lapsed |= {incentive_book.REWARD_BOOK} - set(active)
+    books = sorted(set(active) | lapsed)
     orders = _orders(session, books, since)
     fills = _fills_by_order(session, orders)
     snaps = _latest_snapshots(session, {o.market_ticker for o in orders})
@@ -694,7 +741,8 @@ def build_overview(session, *, now: datetime | None = None) -> dict:
     return {
         "generated_at": now.isoformat(),
         "build_ms": round((time.perf_counter() - t0) * 1000),
-        "headline": build_headline(session, books, open_pairs, orders, fills, snaps, held, now),
+        "headline": build_headline(session, books, open_pairs, orders, fills, snaps, held, now,
+                                   active=active, rewards=rewards),
         "board": build_board(orders, fills, now),
         "scorecards": scorecards,
     }
