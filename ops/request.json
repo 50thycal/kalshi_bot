@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1023b1548", "sql": "select f.market_ticker, f.side, f.action, f.price, f.quantity, f.filled_at, o.client_order_id from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1' and f.filled_at > now()-interval '3 hours' order by f.filled_at"}
