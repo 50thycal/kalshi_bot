@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "logs", "filter": "incentive smoke cycle", "limit": 6, "id": "logs1023a1"}
