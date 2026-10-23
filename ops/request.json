@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1023a0955", "sql": "select o.market_ticker, o.created_at::text, o.action||' '||o.side||' '||o.limit_price||'x'||o.quantity v, coalesce(sum(f.quantity),0) filled_qty from live_orders o left join fills f on f.kalshi_order_id=o.kalshi_order_id where o.strategy='Alimm1' and o.status='filled' and o.created_at > '2026-10-10' group by 1,2,3,o.quantity having coalesce(sum(f.quantity),0) < o.quantity order by 2"}
+{"type":"noop"}
