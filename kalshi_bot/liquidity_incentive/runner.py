@@ -1190,6 +1190,14 @@ class IncentiveLiveRunner:
         # is left is already covered and nothing more is placed.
         free = int(round(qty - held_by_sells))
         have = set(roles)
+        if free >= 1 and {limm.RESTING_SELL_ROLE_ASK, limm.RESTING_SELL_ROLE_ENTRY} <= have:
+            # §9.67: both halves rest but the position grew past them (an orphaned bid filled
+            # 494 more PEAC under a 5-contract sell, 2026-10-23). Re-place the split over the
+            # whole position, so no held contract is left without a sell.
+            if any(r.status != "resting" or not r.kalshi_order_id for r in sells):
+                return "resting_sell:in_flight"
+            return "resting_sell:grown" if cancel("resting_sell:grow") \
+                else "resting_sell:cancel_pending"
         plan = []
         kept = self._sell_sizes.get(ticker) if not sells else None
         if kept:
