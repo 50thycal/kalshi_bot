@@ -36,6 +36,11 @@ from .sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 
 logger = logging.getLogger(__name__)
 
+#: §9.66: reconcile also reads every page of RESTING orders (bounded), so an older resting order
+#: cannot fall off the default orders page and be resolved from a partial fill.
+RESTING_ORDER_PAGE_LIMIT = 200
+RESTING_ORDER_MAX_PAGES = 10
+
 # series-ticker prefix -> city code, for the optional live city filter.
 _CITY_BY_SERIES = {}
 for _c in CITIES:
@@ -1681,7 +1686,7 @@ class LiveExecutor:
         fills idempotently, snapshot positions, cancel timed-out passive orders, and refresh
         the daily realized P&L. AuthError propagates (worker hard-fails); others are logged."""
         try:
-            orders = _items(self.client.get_orders(), "orders")
+            orders = self._fetch_orders()
             fills = _items(self.client.get_fills(), "fills")
             positions = _items(self.client.get_positions(), "market_positions")
         except AuthError:
@@ -1692,6 +1697,7 @@ class LiveExecutor:
 
         by_coid = {o.get("client_order_id"): o for o in orders if o.get("client_order_id")}
         by_koid = {o.get("order_id"): o for o in orders if o.get("order_id")}
+        self._revive_resting_orphans(session, orders)
 
         # Resolve in-flight local orders against the exchange.
         now_utc = datetime.now(timezone.utc)
@@ -1707,7 +1713,7 @@ class LiveExecutor:
                 fill = self._fill_for_order(row, fills)
                 if fill is not None:
                     repo.update_live_order_status(
-                        session, row, status="filled",
+                        session, row, status=self._status_from_fills(session, row, fills, fill),
                         kalshi_order_id=row.kalshi_order_id or fill.get("order_id"))
                 elif not self._executed_on_exchange(row, fills, positions):
                     repo.update_live_order_status(session, row, status="not_landed",
@@ -1724,7 +1730,7 @@ class LiveExecutor:
                 fill = self._fill_for_order(row, fills)
                 if fill is not None:
                     repo.update_live_order_status(
-                        session, row, status="filled",
+                        session, row, status=self._status_from_fills(session, row, fills, fill),
                         kalshi_order_id=row.kalshi_order_id or fill.get("order_id"))
                 elif row.status in ("pending", "unknown"):
                     # No fill yet. If a position exists the order likely executed (fill not in
@@ -1925,6 +1931,69 @@ class LiveExecutor:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("live probe failed", extra={"extra_fields": {"directive": directive}})
+
+    def _fetch_orders(self) -> list:
+        """The orders feed for reconcile: the default (newest) page, plus EVERY page of resting
+        orders. The default page alone drops an older resting order once enough newer orders
+        exist; a partially filled bid then resolved "filled" from its first fill and rested on
+        the exchange unmanaged (2026-10-23: PEAC 494 filled 5 days later; NQE-B, §9.66). A failed
+        resting fetch keeps the default page — the pre-§9.66 behaviour, never worse."""
+        orders = _items(self.client.get_orders(), "orders")
+        seen = {o.get("order_id") for o in orders if o.get("order_id")}
+        try:
+            cursor = None
+            for _ in range(RESTING_ORDER_MAX_PAGES):
+                params = {"status": "resting", "limit": RESTING_ORDER_PAGE_LIMIT}
+                if cursor:
+                    params["cursor"] = cursor
+                page = self.client.get_orders(**params)
+                batch = _items(page, "orders")
+                for o in batch:
+                    oid = o.get("order_id")
+                    if oid and oid not in seen:
+                        seen.add(oid)
+                        orders.append(o)
+                cursor = page.get("cursor") if isinstance(page, dict) else None
+                if not cursor or not batch:
+                    break
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — the default page still reconciles
+            logger.warning(f"resting orders fetch failed: {type(exc).__name__}: {str(exc)[:200]}")
+        return orders
+
+    def _revive_resting_orphans(self, session, orders) -> None:
+        """An order the exchange still shows RESTING that a local row calls "filled" is live
+        exposure nothing manages: no step-aside, contagion, cap or cancel ever reaches a
+        terminal row. Trust the exchange and put the row back to working (§9.66)."""
+        for o in orders:
+            if _map_status(o.get("status")) != "resting":
+                continue
+            row = None
+            coid = o.get("client_order_id")
+            if coid:
+                row = repo.get_live_order_by_client_id(session, coid)
+            if row is None or row.status != "filled":
+                continue
+            repo.update_live_order_status(session, row, status="partial",
+                                          kalshi_order_id=o.get("order_id"), raw=o)
+            logger.warning(f"orphaned resting order revived: {row.strategy} {row.market_ticker} "
+                           f"{row.side}@{row.limit_price} coid={coid} (was 'filled')")
+
+    @staticmethod
+    def _status_from_fills(session, row, fills, fill) -> str:
+        """"filled" only when the fills cover the order; "partial" otherwise, so a resting bid
+        absent from the orders feed stays managed (§9.66). Scoped to the incentive book's resting
+        bids — a v1 order, which this feed never shows, still resolves "filled" on its fill."""
+        if not limm_live.owns_tag(row.strategy) or row.action != "buy" or not row.quantity:
+            return "filled"
+        koid = row.kalshi_order_id or fill.get("order_id")
+        got = repo.filled_quantity_by_fill_id(session, koid)
+        for f in fills:
+            fid = f.get("trade_id") or f.get("fill_id")
+            if f.get("order_id") == koid and fid and str(fid) not in got:
+                got[str(fid)] = float(_to_count(_first(f, "count_fp", "count", "quantity")) or 0)
+        return "filled" if sum(got.values()) >= float(row.quantity) - 1e-9 else "partial"
 
     @staticmethod
     def _fill_for_order(row, fills):
