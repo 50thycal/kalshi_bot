@@ -1,1 +1,1 @@
-{"type": "db", "id": "inv1023a3", "sql": "select created_at::text, k, v from (select id, created_at from system_events where component='limm_book_cooldown' order by id desc limit 1) e, lateral jsonb_each_text((select raw_json from system_events s where s.id=e.id)->'until') as j(k,v) where k like 'KXTRUMPMENTIONB-26OCT27%' or k like 'KXMAMDANI%' or k like 'KXTRUMPMENTION-26OCT25%' order by k"}
+{"type":"noop"}
