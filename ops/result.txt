@@ -1,25 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1023a1146
-# code e9caad97a437307e60b3cadb950cca9b956f0d3e · started 2026-10-23T11:46:19Z
-k     m                             t                              v                                                    
-----  ----------------------------  -----------------------------  -----------------------------------------------------
-ord   KXMAMDANIMENTION-26NOV18-NQE  2026-10-23 04:08:17.075276+00  379993bb- buy yes 2x500 resting                      
-ord   KXTRUMPMENTION-26OCT25-PEAC   2026-10-18 16:52:57.785104+00  5c077098- buy yes 2x500 filled                       
-ord   KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:43.983369+00  limmsell: sell yes 3x3 resting                       
-ord   KXTRUMPMENTION-26OCT25-PEAC   2026-10-20 04:08:44.052962+00  limmsell: sell yes 3x2 resting                       
-ord   KXTRUMPMENTION-26OCT27-CEAS   2026-10-21 08:37:32.35046+00   24c6f4d7- buy yes 3x333 resting                      
-ord   KXTRUMPMENTION-26OCT27-CHEA   2026-10-23 10:49:12.636563+00  6342c190- buy no 10x100 resting                      
-ord   KXTRUMPMENTION-26OCT27-NQE    2026-10-21 14:01:20.470755+00  69ef067f- buy yes 3x333 resting                      
-ord   KXTRUMPMENTIONB-26OCT27-CHIN  2026-10-23 10:41:38.608298+00  48b062d8- buy no 10x100 resting                      
-ord   KXTRUMPMENTIONB-26OCT27-CRYP  2026-10-23 04:02:19.205953+00  3eb01a3b- buy yes 1x500 resting                      
-ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-20 05:29:07.898321+00  0b2c048b- buy yes 2x500 filled                       
-ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 14:49:56.726256+00  limmsell: sell yes 3x4 canceled resting_sell:repriced
-ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 14:49:56.825924+00  limmsell: sell yes 3x4 canceled resting_sell:repriced
-ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 16:06:41.237908+00  limmsell: sell yes 4x4 filled                        
-ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 16:06:41.325552+00  limmsell: sell yes 4x4 filled                        
-pos   KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 11:43:16.06329+00   500.0000                                             
-pos   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-23 11:43:16.07886+00   0.9000                                               
-snap  KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 11:43:54.00917+00   2/97                                                 
-snap  KXTRUMPMENTIONB-26OCT27-NQE   2026-10-23 11:43:54.00917+00   2/97                                                 
-
-(18 rows)
+# type=noop
+# code e9caad97a437307e60b3cadb950cca9b956f0d3e · started 2026-10-23T11:46:39Z
+(noop — nothing to do)
