@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code 3fefdf2facaa5bcc19b7037b7c79350b13ccee72 · started 2026-10-23T13:47:30Z
-(noop — nothing to do)
+# type=db  id=ci1023a1350
+# code 3fefdf2facaa5bcc19b7037b7c79350b13ccee72 · started 2026-10-23T13:47:41Z
+at                             y                         
+-----------------------------  --------------------------
+2026-10-23 13:45:01.585918+00  [[2, 1423.0], [1, 3003.0]]
+2026-10-23 13:34:29.040897+00  [[2, 1423.0], [1, 3003.0]]
+
+(2 rows)
