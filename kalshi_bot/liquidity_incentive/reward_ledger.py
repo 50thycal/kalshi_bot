@@ -103,6 +103,12 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-10-22", 116, "KXTRUMPMENTION-26OCT20"),
     ("2026-10-22", 102, "KXTRUMPMENTION-26OCT20"),
     ("2026-10-22", 189, "KXTRUMPMENTION-26OCT20"),
+    # Operator screenshot 2026-10-23 (lifetime $65.49): Sioux City IA rally and Tate McRae
+    # views, observed as one 1115c step.
+    ("2026-10-23", 186, "KXTRUMPMENTION-26OCT22"),
+    ("2026-10-23", 212, "KXTRUMPMENTION-26OCT22"),
+    ("2026-10-23", 212, "KXTRUMPMENTION-26OCT22"),
+    ("2026-10-23", 505, "KXYTVIEWSHIGH-TAT26NOV"),
 )
 
 
