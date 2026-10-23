@@ -1,0 +1,17 @@
+# ops request [READ]
+# type=db  id=ci1023d1550
+# code a2c716fbb74fa7139905cc3cfc9fb70e1ffd70d8 · started 2026-10-23T15:48:47Z
+market_ticker                 limit_price  quantity  status    cancel_reason          created_at                      
+----------------------------  -----------  --------  --------  ---------------------  --------------------------------
+KXTRUMPMENTIONB-26OCT27-CHIN  10           100       canceled  out_of_band            2026-10-23 12:39:13.052863+00:00
+KXTRUMPMENTIONB-26OCT27-CHIN  10           100       canceled  out_of_band            2026-10-23 10:41:38.608298+00:00
+KXTRUMPMENTION-26OCT27-CHEA   7            142       canceled  repriced               2026-10-23 07:55:39.999135+00:00
+KXTRUMPMENTIONB-26OCT27-CHIN  9            111       canceled  repriced               2026-10-23 04:02:23.924685+00:00
+KXTRUMPMENTION-26OCT24-STOC   13           2         filled                           2026-10-22 19:31:02.212080+00:00
+KXTRUMPMENTIONB-26OCT27-NQE   4            4         filled                           2026-10-22 16:06:41.325552+00:00
+KXTRUMPMENTIONB-26OCT27-NQE   4            4         filled                           2026-10-22 16:06:41.237908+00:00
+KXTRUMPMENTIONB-26OCT27-NQE   3            4         canceled  resting_sell:repriced  2026-10-22 14:49:56.825924+00:00
+KXTRUMPMENTIONB-26OCT27-NQE   3            4         canceled  resting_sell:repriced  2026-10-22 14:49:56.726256+00:00
+KXTRUMPMENTION-26OCT22-DIVI   1            141       filled                           2026-10-22 05:53:30.846540+00:00
+
+(10 rows)
