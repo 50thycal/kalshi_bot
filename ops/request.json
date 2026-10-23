@@ -1,1 +1,1 @@
-{"type": "db", "id": "inv1023a1", "sql": "select split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',3) m, to_char(at,'MM-DD HH24:MI') t, best_yes_bid yb, best_no_bid nb, est_yes_meets_target ym, est_no_meets_target nm from (select distinct on (market_ticker) * from incentive_market_snapshots where (market_ticker like 'KXTRUMPMENTIONB-26OCT27-%' or market_ticker like 'KXMAMDANIMENTION-26NOV18-%') order by market_ticker, at desc) x order by 1"}
+{"type":"noop"}
