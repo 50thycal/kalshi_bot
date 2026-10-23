@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "inv1023a5", "sql": "select distinct on (market_ticker) market_ticker, captured_at::text, quantity, quantity_fp from positions where market_ticker in ('KXTRUMPMENTIONB-26OCT27-NQE','KXTRUMPMENTION-26OCT24-STOC','KXTRUMPMENTION-26OCT25-PEAC') order by market_ticker, captured_at desc"}
