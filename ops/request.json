@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1023a1350", "sql": "select at::text, left(yes_levels_json::text,120) y from incentive_market_snapshots where market_ticker='KXTRUMPMENTIONB-26OCT27-NQE' and at > now()-interval '30 minutes' order by at desc limit 2"}
