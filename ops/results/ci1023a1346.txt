@@ -1,0 +1,24 @@
+# ops request [READ]
+# type=db  id=ci1023a1346
+# code 3fefdf2facaa5bcc19b7037b7c79350b13ccee72 · started 2026-10-23T13:47:12Z
+k     m                             t                              v                                                    
+----  ----------------------------  -----------------------------  -----------------------------------------------------
+ord   KXMAMDANIMENTION-26NOV18-NQE  2026-10-23 04:08:17.075276+00  379993bb- buy yes 2x500 resting                      
+ord   KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 12:34:34.021364+00  limmsell: sell yes 3x250 resting                     
+ord   KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 12:34:34.117986+00  limmsell: sell yes 3x250 resting                     
+ord   KXTRUMPMENTION-26OCT27-CEAS   2026-10-21 08:37:32.35046+00   24c6f4d7- buy yes 3x333 resting                      
+ord   KXTRUMPMENTION-26OCT27-CHEA   2026-10-23 10:49:12.636563+00  6342c190- buy no 10x100 resting                      
+ord   KXTRUMPMENTION-26OCT27-NQE    2026-10-21 14:01:20.470755+00  69ef067f- buy yes 3x333 resting                      
+ord   KXTRUMPMENTIONB-26OCT27-CHIN  2026-10-23 12:39:13.052863+00  3cfcae62- buy no 10x100 resting                      
+ord   KXTRUMPMENTIONB-26OCT27-CRYP  2026-10-23 04:02:19.205953+00  3eb01a3b- buy yes 1x500 resting                      
+ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-20 05:29:07.898321+00  0b2c048b- buy yes 2x500 filled                       
+ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 14:49:56.726256+00  limmsell: sell yes 3x4 canceled resting_sell:repriced
+ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 14:49:56.825924+00  limmsell: sell yes 3x4 canceled resting_sell:repriced
+ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 16:06:41.237908+00  limmsell: sell yes 4x4 filled                        
+ord   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-22 16:06:41.325552+00  limmsell: sell yes 4x4 filled                        
+pos   KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 13:44:23.623296+00  500.0000                                             
+pos   KXTRUMPMENTIONB-26OCT27-NQE   2026-10-23 13:44:23.637148+00  0.9000                                               
+snap  KXTRUMPMENTION-26OCT25-PEAC   2026-10-23 13:45:01.585918+00  2/97                                                 
+snap  KXTRUMPMENTIONB-26OCT27-NQE   2026-10-23 13:45:01.585918+00  2/97                                                 
+
+(17 rows)
