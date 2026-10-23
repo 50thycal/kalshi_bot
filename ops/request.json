@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "inv1023a2", "sql": "select split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',3) m, to_char(max(at),'MM-DD HH24:MI') t, (array_agg(best_yes_bid order by at desc))[1] yb, (array_agg(best_no_bid order by at desc))[1] nb, count(*) n from incentive_market_snapshots where at > now() - interval '8 hours' and (market_ticker like 'KXTRUMPMENTIONB-26OCT27-%' or market_ticker like 'KXMAMDANIMENTION-26NOV18-%') group by 1 order by 1"}
