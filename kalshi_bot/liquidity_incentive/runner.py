@@ -405,6 +405,22 @@ class IncentiveLiveRunner:
             candidates = [p for p in candidates if (p.event_ticker or "") not in capped]
             if len(candidates) < n_before:
                 summary["outcomes"][limm.REFUSE_EVENT_CAP] = n_before - len(candidates)
+        # §9.65: an event any live book holds a position on is refused below (event_cap) and that
+        # refusal never cools down, so its markets took the whole fetch budget every cycle and
+        # starved every other event (2026-10-21 → 10-23: 35 KXTRUMPMENTIONB-26OCT27 markets ahead
+        # of all KXMAMDANIMENTION). Drop those events BEFORE the fetches, as §9.59 does for caps.
+        position_blocked: dict[str, bool] = {}
+        for p in candidates:
+            ev = p.event_ticker or ""
+            if ev and ev not in capped and ev not in position_blocked:
+                position_blocked[ev] = repo.event_has_open_live_position(
+                    session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS)
+        if any(position_blocked.values()):
+            n_before = len(candidates)
+            candidates = [p for p in candidates if not position_blocked.get(p.event_ticker or "")]
+            if len(candidates) < n_before:
+                summary["outcomes"][limm.REFUSE_EVENT_CAP] = \
+                    summary["outcomes"].get(limm.REFUSE_EVENT_CAP, 0) + n_before - len(candidates)
         max_fetch = max(1, int(getattr(self.settings,
                                        "liquidity_incentive_live_max_book_fetches", 8)))
         built: list[dict] = []
@@ -429,7 +445,8 @@ class IncentiveLiveRunner:
                           if n >= limm.MAX_MARKETS_PER_EVENT}
         for c in built:
             ev = c.get("event_ticker")
-            if ev and ev not in blocked_events and repo.event_has_open_live_position(session, ev):
+            if ev and ev not in blocked_events and repo.event_has_open_live_position(
+                    session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS):
                 blocked_events.add(ev)
         ranked = limm.rank_candidates(built, excluded_series=excluded,
                                       blocked_event_tickers=frozenset(blocked_events))

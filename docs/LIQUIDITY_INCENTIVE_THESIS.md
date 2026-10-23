@@ -3159,3 +3159,19 @@ rough proxy, re-read after two weeks of §9.63 data.
 bid unless it can rest at least a day before it must step aside (a bid could otherwise be placed
 54h before an event and cancelled 6h later). Narrows entry only; no cap, price or safety rule
 changes.
+
+### 9.65 Blocked events no longer starve the fetch budget; dust does not block (2026-10-23)
+
+**Evidence.** No new bid from ~12Z Oct 21 to Oct 23 while KXTRUMPMENTIONB-26OCT27 (35 markets)
+and KXMAMDANIMENTION-26NOV18 (19) were eligible. The resting sells closed NQE-B in whole contracts
+(8 of 8.9), leaving a 0.9-contract position. `event_has_open_live_position` counted it, so the
+whole event was refused `event_cap` — a refusal that never cools down — and its 35 markets, the
+newest programmes, took all 8 book fetches every cycle. Mamdani was never fetched (the §9.39 /
+§9.59 shape). Contagion had hidden the event for the 12h after the NQE fill, which is when the
+Mamdani bids were placed.
+
+**Fix (operator, 2026-10-23).**
+1. A held position under `EVENT_BLOCK_MIN_CONTRACTS` (1) does not block its event.
+2. Events blocked by an open live position are dropped from the candidates BEFORE the bounded
+   fetches, as §9.59 does for capped events.
+No cap, price or safety rule changes; the per-event block itself is unchanged for real positions.
