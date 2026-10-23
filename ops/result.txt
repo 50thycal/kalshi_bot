@@ -1,4 +1,7 @@
 # ops request [READ]
-# type=noop
-# code a2c716fbb74fa7139905cc3cfc9fb70e1ffd70d8 · started 2026-10-23T15:47:22Z
-(noop — nothing to do)
+# type=db  id=ci1023b1548
+# code a2c716fbb74fa7139905cc3cfc9fb70e1ffd70d8 · started 2026-10-23T15:47:51Z
+market_ticker  side  action  price  quantity  filled_at  client_order_id
+-------------  ----  ------  -----  --------  ---------  ---------------
+
+(0 rows)
