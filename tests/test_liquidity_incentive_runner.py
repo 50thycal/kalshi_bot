@@ -1841,6 +1841,16 @@ def test_a_missing_split_half_is_placed_from_the_uncovered_contracts(live_db, se
     assert [(o["price"], o["count"]) for o in client.placed] == [("0.1400", "50.00")]
 
 
+def test_split_sells_grow_with_the_position(live_db, settings):
+    """§9.67: 5 contracts of sells under a 100-contract position are re-placed over all of it."""
+    client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
+    with db.session_scope() as s:
+        _held_mention(s, entry=14, sells=(("a", 12, 3), ("b", 14, 2)))
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:grown": 1}
+    assert sorted(client.canceled) == ["K-SELL", "K-SELL1"] and client.placed == []
+
+
 def test_a_resting_sell_larger_than_the_position_is_cancelled_at_once(live_db, settings):
     client = FakeClient({MENTION: _book([(8, 3)], [(88, 100)])})
     with db.session_scope() as s:

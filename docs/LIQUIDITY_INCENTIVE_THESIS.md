@@ -3191,3 +3191,13 @@ held. NQE-B Oct 27 (500 @2c) was marked filled after 9.
    otherwise "partial", which stays working and managed.
 3. A row the exchange shows resting but the database calls "filled" is put back to "partial".
 No cap, price or safety rule changes; v1 orders and other books resolve as before.
+
+### 9.67 Resting sells grow with the position (2026-10-23)
+
+**Evidence.** After the §9.66 orphan filled 494 more PEAC (Oct 25), the book held 500 contracts
+under split sells of 3 + 2: with both halves present, `_manage_resting_sell` only re-priced them
+and never covered the 495 new contracts.
+
+**Fix (operator, 2026-10-23).** When both halves rest and at least one held contract is uncovered,
+both are cancelled and the split is re-placed over the whole position on the next cycle (after a
+fresh position read, as for any cancel). No price, cap or stop change.
