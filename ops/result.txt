@@ -1,19 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1023c2152
-# code a2c716fbb74fa7139905cc3cfc9fb70e1ffd70d8 · started 2026-10-23T21:51:19Z
-market_ticker                side  action  limit_price  quantity  status    cancel_reason   created_at                        cid             
----------------------------  ----  ------  -----------  --------  --------  --------------  --------------------------------  ----------------
-KXTRUMPMENTION-26OCT27-CEAS  yes   buy     5            200       canceled  fill_contagion  2026-10-23 16:56:26.293998+00:00  2ec445e1-e367-48
-KXTRUMPMENTION-26OCT27-CEAS  yes   buy     4            250       canceled  repriced        2026-10-23 15:01:28.266307+00:00  6d70d5d5-6223-47
-KXTRUMPMENTION-26OCT27-CHEA  no    buy     10           100       resting                   2026-10-23 10:49:12.636563+00:00  6342c190-ff4c-4d
-KXTRUMPMENTION-26OCT27-CHEA  no    buy     7            142       canceled  repriced        2026-10-23 07:55:39.999135+00:00  47ca78e1-0596-4e
-KXTRUMPMENTION-26OCT27-NQE   yes   buy     3            333       canceled  fill_contagion  2026-10-21 14:01:20.470755+00:00  69ef067f-aeff-4b
-KXTRUMPMENTION-26OCT27-FRAU  yes   buy     6            166       canceled  out_of_band     2026-10-21 12:33:50.767970+00:00  7987d54f-2d23-45
-KXTRUMPMENTION-26OCT27-PALE  yes   buy     10           100       canceled  out_of_band     2026-10-21 08:44:02.489510+00:00  2e9fb9b0-9f51-41
-KXTRUMPMENTION-26OCT27-CEAS  yes   buy     3            333       canceled  repriced        2026-10-21 08:37:32.350460+00:00  24c6f4d7-cb52-4c
-KXTRUMPMENTION-26OCT27-PEAC  yes   buy     3            333       canceled  fill_contagion  2026-10-21 08:37:25.425481+00:00  2d774136-43aa-4a
-KXTRUMPMENTION-26OCT27-PALE  yes   buy     6            166       canceled  repriced        2026-10-21 07:42:49.960631+00:00  8da3222c-5ef7-41
-KXTRUMPMENTION-26OCT27-PALE  yes   buy     5            200       canceled  repriced        2026-10-21 02:34:48.385596+00:00  9a0bc633-7cea-40
-KXTRUMPMENTION-26OCT27-SAVE  no    sell    2            125       filled                    2026-10-20 14:33:22.885982+00:00  limmexit:stop_lo
-
-(12 rows)
+# type=noop
+# code a2c716fbb74fa7139905cc3cfc9fb70e1ffd70d8 · started 2026-10-23T21:51:37Z
+(noop — nothing to do)
