@@ -2065,3 +2065,46 @@ def test_market_word():
     assert limm.market_word("KXTRUMPMENTION-26OCT19-CEAS", "KXTRUMPMENTION-26OCT19") == "CEAS"
     assert limm.market_word("KXTEST-A", "KXTEST-A") is None
     assert limm.market_word("KXTEST-A", None) is None
+
+
+# --- §9.65: a position-blocked event is dropped before the fetches; dust does not block ------
+
+def _held_in(s, ticker, event, qty):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
+                      side="yes", action="buy", limit_price=2, quantity=10, status="filled",
+                      kalshi_order_id=f"K-H-{ticker}", client_order_id=f"H-{ticker}",
+                      created_at=NOW - timedelta(hours=30)))
+    s.add(m.Position(market_ticker=ticker, captured_at=NOW, side="yes", quantity=round(qty),
+                     quantity_fp=qty))
+    s.flush()
+
+
+def test_position_blocked_event_does_not_eat_the_fetch_budget(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    book = _book([(3, 500)], [(4, 500)])
+    blk = [f"KXTEST-BLK-{i}" for i in range(3)]
+    client = FakeClient({**{t: book for t in blk}, "KXTEST-OTH-A": book,
+                         "KXTEST-BLK-HELD": book})
+    with db.session_scope() as s:
+        for t in blk:                                   # newest programmes: ranked first
+            _program(s, t, event="KXTEST-BLK", age_hours=1.0)
+        _program(s, "KXTEST-OTH-A", event="KXTEST-OTH", age_hours=30.0)
+        _held_in(s, "KXTEST-BLK-HELD", "KXTEST-BLK", 9.0)
+        out = _cycle(client, settings, s)
+    # The held market's own book is read for its exit; no BLK candidate is fetched.
+    assert [t for t in client.asked if t != "KXTEST-BLK-HELD"] == ["KXTEST-OTH-A"]
+    assert out["placed"] == 1
+
+
+def test_fractional_dust_does_not_block_its_event(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    book = _book([(3, 500)], [(4, 500)])
+    client = FakeClient({"KXTEST-BLK-0": book, "KXTEST-OTH-A": book, "KXTEST-BLK-HELD": book})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-BLK-0", event="KXTEST-BLK", age_hours=1.0)
+        _program(s, "KXTEST-OTH-A", event="KXTEST-OTH", age_hours=30.0)
+        _held_in(s, "KXTEST-BLK-HELD", "KXTEST-BLK", 0.9)   # whole-contract exits left 0.9
+        _cycle(client, settings, s)
+    assert "KXTEST-BLK-0" in {o["ticker"] for o in client.placed}

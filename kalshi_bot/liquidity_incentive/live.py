@@ -143,6 +143,10 @@ EVENT_DATE_FALLBACK_HOUR_UTC = 11
 #: A programme ending at least this long before the market closes is taken to end AT the event
 #: (Kalshi stops paying when the event starts; the market stays open for resolution).
 PROGRAM_ENDS_AT_EVENT_MIN_GAP_HOURS = 1.0
+#: §9.65: a held position under this many contracts does not block its event. Resting sells
+#: exit in whole contracts, so a fractional fill leaves dust (0.9 of an NQE contract on
+#: 2026-10-22) that would otherwise block all 35 markets of its event until settlement.
+EVENT_BLOCK_MIN_CONTRACTS = 1.0
 #: No new entry with less than this left before its pre-event cutoff: too little time to earn.
 #: Counted from the §9.63 step-aside, so a new bid always rests at least a day before it is
 #: pulled (§9.64; was 6h, which allowed a bid to be placed and cancelled six hours later).

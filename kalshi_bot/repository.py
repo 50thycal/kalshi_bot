@@ -1718,11 +1718,14 @@ def live_book_open_event_counts(session, strategy: str) -> dict[str, int]:
     return out
 
 
-def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None) -> bool:
+def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None,
+                                 min_quantity: float = 0.01) -> bool:
     """True if any committed live BUY on this event still holds an open position (Kalshi-truth:
     its latest position snapshot is net non-zero). Used to cap exposure to one position per
     event-day — a later-window entry is skipped while an earlier-window one is still open.
-    `exclude_strategy` ignores the entry's own strategy (so it never blocks itself)."""
+    `exclude_strategy` ignores the entry's own strategy (so it never blocks itself).
+    A position under `min_quantity` contracts does not count (callers may set it to ignore
+    fractional dust left behind by whole-contract exits)."""
     rows = session.execute(
         select(m.LiveOrder.market_ticker, m.LiveOrder.strategy).where(
             m.LiveOrder.event_ticker == event_ticker,
@@ -1739,7 +1742,7 @@ def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy
         if snap is None:
             continue
         qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
-        if qty is not None and abs(float(qty)) > 0.01:
+        if qty is not None and abs(float(qty)) > 0.01 and abs(float(qty)) >= min_quantity:
             return True
     return False
 
