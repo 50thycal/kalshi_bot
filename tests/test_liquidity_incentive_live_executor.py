@@ -764,3 +764,70 @@ def test_the_timeout_skips_this_books_resting_orders_but_not_other_books(setting
     assert got["K-LIMM"] == ("resting", None)
     assert got["K-OTHER"] == ("canceled", "timeout")
     assert client.canceled == ["K-OTHER"]
+
+
+# --- §9.66: a resting bid off the default orders page is never resolved "filled" ------------
+
+class PagedClient(ShardClient):
+    """The default orders page holds only `recent`; `status=resting` pages hold `resting`."""
+
+    def __init__(self, recent=(), resting=(), **kw):
+        super().__init__(**kw)
+        self.recent, self.resting, self.order_calls = list(recent), list(resting), []
+
+    def get_orders(self, **kw):
+        self.order_calls.append(kw)
+        if kw.get("status") == "resting":
+            if kw.get("cursor"):
+                return {"orders": self.resting[1:], "cursor": ""}
+            return {"orders": self.resting[:1], "cursor": "p2" if len(self.resting) > 1 else ""}
+        return {"orders": self.recent}
+
+
+def _fill(koid, qty, fid):
+    return {"trade_id": fid, "order_id": koid, "market_ticker": "KXTEST-A", "side": "yes",
+            "action": "buy", "yes_price_dollars": "0.02", "count_fp": str(qty)}
+
+
+def test_a_partly_filled_bid_off_the_feed_stays_working(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = PagedClient(fills=[_fill("K-P", 5, "T1")])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-P", "KXTEST-A", hours_old=1)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert row.status == "partial"            # 5 of 500: still working, still managed
+
+
+def test_a_fully_filled_bid_off_the_feed_resolves_filled(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = PagedClient(fills=[_fill("K-F", 300, "T1"), _fill("K-F", 200, "T2")])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-F", "KXTEST-A", hours_old=1)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        assert s.scalars(select(m.LiveOrder)).one().status == "filled"
+
+
+def test_every_resting_page_is_read_and_an_orphan_is_revived(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = PagedClient(resting=[
+        {"order_id": "K-X", "client_order_id": "c-K-X", "status": "resting"},
+        {"order_id": "K-ORPH", "client_order_id": "c-K-ORPH", "status": "resting"},
+    ])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-ORPH", "KXTEST-A", hours_old=1)
+        s.scalars(select(m.LiveOrder)).one().status = "filled"   # the pre-§9.66 wrong state
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert row.status in ("partial", "resting")  # working again: rules can cancel it
+    assert [c.get("cursor") for c in client.order_calls if c.get("status") == "resting"] \
+        == [None, "p2"]

@@ -1811,6 +1811,15 @@ def live_orders_on_ticker(session, ticker: str) -> list[m.LiveOrder]:
     ).all())
 
 
+def filled_quantity_by_fill_id(session, kalshi_order_id: str | None) -> dict[str, float]:
+    """{kalshi_fill_id: quantity} of the fills already recorded for one exchange order."""
+    if not kalshi_order_id:
+        return {}
+    rows = session.execute(select(m.Fill.kalshi_fill_id, m.Fill.quantity)
+                           .where(m.Fill.kalshi_order_id == kalshi_order_id)).all()
+    return {str(fid): float(q or 0) for fid, q in rows}
+
+
 def get_live_order_by_client_id(session, client_order_id: str) -> m.LiveOrder | None:
     return session.scalar(
         select(m.LiveOrder).where(m.LiveOrder.client_order_id == client_order_id)

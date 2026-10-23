@@ -3175,3 +3175,19 @@ Mamdani bids were placed.
 2. Events blocked by an open live position are dropped from the candidates BEFORE the bounded
    fetches, as §9.59 does for capped events.
 No cap, price or safety rule changes; the per-event block itself is unchanged for real positions.
+
+### 9.66 Orphaned resting bids: a partial fill no longer reads as "filled" (2026-10-23)
+
+**Evidence.** `LiveExecutor.reconcile` read `get_orders()` with no parameters — Kalshi's newest
+page only. An older resting bid that had fallen off that page but had any fill was resolved
+"filled" from that fill, so the rest of it stayed on the exchange with nothing managing it (no
+§9.63 step-aside, contagion, cap or out-of-band cancel reaches a terminal row). PEAC Oct 25
+(500 @2c) was marked filled after 5 contracts on Oct 18; 494 more filled ~07:54Z Oct 23 → 500
+held. NQE-B Oct 27 (500 @2c) was marked filled after 9.
+
+**Fix (operator, 2026-10-23).**
+1. Reconcile also reads every page of `status=resting` orders (bounded at 10 × 200).
+2. An incentive-book bid resolved from fills is "filled" only when its fills cover the order;
+   otherwise "partial", which stays working and managed.
+3. A row the exchange shows resting but the database calls "filled" is put back to "partial".
+No cap, price or safety rule changes; v1 orders and other books resolve as before.
