@@ -1,4 +1,10 @@
 # ops request [READ]
-# type=noop
-# code 6645eae5b90258bbd775c1de1ddb73dcb6e232c6 · started 2026-10-23T02:53:34Z
-(noop — nothing to do)
+# type=db  id=inv1023a5
+# code 6645eae5b90258bbd775c1de1ddb73dcb6e232c6 · started 2026-10-23T02:53:45Z
+market_ticker                captured_at                    quantity  quantity_fp
+---------------------------  -----------------------------  --------  -----------
+KXTRUMPMENTION-26OCT24-STOC  2026-10-23 02:51:02.277754+00  -1        -0.7000    
+KXTRUMPMENTION-26OCT25-PEAC  2026-10-23 02:51:02.297116+00  6         6.1000     
+KXTRUMPMENTIONB-26OCT27-NQE  2026-10-23 02:51:02.28131+00   1         0.9000     
+
+(3 rows)
