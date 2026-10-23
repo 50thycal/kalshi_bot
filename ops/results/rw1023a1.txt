@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rw1023a1
+# code 3fefdf2facaa5bcc19b7037b7c79350b13ccee72 · started 2026-10-23T14:45:25Z
+at                             residual_cents  presumed_transfer
+-----------------------------  --------------  -----------------
+2026-10-23 10:58:59.830988+00  1115            True             
+
+(1 row)
