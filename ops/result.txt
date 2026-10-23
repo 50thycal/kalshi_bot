@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code 8696e238393e40f14db36a7f4099f4be76fff5fe · started 2026-10-23T09:47:46Z
-(noop — nothing to do)
+# type=db  id=ci1023a0955
+# code 8696e238393e40f14db36a7f4099f4be76fff5fe · started 2026-10-23T09:48:12Z
+market_ticker                created_at                     v              filled_qty
+---------------------------  -----------------------------  -------------  ----------
+KXTRUMPMENTIONB-26OCT27-NQE  2026-10-20 05:29:07.898321+00  buy yes 2x500  9         
+
+(1 row)
