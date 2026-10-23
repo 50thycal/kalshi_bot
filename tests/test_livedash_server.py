@@ -61,6 +61,7 @@ def live_server(monkeypatch):
     # A fresh overview cache per test: the module-level one would serve another test's build.
     monkeypatch.setattr(srv, "OVERVIEW", srv.overview_mod.OverviewCache(srv._build_overview))
     monkeypatch.setattr(srv, "BOOK_PNL", srv.incentive_pnl.BookPnlCache())
+    monkeypatch.setattr(srv, "TOTAL_PNL", srv.total_pnl.TotalPnlCache())
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), srv.LiveDashHandler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -121,6 +122,14 @@ def test_the_incentive_book_pnl_route(live_server):
     with urllib.request.urlopen(base + "/chart", timeout=10) as r:
         page = r.read().decode()
     assert "/api/incentives/book/pnl" in page and limm.LIVE_TAG not in page
+
+
+def test_the_total_pnl_route(live_server):
+    base, _ = live_server
+    code, x = _get(base, "/api/overview/pnl")
+    assert code == 200 and isinstance(x["points"], list) and x["goal_usd"] == 100.0
+    with urllib.request.urlopen(base + "/", timeout=10) as r:
+        assert "/api/overview/pnl" in r.read().decode()
 
 
 def test_all_routes_answer(live_server):

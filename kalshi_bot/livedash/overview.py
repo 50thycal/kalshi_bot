@@ -28,8 +28,9 @@ Attribution rules — the same chain as `legs.live_leg`, with one addition:
   split reads every book with a fill in the window, active or not, or a stopped book's share
   would land on its successor.
 
-The month a settlement belongs to is the snapshot's `captured_at` — the reconcile loop writes
-the settlement row once, the cycle it first sees it.
+The month a settlement belongs to is when it was realized: the first flat snapshot carrying the
+realized figure the newest one holds (`_realized_at`). The reconcile loop writes a settlement
+row once, but the positions feed reports a closed position flat on later cycles too.
 
 Nothing here writes. Nothing here hardcodes a strategy tag: the books are whichever placed
 real orders recently or hold an open twin epoch, and the scorecard applies to any open pair
@@ -195,6 +196,31 @@ def _settled(snap: m.Position | None) -> bool:
     return snap is not None and (snap.quantity or 0) == 0 and snap.realized_pnl is not None
 
 
+def _realized_at(session, settled: dict[str, m.Position]) -> dict[str, datetime]:
+    """When each settled ticker's money was realized: the first flat snapshot carrying the
+    realized figure the newest one holds.
+
+    The newest snapshot's own time is not it: a position closed by a sale is reported flat by
+    the positions feed on later cycles too, so its newest `captured_at` drifts forward until
+    Kalshi drops it, and a late-month close would land in the next month."""
+    out: dict[str, datetime] = {}
+    tickers = sorted(settled)
+    for start in range(0, len(tickers), 500):
+        rows = session.execute(
+            select(m.Position.market_ticker, m.Position.realized_pnl,
+                   func.min(m.Position.captured_at))
+            .where(m.Position.market_ticker.in_(tickers[start:start + 500]),
+                   m.Position.quantity == 0, m.Position.realized_pnl.is_not(None))
+            .group_by(m.Position.market_ticker, m.Position.realized_pnl)
+        )
+        for ticker, pnl, first in rows:
+            if abs(float(pnl) - float(settled[ticker].realized_pnl)) < 1e-6:
+                out[ticker] = _aware(first)
+    for ticker, snap in settled.items():
+        out.setdefault(ticker, _aware(snap.captured_at))
+    return out
+
+
 def _open_marks(session, snaps, now) -> marks_mod.MarkIndex:
     """The newest orderbook tick for every ticker still held — one row per ticker, the same
     tape and the same "latest" read the comparison page values open positions with."""
@@ -339,13 +365,15 @@ def month_peak(events: list[tuple[datetime, float]]) -> dict:
 
 
 def build_headline(session, books, open_pairs, orders, fills, snaps, held, now, *,
-                   active=None, rewards=()) -> dict:
+                   active=None, rewards=(), realized_at=None) -> dict:
     """`books` is every book read; `active` (default: all of them) the ones that are trading.
     A book outside `active` gets a card only while it has something this month — a settlement,
     a trade, an open position or a reward — so every dollar in the total is on a card.
     `rewards` are this month's confirmed reward credits (`incentive_book.reward_credits`); they
-    count toward the goal like a settlement and belong to `incentive_book.REWARD_BOOK`."""
+    count toward the goal like a settlement and belong to `incentive_book.REWARD_BOOK`.
+    `realized_at` (`_realized_at`) dates each settled ticker; without it, its snapshot's time."""
     start = month_start(now)
+    realized_at = realized_at or {}
     active = set(books) if active is None else set(active)
     reward_usd = sum(usd for _, usd in rewards)
     marks = _open_marks(session, snaps, now)
@@ -383,10 +411,11 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now, 
             share = q / ticker_total[ticker]
             snap = snaps.get(ticker)
             if _settled(snap):
-                if _aware(snap.captured_at) >= start:
+                at = realized_at.get(ticker) or _aware(snap.captured_at)
+                if at >= start:
                     pnl = float(snap.realized_pnl) * share
                     month_pnl += pnl
-                    settled_events.append((_aware(snap.captured_at), pnl))
+                    settled_events.append((at, pnl))
                     settled_month += 1
                     wins += pnl > 0
             elif snap is not None and abs(float(snap.quantity_fp or snap.quantity or 0)):
@@ -741,8 +770,10 @@ def build_overview(session, *, now: datetime | None = None) -> dict:
     return {
         "generated_at": now.isoformat(),
         "build_ms": round((time.perf_counter() - t0) * 1000),
-        "headline": build_headline(session, books, open_pairs, orders, fills, snaps, held, now,
-                                   active=active, rewards=rewards),
+        "headline": build_headline(
+            session, books, open_pairs, orders, fills, snaps, held, now, active=active,
+            rewards=rewards,
+            realized_at=_realized_at(session, {t: s for t, s in snaps.items() if _settled(s)})),
         "board": build_board(orders, fills, now),
         "scorecards": scorecards,
     }

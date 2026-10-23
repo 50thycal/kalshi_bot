@@ -504,3 +504,21 @@ def test_a_reward_keeps_its_book_on_the_page_after_it_stops_quoting(session):
     r = _book({"headline": h}, limm.LIVE_TAG)
     assert r["active"] is False and r["month_realized_usd"] == pytest.approx(2.09)
     assert h["month_realized_usd"] == pytest.approx(2.09)
+
+
+def test_a_closed_position_reported_again_later_counts_when_it_went_flat(session):
+    """The positions feed reports a sold-out position flat on later cycles too. The money was
+    realized when it first went flat (September here), not on the newest report (October)."""
+    _order(session, "KXF-1", filled=2, qty=2, at=datetime(2026, 9, 27, tzinfo=timezone.utc))
+    for day in (29, 30):
+        session.add(m.Position(market_ticker="KXF-1", captured_at=datetime(2026, 9, day, tzinfo=timezone.utc),
+                               side="no", quantity=0, quantity_fp=0, realized_pnl=-0.50))
+    session.add(m.Position(market_ticker="KXF-1", captured_at=datetime(2026, 10, 2, tzinfo=timezone.utc),
+                           side="no", quantity=0, quantity_fp=0, realized_pnl=-0.50))
+    _order(session, "KXF-2", filled=1)
+    _settle(session, "KXF-2", 0.07, at=NOW - timedelta(hours=1))
+    session.flush()
+
+    h = ov.build_overview(session, now=NOW)["headline"]
+    assert h["month_realized_usd"] == pytest.approx(0.07)
+    assert _book({"headline": h}, "Hbook")["settled_this_month"] == 1

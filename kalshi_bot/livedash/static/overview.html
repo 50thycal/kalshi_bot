@@ -108,6 +108,43 @@
   .pill.fail{color:var(--neg);background:#2a1618}
   .pill.wait{color:var(--muted);background:var(--panel2)}
 
+  /* total P&L chart. Mark colours validated (dataviz validate_palette.js, dark, surface
+     #181b24, --pairs all since lines cross): lightness, chroma, CVD, normal-vision and
+     contrast all PASS. Total and rewards match the Charts page's net and reward colours. */
+  .tp{--c-total:#6a87f5;--c-trading:#d55181;--c-rewards:#bb8a2c;margin:12px 0;
+    display:flex;flex-direction:column;gap:10px}
+  .tp-top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+  .tp-stats{display:flex;flex-wrap:wrap;gap:6px 22px}
+  .tp-stats .k{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .tp-stats .k i{width:14px;height:2px;border-radius:1px;display:inline-block}
+  .tp-stats .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tp-stats .s{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:2px}
+  .seg button{font:inherit;border:0;background:transparent;color:var(--muted);padding:5px 11px;
+    border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;min-height:30px}
+  .seg button[aria-pressed="true"]{background:var(--panel3);color:var(--text)}
+  .tpbox{position:relative;height:clamp(220px,40vh,380px)}
+  .tpbox svg{display:block;touch-action:pan-y}
+  .tpbox .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .tp .chip{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12px}
+  .tp .chip[aria-pressed="false"]{color:var(--dim);background:transparent}
+  .tp .chip[aria-pressed="false"] i{opacity:.4}
+  .tp .chip i{width:14px;height:2px;border-radius:1px;display:inline-block}
+  .tptip{position:fixed;z-index:30;display:none;pointer-events:none;background:var(--panel3);
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;min-width:190px;
+    box-shadow:0 4px 16px rgba(0,0,0,.35)}
+  .tptip .row{display:flex;align-items:center;gap:8px;margin-top:3px}
+  .tptip .row i{width:14px;height:2px;border-radius:1px;flex:none}
+  .tptip .row span{color:var(--muted);flex:1}
+  .tptip .row b{font-variant-numeric:tabular-nums}
+  .tp details summary{font-size:12px;color:var(--muted);cursor:pointer}
+  .tp details .scroll{max-height:280px;overflow:auto;margin-top:6px}
+  .stopped{margin-top:12px;display:flex;justify-content:center}
+  .stopped button{font:inherit;font-size:12px;color:var(--muted);background:transparent;
+    border:1px dashed var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+  .stopped button:hover{color:var(--text)}
+  button:focus-visible{outline:2px solid var(--live);outline-offset:1px}
+
   .note{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
   .inc{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
   .incrow{background:var(--panel2);border-radius:8px;padding:8px 10px;margin-top:8px}
@@ -150,6 +187,22 @@
 
   <h2>Real money this month</h2>
   <div id="headline"><div class="skel"></div></div>
+  <div class="panel pad tp" id="tp">
+    <div class="tp-top">
+      <div class="dim" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em">Total P&amp;L — all books</div>
+      <div class="seg" id="tprange" role="group" aria-label="Range"></div>
+    </div>
+    <div class="tp-stats" id="tpstats"></div>
+    <div class="chips" id="tpseries" style="margin:0"></div>
+    <div class="tpbox" id="tpchart"><div class="skel" style="height:100%"></div></div>
+    <details><summary>Table</summary><div class="scroll" id="tptable"></div></details>
+    <div class="note" style="margin-top:0">Realized money over time, every live book together: trading
+      after fees (each market at the moment it was realized) plus confirmed liquidity rewards. This
+      month's line ends on the headline figure. Open positions are not on the line; their value at
+      the bid now is shown beside it. The dashed line is the pace that reaches the $100 goal by month end.</div>
+  </div>
+  <div id="books"></div>
+  <div class="tptip" id="tptip"></div>
 
   <h2>Orders</h2>
   <div id="board"><div class="skel"></div></div>
@@ -172,7 +225,8 @@ function dur(min){
   if(min < 48*60) return Math.floor(min/60) + "h " + String(min%60).padStart(2,"0") + "m";
   return Math.floor(min/1440) + "d";
 }
-const S = {d:null, filter:"all"};
+const S = {d:null, filter:"all", showStopped:false};
+try{ S.showStopped = localStorage.getItem("livedash.showStopped") === "1"; }catch(e){ /* storage unavailable */ }
 
 /* ---------- 1. headline ---------- */
 function renderHeadline(){
@@ -185,7 +239,7 @@ function renderHeadline(){
     return `<span title="Highest the realized total reached this month (settled after fees, plus rewards)">peak <b>${usd(h.month_peak_usd)}</b> on ${esc(when)} · ${
       h.below_peak_usd > 0.004 ? `<b>${usd(h.below_peak_usd)}</b> below it` : "at the peak now"}</span>`;
   };
-  const books = h.books.map(b => {
+  const card = b => {
     const hl = b.health;
     const lights = [`<span class="light ${hl.state}"><span class="dot"></span>${esc(hl.text)}</span>`]
       .concat(hl.lights.map(l =>
@@ -216,7 +270,14 @@ function renderHeadline(){
         <span><b>${b.open_positions}</b> open (${usd(b.open_cost_usd)} at risk)</span>
         <span><b>${b.resting_orders}</b> orders resting</span>
       </div>`}</div>`;
-  }).join("");
+  };
+  // Books that stopped trading stay in every total; their cards are folded away by default.
+  const live = h.books.filter(b => b.active !== false), stopped = h.books.filter(b => b.active === false);
+  const stoppedUsd = stopped.reduce((s, b) => s + (b.month_realized_usd || 0), 0);
+  const books = live.map(card).join("") + (S.showStopped ? stopped.map(card).join("") : "");
+  const toggle = stopped.length ? `<div class="stopped"><button type="button" id="togglestopped" aria-expanded="${S.showStopped}">${
+    S.showStopped ? `Hide ${stopped.length} stopped book${stopped.length > 1 ? "s" : ""}`
+      : `Show ${stopped.length} stopped book${stopped.length > 1 ? "s" : ""} · ${usd(stoppedUsd)} this month, already in the total`}</button></div>` : "";
   $("#headline").innerHTML = `
     <div class="panel pad" style="margin-bottom:12px">
       <div class="goal">
@@ -253,8 +314,14 @@ function renderHeadline(){
       </div>
       <div class="note">The goal bar counts realized money only — settled markets after the fees Kalshi charged, plus liquidity rewards that match a payout on Kalshi's Rewards page. A book that stopped trading stays on the page while it has money this month, so the book cards add up to the total. Unrealized is what open positions would fetch if sold at the bid right now; it moves until they settle. A trade is one market we got filled on. Peak is the highest the realized total reached this month; the faint green tick on the bar marks it.
         ${h.shared_tickers ? `${h.shared_tickers} market(s) were filled by two books; each book is credited its share by contracts.` : ""}</div>
-    </div>
-    <div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>`;
+    </div>`;
+  $("#books").innerHTML = `<div class="grid">${books || '<div class="empty">No live books in the last two weeks.</div>'}</div>${toggle}`;
+  const tb = $("#togglestopped");
+  if(tb) tb.onclick = () => {
+    S.showStopped = !S.showStopped;
+    try{ localStorage.setItem("livedash.showStopped", S.showStopped ? "1" : "0"); }catch(e){ /* storage unavailable */ }
+    renderHeadline();
+  };
 }
 
 /* ---------- liquidity-incentive section (only the incentive book carries it) ---------- */
@@ -415,12 +482,216 @@ function renderScorecards(){
   }).join("");
 }
 
+/* ---------- total P&L chart (livedash.total_pnl; inline SVG, no libraries) ---------- */
+const TP_SERIES = [
+  {id:"total",   label:"Total",              col:"--c-total",   w:2.5},
+  {id:"trading", label:"Trading, after fees", col:"--c-trading", w:1.75},
+  {id:"rewards", label:"Rewards",            col:"--c-rewards", w:1.75},
+];
+const TP = {range:"month", on:new Set(TP_SERIES.map(x => x.id)), data:null, view:null};
+try{
+  const saved = JSON.parse(localStorage.getItem("livedash.tp") || "null");
+  if(saved && (saved.range === "month" || saved.range === "all")) TP.range = saved.range;
+  if(saved && Array.isArray(saved.on)){
+    const on = saved.on.filter(i => TP_SERIES.some(x => x.id === i));
+    if(on.length) TP.on = new Set(on);
+  }
+}catch(e){ /* storage unavailable: defaults */ }
+const saveTp = () => {
+  try{ localStorage.setItem("livedash.tp", JSON.stringify({range:TP.range, on:[...TP.on]})); }catch(e){ /* storage unavailable */ }
+};
+const cssv = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
+const fmtDay = t => new Date(t).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+const fmtWhen = t => new Date(t).toLocaleString(undefined, {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"});
+function niceStep(raw){
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+
+// The series cut to the chosen range. "This month" restarts every line at $0 on the 1st (UTC),
+// the same base the headline uses, so its last value IS the headline's realized figure.
+function tpPoints(){
+  const d = TP.data, now = Date.now();
+  let pts = (d.points || []).map(p => ({t:Date.parse(p.at), total:p.total, trading:p.trading, rewards:p.rewards}));
+  if(TP.range === "month"){
+    const ms = Date.parse(d.month_start);
+    const before = pts.filter(p => p.t < ms), base = before.length ? before[before.length-1] : {total:0, trading:0, rewards:0};
+    pts = [{t:ms, total:0, trading:0, rewards:0}].concat(pts.filter(p => p.t >= ms).map(p =>
+      ({t:p.t, total:p.total-base.total, trading:p.trading-base.trading, rewards:p.rewards-base.rewards})));
+  }
+  if(pts.length){ const last = pts[pts.length-1]; if(now > last.t) pts.push({...last, t:now}); }
+  return pts;
+}
+
+function renderTotal(){
+  const d = TP.data; if(!d) return;
+  const panel = $("#tp");
+  $("#tprange").innerHTML = [["month","This month"],["all","All time"]].map(([v,l]) =>
+    `<button type="button" data-range="${v}" aria-pressed="${TP.range===v}">${l}</button>`).join("");
+  $("#tpseries").innerHTML = TP_SERIES.map(x =>
+    `<button type="button" class="chip" data-ser="${x.id}" aria-pressed="${TP.on.has(x.id)}"><i style="background:${cssv(panel,x.col)}"></i>${esc(x.label)}</button>`).join("");
+  const pts = tpPoints(), last = pts.length ? pts[pts.length-1] : null;
+  const h = S.d && S.d.headline, unreal = h ? h.unrealized_usd : null;
+  const k = (label, col) => `<span class="k">${col ? `<i style="background:${cssv(panel,col)}"></i>` : ""}${esc(label)}</span>`;
+  const span = TP.range === "month" ? "this month" : (pts.length ? "since " + fmtDay(pts[0].t) : "all time");
+  $("#tpstats").innerHTML = last ? `
+    <div>${k("Total, " + span, "--c-total")}<div class="v ${sgn(last.total)}">${usd(last.total)}</div>
+      <div class="s">trading + rewards, realized</div></div>
+    <div>${k("Trading", "--c-trading")}<div class="v ${sgn(last.trading)}">${usd(last.trading)}</div>
+      <div class="s">${TP.range === "all" ? `${esc(d.markets_settled)} markets, after fees` : "settled, after fees"}</div></div>
+    <div>${k("Rewards", "--c-rewards")}<div class="v ${sgn(last.rewards)}">${usd(last.rewards)}</div>
+      <div class="s">${TP.range === "all" ? `${esc(d.reward_payouts)} confirmed payouts` : "confirmed payouts"}</div></div>
+    <div>${k("With open positions now")}<div class="v ${sgn(has(unreal) ? last.total + unreal : null)}">${has(unreal) ? usd(last.total + unreal) : "—"}</div>
+      <div class="s">open ${usd(unreal)} at the bid</div></div>` : "";
+  drawTotal(pts);
+  renderTotalTable(pts);
+}
+
+function drawTotal(pts){
+  const el = $("#tpchart"), panel = $("#tp");
+  if(!pts.length){ el.innerHTML = `<div class="empty">No realized money yet.</div>`; TP.view = null; return; }
+  const W = Math.max(280, Math.floor(el.clientWidth)), H = Math.max(200, Math.floor(el.clientHeight));
+  const narrow = W < 520, L = narrow ? 48 : 58, R = narrow ? 62 : 74, T = 10, B = 24;
+  const pw = W - L - R, ph = H - T - B;
+  const shown = TP_SERIES.filter(x => TP.on.has(x.id)).map(x => ({...x, color:cssv(panel, x.col)}));
+  const x0 = pts[0].t, x1 = Math.max(pts[pts.length-1].t, x0 + 1);
+  // The goal pace (month view): $0 on the 1st to $100 at month end, drawn up to now.
+  let pace = null;
+  if(TP.range === "month"){
+    const ms = x0, me = Date.UTC(new Date(ms).getUTCFullYear(), new Date(ms).getUTCMonth() + 1, 1);
+    pace = {at:t => (t - ms) / (me - ms) * TP.data.goal_usd};
+  }
+  let vals = [0];
+  for(const x of shown) for(const p of pts) vals.push(p[x.id]);
+  if(pace) vals.push(pace.at(x1));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if(hi - lo < 1){ hi += .5; lo -= .5; }
+  const ys = niceStep((hi - lo) / Math.max(3, Math.min(7, Math.floor(ph / 48))));
+  lo = Math.floor(lo / ys) * ys; hi = Math.ceil(hi / ys) * ys;
+  const X = t => L + (t - x0) / (x1 - x0) * pw, Y = v => T + (1 - (v - lo) / (hi - lo)) * ph;
+  const f = n => n.toFixed(1), ink = {grid:"#232837", zero:"#4a5169", axis:"#7d8696"};
+  let g = "";
+  const dec = ys < 1 ? 2 : 0;
+  for(let v = lo; v <= hi + ys/2; v += ys){
+    const z = Math.abs(v) < ys/1000, y = f(Y(v));
+    g += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${z ? ink.zero : ink.grid}"/>`;
+    g += `<text x="${L-8}" y="${f(Y(v)+4)}" fill="${ink.axis}" font-size="11" text-anchor="end" style="font-variant-numeric:tabular-nums">${esc((v < -1e-9 ? "−$" : "$") + Math.abs(z ? 0 : v).toFixed(dec))}</text>`;
+  }
+  const DAY = 864e5, want = Math.max(2, Math.floor(pw / (narrow ? 64 : 84)));
+  const step = [1,2,3,7,14,30,61,91].map(n => n*DAY).find(s => (x1 - x0) / s <= want) || 182*DAY;
+  for(let t = Math.ceil(x0 / step) * step; t <= x1; t += step){
+    const x = f(X(t));
+    g += `<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ph}" stroke="${ink.grid}"/>`;
+    g += `<text x="${x}" y="${H-7}" fill="${ink.axis}" font-size="11" text-anchor="middle">${esc(fmtDay(t))}</text>`;
+  }
+  if(pace)
+    g += `<line x1="${f(X(x0))}" y1="${f(Y(0))}" x2="${f(X(x1))}" y2="${f(Y(pace.at(x1)))}" stroke="${ink.axis}" stroke-width="1.25" stroke-dasharray="5 4"><title>Goal pace: $${TP.data.goal_usd} by month end</title></line>`
+      + `<text x="${f(X(x1) - 4)}" y="${f(Y(pace.at(x1)) - 6)}" fill="${ink.axis}" font-size="10" text-anchor="end">goal pace</text>`;
+  // Cumulative money is a step function: each value holds until the next record moves it.
+  const path = id => pts.map((p, i) => i ? `H${f(X(p.t))}V${f(Y(p[id]))}` : `M${f(X(p.t))},${f(Y(p[id]))}`).join("");
+  const tot = shown.find(x => x.id === "total");
+  if(tot){
+    const base = f(Math.min(T + ph, Math.max(T, Y(0))));
+    g += `<defs><linearGradient id="tpfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${tot.color}" stop-opacity=".18"/><stop offset="1" stop-color="${tot.color}" stop-opacity="0"/></linearGradient></defs>`;
+    g += `<path d="${path("total")}V${base}H${f(X(x0))}Z" fill="url(#tpfill)"/>`;
+  }
+  for(const x of [...shown].sort((a, b) => (a.id === "total") - (b.id === "total")))
+    g += `<path d="${path(x.id)}" fill="none" stroke="${x.color}" stroke-width="${x.w}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Direct labels at the right end, nudged apart so they never overlap.
+  const lastP = pts[pts.length-1];
+  const ends = shown.map(x => ({x, v:lastP[x.id], y:Y(lastP[x.id])})).sort((a, b) => a.y - b.y);
+  for(let i = 1; i < ends.length; i++) if(ends[i].y - ends[i-1].y < 14) ends[i].y = ends[i-1].y + 14;
+  const over = ends.length ? ends[ends.length-1].y - (T + ph) : 0;
+  if(over > 0) ends.forEach(e => e.y -= over);
+  for(const e of ends)
+    g += `<line x1="${W-R+2}" x2="${W-R+9}" y1="${f(e.y)}" y2="${f(e.y)}" stroke="${e.x.color}" stroke-width="2"/>`
+      + `<text x="${W-R+12}" y="${f(e.y+4)}" fill="#e6e8ee" font-size="11" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(usd(e.v))}</text>`;
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Total realized profit and loss over time, all live books: ${esc(shown.map(x => x.label).join(", "))}">${g}
+    <g id="tphover" pointer-events="none"></g></svg>`;
+  TP.view = {pts, shown, X, Y, L, R, T, ph, pw, W, x0, x1, pace};
+  bindTotalHover(el);
+}
+
+function bindTotalHover(el){
+  const svg = el.querySelector("svg"), hov = svg.querySelector("#tphover"), tip = $("#tptip");
+  let timer = null;
+  const hide = () => { hov.innerHTML = ""; tip.style.display = "none"; };
+  const show = ev => {
+    const v = TP.view; if(!v) return;
+    const box = svg.getBoundingClientRect(), px = ev.clientX - box.left;
+    if(px < v.L - 4 || px > v.W - v.R + 4){ hide(); return; }
+    const t = v.x0 + (Math.min(Math.max(px, v.L), v.L + v.pw) - v.L) / v.pw * (v.x1 - v.x0);
+    let p = v.pts[0];
+    for(const q of v.pts){ if(q.t <= t) p = q; else break; }   // the step in force at t
+    const x = v.X(t).toFixed(1);
+    let hh = `<line x1="${x}" x2="${x}" y1="${v.T}" y2="${v.T+v.ph}" stroke="#9aa3b2" opacity=".6"/>`;
+    for(const s of v.shown) hh += `<circle cx="${x}" cy="${v.Y(p[s.id]).toFixed(1)}" r="4" fill="${s.color}" stroke="#181b24" stroke-width="2"/>`;
+    hov.innerHTML = hh;
+    tip.innerHTML = `<b>${esc(fmtWhen(t))}</b>` + v.shown.map(s =>
+      `<div class="row"><i style="background:${s.color}"></i><span>${esc(s.label)}</span><b>${esc(usd(p[s.id]))}</b></div>`).join("")
+      + (v.pace ? `<div class="row"><i style="background:#7d8696"></i><span>Goal pace</span><b>${esc(usd(v.pace.at(t)))}</b></div>` : "");
+    tip.style.display = "block";
+    const tw = tip.offsetWidth, th = tip.offsetHeight, cx = box.left + Number(x);
+    let left = cx + 14; if(left + tw > window.innerWidth - 8) left = cx - tw - 14;
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(8, Math.min(window.innerHeight - th - 8, ev.clientY - th/2)) + "px";
+  };
+  svg.addEventListener("pointermove", e => { clearTimeout(timer); show(e); });
+  svg.addEventListener("pointerdown", e => { clearTimeout(timer); show(e); });
+  svg.addEventListener("pointerleave", e => { if(e.pointerType === "mouse") hide(); });
+  svg.addEventListener("pointerup", e => { if(e.pointerType !== "mouse"){ clearTimeout(timer); timer = setTimeout(hide, 2500); } });
+  svg.addEventListener("pointercancel", hide);
+}
+
+// The same series as a table: one row per UTC day, its change and the running total.
+function renderTotalTable(pts){
+  const days = new Map();
+  let prev = pts.length ? pts[0] : null;
+  for(const p of pts.slice(1)){
+    const day = new Date(p.t).toISOString().slice(0, 10);
+    const r = days.get(day) || {day, trading:0, rewards:0, total:p.total};
+    r.trading += p.trading - prev.trading; r.rewards += p.rewards - prev.rewards; r.total = p.total;
+    days.set(day, r); prev = p;
+  }
+  const rows = [...days.values()].filter(r => Math.abs(r.trading) + Math.abs(r.rewards) > 0.004).reverse();
+  $("#tptable").innerHTML = rows.length ? `<table><thead><tr><th>Day (UTC)</th><th class="r">Trading</th><th class="r">Rewards</th><th class="r">Running total</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${esc(r.day)}</td><td class="r ${sgn(r.trading)}">${usd(r.trading)}</td><td class="r ${sgn(r.rewards)}">${usd(r.rewards)}</td><td class="r ${sgn(r.total)}">${usd(r.total)}</td></tr>`).join("")
+  }</tbody></table>` : `<div class="empty">Nothing realized in this range.</div>`;
+}
+
+$("#tp").addEventListener("click", e => {
+  const r = e.target.closest("[data-range]"), s = e.target.closest("[data-ser]");
+  if(r){ TP.range = r.dataset.range; }
+  else if(s){
+    const id = s.dataset.ser;
+    if(TP.on.has(id)){ if(TP.on.size > 1) TP.on.delete(id); } else TP.on.add(id);
+  } else return;
+  saveTp(); renderTotal();
+});
+if(window.ResizeObserver){
+  let last = 0;
+  new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width);
+    if(w !== last){ last = w; if(TP.data) renderTotal(); } }).observe($("#tpchart"));
+}
+async function loadTotal(){
+  try{
+    const r = await fetch("/api/overview/pnl", {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    TP.data = await r.json();
+    renderTotal();
+  }catch(e){
+    if(!TP.data) $("#tpchart").innerHTML = `<div class="err">Could not load the chart — ${esc(e.message)}. Retrying.</div>`;
+  }
+}
+
 async function load(){
   try{
     const r = await fetch("/api/overview", {cache:"no-store"});
     if(!r.ok) throw new Error("HTTP " + r.status);
     S.d = await r.json();
     renderHeadline(); renderBoard(); renderScorecards();
+    if(TP.data) renderTotal();          // the "with open positions" figure reads the headline
     const age = S.d.cache_age_seconds;
     $("#asof").textContent = "data " + (age < 90 ? "fresh" : Math.round(age/60) + " min old")
       + (S.d.cache_error ? " · " + S.d.cache_error : "");
@@ -428,9 +699,9 @@ async function load(){
     if(!S.d) $("#headline").innerHTML = `<div class="err">Could not load the overview — ${esc(e.message)}. Retrying.</div>`;
   }
 }
-load();
-setInterval(() => { if(!document.hidden) load(); }, 60000);
-document.addEventListener("visibilitychange", () => { if(!document.hidden) load(); });
+load(); loadTotal();
+setInterval(() => { if(!document.hidden){ load(); loadTotal(); } }, 60000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden){ load(); loadTotal(); } });
 </script>
 </body>
 </html>

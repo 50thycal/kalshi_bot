@@ -6,6 +6,7 @@ Routes:
   GET /chart                         the P&L and price charts for one pair, on their own
   GET /healthz                       "ok"
   GET /api/overview                  the overview payload, from a background-refreshed cache
+  GET /api/overview/pnl              every live book's realized P&L together, over time
   GET /api/runs[?view=selector]      paired runs + unpaired live strategies
                                      (view=selector: the picker's pairs only, no P&L)
   GET /api/runs/<twin_tag>           header, positions, comparison, divergence
@@ -53,7 +54,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..db import session_scope
 from ..liquidity_incentive import report as incentive_report
-from . import data, incentive_pnl
+from . import data, incentive_pnl, total_pnl
 from . import execution as execution_mod
 from . import overview as overview_mod
 from .events import CATEGORIES, DEFAULT_CATEGORY, ENVIRONMENTS
@@ -91,6 +92,7 @@ def _build_overview() -> dict:
 # the first request after start builds inline if the refresher has not finished yet.
 OVERVIEW = overview_mod.OverviewCache(_build_overview)
 BOOK_PNL = incentive_pnl.BookPnlCache()
+TOTAL_PNL = total_pnl.TotalPnlCache()
 
 
 def _one(params: dict, key: str) -> str | None:
@@ -231,6 +233,10 @@ class LiveDashHandler(BaseHTTPRequestHandler):
     def _route(self, path: str, params: dict) -> bool:
         if path == "/api/overview":
             self._json(OVERVIEW.get())
+            return True
+        if path == "/api/overview/pnl":
+            with session_scope() as session:
+                self._json(TOTAL_PNL.build(session))
             return True
         # Liquidity-incentive shadow research view (docs/LIQUIDITY_INCENTIVE_THESIS.md): read-only
         # over the incentive_* tables. Ranking only; nothing here can submit an order.
