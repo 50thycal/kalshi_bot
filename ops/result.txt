@@ -1,4 +1,23 @@
+Railway GraphQL errors:
+[
+  {
+    "message": "Not Authorized",
+    "locations": [
+      {
+        "line": 3,
+        "column": 3
+      }
+    ],
+    "path": [
+      "deployments"
+    ],
+    "extensions": {
+      "code": "INTERNAL_SERVER_ERROR"
+    },
+    "traceId": "8040632492246802095"
+  }
+]
 # ops request [READ]
-# type=noop
-# code 6645eae5b90258bbd775c1de1ddb73dcb6e232c6 · started 2026-10-23T02:51:33Z
-(noop — nothing to do)
+# type=logs  service=main  id=logs1023a1
+# code 6645eae5b90258bbd775c1de1ddb73dcb6e232c6 · started 2026-10-23T02:52:03Z
+# target service: main
