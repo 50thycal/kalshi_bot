@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1024b2004", "sql": "select market_ticker, side, action, limit_price, quantity, status, cancel_reason, created_at from live_orders where strategy='Alimm1' and (status in ('resting','partial','pending','submitted') or created_at > now()-interval '130 minutes' or cancel_reason='gone_from_exchange') order by created_at"}
