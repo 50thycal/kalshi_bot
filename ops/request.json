@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1024y1640", "sql": "select market_ticker, event_ticker, left(market_title,70) title, end_date, close_time, period_reward_usd, target_size from incentive_programs where superseded_at is null and disappeared_at is null and incentive_type='liquidity' and series_ticker='KXYTVIEWSHIGH' and end_date > now() order by close_time limit 12"}
