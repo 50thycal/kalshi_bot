@@ -3201,3 +3201,20 @@ and never covered the 495 new contracts.
 **Fix (operator, 2026-10-23).** When both halves rest and at least one held contract is uncovered,
 both are cancelled and the split is re-placed over the whole position on the next cycle (after a
 fresh position read, as for any cancel). No price, cap or stop change.
+
+### 9.68 Orders gone from the exchange are closed (2026-10-24)
+
+**Problem.** §9.66 kept a part-filled bid that is absent from the orders feed at `partial`, because
+the feed then held only the newest page and absence proved nothing. Once that bid is cancelled or
+expires on Kalshi the row stays `partial` for ever: it holds a market slot and the per-event cap,
+blocks that market's resting sells (they wait while an entry bid works), and reads as live in the
+DB. The NQE-B 500@2c row (stale since before §9.66) could only be settled by an operator screenshot
+of the event's order count (2026-10-24: 2 orders, both other markets).
+
+**Fix (operator, 2026-10-24).** `_fetch_orders` now records whether it reached the last resting
+page. When it did, an incentive-book order (all are v2, so listed while they rest) that is
+`resting`/`partial`, has an exchange id, is over 10 minutes old and is not listed is closed:
+`filled` if its fills cover it, else `canceled` with `cancel_reason = gone_from_exchange`. A failed
+or truncated resting read changes nothing. A row closed this way that the exchange later lists as
+resting is revived to `partial`, as a `filled` orphan is. Other books are untouched. No order is
+placed, sized or priced by this.
