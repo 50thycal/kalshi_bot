@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1024p1628", "sql": "select case when market_ticker like '%MENTION%' then 'MENTION' else coalesce(series_ticker,'?') end grp, count(*) n, round(sum(period_reward_usd)::numeric,0) usd, round(avg(target_size)::numeric,0) tgt, min(end_date)::date first_end from incentive_programs where superseded_at is null and disappeared_at is null and incentive_type='liquidity' and (end_date is null or end_date > now()) group by 1 order by usd desc nulls last limit 30"}
+{"type":"noop"}
