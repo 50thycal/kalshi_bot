@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1024s1650", "sql": "select count(distinct s.market_ticker) mk, count(*) n, sum(case when s.market_ticker like '%MENTION%' then 1 else 0 end) mention_rows, sum(case when s.market_ticker like 'KXYTVIEWSHIGH%' then 1 else 0 end) yt_rows, min(s.at) first_at from incentive_market_snapshots s where s.at > now()-interval '3 hours'"}
