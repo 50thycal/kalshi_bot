@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=ci1024b1159
+# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T11:59:27Z
+market_ticker                 side  action  limit_price  quantity  status   cancel_reason  created_at                      
+----------------------------  ----  ------  -----------  --------  -------  -------------  --------------------------------
+KXTRUMPMENTIONB-26OCT27-CRYP  yes   buy     1            500       resting                 2026-10-23 04:02:19.205953+00:00
+KXTRUMPMENTION-26OCT27-CHEA   no    buy     10           100       resting                 2026-10-23 10:49:12.636563+00:00
+KXTRUMPMENTIONB-26OCT27-WIND  yes   buy     9            111       resting                 2026-10-23 14:48:43.181905+00:00
+KXMAMDANIMENTION-26NOV18-NQE  yes   buy     3            333       resting                 2026-10-24 01:19:06.745673+00:00
+
+(4 rows)
