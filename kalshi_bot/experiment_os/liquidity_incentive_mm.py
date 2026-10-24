@@ -128,17 +128,21 @@ RISK_ENVELOPE: dict = {
     "question": "does a two-sided resting pair earn liquidity reward net of single-leg losses",
     "contracts_per_order": limm.MAX_CONTRACTS_PER_ORDER,
     "max_order_dollars": limm.MAX_ORDER_DOLLARS,
+    # §9.69: bids at SIZE_UP_MIN_PRICE_CENTS or more get SIZE_UP_ORDER_DOLLARS.
+    "size_up_order_dollars": limm.SIZE_UP_ORDER_DOLLARS,
+    "size_up_min_price_cents": limm.SIZE_UP_MIN_PRICE_CENTS,
     "max_price_cents": limm.MAX_PRICE_CENTS,
     "max_open_orders": limm.MAX_OPEN_ORDERS,
     "max_book_exposure_usd": limm.MAX_STRATEGY_EXPOSURE_USD,
     "max_markets_per_event": limm.MAX_MARKETS_PER_EVENT,
-    "max_loss_per_clip_usd": round(limm.MAX_ORDER_DOLLARS, 2),
+    "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,
     "close_window_hours": [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE],
     # §9.55: event-tied mention markets only; a resting bid steps aside before its event.
     "universe": {
         "event_mention_only": limm.EVENT_MENTION_ONLY,
+        "month_window_series": sorted(limm.MONTH_WINDOW_SERIES),     # §9.69
         "pre_event_cutoff_minutes": limm.PRE_EVENT_CUTOFF_MINUTES,
         "event_date_fallback_hour_utc": limm.EVENT_DATE_FALLBACK_HOUR_UTC,
         "min_hours_before_event": limm.MIN_HOURS_BEFORE_EVENT,

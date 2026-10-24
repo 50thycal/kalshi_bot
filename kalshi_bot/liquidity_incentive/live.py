@@ -62,6 +62,19 @@ MAX_CONTRACTS_PER_ORDER = 500
 #: the operator's "$10 a side, still $20 a position". Both legs share one quantity, so the dearer
 #: leg is the one this cap binds.
 MAX_ORDER_DOLLARS = 10.00
+#: §9.69 (operator, 2026-10-24): a bid priced at SIZE_UP_MIN_PRICE_CENTS or more gets this budget
+#: instead. Reward follows contracts resting against a ~1,000-contract Target Size: at 1-3c $10
+#: already buys 333-500 contracts, at 9-10c only ~100, so the extra dollars go where they buy
+#: reward. The book's total (`MAX_STRATEGY_EXPOSURE_USD`) is unchanged.
+SIZE_UP_ORDER_DOLLARS = 20.00
+SIZE_UP_MIN_PRICE_CENTS = 4
+
+
+def order_dollars(price_cents: int) -> float:
+    """§9.69: the per-bid budget for a bid at this price."""
+    return SIZE_UP_ORDER_DOLLARS if int(price_cents) >= SIZE_UP_MIN_PRICE_CENTS \
+        else MAX_ORDER_DOLLARS
+
 #: Markets this strategy may be working at once. `repository.count_live_book_open` counts open
 #: TICKERS, so a two-legged pair is one. 3 -> 5 (§9.34) -> 2 (§9.36); unchanged by §9.37.
 #: 2 -> 10 (§9.56, operator 2026-10-15: "go full send … the 100 dollar limit"), with the
@@ -192,14 +205,50 @@ def is_event_mention(series: str | None, event_ticker: str | None, title: str | 
     return event_date(event_ticker) is not None
 
 
+#: §9.69 (operator, 2026-10-24: "only add one market"): YouTube "above N daily views at any point
+#: during <month>" markets join the universe. Their event ticker ends in the month the market
+#: CLOSES (`KXYTVIEWSHIGH-TAT26NOV` measures October), and the measured window is the event: a
+#: bid steps aside ENTRY_STEP_ASIDE_HOURS before that window ends. The Tate McRae market of this
+#: series paid $5.05 on 2026-10-23, the largest single payout the book has had.
+MONTH_WINDOW_SERIES = frozenset({"KXYTVIEWSHIGH"})
+#: The measured month ends at local midnight; 04:00Z is midnight US Eastern (daylight time) and
+#: earlier than midnight Pacific, so the cutoff is never after the window has closed.
+MONTH_WINDOW_END_HOUR_UTC = 4
+_MONTH_TICKER_RE = re.compile(r"-[A-Z]*(\d{2})([A-Z]{3})$")
+
+
+def month_window_end(series: str | None, event_ticker: str | None):
+    """§9.69: when the measured month of a MONTH_WINDOW_SERIES market ends — the 1st of the
+    month in its event ticker at MONTH_WINDOW_END_HOUR_UTC — else None."""
+    if (series or "").upper() not in MONTH_WINDOW_SERIES:
+        return None
+    m = _MONTH_TICKER_RE.search((event_ticker or "").upper())
+    if not m or m.group(2) not in _MONTHS:
+        return None
+    return datetime(2000 + int(m.group(1)), _MONTHS[m.group(2)], 1, MONTH_WINDOW_END_HOUR_UTC,
+                    tzinfo=timezone.utc)
+
+
+def in_universe(series: str | None, event_ticker: str | None, title: str | None) -> bool:
+    """The markets this book may rest in: event-tied mentions (§9.55) and the month-window
+    series (§9.69)."""
+    return is_event_mention(series, event_ticker, title) \
+        or month_window_end(series, event_ticker) is not None
+
+
 def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str | None,
                      program_end: datetime | None, close_time: datetime | None):
-    """When a resting bid in this market must be gone, or None when it is not an event-tied
-    mention market (and so is outside the §9.55 universe).
+    """When a resting bid in this market must be gone, or None when it is outside the universe.
 
-    A programme that ends well before the market closes ends AT the event: cut off
-    PRE_EVENT_CUTOFF_MINUTES before it. Otherwise the event's hour is unknown and the cutoff is
-    EVENT_DATE_FALLBACK_HOUR_UTC on the date in the event ticker."""
+    A month-window market (§9.69) is cut off when its measured month ends, or at its programme's
+    end or close if either comes first.
+
+    For a mention market: a programme that ends well before the market closes ends AT the
+    event: cut off PRE_EVENT_CUTOFF_MINUTES before it. Otherwise the event's hour is unknown and
+    the cutoff is EVENT_DATE_FALLBACK_HOUR_UTC on the date in the event ticker."""
+    window_end = month_window_end(series, event_ticker)
+    if window_end is not None:
+        return min(t for t in (window_end, program_end, close_time) if t is not None)
     if not is_event_mention(series, event_ticker, title):
         return None
     if program_end is not None and close_time is not None and (
@@ -231,6 +280,8 @@ def market_word(ticker: str | None, event_ticker: str | None) -> str | None:
     """The word a mention market is about — the ticker's suffix after its event
     (`KXTRUMPMENTION-26OCT19-CEAS` -> `CEAS`). None when the ticker is not `<event>-<word>`."""
     t, ev = (ticker or ""), (event_ticker or "")
+    if "MENTION" not in t.split("-", 1)[0].upper():
+        return None     # §9.69: a views threshold ("16.5M") is not a word shared across events
     if ev and t.startswith(ev + "-") and len(t) > len(ev) + 1:
         return t[len(ev) + 1:].upper()
     return None
@@ -571,10 +622,11 @@ def build_side_quote(
         return Refusal(REFUSE_TOO_EXPENSIVE,
                        f"no side's reference price is within {max_price_cents}c ({known})")
     price, side = min(cands)
-    qty = min(MAX_CONTRACTS_PER_ORDER, int(MAX_ORDER_DOLLARS * 100 // price))
+    budget = order_dollars(price)
+    qty = min(MAX_CONTRACTS_PER_ORDER, int(budget * 100 // price))
     if qty < 1:
         return Refusal(REFUSE_TOO_EXPENSIVE,
-                       f"{price}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-leg budget")
+                       f"{price}c exceeds the ${budget:.2f} per-leg budget")
     collateral = round(price * qty / 100.0, 4)
     if strategy_exposure_now_usd + collateral > MAX_STRATEGY_EXPOSURE_USD:
         return Refusal(

@@ -35,7 +35,10 @@ def test_the_registered_envelope_equals_the_running_constants():
     # The stated per-clip downside must be what the dollar cap actually allows (thesis §9.36:
     # the dollar cap binds before the contract-count ceiling does at any price this book
     # trades), not a rounder number someone liked better.
-    assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_ORDER_DOLLARS)
+    assert e["max_loss_per_clip_usd"] == pytest.approx(
+        max(limm.MAX_ORDER_DOLLARS, limm.SIZE_UP_ORDER_DOLLARS))
+    assert e["size_up_order_dollars"] == limm.SIZE_UP_ORDER_DOLLARS
+    assert e["size_up_min_price_cents"] == limm.SIZE_UP_MIN_PRICE_CENTS
     # Two-sided with registered exits (thesis §9.37): the envelope names the rules that run.
     assert e["sides_quoted"] == 2
     assert e["min_pair_edge_cents"] == limm.MIN_PAIR_EDGE_CENTS
@@ -63,6 +66,8 @@ def test_the_operator_guardrails_are_not_exceeded():
     assert limm.MAX_STRATEGY_EXPOSURE_USD <= 100.00
     assert limm.MAX_OPEN_ORDERS <= 10
     assert limm.MAX_ORDER_DOLLARS <= 10.00
+    # §9.69 (operator, 2026-10-24: "size up to 20 for ones [priced 4c+]"); the $100 total binds.
+    assert limm.SIZE_UP_ORDER_DOLLARS <= 20.00
     assert limm.MAX_MARKETS_PER_EVENT <= 3
     # Mutually consistent: the book quotes ONE side per market (§9.48), so every open market
     # carrying its one bid at the cap stays inside the book budget.

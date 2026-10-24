@@ -59,6 +59,8 @@ SKIP_LOW_PROJECTED = "low_projected_payout"
 #: 2026-09-30 the eight newest programmes were all `book_too_deep`, so each cycle fetched those
 #: eight, refused all eight, and never reached the other ~1,150 (§9.43; §9.39 was the same shape).
 BOOK_REFUSAL_COOLDOWN_SECONDS = 3600.0
+#: §9.69: how long a market's estimated reward rate orders the fetches before it is re-explored.
+REWARD_MEMORY_SECONDS = 6 * 3600.0
 #: The cooldown map is also written to `system_events` (at most this often) and read back on the
 #: first cycle after a restart, so a redeploy does not send the fetch budget back to the top of
 #: the ranking (§9.44). Production redeploys several times a day as other work merges.
@@ -291,6 +293,10 @@ class IncentiveLiveRunner:
         #: `incentive_programs` (WS-024). Cleared at the start of a cycle and after discovery,
         #: the only writer of the table inside a cycle.
         self._programs_memo: tuple[int, datetime, list] | None = None
+        #: §9.69: ticker -> (estimated reward $/h of our quote there, when estimated), from every
+        #: book this process fetched. Orders the next cycles' fetches by expected reward. In
+        #: memory: after a restart it is rebuilt by exploration within about an hour.
+        self._reward_seen: dict[str, tuple[float, datetime]] = {}
 
     # --- arming ---------------------------------------------------------------
 
@@ -423,6 +429,7 @@ class IncentiveLiveRunner:
                     summary["outcomes"].get(limm.REFUSE_EVENT_CAP, 0) + n_before - len(candidates)
         max_fetch = max(1, int(getattr(self.settings,
                                        "liquidity_incentive_live_max_book_fetches", 8)))
+        candidates = self._order_by_expected_reward(candidates, now, max_fetch)
         built: list[dict] = []
         for program in candidates[:max_fetch]:
             try:
@@ -453,6 +460,7 @@ class IncentiveLiveRunner:
         ranked, dropped = rank_by_projected_payout(ranked)
         if dropped:
             summary["outcomes"][SKIP_LOW_PROJECTED] = len(dropped)
+        self._remember_rewards(built, ranked + dropped, now)
         # Every candidate that produced no pair is still reported, by its refusal code, so a
         # cycle that placed nothing says which cap or which book stopped it.
         placeable = {c["market_ticker"] for c, _ in ranked + dropped}
@@ -883,6 +891,12 @@ class IncentiveLiveRunner:
             if not isinstance(q, limm.SideQuote) or q.leg.side != row.side \
                     or int(q.leg.price_cents) == int(row.limit_price):
                 continue
+            # §9.69: a re-price across SIZE_UP_MIN_PRICE_CENTS doubles the bid's dollars, so it
+            # must still fit the book's total.
+            held_usd = int(row.limit_price) * float(row.quantity or 0) / 100.0
+            if repo.live_strategy_exposure(session, limm.LIVE_TAG) - held_usd \
+                    + q.collateral_usd > limm.MAX_STRATEGY_EXPOSURE_USD + 1e-9:
+                continue
             if not executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
                                                     ticker=ticker, reason="repriced"):
                 continue            # part-cancelled: next cycle re-checks
@@ -1108,7 +1122,7 @@ class IncentiveLiveRunner:
 
         prog = next((p for p in self._running_programs(session, now)
                      if p.market_ticker == ticker), None)
-        eligible = prog is not None and limm.is_event_mention(
+        eligible = prog is not None and limm.in_universe(
             prog.series_ticker or ticker.split("-", 1)[0], prog.event_ticker, prog.market_title)
         cutoff = _pre_event_cutoff(prog) if eligible else None
         if not eligible or cutoff is None or now >= cutoff:
@@ -1485,6 +1499,37 @@ class IncentiveLiveRunner:
         except Exception:  # noqa: BLE001 — persistence is a convenience, never the guard
             logger.warning("incentive live: cooldown save failed", exc_info=True)
 
+    def _order_by_expected_reward(self, candidates: list, now: datetime, max_fetch: int) -> list:
+        """§9.69 (operator, 2026-10-24: "choose markets by expected rewards, not newest first"):
+        the fetch order. Half the budget re-reads the markets with the highest remembered
+        projected payout (reward $/h x hours the programme has left), so the best books are
+        fresh when the ranking picks; the rest explores markets not yet estimated, newest
+        first. Markets estimated at nothing go last. Then the post-fetch ranking
+        (`rank_by_projected_payout`) chooses among fresh books."""
+        horizon = now - timedelta(seconds=REWARD_MEMORY_SECONDS)
+        self._reward_seen = {t: v for t, v in self._reward_seen.items() if v[1] >= horizon}
+        known, unknown, zero = [], [], []
+        for p in candidates:
+            seen = self._reward_seen.get(p.market_ticker)
+            if seen is None:
+                unknown.append(p)
+                continue
+            end = _aware(p.end_date)
+            hours_left = 0.0 if end is None else max(0.0, (end - now).total_seconds() / 3600.0)
+            payout = seen[0] * hours_left
+            (known if payout > 0 else zero).append((payout, p))
+        known.sort(key=lambda t: -t[0])
+        best = [p for _v, p in known]
+        n_best = min(len(best), max(1, max_fetch // 2))
+        return best[:n_best] + unknown + best[n_best:] + [p for _v, p in zero]
+
+    def _remember_rewards(self, built: list[dict], quotable: list, now: datetime) -> None:
+        """§9.69: record the estimated reward rate of every book fetched this cycle; a book that
+        produced no quote is remembered at zero."""
+        rates = {c["market_ticker"]: quote_rate((c, q)) for c, q in quotable}
+        for c in built:
+            self._reward_seen[c["market_ticker"]] = (rates.get(c["market_ticker"], 0.0), now)
+
     def _candidate_programs(self, session, *, now: datetime,
                             excluded_series: frozenset[str] = frozenset()) -> list:
         """Current liquidity programs worth fetching a book for, NEWEST program first.
@@ -1506,8 +1551,8 @@ class IncentiveLiveRunner:
             if (row.market_ticker or "").split("-", 1)[0].upper() in excluded_series:
                 continue
             if limm.EVENT_MENTION_ONLY:
-                # §9.55: event-tied mention markets only, and only with time left to earn
-                # before the bot must step aside for the event.
+                # §9.55: event-tied mention markets (and §9.69's month-window series) only, and
+                # only with time left to earn before the bot must step aside for the event.
                 cutoff = _entry_cutoff(row)
                 if cutoff is None or (cutoff - now).total_seconds() / 3600.0 \
                         < limm.MIN_HOURS_BEFORE_EVENT:
