@@ -3218,3 +3218,33 @@ page. When it did, an incentive-book order (all are v2, so listed while they res
 or truncated resting read changes nothing. A row closed this way that the exchange later lists as
 resting is revived to `partial`, as a `filled` orphan is. Other books are untouched. No order is
 placed, sized or priced by this.
+
+### 9.69 Rank by expected reward, size by price, one more series (2026-10-24)
+
+**Read before the change.** Since §9.63 (Oct 19 21Z to Oct 24, ~5 days): rewards $19.11
+(~$4.0/day) against closed-fill losses −$16.70 (~−$3.5/day), net +$2.41. The week before
+(Oct 13–19): rewards $38.78 (~$5.5/day), fills −$25.70 (~−$3.7/day), net +$13.08. Fills did not
+slow, they moved earlier; the book used 4 of its 10 slots; mention markets are ~6% of the listed
+liquidity-programme pool (153 markets, ~$15k of the listed pools). Small samples (5–6 fills each side).
+
+**Changes (operator, 2026-10-24: "choose markets by expected rewards, not newest first … size up
+to 20 … only add one market").**
+1. *Fetch order by expected reward.* The runner remembers each fetched market's estimated reward
+   rate (`quote_rate`) for 6h. Half of each cycle's fetch budget re-reads the markets with the
+   highest remembered projected payout; the rest explores unseen markets newest first; markets
+   estimated at nothing go last. The post-fetch ranking (`rank_by_projected_payout`, §9.49) is
+   unchanged and now chooses among the best-known books instead of the newest eight.
+2. *Size by price.* A bid at 4c or more gets $20 (`SIZE_UP_ORDER_DOLLARS`); below 4c stays $10.
+   Reward follows contracts against a ~1,000-contract Target Size: $10 buys 333–500 at 1–3c but
+   only ~100 at 10c. The $100 book total, 10 markets and 3 per event are unchanged, so the total
+   binds sooner. A re-price that would cross into the larger size must still fit the total.
+3. *One series added:* `KXYTVIEWSHIGH` ("above N daily views at any point during <month>"),
+   whose Tate McRae market paid $5.05 on 2026-10-23 — the largest single payout. The measured
+   month is the event: bids step aside `ENTRY_STEP_ASIDE_HOURS` before it ends (the 1st of the
+   ticker's month, 04:00Z), resting sells come off at its end. Its thresholds are not "words"
+   for fill contagion. Every other rule is the same.
+
+**What to watch.** Rewards per day against fill losses per day, by series, over the next week; a
+views market is a moving number (§9.55's warning), so its fill rate is the first thing to check.
+Per Experiment OS this changes the book's universe and risk sizing: a recorded change (new epoch)
+for the operator to register.

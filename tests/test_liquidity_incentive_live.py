@@ -293,8 +293,9 @@ def test_one_bid_on_the_cheap_side_at_its_reference_price():
     assert isinstance(q, lv.SideQuote) and len(q.legs) == 1
     assert (q.leg.side, q.leg.price_cents, q.leg.reference_price_cents) == (lv.SIDE_NO, 4, 4)
     assert q.leg.at_or_above_reference
-    assert q.quantity == min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 4))
-    assert q.collateral_usd <= lv.MAX_ORDER_DOLLARS and q.max_loss_usd == q.collateral_usd
+    assert q.quantity == min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.order_dollars(4) * 100 // 4))
+    assert q.collateral_usd <= lv.order_dollars(q.leg.price_cents)
+    assert q.max_loss_usd == q.collateral_usd
 
 
 def test_the_cheaper_side_wins_when_both_are_cheap():
@@ -369,3 +370,52 @@ def test_say_before_a_date_windows_and_non_mention_markets_are_outside_the_unive
     assert lv.pre_event_cutoff(series="KXTRUMPSAY", event_ticker="KXTRUMPSAY-26OCT19",
                                  title="Will Trump say X before Oct 19?", program_end=None,
                                  close_time=None) is None
+
+
+# ------------------------------------------------------- §9.69
+
+
+def test_a_bid_at_four_cents_or_more_gets_twenty_dollars():
+    """Reward follows contracts: $10 already buys 333 at 3c, but only 100 at 10c."""
+    cheap = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 3})
+    assert (cheap.leg.price_cents, cheap.quantity) == (3, 333)        # $9.99
+    five = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 5})
+    assert (five.quantity, five.collateral_usd) == (400, 20.0)
+    ten = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 10})
+    assert (ten.quantity, ten.collateral_usd) == (200, 20.0)
+
+
+def test_a_twenty_dollar_bid_still_fits_the_book_total():
+    q = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 5},
+           strategy_exposure_now_usd=lv.MAX_STRATEGY_EXPOSURE_USD - 15.0)
+    assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_EXPOSURE_CAP
+
+
+def test_youtube_views_markets_step_aside_before_their_month_ends():
+    from datetime import datetime, timedelta, timezone
+    kw = dict(series="KXYTVIEWSHIGH", event_ticker="KXYTVIEWSHIGH-TAT26NOV",
+              title="Will Tate McRae have above 8M daily views at any point during October 2026?",
+              program_end=datetime(2026, 11, 4, 15, tzinfo=timezone.utc),
+              close_time=datetime(2026, 11, 4, 15, tzinfo=timezone.utc))
+    end = datetime(2026, 11, 1, 4, tzinfo=timezone.utc)
+    assert lv.pre_event_cutoff(**kw) == end
+    assert lv.entry_cutoff(**kw) == end - timedelta(hours=lv.ENTRY_STEP_ASIDE_HOURS)
+    assert lv.in_universe("KXYTVIEWSHIGH", "KXYTVIEWSHIGH-TAT26NOV", kw["title"])
+    # A programme that ends first cuts it off sooner.
+    early = datetime(2026, 10, 30, tzinfo=timezone.utc)
+    assert lv.pre_event_cutoff(**{**kw, "program_end": early}) == early
+
+
+def test_only_the_one_added_series_joins_the_universe():
+    assert not lv.in_universe("KXYTVIEWSW", "KXYTVIEWSW-TAT26NOV", "weekly views")
+    assert not lv.in_universe("KXRT", "KXRT-FILM26NOV", "Rotten Tomatoes")
+    assert lv.pre_event_cutoff(series="KXRT", event_ticker="KXRT-FILM26NOV", title="x",
+                               program_end=None, close_time=None) is None
+    assert lv.in_universe("KXTRUMPMENTION", "KXTRUMPMENTION-26OCT27", "What will Trump say")
+
+
+def test_a_views_threshold_is_not_a_shared_word():
+    """Fill contagion links one WORD across events; '16.5M' for one artist says nothing of
+    another artist's 16.5M."""
+    assert lv.market_word("KXYTVIEWSHIGH-ARI26NOV-16.5M", "KXYTVIEWSHIGH-ARI26NOV") is None
+    assert lv.market_word("KXTRUMPMENTION-26OCT19-CEAS", "KXTRUMPMENTION-26OCT19") == "CEAS"

@@ -1230,6 +1230,26 @@ def test_a_quote_behind_its_reference_is_repriced_in_the_same_market(live_db, se
     assert rows == [("no", 2, "canceled"), ("no", 3, "resting")]
 
 
+def test_a_re_price_that_would_double_the_bid_must_fit_the_book_total(live_db, settings):
+    """§9.69: 3c -> 4c moves a $10 bid to $20. With $40 already held elsewhere under the $50
+    test budget, the re-price would take the book to $60, so the bid is left where it is."""
+    t = "KXTEST-R"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 300), (3, 800)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        s.add(m.LiveOrder(market_ticker=t, event_ticker=t, strategy=limm.LIVE_TAG, side="no",
+                          action="buy", limit_price=3, quantity=333, status="resting",
+                          kalshi_order_id="K-R", client_order_id="K-R",
+                          created_at=NOW - timedelta(hours=2)))
+        s.add(m.LiveOrder(market_ticker="KXTEST-H", event_ticker="KXTEST-H",
+                          strategy=limm.LIVE_TAG, side="no", action="buy", limit_price=10,
+                          quantity=400, status="filled", kalshi_order_id="K-H",
+                          client_order_id="K-H", created_at=NOW - timedelta(hours=2)))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert "repriced" not in out["outcomes"] and "K-R" not in client.canceled
+
+
 def test_a_quote_at_its_reference_is_left_alone(live_db, settings):
     t = "KXTEST-R"
     client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 30), (3, 800)])})
@@ -1492,6 +1512,23 @@ def test_only_event_tied_mention_markets_are_quoted(live_db, settings, monkeypat
         out = _cycle(client, settings, s)
     assert client.asked == ["KXTRUMPMENTION-26SEP20-PEAC"]
     assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTRUMPMENTION-26SEP20-PEAC"
+
+
+def test_youtube_views_high_markets_are_quoted_and_other_views_series_are_not(
+        live_db, settings, monkeypatch):
+    """§9.69: the one series added to the universe."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({"KXYTVIEWSHIGH-TAT26OCT-8.0M": book, "KXYTVIEWSW-TAT26OCT-8.0M": book})
+    with db.session_scope() as s:
+        _mention(s, "KXYTVIEWSHIGH-TAT26OCT-8.0M", event="KXYTVIEWSHIGH-TAT26OCT",
+                 series="KXYTVIEWSHIGH", hours=100.0,
+                 title="Will Tate McRae have above 8M daily views at any point during September?")
+        _mention(s, "KXYTVIEWSW-TAT26OCT-8.0M", event="KXYTVIEWSW-TAT26OCT",
+                 series="KXYTVIEWSW", hours=100.0, title="Tate McRae weekly views")
+        out = _cycle(client, settings, s)
+    assert client.asked == ["KXYTVIEWSHIGH-TAT26OCT-8.0M"]
+    assert out["placed"] == 1
 
 
 def _resting(s, ticker, *, hours_old=2):
@@ -2118,3 +2155,31 @@ def test_fractional_dust_does_not_block_its_event(live_db, settings, monkeypatch
         _held_in(s, "KXTEST-BLK-HELD", "KXTEST-BLK", 0.9)   # whole-contract exits left 0.9
         _cycle(client, settings, s)
     assert "KXTEST-BLK-0" in {o["ticker"] for o in client.placed}
+
+
+# ------------------------------------------------------- §9.69 fetch order
+
+
+def test_fetches_go_to_the_best_remembered_markets_first(settings):
+    """Half the fetch budget re-reads the markets with the highest remembered payout; the rest
+    explores unseen markets (newest first, as listed); markets estimated at nothing go last."""
+    from types import SimpleNamespace
+    now = datetime(2026, 10, 24, 12, tzinfo=timezone.utc)
+    end = now + timedelta(hours=100)
+    progs = [SimpleNamespace(market_ticker=t, end_date=end)
+             for t in ("NEW1", "NEW2", "LOW", "HIGH", "ZERO", "MID")]
+    r = run.IncentiveLiveRunner(FakeClient({}), settings)
+    r._reward_seen = {"LOW": (0.01, now), "HIGH": (0.10, now), "MID": (0.05, now),
+                      "ZERO": (0.0, now)}
+    order = [p.market_ticker for p in r._order_by_expected_reward(progs, now, max_fetch=4)]
+    assert order == ["HIGH", "MID", "NEW1", "NEW2", "LOW", "ZERO"]
+
+
+def test_a_stale_estimate_is_explored_again(settings):
+    from types import SimpleNamespace
+    now = datetime(2026, 10, 24, 12, tzinfo=timezone.utc)
+    progs = [SimpleNamespace(market_ticker="OLD", end_date=now + timedelta(hours=50))]
+    r = run.IncentiveLiveRunner(FakeClient({}), settings)
+    r._reward_seen = {"OLD": (0.0, now - timedelta(seconds=run.REWARD_MEMORY_SECONDS + 1))}
+    assert [p.market_ticker for p in r._order_by_expected_reward(progs, now, 8)] == ["OLD"]
+    assert "OLD" not in r._reward_seen

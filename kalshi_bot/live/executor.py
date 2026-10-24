@@ -754,7 +754,10 @@ class LiveExecutor:
                 return False
             if not (1 <= qty <= limm_live.MAX_CONTRACTS_PER_ORDER):
                 return False
-            if price * qty > limm_live.MAX_ORDER_DOLLARS * 100 + 1e-9:
+            # §9.69: a single bid's budget depends on its price; a pair's legs stay at the base.
+            cap = limm_live.order_dollars(price) if len(legs) == 1 \
+                else limm_live.MAX_ORDER_DOLLARS
+            if price * qty > cap * 100 + 1e-9:
                 return False
         return True
 
