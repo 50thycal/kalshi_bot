@@ -142,6 +142,7 @@ class LiveExecutor:
         self.risk = risk
         self.summary = LiveCycleSummary()
         self._daily_loss_tripped = False
+        self._resting_feed_complete = False   # §9.68: set by _fetch_orders each reconcile
         self._exit_abandoned: set[tuple[str, str]] = set()
         self._unowned_noted: set[str] = set()  # tickers with no bot entry order, already logged
         self._closeout_abandoned: set[tuple[str, str]] = set()  # (book, ticker) past its attempt cap
@@ -1722,6 +1723,24 @@ class LiveExecutor:
                         f"incentive 409 order never landed -> not_landed: {row.market_ticker} "
                         f"{row.side} coid={row.client_order_id}")
                 continue
+            if exch is None and self._resting_feed_complete \
+                    and _is_gone_incentive_order(row, now_utc):
+                # §9.68: every resting page was read and this v2 order is not on it, so it is no
+                # longer working on the exchange (cancelled, expired or filled). Left 'partial'
+                # it would hold its slot, block its resting sells and read as live in the DB.
+                got = self._order_filled_qty(session, row.kalshi_order_id, fills)
+                if row.quantity and got >= float(row.quantity) - 1e-9:
+                    repo.update_live_order_status(session, row, status="filled")
+                    self._stamp_context(session, row, terminal_reason="filled")
+                else:
+                    repo.update_live_order_status(session, row, status="canceled",
+                                                  cancel_reason=GONE_FROM_EXCHANGE)
+                    self._stamp_context(session, row, terminal_reason=GONE_FROM_EXCHANGE)
+                    logger.warning(
+                        f"incentive order gone from exchange -> canceled: {row.market_ticker} "
+                        f"{row.side} {row.action}@{row.limit_price} filled {got:g}/"
+                        f"{row.quantity} coid={row.client_order_id}")
+                continue
             if exch is None:
                 # A v1 order (fractional entry / bucket close) is NEVER visible in the v2 orders
                 # feed, so 'not found here' is not proof of anything. Resolve it from Kalshi's
@@ -1938,6 +1957,7 @@ class LiveExecutor:
         exist; a partially filled bid then resolved "filled" from its first fill and rested on
         the exchange unmanaged (2026-10-23: PEAC 494 filled 5 days later; NQE-B, §9.66). A failed
         resting fetch keeps the default page — the pre-§9.66 behaviour, never worse."""
+        self._resting_feed_complete = False
         orders = _items(self.client.get_orders(), "orders")
         seen = {o.get("order_id") for o in orders if o.get("order_id")}
         try:
@@ -1955,6 +1975,8 @@ class LiveExecutor:
                         orders.append(o)
                 cursor = page.get("cursor") if isinstance(page, dict) else None
                 if not cursor or not batch:
+                    # The last page was reached: an order absent now is truly not resting.
+                    self._resting_feed_complete = True
                     break
         except AuthError:
             raise
@@ -1973,12 +1995,14 @@ class LiveExecutor:
             coid = o.get("client_order_id")
             if coid:
                 row = repo.get_live_order_by_client_id(session, coid)
-            if row is None or row.status != "filled":
+            if row is None or not (row.status == "filled" or (
+                    row.status == "canceled" and row.cancel_reason == GONE_FROM_EXCHANGE)):
                 continue
+            was = row.status
             repo.update_live_order_status(session, row, status="partial",
                                           kalshi_order_id=o.get("order_id"), raw=o)
             logger.warning(f"orphaned resting order revived: {row.strategy} {row.market_ticker} "
-                           f"{row.side}@{row.limit_price} coid={coid} (was 'filled')")
+                           f"{row.side}@{row.limit_price} coid={coid} (was '{was}')")
 
     @staticmethod
     def _status_from_fills(session, row, fills, fill) -> str:
@@ -1988,12 +2012,19 @@ class LiveExecutor:
         if not limm_live.owns_tag(row.strategy) or row.action != "buy" or not row.quantity:
             return "filled"
         koid = row.kalshi_order_id or fill.get("order_id")
+        got = LiveExecutor._order_filled_qty(session, koid, fills)
+        return "filled" if got >= float(row.quantity) - 1e-9 else "partial"
+
+    @staticmethod
+    def _order_filled_qty(session, koid, fills) -> float:
+        """Contracts filled on one exchange order: the recorded fills plus this cycle's batch,
+        deduped by fill id."""
         got = repo.filled_quantity_by_fill_id(session, koid)
         for f in fills:
             fid = f.get("trade_id") or f.get("fill_id")
             if f.get("order_id") == koid and fid and str(fid) not in got:
                 got[str(fid)] = float(_to_count(_first(f, "count_fp", "count", "quantity")) or 0)
-        return "filled" if sum(got.values()) >= float(row.quantity) - 1e-9 else "partial"
+        return sum(got.values())
 
     @staticmethod
     def _fill_for_order(row, fills):
@@ -2774,6 +2805,10 @@ def _ack_ts_ms(resp) -> int | None:
 #: How long a liquidity-incentive order answered 409 may stay unconfirmed before reconcile
 #: treats it as never landed (§9.45). Several reconcile cycles, so a slow exchange is not misread.
 INCENTIVE_409_GRACE_SECONDS = 900.0
+# §9.68: a working incentive order absent from a COMPLETE resting feed is closed after this long
+# (a just-placed order may not be listed yet).
+INCENTIVE_GONE_GRACE_SECONDS = 600.0
+GONE_FROM_EXCHANGE = "gone_from_exchange"
 
 
 def _is_unconfirmed_incentive_409(row, now: datetime) -> bool:
@@ -2793,6 +2828,22 @@ def _is_unconfirmed_incentive_409(row, now: datetime) -> bool:
     if created.tzinfo is None:
         created = created.replace(tzinfo=timezone.utc)
     return (now - created).total_seconds() > INCENTIVE_409_GRACE_SECONDS
+
+
+def _is_gone_incentive_order(row, now: datetime) -> bool:
+    """A working liquidity-incentive order with an exchange id, past the grace period. Every
+    order this book places is a v2 order, so it is listed while it rests; other books' rows may
+    be v1 orders the feed never shows, and are left alone."""
+    if not limm_live.owns_tag(row.strategy):
+        return False
+    if row.status not in ("resting", "partial") or not row.kalshi_order_id:
+        return False
+    created = row.created_at
+    if created is None:
+        return False
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return (now - created).total_seconds() > INCENTIVE_GONE_GRACE_SECONDS
 
 
 def _map_status(kalshi_status: str | None) -> str:

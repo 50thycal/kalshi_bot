@@ -789,7 +789,29 @@ def _fill(koid, qty, fid):
             "action": "buy", "yes_price_dollars": "0.02", "count_fp": str(qty)}
 
 
-def test_a_partly_filled_bid_off_the_feed_stays_working(settings):
+class BrokenRestingClient(PagedClient):
+    """The resting-orders read fails, so 'absent from the feed' proves nothing."""
+
+    def get_orders(self, **kw):
+        if kw.get("status") == "resting":
+            raise RuntimeError("resting read down")
+        return super().get_orders(**kw)
+
+
+def test_a_partly_filled_bid_stays_working_when_the_resting_read_fails(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = BrokenRestingClient(fills=[_fill("K-P", 5, "T1")])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-P", "KXTEST-A", hours_old=1)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert row.status == "partial"            # 5 of 500: still working, still managed
+
+
+def test_a_partly_filled_bid_gone_from_the_full_feed_is_closed(settings):
     _db(settings)
     _limm_settings(settings)
     client = PagedClient(fills=[_fill("K-P", 5, "T1")])
@@ -799,7 +821,57 @@ def test_a_partly_filled_bid_off_the_feed_stays_working(settings):
     with db.session_scope() as s:
         ex.reconcile(s)
         row = s.scalars(select(m.LiveOrder)).one()
-        assert row.status == "partial"            # 5 of 500: still working, still managed
+        assert row.status == "canceled"           # every resting page read; it is not there
+        assert row.cancel_reason == "gone_from_exchange"
+
+
+def test_an_unfilled_bid_gone_from_the_full_feed_is_closed(settings):
+    _db(settings)
+    _limm_settings(settings)
+    ex = _exec(settings, client=PagedClient())
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-U", "KXTEST-A", hours_old=1)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        assert s.scalars(select(m.LiveOrder)).one().status == "canceled"
+
+
+def test_a_just_placed_bid_is_not_closed_before_the_grace(settings):
+    _db(settings)
+    _limm_settings(settings)
+    ex = _exec(settings, client=PagedClient())
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-N", "KXTEST-A", hours_old=0.05)   # 3 minutes old
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        assert s.scalars(select(m.LiveOrder)).one().status == "resting"
+
+
+def test_another_books_order_off_the_feed_is_left_alone(settings):
+    _db(settings)
+    _limm_settings(settings)
+    ex = _exec(settings, client=PagedClient())
+    with db.session_scope() as s:
+        _resting(s, "Cmmsell10", "K-O", "KXOTHER-A", hours_old=1)
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert row.cancel_reason != "gone_from_exchange"
+
+
+def test_a_wrongly_closed_bid_is_revived_when_the_exchange_lists_it(settings):
+    _db(settings)
+    _limm_settings(settings)
+    client = PagedClient(resting=[
+        {"order_id": "K-R", "client_order_id": "c-K-R", "status": "resting"}])
+    ex = _exec(settings, client=client)
+    with db.session_scope() as s:
+        _resting(s, limm.LIVE_TAG, "K-R", "KXTEST-A", hours_old=1)
+        row = s.scalars(select(m.LiveOrder)).one()
+        row.status, row.cancel_reason = "canceled", "gone_from_exchange"
+    with db.session_scope() as s:
+        ex.reconcile(s)
+        assert s.scalars(select(m.LiveOrder)).one().status in ("partial", "resting")
 
 
 def test_a_fully_filled_bid_off_the_feed_resolves_filled(settings):
