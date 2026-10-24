@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T16:45:14Z
-(noop — nothing to do)
+# type=db  id=ci1024s1650
+# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T16:45:42Z
+mk  n   mention_rows  yt_rows  first_at                        
+--  --  ------------  -------  --------------------------------
+5   80  80            0        2026-10-24 13:48:56.452944+00:00
+
+(1 row)
