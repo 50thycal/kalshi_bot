@@ -1,4 +1,10 @@
 # ops request [READ]
-# type=noop
-# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T07:57:28Z
-(noop — nothing to do)
+# type=db  id=ci1024c0758
+# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T07:57:36Z
+market_ticker                action  limit_price  quantity  status    cancel_reason           created_at                        cid                           
+---------------------------  ------  -----------  --------  --------  ----------------------  --------------------------------  ------------------------------
+KXTRUMPMENTION-26OCT25-PEAC  sell    3            250       canceled  resting_sell:stop_loss  2026-10-23 12:34:34.021364+00:00  limmsell:a:12762ce3-e741-457b-
+KXTRUMPMENTION-26OCT25-PEAC  sell    3            250       canceled  resting_sell:stop_loss  2026-10-23 12:34:34.117986+00:00  limmsell:b:af9a5967-228c-4877-
+KXTRUMPMENTION-26OCT25-PEAC  sell    1            500       filled                            2026-10-24 06:18:39.999297+00:00  limmexit:stop_loss:41ddb3fd-c9
+
+(3 rows)
