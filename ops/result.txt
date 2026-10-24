@@ -1,4 +1,13 @@
 # ops request [READ]
-# type=noop
-# code 383897f0b2e617d39e19a256ff612fc5f263becc · started 2026-10-24T03:54:09Z
-(noop — nothing to do)
+# type=db  id=ci1024b0354
+# code 383897f0b2e617d39e19a256ff612fc5f263becc · started 2026-10-24T03:54:10Z
+market_ticker                 side  action  limit_price  quantity  status   cancel_reason  created_at                      
+----------------------------  ----  ------  -----------  --------  -------  -------------  --------------------------------
+KXTRUMPMENTIONB-26OCT27-CRYP  yes   buy     1            500       resting                 2026-10-23 04:02:19.205953+00:00
+KXTRUMPMENTION-26OCT27-CHEA   no    buy     10           100       resting                 2026-10-23 10:49:12.636563+00:00
+KXTRUMPMENTION-26OCT25-PEAC   yes   sell    3            250       resting                 2026-10-23 12:34:34.021364+00:00
+KXTRUMPMENTION-26OCT25-PEAC   yes   sell    3            250       resting                 2026-10-23 12:34:34.117986+00:00
+KXTRUMPMENTIONB-26OCT27-WIND  yes   buy     9            111       resting                 2026-10-23 14:48:43.181905+00:00
+KXMAMDANIMENTION-26NOV18-NQE  yes   buy     3            333       resting                 2026-10-24 01:19:06.745673+00:00
+
+(6 rows)
