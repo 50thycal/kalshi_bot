@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1024d0758", "sql": "select f.price, f.quantity, f.fee, f.raw_fill_json->>'created_time' t from fills f where f.market_ticker like '%26OCT25-PEAC' and f.filled_at > now()-interval '3 hours'"}
+{"type":"noop"}
