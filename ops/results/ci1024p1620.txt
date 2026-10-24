@@ -1,0 +1,23 @@
+# ops request [READ]
+# type=db  id=ci1024p1620
+# code c372c0c948340c66f2528f1079446a44767ec53d · started 2026-10-24T16:27:19Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 643, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 639, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 456, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 500, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.SyntaxError: syntax error at or near "uq_incentive_program_terms"
+LINE 3: uq_incentive_program_terms
+        ^
