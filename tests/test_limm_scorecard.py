@@ -86,3 +86,20 @@ def test_idle_old_universe_events_are_not_listed():
     text = sc.render(s)
     assert "KXCLAUDEAPP-26NOV08" not in text            # quoted, never moved money, retired type
     assert "KXTRUMPMENTION-26OCT27" in text             # current universe: shown
+
+
+def test_json_rows_for_the_dashboard():
+    payouts = [("2026-10-23", 505, "KXYTVIEWSHIGH-TAT26NOV")]
+    fills = {"KXTRUMPMENTION-26OCT27-CHEA": [
+        ("no", 10, 100, 0.0, "2026-10-23T21:29:55Z"), ("yes", 95, 100, 0.33, "2026-10-25T00:40Z")]}
+    s = sc.summarise(payouts, fills, {}, {"KXTRUMPMENTION-26OCT27-CHEA": 0.0},
+                     {"KXTRUMPMENTION-26OCT27": 5}, now=NOW, days=7)
+    rows = sc.as_rows(s)
+    json.dumps(rows)                                    # serialisable
+    types = {r["type"]: r for r in rows["by_type"]}
+    assert types["youtube_views"]["net"] == 5.05 and types["youtube_views"]["trading"]
+    ev = {r["event"]: r for r in rows["by_event"]}
+    assert ev["KXTRUMPMENTION-26OCT27"]["fills"] == -5.33
+    assert not ev["KXTRUMPMENTION-26OCT27"]["payout_recorded"]
+    (loser,) = rows["losers"]
+    assert loser["pnl"] == -5.33 and loser["fills"] == 2 and loser["lead_h"] == 74.5
