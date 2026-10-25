@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1025e2226", "sql": "SELECT series_ticker, count(*) n, max(period_reward_usd) top_usd, min(end_date) ends FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL AND (series_ticker LIKE '%MENTION%' OR series_ticker='KXYTVIEWSHIGH') AND end_date > now() GROUP BY 1 ORDER BY 3 DESC"}
