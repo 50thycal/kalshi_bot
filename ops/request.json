@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1025s1642", "sql": "select distinct on (market_ticker) market_ticker, realized_pnl, side, raw_json->>'settled_time' st, raw_json->>'market_result' res from positions where raw_json ? 'settled_time' and market_ticker in (select distinct f.market_ticker from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1') order by market_ticker, captured_at desc"}
+{"type":"noop"}
