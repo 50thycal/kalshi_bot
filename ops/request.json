@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1025f2228", "sql": "SELECT split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',2) ev, count(*) n, sum(period_reward_usd) usd, min(end_date) ends, max(close_time) closes FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL AND series_ticker LIKE '%MENTION%' AND end_date > now() GROUP BY 1 ORDER BY 1"}
+{"type":"noop"}
