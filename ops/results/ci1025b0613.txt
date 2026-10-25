@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=ci1025b0411
-# code 9fe3f28f856a4dcd98e9249a6887d5d6f8d4b61e · started 2026-10-25T04:11:58Z
+# type=db  id=ci1025b0613
+# code 9fe3f28f856a4dcd98e9249a6887d5d6f8d4b61e · started 2026-10-25T06:14:23Z
 market_ticker                 side  action  limit_price  quantity  status   cancel_reason  created_at                      
 ----------------------------  ----  ------  -----------  --------  -------  -------------  --------------------------------
 KXTRUMPMENTIONB-26OCT27-CRYP  yes   buy     1            500       resting                 2026-10-23 04:02:19.205953+00:00
