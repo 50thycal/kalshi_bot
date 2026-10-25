@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1025h1630", "sql": "select f.market_ticker, min(f.raw_fill_json->>'created_time')::date d, round(sum(case when f.side='yes' then f.quantity else 0 end)::numeric,0) yq, round(sum(case when f.side='no' then f.quantity else 0 end)::numeric,0) nq, round(sum(f.price*f.quantity)/100.0::numeric,2) cost, round(sum(coalesce(f.fee,0))::numeric,2) fees from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1' group by 1 order by 2"}
