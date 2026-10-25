@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1025d1422", "sql": "select market_ticker, quantity_fp, captured_at from positions where market_ticker like 'KXYTVIEWSHIGH%' and captured_at > now()-interval '10 minutes' order by captured_at desc limit 8"}
+{"type":"noop"}
