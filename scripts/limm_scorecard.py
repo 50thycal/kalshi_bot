@@ -38,6 +38,8 @@ RO_OPTIONS = (
 LIVE_TAG = "Alimm1"
 LEDGER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir,
                            "kalshi_bot", "liquidity_incentive", "reward_ledger.py")
+#: Market types the book quotes today (thesis §9.55, §9.69); others show only if they moved money.
+CURRENT_UNIVERSE = frozenset({"mention_event", "youtube_views"})
 #: Orders that only close a held position — never an entry bid.
 CLOSING_PREFIXES = ("limmexit", "limmsell:")
 _DATED_EVENT = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
@@ -203,9 +205,19 @@ def render(s: dict) -> str:
     cat_table(f"BY MARKET TYPE (last {s['days']} days: payouts dated / fills closed)",
               s["recent"], False)
 
-    out.append("BY EVENT (newest 30; rewards / closed fill P&L / net; open = cost still held)")
-    rows = sorted(s["events"].items(),
-                  key=lambda kv: (kv[1]["date"] or dt.date.min, kv[0]), reverse=True)[:30]
+    out.append("BY EVENT (newest 30 that earned, lost or still hold money, plus current-universe "
+               "events quoted; rewards / closed fill P&L / net)")
+
+    def shown(r):
+        moved = r["rewards"] or r["fill_pnl"] or r["open_cost"]
+        return bool(moved) or (r["bids"] and r["category"] in CURRENT_UNIVERSE)
+
+    def newest(kv):
+        r = kv[1]
+        last = r.get("last_payout")
+        return (r["date"] or (dt.date.fromisoformat(last) if last else dt.date.min), kv[0])
+    rows = sorted(((e, r) for e, r in s["events"].items() if shown(r)),
+                  key=newest, reverse=True)[:30]
     for e, r in rows:
         flag = ""
         if r["date"] and r["payouts"] == 0 and (r["bids"] or r["fill_pnl"]):
@@ -217,7 +229,7 @@ def render(s: dict) -> str:
                    f"{r['fill_pnl']:>8.2f}{r['rewards'] + r['fill_pnl']:>8.2f}  orders {r['bids']}"
                    + (f"  losers: {losses}" if losses else "") + flag)
     out.append("")
-    out.append("LOSING MARKETS (≤ -$1): how they filled")
+    out.append("LOSING MARKETS (≤ -$1): how they filled (lead < 0 = first fill on the event day)")
     for t, m in s["losers"]:
         span = ""
         if m["first_fill"] and m["last_fill"]:

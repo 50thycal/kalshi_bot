@@ -78,3 +78,11 @@ def test_the_scorecard_is_allowlisted_and_imports_nothing_heavy():
             mods.add(node.module.split(".")[0])
     # The ops runner installs psycopg and nothing else for a `script` request.
     assert not mods & {"kalshi_bot", "sqlalchemy", "pydantic"}
+
+
+def test_idle_old_universe_events_are_not_listed():
+    s = sc.summarise([], {}, {}, {}, {"KXCLAUDEAPP-26NOV08": 2, "KXTRUMPMENTION-26OCT27": 4},
+                     now=NOW, days=7)
+    text = sc.render(s)
+    assert "KXCLAUDEAPP-26NOV08" not in text            # quoted, never moved money, retired type
+    assert "KXTRUMPMENTION-26OCT27" in text             # current universe: shown
