@@ -230,6 +230,7 @@ def test_confirmed_reward_matches_the_rewards_page():
     assert confirmed_reward(3173, datetime(2026, 10, 20, 10, 40, tzinfo=timezone.utc))
     assert confirmed_reward(796, datetime(2026, 10, 22, 17, 4, tzinfo=timezone.utc))
     assert confirmed_reward(1115, datetime(2026, 10, 23, 10, 58, tzinfo=timezone.utc))
+    assert confirmed_reward(182, datetime(2026, 10, 25, 14, 0, tzinfo=timezone.utc))
     assert not confirmed_reward(None, oct10)
 
 
