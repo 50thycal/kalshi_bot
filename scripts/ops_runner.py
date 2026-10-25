@@ -245,6 +245,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_metalhalt_census",
     "kalshi_kpi_census",
     "kalshi_gridpin_census",
+    "limm_scorecard",
 )
 
 
