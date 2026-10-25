@@ -1,0 +1,15 @@
+# ops request [READ]
+# type=db  id=ci1025b1621
+# code f82c70d64d5a7cd8a61c482eedb040d9bebe5ac2 · started 2026-10-25T16:22:03Z
+market_ticker                  side  action  limit_price  quantity  status   cancel_reason  created_at                      
+-----------------------------  ----  ------  -----------  --------  -------  -------------  --------------------------------
+KXMAMDANIMENTION-26NOV18-NQE   yes   buy     3            333       resting                 2026-10-24 01:19:06.745673+00:00
+KXYTVIEWSHIGH-OLI26NOV-12.0M   no    buy     1            500       resting                 2026-10-24 17:37:40.744514+00:00
+KXYTVIEWSHIGH-YOU26NOV-12.0M   yes   buy     9            222       resting                 2026-10-24 22:41:31.872493+00:00
+KXYTVIEWSHIGH-YE26NOV-5.0M     no    buy     8            250       resting                 2026-10-25 13:54:11.873853+00:00
+KXYTVIEWSHIGH-MOR26NOV-7.75M   yes   buy     8            250       resting                 2026-10-25 14:58:30.851233+00:00
+KXYTVIEWSHIGH-DRA26DEC-14.25M  no    buy     1            500       resting                 2026-10-25 16:04:33.282090+00:00
+KXYTVIEWSHIGH-BAD26DEC-30.0M   no    buy     1            500       resting                 2026-10-25 16:04:38.211746+00:00
+KXYTVIEWSHIGH-JUS26DEC-15.5M   no    buy     1            500       resting                 2026-10-25 16:04:42.984795+00:00
+
+(8 rows)
