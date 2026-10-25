@@ -1,24 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1025a1822
-# code 4c2b742f915ce0081ceef66c67163c7731436fa1 · started 2026-10-25T18:22:12Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 644, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 640, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 457, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 501, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
-    cur.execute(sql)
-  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column "updated_at" does not exist
-LINE 1: ...l '3 hours' OR status IN ('resting','partial') OR updated_at...
-                                                             ^
-HINT:  Perhaps you meant to reference the column "live_orders.created_at".
+# type=noop
+# code 4c2b742f915ce0081ceef66c67163c7731436fa1 · started 2026-10-25T18:22:27Z
+(noop — nothing to do)
