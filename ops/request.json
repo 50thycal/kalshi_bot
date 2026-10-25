@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1025c0212", "sql": "select f.side, f.action, f.price, f.quantity, f.fee, left(o.client_order_id,28) cid, f.raw_fill_json->>'created_time' t from fills f join live_orders o on o.kalshi_order_id=f.kalshi_order_id where o.strategy='Alimm1' and f.market_ticker='KXTRUMPMENTION-26OCT27-CHEA' order by f.filled_at"}
+{"type":"noop"}
