@@ -81,6 +81,8 @@ EV_REWARD_RESIDUAL = "reward_residual"
 
 #: Client-order-id prefix of the resting opposite-side exit leg (`place_incentive_exit_leg`).
 EXIT_LEG_PREFIX = "limmexitleg:"
+#: §9.70: orders that only CLOSE a held position — never an entry bid.
+_CLOSING_PREFIXES = ("limmexit", "limmsell:")
 
 #: How often the book snapshots the markets it rests or holds in, for the dashboard (§9.53).
 OWN_BOOK_SNAPSHOT_SECONDS = 600.0
@@ -358,6 +360,9 @@ class IncentiveLiveRunner:
         contagion = self._retire_contagion(session, executor, now)
         if contagion:
             summary["outcomes"]["fill_contagion"] = contagion
+        partial = self._retire_partially_filled(session, executor)
+        if partial:
+            summary["outcomes"]["partial_fill"] = partial
         out_of_band = self._retire_out_of_band(session, executor, now)
         if out_of_band:
             summary["outcomes"]["out_of_band"] = out_of_band
@@ -755,6 +760,30 @@ class IncentiveLiveRunner:
                 logger.info(f"incentive book: fill_contagion: cancelled resting bid on {ticker} "
                             f"(a bid in its event or on its word filled in the last "
                             f"{limm.FILL_CONTAGION_HOURS:.0f}h)")
+        return n
+
+    def _retire_partially_filled(self, session, executor) -> int:
+        """§9.70: cancel the rest of any entry bid of ours that has started to fill. A seller
+        working into our bid a little at a time is the sign the price is about to move against
+        us; left resting, the bid grew to full size before the stop-loss sold it. Only entry
+        bids — resting sells and exits are never touched here. Returns the number cancelled."""
+        n = 0
+        for ticker in sorted(repo.live_book_open_tickers(session, limm.LIVE_TAG)):
+            bids = [r for r in repo.live_orders_on_ticker(session, ticker)
+                    if r.strategy == limm.LIVE_TAG and r.action == "buy"
+                    and r.status in ("resting", "partial") and r.kalshi_order_id
+                    and not (r.client_order_id or "").startswith(_CLOSING_PREFIXES)]
+            if len({r.side for r in bids}) > 1:
+                continue            # a two-sided pair (pre-§9.48 mode) is hedged, not one bet
+            started = [r for r in bids if sum(repo.filled_quantity_by_fill_id(
+                session, r.kalshi_order_id).values()) >= limm.PARTIAL_FILL_CANCEL_MIN_CONTRACTS]
+            if not started:
+                continue
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="partial_fill"):
+                n += 1
+                logger.info(f"incentive book: partial_fill: cancelled the rest of the bid on "
+                            f"{ticker} after {len(started)} bid(s) started to fill")
         return n
 
     def _retire_out_of_band(self, session, executor, now: datetime) -> int:

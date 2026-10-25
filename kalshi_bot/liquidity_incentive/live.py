@@ -267,6 +267,11 @@ ENTRY_STEP_ASIDE_HOURS = 48.0
 #: sign of a seller who knows something (NQE then FENT, one event, 4h apart; CEAS Oct 19 then
 #: CEAS Oct 25, one word, a day apart).
 FILL_CONTAGION_HOURS = 12.0
+#: §9.70 (operator, 2026-10-25): once this many contracts of one of our entry bids have filled,
+#: the rest of that bid is cancelled. PEAC, CHEA, DIVI and SAVE each filled a little at a time and
+#: grew to full size before the stop-loss sold at ~half (≈ −$5–6 each); CHEA would have stopped
+#: at 13 contracts. The held part then gets its resting sells, which wait while a bid works.
+PARTIAL_FILL_CANCEL_MIN_CONTRACTS = 1.0
 
 
 def entry_cutoff(**kw):

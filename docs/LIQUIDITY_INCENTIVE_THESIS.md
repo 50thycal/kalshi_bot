@@ -3248,3 +3248,22 @@ to 20 … only add one market").**
 views market is a moving number (§9.55's warning), so its fill rate is the first thing to check.
 Per Experiment OS this changes the book's universe and risk sizing: a recorded change (new epoch)
 for the operator to register.
+
+### 9.70 A bid that starts to fill has the rest of it cancelled (2026-10-25)
+
+**Read.** Four of the book's five large closed losses since 2026-10-19 had one shape: an entry bid
+filled a little at a time (a seller working into it), stayed resting, grew to full size, and the
+stop-loss sold at about half: PEAC −$5.35, CHEA −$5.33, DIVI −$5.65, SAVE −$6.00. CHEA filled
+13, 6, 6, 1, 1, 2 contracts over two days, then 66 at once at 00:38Z on 2026-10-25, and was
+stopped at 5c two minutes later. §9.63's fill contagion pulled the OTHER markets of the event, but
+never the bid that was filling.
+
+**Change (operator, 2026-10-25: "build the partial fill cancel").** Each cycle, any one-sided
+entry bid of ours with at least `PARTIAL_FILL_CANCEL_MIN_CONTRACTS` (1) filled has its remainder
+cancelled (`cancel_reason = partial_fill`). The held part then gets its resting sells (§9.60–62),
+which wait while an entry bid works. Resting sells and exits are never touched; a two-sided pair
+(pre-§9.48 mode) is hedged and left alone. A held position still blocks its event (§9.65), so the
+market is not re-entered. On CHEA the loss would have been ~$0.70 instead of $5.33.
+
+**Cost.** A bid that fills once by chance loses its remaining reward time in that market. Watch
+`partial_fill` cancels against the fills that followed elsewhere in the same event.

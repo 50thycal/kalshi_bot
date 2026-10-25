@@ -2183,3 +2183,39 @@ def test_a_stale_estimate_is_explored_again(settings):
     r._reward_seen = {"OLD": (0.0, now - timedelta(seconds=run.REWARD_MEMORY_SECONDS + 1))}
     assert [p.market_ticker for p in r._order_by_expected_reward(progs, now, 8)] == ["OLD"]
     assert "OLD" not in r._reward_seen
+
+
+# --- §9.70: a bid that starts to fill has the rest of it cancelled ----------------------------
+
+def _one_sided_bid(s, ticker, koid, *, filled):
+    _program(s, ticker)
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=ticker, strategy=limm.LIVE_TAG,
+                      side="no", action="buy", limit_price=10, quantity=100, status="resting",
+                      kalshi_order_id=koid, client_order_id=koid,
+                      created_at=NOW - timedelta(hours=3)))
+    if filled:
+        s.add(m.Fill(kalshi_fill_id=f"F-{koid}", kalshi_order_id=koid, market_ticker=ticker,
+                     side="no", action="sell", price=10, quantity=filled))
+    s.add(m.Position(market_ticker=ticker, captured_at=NOW, side="no", quantity=-filled,
+                     quantity_fp=-filled))
+    s.flush()
+
+
+def test_a_bid_that_starts_to_fill_has_the_rest_cancelled(live_db, settings):
+    """CHEA, 2026-10-23: 13 of 100 filled, then 6, 6, ... then 66 at once and a stop at 5c."""
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _one_sided_bid(s, "KXPF-CHEA", "K-PF", filled=13)
+        out = _cycle(client, settings, s)
+        row = s.scalars(sa_select(m.LiveOrder).where(m.LiveOrder.kalshi_order_id == "K-PF")).one()
+        assert (row.status, row.cancel_reason) == ("canceled", "partial_fill")
+    assert "K-PF" in client.canceled
+    assert out["outcomes"].get("partial_fill") == 1
+
+
+def test_an_unfilled_bid_is_left_resting(live_db, settings):
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _one_sided_bid(s, "KXPF-REST", "K-RE", filled=0)
+        out = _cycle(client, settings, s)
+    assert "K-RE" not in client.canceled and "partial_fill" not in out["outcomes"]
