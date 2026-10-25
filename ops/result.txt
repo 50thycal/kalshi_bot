@@ -1,23 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1025s1642
-# code f82c70d64d5a7cd8a61c482eedb040d9bebe5ac2 · started 2026-10-25T16:41:59Z
-market_ticker                    realized_pnl  side  st                           res
--------------------------------  ------------  ----  ---------------------------  ---
-KXAAAGASDCO-26SEP26-4.2350       -8.3289       yes   2026-09-26T11:06:46.501194Z  yes
-KXANTHVREQ-28SEP26-T9P5          -9.9900       no    2026-09-29T14:37:06.449945Z  no 
-KXBIGGESTQUAKE-17SEP26-6.8       -0.0100       no    2026-10-01T22:06:33.9647Z    no 
-KXBIGGESTQUAKE-17SEP26-7.0       -0.0100       no    2026-10-01T22:06:33.964927Z  no 
-KXGOOGVREQ-28SEP26-T13           -3.3200       yes   2026-09-29T14:38:26.445808Z  yes
-KXOPENVREQ-26SEP26-T17           -1.8000       yes   2026-09-27T15:42:56.448626Z  yes
-KXRT-RES-93                      -0.0300       yes   2026-09-21T15:14:54.5313Z    yes
-KXRT-RES-94                      -0.1000       yes   2026-09-21T15:14:54.5313Z    yes
-KXTOKENUSE-26SEP28-T146          -0.9300       no    2026-09-28T14:48:16.446925Z  no 
-KXTOP10BBSPOTS-26OCT24-TSWIF-10  -4.9907       no    2026-10-20T18:24:11.774929Z  no 
-KXTRUMPAPPROVE-26SEP18-E39.4     -0.0100       no    2026-09-18T17:31:04.503589Z  no 
-KXTRUMPMENTION-26OCT22-DIVI      -5.9883       yes   2026-10-23T03:35:28.491829Z  yes
-KXTRUMPMENTION-26OCT24-STOC      0.0661        yes   2026-10-25T03:15:42.840091Z  yes
-KXTRUMPMENTIONB-26OCT19-NQE      -4.6982       no    2026-10-19T16:05:36.775326Z  no 
-KXTRUMPMENTIONB-26SEP24-BOEI     -0.0500       no    2026-09-25T03:06:28.150215Z  no 
-KXUSLEI-26SEP18-T0.2             -0.0500       no    2026-09-18T14:45:34.553232Z  no 
-
-(16 rows)
+# type=noop
+# code f82c70d64d5a7cd8a61c482eedb040d9bebe5ac2 · started 2026-10-25T16:42:19Z
+(noop — nothing to do)
