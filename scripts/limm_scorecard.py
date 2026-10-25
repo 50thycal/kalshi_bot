@@ -38,6 +38,8 @@ RO_OPTIONS = (
 LIVE_TAG = "Alimm1"
 LEDGER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir,
                            "kalshi_bot", "liquidity_incentive", "reward_ledger.py")
+#: Market types the book quotes today (thesis §9.55, §9.69); others show only if they moved money.
+CURRENT_UNIVERSE = frozenset({"mention_event", "youtube_views"})
 #: Orders that only close a held position — never an entry bid.
 CLOSING_PREFIXES = ("limmexit", "limmsell:")
 _DATED_EVENT = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
@@ -203,9 +205,19 @@ def render(s: dict) -> str:
     cat_table(f"BY MARKET TYPE (last {s['days']} days: payouts dated / fills closed)",
               s["recent"], False)
 
-    out.append("BY EVENT (newest 30; rewards / closed fill P&L / net; open = cost still held)")
-    rows = sorted(s["events"].items(),
-                  key=lambda kv: (kv[1]["date"] or dt.date.min, kv[0]), reverse=True)[:30]
+    out.append("BY EVENT (newest 30 that earned, lost or still hold money, plus current-universe "
+               "events quoted; rewards / closed fill P&L / net)")
+
+    def shown(r):
+        moved = r["rewards"] or r["fill_pnl"] or r["open_cost"]
+        return bool(moved) or (r["bids"] and r["category"] in CURRENT_UNIVERSE)
+
+    def newest(kv):
+        r = kv[1]
+        last = r.get("last_payout")
+        return (r["date"] or (dt.date.fromisoformat(last) if last else dt.date.min), kv[0])
+    rows = sorted(((e, r) for e, r in s["events"].items() if shown(r)),
+                  key=newest, reverse=True)[:30]
     for e, r in rows:
         flag = ""
         if r["date"] and r["payouts"] == 0 and (r["bids"] or r["fill_pnl"]):
@@ -217,7 +229,7 @@ def render(s: dict) -> str:
                    f"{r['fill_pnl']:>8.2f}{r['rewards'] + r['fill_pnl']:>8.2f}  orders {r['bids']}"
                    + (f"  losers: {losses}" if losses else "") + flag)
     out.append("")
-    out.append("LOSING MARKETS (≤ -$1): how they filled")
+    out.append("LOSING MARKETS (≤ -$1): how they filled (lead < 0 = first fill on the event day)")
     for t, m in s["losers"]:
         span = ""
         if m["first_fill"] and m["last_fill"]:
@@ -237,6 +249,50 @@ def render(s: dict) -> str:
                if s["losers"] else 0.0}
     out.append("JSON " + json.dumps(summary, sort_keys=True))
     return "\n".join(out)
+
+
+def as_rows(s: dict) -> dict:
+    """The summary as flat row lists (dashboard datasets): by_type, by_event, losers."""
+    def lead_hours(m):
+        d = event_date(m["event"])
+        if not (d and m["first_fill"]):
+            return None
+        a = dt.datetime.fromisoformat(m["first_fill"].replace("Z", "+00:00"))
+        return round((dt.datetime(d.year, d.month, d.day, tzinfo=dt.timezone.utc) - a)
+                     .total_seconds() / 3600, 1)
+
+    def span_hours(m):
+        if not (m["first_fill"] and m["last_fill"]):
+            return None
+        a, b = (dt.datetime.fromisoformat(x.replace("Z", "+00:00"))
+                for x in (m["first_fill"], m["last_fill"]))
+        return round((b - a).total_seconds() / 3600, 1)
+
+    recent = s["recent"]
+    by_type = [{"type": t, "trading": t in CURRENT_UNIVERSE, "rewards": d["rewards"],
+                "fills": d["fill_pnl"], "net": d["net"], "events": d["events"],
+                "events_with_loss": d["events_with_loss"],
+                "recent_rewards": recent.get(t, {}).get("rewards", 0.0),
+                "recent_fills": recent.get(t, {}).get("fill_pnl", 0.0),
+                "recent_net": recent.get(t, {}).get("net", 0.0)}
+               for t, d in s["categories"].items()]
+    by_event = []
+    for e, r in s["events"].items():
+        if not (r["rewards"] or r["fill_pnl"] or r["open_cost"]
+                or (r["bids"] and r["category"] in CURRENT_UNIVERSE)):
+            continue
+        by_event.append({"event": e, "type": r["category"],
+                         "date": r["date"].isoformat() if r["date"] else None,
+                         "rewards": round(r["rewards"], 2), "fills": round(r["fill_pnl"], 2),
+                         "net": round(r["rewards"] + r["fill_pnl"], 2),
+                         "open_cost": round(r["open_cost"], 2), "orders": r["bids"],
+                         "loss_markets": len(r["loss_markets"]),
+                         "payout_recorded": r["payouts"] > 0})
+    losers = [{"market": t, "event": m["event"], "type": m["category"],
+               "pnl": round(m["pnl"], 2), "fills": m["fills"], "span_h": span_hours(m),
+               "lead_h": lead_hours(m)} for t, m in s["losers"]]
+    return {"as_of": s["as_of"], "days": s["days"], "by_type": by_type,
+            "by_event": by_event, "losers": losers}
 
 
 # ------------------------------------------------------------------ database
@@ -291,6 +347,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Liquidity-incentive scorecard.")
     ap.add_argument("--days", type=int, default=7, help="recent window in days (default 7)")
     ap.add_argument("--tag", default=LIVE_TAG)
+    ap.add_argument("--json", action="store_true",
+                    help="print the full data as one JSON object (for the dashboard)")
     args = ap.parse_args(argv)
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
@@ -305,7 +363,7 @@ def main(argv=None) -> int:
             fills, settled, positions, bids = fetch(cur, args.tag)
     s = summarise(payouts, fills, settled, positions, bids,
                   now=dt.datetime.now(dt.timezone.utc), days=args.days)
-    print(render(s))
+    print(json.dumps(as_rows(s), sort_keys=True) if args.json else render(s))
     return 0
 
 
