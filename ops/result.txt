@@ -1,16 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1026t1648
-# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-26T16:47:39Z
-k  t                              d                                                            
--  -----------------------------  -------------------------------------------------------------
-O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/buy 7c x285 90502fd5-858 10-26 15:39           
-O  KXMAMDANIMENTION-26NOV18-BILL  canceled repriced yes/buy 2c x500 50d0eeb9-587 10-26 14:38   
-O  KXMAMDANIMENTION-26NOV18-NQE   resting - yes/buy 3c x333 8d074f44-4be 10-24 01:19           
-O  KXYTVIEWSHIGH-FUE26NOV-24.0M   resting - no/buy 1c x500 6ee0fc6a-01b 10-26 15:24            
-O  KXYTVIEWSHIGH-KAT26NOV-23.0M   canceled out_of_band no/buy 10c x200 d9cd8c38-fc3 10-26 14:44
-O  KXYTVIEWSHIGH-MOR26NOV-7.5M    resting - yes/buy 5c x400 796d8abf-447 10-26 16:36           
-O  KXYTVIEWSHIGH-MOR26NOV-7.75M   resting - yes/buy 8c x250 a87fef04-6bb 10-25 14:58           
-O  KXYTVIEWSHIGH-OLI26NOV-12.0M   resting - no/buy 1c x500 5eecbca3-69e 10-24 17:37            
-O  KXYTVIEWSHIGH-YE26NOV-5.0M     resting - no/buy 1c x500 4a6ac860-d4a 10-26 14:38            
-
-(9 rows)
+# type=noop
+# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-26T16:47:59Z
+(noop — nothing to do)
