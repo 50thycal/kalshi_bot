@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1026s1448", "sql": "SELECT market_ticker, status, cancel_reason, limit_price, quantity, to_char(created_at,'MM-DD HH24:MI') c FROM live_orders WHERE strategy='Alimm1' AND client_order_id LIKE ANY (ARRAY['400a9c78%','12168af8%','ff699ab3%','ec85fbc1%','aae3a7bc%'])"}
