@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1026i1209", "sql": "SELECT left(ticker,23) ev, min(title) t, min(rules_summary) r FROM markets WHERE ticker LIKE 'KXTRUMPMENTION%-26OCT27-%' OR ticker LIKE 'KXTRUMPMENTION-26OCT24-%' GROUP BY 1"}
+{"type":"noop"}
