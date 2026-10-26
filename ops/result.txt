@@ -1,4 +1,16 @@
 # ops request [READ]
-# type=noop
-# code 4c2b742f915ce0081ceef66c67163c7731436fa1 · started 2026-10-26T12:07:15Z
-(noop — nothing to do)
+# type=db  id=ci1026j1210
+# code 4c2b742f915ce0081ceef66c67163c7731436fa1 · started 2026-10-26T12:07:37Z
+ev                       a                                 b                                 n   words                                
+-----------------------  --------------------------------  --------------------------------  --  -------------------------------------
+KXTRUMPMENTIONB-26OCT19  2026-10-18 15:04:08.623876+00:00  2026-10-19 13:48:57.715284+00:00  19  FENT,NQE                             
+KXTRUMPMENTION-26OCT19   2026-10-18 16:46:21.628251+00:00  2026-10-18 16:46:21.628251+00:00  1   CEAS                                 
+KXTRUMPMENTION-26OCT25   2026-10-18 16:48:12.880006+00:00  2026-10-24 06:18:39.999297+00:00  10  CANA,CEAS,HOTT,PEAC                  
+KXTRUMPMENTION-26OCT22   2026-10-18 16:48:26.111764+00:00  2026-10-22 05:53:30.846540+00:00  13  DIVI,HEAL                            
+KXTRUMPMENTION-26OCT23   2026-10-19 04:15:09.666956+00:00  2026-10-20 20:20:38.231804+00:00  6   CHEA,DATA,DIVI,INSU,TRAN             
+KXTRUMPMENTION-26OCT20   2026-10-19 14:52:05.143252+00:00  2026-10-19 15:53:16.705679+00:00  2   FRAU                                 
+KXTRUMPMENTION-26OCT24   2026-10-19 20:57:08.126949+00:00  2026-10-22 19:31:02.212080+00:00  7   CHEA,FENT,FRAU,STOC                  
+KXTRUMPMENTIONB-26OCT27  2026-10-20 03:32:44.092323+00:00  2026-10-23 14:48:43.181905+00:00  19  BLOC,CHIN,CRYP,GULF,NQE,SUPR,WIND    
+KXTRUMPMENTION-26OCT27   2026-10-20 04:06:58.368661+00:00  2026-10-25 00:40:44.055484+00:00  18  CEAS,CHEA,FRAU,ICE,NQE,PALE,PEAC,SAVE
+
+(9 rows)
