@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1026m1240", "sql": "SELECT split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',2) ev, count(*) n, min(start_date) s, max(end_date) e, bool_or(superseded_at IS NULL AND disappeared_at IS NULL) live, max(period_reward_usd) usd FROM incentive_programs WHERE market_ticker ~ '^(KXYTVIEWSHIGH-(TAT26NOV|YE26NOV|MOR26NOV|OLI26NOV|YOU26NOV|BAD26DEC|DRA26DEC|JUS26DEC|BAD26NOV)|KXTRUMPMENTION-26OCT2[2-7]|KXTRUMPMENTIONB-26OCT27)' GROUP BY 1 ORDER BY 1"}
+{"type":"noop"}
