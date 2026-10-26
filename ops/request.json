@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1026h1208", "sql": "SELECT DISTINCT event_ticker, title FROM markets WHERE event_ticker IN ('KXTRUMPMENTION-26OCT27','KXTRUMPMENTIONB-26OCT27','KXTRUMPMENTION-26OCT24') LIMIT 6"}
+{"type":"noop"}
