@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1026g1120", "sql": "SELECT event_ticker, min(created_at) first_bid, max(created_at) last_bid, count(*) n, string_agg(DISTINCT coalesce(cancel_reason,status),',') how FROM live_orders WHERE strategy='Alimm1' AND market_ticker LIKE 'KXTRUMPMENTION%' AND created_at > now()-interval '5 days' GROUP BY 1 ORDER BY 2"}
