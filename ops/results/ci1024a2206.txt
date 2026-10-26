@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=ci1024a2206
-# code 9fe3f28f856a4dcd98e9249a6887d5d6f8d4b61e · started 2026-10-24T22:06:45Z
-market_ticker                side  action  price  quantity  filled_at                       
----------------------------  ----  ------  -----  --------  --------------------------------
-KXTRUMPMENTION-26OCT27-CHEA  no    sell    10     2         2026-10-24 21:54:19.529099+00:00
-
-(1 row)
