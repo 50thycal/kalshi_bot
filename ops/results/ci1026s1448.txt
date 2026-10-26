@@ -1,0 +1,12 @@
+# ops request [READ]
+# type=db  id=ci1026s1448
+# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-26T14:46:42Z
+market_ticker                  status    cancel_reason  limit_price  quantity  c          
+-----------------------------  --------  -------------  -----------  --------  -----------
+KXYTVIEWSHIGH-DRA26DEC-14.25M  canceled  repriced       1            500       10-25 16:04
+KXYTVIEWSHIGH-YOU26NOV-12.0M   canceled  out_of_band    9            222       10-24 22:41
+KXYTVIEWSHIGH-YE26NOV-5.0M     canceled  out_of_band    8            250       10-25 13:54
+KXYTVIEWSHIGH-BAD26DEC-30.0M   canceled  out_of_band    1            500       10-25 16:04
+KXYTVIEWSHIGH-JUS26DEC-15.5M   canceled  repriced       1            500       10-25 16:04
+
+(5 rows)
