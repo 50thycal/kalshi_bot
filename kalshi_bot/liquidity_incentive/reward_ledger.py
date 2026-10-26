@@ -112,6 +112,11 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     # Operator screenshot 2026-10-25 (lifetime $67.31): Georgia rally, the first event whose
     # bids rested entirely under the §9.63 48h step-aside.
     ("2026-10-25", 182, "KXTRUMPMENTION-26OCT24"),
+    # Operator screenshot 2026-10-26 (lifetime $71.71): Michigan rally (Oct 25 event), three
+    # rows, all under the §9.63 48h step-aside.
+    ("2026-10-26", 206, "KXTRUMPMENTION-26OCT25"),
+    ("2026-10-26", 129, "KXTRUMPMENTION-26OCT25"),
+    ("2026-10-26", 105, "KXTRUMPMENTION-26OCT25"),
 )
 
 
