@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1026j1210", "sql": "SELECT split_part(market_ticker,'-',1)||'-'||split_part(market_ticker,'-',2) ev, min(created_at) a, max(created_at) b, count(*) n, string_agg(DISTINCT split_part(market_ticker,'-',3),',') words FROM live_orders WHERE strategy='Alimm1' AND market_ticker LIKE 'KXTRUMPMENTION%' AND created_at > now()-interval '8 days' GROUP BY 1 ORDER BY 2"}
