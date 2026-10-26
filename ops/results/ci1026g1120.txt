@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=ci1026g1120
+# code 4c2b742f915ce0081ceef66c67163c7731436fa1 · started 2026-10-26T12:05:57Z
+event_ticker             first_bid                         last_bid                          n   how                                                
+-----------------------  --------------------------------  --------------------------------  --  ---------------------------------------------------
+KXTRUMPMENTION-26OCT27   2026-10-21 12:33:50.767970+00:00  2026-10-23 16:56:26.293998+00:00  6   fill_contagion,filled,out_of_band,repriced         
+                         2026-10-22 05:53:30.846540+00:00  2026-10-25 00:40:44.055484+00:00  10  filled,resting_sell:repriced,resting_sell:stop_loss
+KXTRUMPMENTIONB-26OCT27  2026-10-23 04:02:19.205953+00:00  2026-10-23 14:48:43.181905+00:00  5   out_of_band,pre_event,repriced                     
+
+(3 rows)
