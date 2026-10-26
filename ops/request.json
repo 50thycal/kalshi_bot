@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1026p1255", "sql": "SELECT at, residual_cents, notes_json->>'residual_untrustworthy' bad FROM incentive_balance_observations WHERE at > now()-interval '30 hours' AND residual_cents IS NOT NULL AND residual_cents <> 0 ORDER BY at"}
