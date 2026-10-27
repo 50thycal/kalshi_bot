@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-win-set-2-canary-register-202610271124"],"id":"ws2-reg-rcpt-1"}
+{"type": "env", "id": "ws2-arm-1", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"ws2-arm-canary-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell-win-set-2-canary\",\"approved_by\":\"Calvin\"}}"}}
