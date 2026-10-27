@@ -1,0 +1,10 @@
+# ops request [READ]
+# type=db  id=ws1-drift-chk-3
+# code fc7d21964e443a60d180691cafdc15ca82484833 · started 2026-10-27T13:47:32Z
+id  kind                             detected_at                       resolved_at                       res                                                                                                                                                             
+--  -------------------------------  --------------------------------  --------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+27  EXPERIMENT_CONFIG_DRIFT          2026-10-27 11:35:23.257532+00:00  2026-10-27 11:38:34.070477+00:00  resolved automatically: the LIVE trading worker observed mmsell-winset2-live-1's runtime config matching its registered material config                         
+28  EXPERIMENT_CONFIG_DRIFT          2026-10-27 11:38:34.010687+00:00  2026-10-27 13:43:26.415600+00:00  reclassified as an intentional operator stand-down: none of this deployment's registered live tags (Nmmsell10) appear in the runtime live allowlist, so it is no
+29  EXPERIMENT_EXECUTION_STOOD_DOWN  2026-10-27 13:43:26.430232+00:00                                                                                                                                                                                                    
+
+(3 rows)
