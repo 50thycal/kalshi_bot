@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=ci1027k0903
-# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T09:03:43Z
+# type=db  id=ci1027m1329
+# code fc7d21964e443a60d180691cafdc15ca82484833 · started 2026-10-27T13:29:13Z
 k  t                              d                                                  
 -  -----------------------------  ---------------------------------------------------
 O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/buy 10c x200 472f6c1b-f59 10-27 04:29
@@ -11,5 +11,6 @@ O  KXYTVIEWSHIGH-OLI26DEC-7.5M    resting - no/buy 10c x200 97d72469-dbd 10-27 0
 O  KXYTVIEWSHIGH-YE26NOV-5.0M     resting - no/buy 1c x500 4a6ac860-d4a 10-26 14:38  
 P  KXTRUMPMENTIONB-26OCT27-NQE    0.9000                                             
 P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                                          
+P  KXYTVIEWSW-TAY26OCT25-15.0M    -3.0000                                            
 
-(8 rows)
+(9 rows)
