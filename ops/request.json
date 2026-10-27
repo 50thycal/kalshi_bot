@@ -1,1 +1,1 @@
-{"type":"xos","command":"platform","id":"tm-platform-1"}
+{"type":"xos","command":"platform","args":["review","MARKET_TAXONOMY:football_coverage_2026_10_12"],"id":"tm-fb-review-1"}
