@@ -1,0 +1,26 @@
+# ops request [READ]
+# type=db  id=ci1027j0701
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T07:01:03Z
+k  t                                  d                                                  
+-  ---------------------------------  ---------------------------------------------------
+O  KXMAMDANIMENTION-26NOV18-BILL      resting - yes/buy 10c x200 472f6c1b-f59 10-27 04:29
+O  KXMAMDANIMENTION-26NOV18-NQE       resting - yes/buy 3c x333 8d074f44-4be 10-24 01:19 
+O  KXYTVIEWSHIGH-FUE26NOV-24.0M       resting - no/buy 1c x500 6ee0fc6a-01b 10-26 15:24  
+O  KXYTVIEWSHIGH-MOR26NOV-7.5M        resting - yes/buy 5c x400 796d8abf-447 10-26 16:36 
+O  KXYTVIEWSHIGH-OLI26DEC-7.5M        resting - no/buy 9c x222 91662f95-f91 10-26 20:36  
+O  KXYTVIEWSHIGH-YE26NOV-5.0M         resting - no/buy 1c x500 4a6ac860-d4a 10-26 14:38  
+P  KXAAAGASD-26OCT27-4.2750           -1.0000                                            
+P  KXMCDSBIGMAC-26NOV02-T6.08         -0.2100                                            
+P  KXRAIN-26OCT26-MKE                 -6.0000                                            
+P  KXRAIN-26OCT26-OKC                 -6.0000                                            
+P  KXRAIN-26OCT26-SATX                -6.0000                                            
+P  KXRAIN-26OCT27-CHI                 -6.0000                                            
+P  KXRAIN-26OCT27-DAL                 -6.0000                                            
+P  KXRAIN-26OCT27-TPA                 -6.0000                                            
+P  KXRAINLAXM-26OCT-3                 -3.0000                                            
+P  KXRT-WIC-96                        -1.0000                                            
+P  KXTESTMATCH-26OCT231730INANEW-NEW  -1.0000                                            
+P  KXTRUMPMENTIONB-26OCT27-NQE        0.9000                                             
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M       -487.9700                                          
+
+(19 rows)
