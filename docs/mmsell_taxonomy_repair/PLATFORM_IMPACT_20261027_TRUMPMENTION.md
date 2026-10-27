@@ -76,6 +76,18 @@ Consequences, measured against the code:
   approved. Nothing else live changed: `Nmmsell10` is `onlyx=` the seven series; `Vmmsell10` is not
   armed.
 
+## Outcome (2026-10-27 11:23Z)
+
+Revision #15 is **ACTIVE at 11:23:05Z** (`tm-cutover-20261027b`). The first CUTOVER
+(`tm-cutover-20261027`) was REJECTED and rolled back because `apply_new_epoch` →
+`carry_deployments_forward` re-registers only `paper` deployments, and a live canary's lineage
+may be created only by `arm_live_canary`. **Lesson for this record and the next one:
+I2/NEW_EPOCH on an experiment with an open live (or live-kind, stood-down) deployment cannot be
+applied by CUTOVER.** Recording it makes the experiment BLOCKED_PLATFORM until the book is
+restarted on fresh tags. Applied: `mmsell-type-tight` (epoch 45; it is still blocked by #13's
+record #19). Accepted, not applied: `mmsell-price-ceiling-cell-size` (#54) and
+`mmsell-price-ceiling-size-split` (#56). The drift window was empty (`tm-drift-1`).
+
 ## Sequence (each send is one ops `env` act; every one needs a working ops Railway token)
 
 Revised by the addendum: steps 1 and 5 are void.
