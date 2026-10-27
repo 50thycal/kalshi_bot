@@ -125,3 +125,38 @@ the new taxonomy since 03:02:20Z. Football #13 can no longer cut over; `trumpmen
 supersedes it and carries its rows. Revised sequence, the drift window and one owner decision
 (`mmsell-type-tight` stays blocked by #13's unapplied NEW_EPOCH): the impact record's addendum.
 Still blocked on the token.
+
+**2026-10-27 03:20Z — token refreshed by the owner; steps 2–3 done.** `tm-register-20261027`
+SUCCEEDED (revision #15, PENDING); `tm-impacts-20261027` SUCCEEDED (15 rows, records #54–#68; the
+three I2 rows accepted, not yet applied). Side effect until CUTOVER: the three I2 experiments read
+BLOCKED_PLATFORM, `Kmmsell10`'s `live_canary_keep` among them. That gate is a recorded verdict, not
+an automatic stop; `max_daily_loss` still covers every live book. Drift window measured 10:56Z
+(`tm-drift-1`): **zero** KXTRUMPMENTION live orders or paper trades since 03:02:20Z. Default branch
+fingerprint unchanged (`cfbd6ba5`). **Next: owner hard stop — CUTOVER `tm-cutover-20261027`**
+(expect `9b3b8873…`, the three NEW_EPOCH keys), then REGISTER_PACKAGE, then ARM_CANARY + env swap.
+
+**2026-10-27 11:18–11:39Z — cut over, registered, armed (owner confirmed each hard stop in session).**
+- `tm-cutover-20261027` **REJECTED**: `carry_deployments_forward` refuses live deployments across
+  an epoch boundary (`mmsell-cellsize-live-1/twin-1`); only `arm_live_canary` may create live
+  lineage. Rolled back. Size-split's `mmsell-sizesplit-live-2` would refuse the same way.
+- `tm-cutover-20261027b` SUCCEEDED with `new_epoch_experiments=["mmsell-type-tight"]`: revision #15
+  ACTIVE at **11:23:05Z**, type-tight epoch 45. Cell-size (#54) and size-split (#56) stay ACCEPTED,
+  unapplied: their gates read BLOCKED_PLATFORM until each is restarted on fresh tags.
+- `REGISTER_PACKAGE mmsell-win-set-2-canary` SUCCEEDED (preflight GO); `ws2-arm-canary-1`
+  SUCCEEDED (approved_by Calvin): `mmsell-winset2-live-1` + `twin-1`, epoch 2, **11:35:22Z**.
+- Env act `ws2-envswap-1` VERIFIED (computed from the live values, never retyped): `Nmmsell10`'s
+  `MMSELL_VARIANTS` entry replaced in place by `Vmmsell10` (still after `Kmmsell10`), `Qmmsell10`
+  appended, `LIVE_STRATEGIES=Kmmsell10,Alimm1,Vmmsell10`,
+  `MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Vmmsell10:6:6.00`. `xos tag Vmmsell10` → LIVE_CANARY
+  e2. `Nmmsell10`/`Pmmsell10` deployments stay open; `Nmmsell10` drains on the record.
+
+**Owner decision (2026-10-27): Kmmsell10's restart waits for the size-up decision**, and
+Kmmsell10 and Vmmsell10 restart together then. Reason: `Vmmsell10`'s registered drift baseline names
+`Kmmsell10+Vmmsell10:6:6.00`, so a Kmmsell10 successor on a fresh tag now would read as
+EXPERIMENT_CONFIG_DRIFT on the book just armed. Until then `Kmmsell10`'s keep gate is
+BLOCKED_PLATFORM (a recorded verdict, not an automatic stop; `max_daily_loss` still binds), and a
+daily routine in this session (`trig_01JKWHkT2HqxJVp5yK2X4SmK`) reads its live realized P&L against
+its keep contract and tells the owner on a breach. It changes nothing itself.
+
+Open: the 24h silent-arm check for `Vmmsell10`, and the first settled shared market's
+reconciliation (§6 line 6).
