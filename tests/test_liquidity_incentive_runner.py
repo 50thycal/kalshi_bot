@@ -16,6 +16,7 @@ from sqlalchemy import select as sa_select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
+from kalshi_bot import repository as repo
 from kalshi_bot.liquidity_incentive import live as limm
 from kalshi_bot.liquidity_incentive import runner as run
 from kalshi_bot.live.executor import LiveExecutor
@@ -1750,12 +1751,14 @@ MENTION = "KXTRUMPMENTION-26SEP20-PALE"
 
 
 def _held_mention(s, *, entry=10, qty=100, sell=None, sell_qty=None, sell_age_min=10,
-                  hours=48.0, snap_at=NOW, sell_role="a", sells=()):
+                  hours=48.0, snap_at=NOW, sell_role="a", sells=(), bid_qty=None,
+                  status="filled", cancel_reason=None):
     _mention(s, MENTION, event="KXTRUMPMENTION-26SEP20", hours=hours)
     s.add(m.LiveOrder(market_ticker=MENTION, event_ticker="KXTRUMPMENTION-26SEP20",
                       strategy=limm.LIVE_TAG, side="yes", action="buy", limit_price=entry,
-                      quantity=qty, status="filled", kalshi_order_id="K-PALE",
-                      client_order_id="pale", created_at=NOW - timedelta(hours=5)))
+                      quantity=bid_qty or qty, status=status, cancel_reason=cancel_reason,
+                      kalshi_order_id="K-PALE", client_order_id="pale",
+                      created_at=NOW - timedelta(hours=5)))
     s.add(m.Fill(kalshi_fill_id="F-PALE", kalshi_order_id="K-PALE", market_ticker=MENTION,
                  side="yes", action="buy", price=entry, quantity=qty))
     if sell is not None:
@@ -2219,3 +2222,43 @@ def test_an_unfilled_bid_is_left_resting(live_db, settings):
         _one_sided_bid(s, "KXPF-REST", "K-RE", filled=0)
         out = _cycle(client, settings, s)
     assert "K-RE" not in client.canceled and "partial_fill" not in out["outcomes"]
+
+
+# --- §9.71: what a part-filled, cancelled bid bought is still managed -------------------------
+
+def test_a_part_filled_cancelled_bid_still_gets_its_resting_sells(live_db, settings):
+    """OLI, 2026-10-27: 488 of 500 filled, §9.70 cancelled the rest, and the 488 held went
+    unmanaged -- no resting sell, no stop -- because a cancelled order made the market look
+    closed to the position manager."""
+    client = FakeClient({MENTION: _book([(8, 3), (7, 10)], [(88, 100), (85, 400)])})
+    with db.session_scope() as s:
+        _held_mention(s, entry=14, qty=100, bid_qty=120, status="canceled",
+                      cancel_reason="partial_fill")
+        assert MENTION in repo.live_book_open_tickers(s, limm.LIVE_TAG)
+        assert repo.live_strategy_exposure(s, limm.LIVE_TAG) == 14.0   # 100 held x 14c
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"resting_sell:placed": 1}
+    assert [(o["price"], o["count"]) for o in client.placed] == [
+        ("0.1200", "50.00"), ("0.1400", "50.00")]
+
+
+def test_a_part_filled_cancel_closes_once_the_position_is_flat(live_db, settings):
+    with db.session_scope() as s:
+        _held_mention(s, qty=100, bid_qty=120, status="canceled", cancel_reason="partial_fill")
+        _snap(s, 0, NOW + timedelta(minutes=5))
+        assert MENTION not in repo.live_book_open_tickers(s, limm.LIVE_TAG)
+        assert repo.live_strategy_exposure(s, limm.LIVE_TAG) == 0.0
+
+
+def test_other_cancels_are_not_read_as_positions(live_db, settings):
+    with db.session_scope() as s:
+        # A plain cancel, even with a stray fill row, stays closed as before.
+        _held_mention(s, qty=100, status="canceled", cancel_reason="out_of_band")
+        # Gone from Kalshi with nothing filled: no position, and no snapshot to say so.
+        s.add(m.LiveOrder(market_ticker="KXGONE-1", event_ticker="KXGONE", strategy=limm.LIVE_TAG,
+                          side="no", action="buy", limit_price=3, quantity=300, status="canceled",
+                          cancel_reason="gone_from_exchange", kalshi_order_id="K-GONE",
+                          client_order_id="gone", created_at=NOW - timedelta(hours=5)))
+        s.flush()
+        assert repo.live_book_open_tickers(s, limm.LIVE_TAG) == set()
+        assert repo.count_live_book_open(s, limm.LIVE_TAG) == 0

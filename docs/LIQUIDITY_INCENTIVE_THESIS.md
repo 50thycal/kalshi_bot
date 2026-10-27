@@ -3267,3 +3267,20 @@ market is not re-entered. On CHEA the loss would have been ~$0.70 instead of $5.
 
 **Cost.** A bid that fills once by chance loses its remaining reward time in that market. Watch
 `partial_fill` cancels against the fills that followed elsewhere in the same event.
+
+### 9.71 What a part-filled, cancelled bid bought is still managed (2026-10-27)
+
+**Read.** The first §9.70 cancel (2026-10-27 04:34Z, `KXYTVIEWSHIGH-OLI26NOV-12.0M`: 488 of 500
+NO at 1c filled at once, the last 12 cancelled) left the 488 held with no resting sell, no stop and
+no place in the caps. The book's open-market list (`repository._open_live_tickers`) counts a market
+only while a BUY is still working or `filled`; a §9.70 cancel marks the bid `canceled`, so the held
+contracts became invisible to the position manager, the market cap, the per-event cap and the
+dollar cap. §9.68's `gone_from_exchange` close of a part-filled order had the same hole. At 1c the
+cost was nil (the stop cannot fire below 1c); on a 10c, $20 bid it would be an unstopped position.
+
+**Change (operator, 2026-10-27: "go build the fix").** A cancelled BUY whose `cancel_reason` is
+`partial_fill` or `gone_from_exchange` AND that has recorded fills is read as `filled` for the
+open-market list, and its filled quantity at its limit price counts toward
+`live_strategy_exposure`. It drops out, as any filled order does, once Kalshi's position snapshot
+shows the market flat. Plain cancels and cancels with nothing filled are unchanged. No trading
+rule changes: the stop, take-profit and resting sells are the existing ones, now applied.
