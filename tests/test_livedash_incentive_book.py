@@ -163,6 +163,30 @@ def test_a_one_cent_leg_has_no_stop_and_can_lose_only_its_cost(session):
     assert p["awaiting_settlement"] is False
 
 
+def test_a_part_filled_cancelled_bid_shows_as_held(session):
+    """OLI, 2026-10-27: 488 of 500 filled, §9.70 cancelled the rest -- the 488 are still held."""
+    _setup(session)
+    held = "KXYTVIEWSHIGH-OLI26NOV-12.0M"
+    session.add(m.LiveOrder(kalshi_order_id="o-oli", client_order_id="c-oli", market_ticker=held,
+                            strategy=limm.LIVE_TAG, created_at=NOW - timedelta(hours=8),
+                            side="no", action="buy", limit_price=1, quantity=500,
+                            status="canceled", cancel_reason="partial_fill"))
+    session.add(m.Fill(kalshi_fill_id="f-oli", kalshi_order_id="o-oli", market_ticker=held,
+                       side="no", action="sell", price=1, quantity=488))
+    session.add(m.Position(market_ticker=held, captured_at=NOW, side="no", quantity=-488,
+                           quantity_fp=-487.97, avg_price=1.0))
+    # A plain cancel is still not a position.
+    session.add(m.LiveOrder(kalshi_order_id="o-oob", client_order_id="c-oob", market_ticker="KXX-1",
+                            strategy=limm.LIVE_TAG, created_at=NOW - timedelta(hours=8),
+                            side="no", action="buy", limit_price=1, quantity=500,
+                            status="canceled", cancel_reason="out_of_band"))
+    session.flush()
+    x = ib.build_incentive_block(session, limm.LIVE_TAG, NOW, ov._latest_snapshots)
+    (p,) = x["positions"]
+    assert (p["market"], p["side"], p["quantity"], p["entry_cents"]) == (held, "no", 488, 1)
+    assert x["positions_at_risk_usd"] == 4.88
+
+
 def test_a_book_that_does_not_qualify_estimates_zero_and_a_stale_book_unknown(session):
     _setup(session)
     snap = session.query(m.IncentiveMarketSnapshot).one()

@@ -206,7 +206,10 @@ def _latest_book(session, ticker: str, now: datetime):
 
 def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -> dict | None:
     """One held position with its exit plan, or None when this book holds nothing there."""
-    if not any((o.status or "").lower() in ("filled", "partial") for o in ours):
+    # §9.71: a bid cancelled after it part-filled still holds what it bought.
+    if not any((o.status or "").lower() in ("filled", "partial")
+               or ((o.status or "").lower() == "canceled"
+                   and o.cancel_reason in repo.PART_FILLED_CANCEL_REASONS) for o in ours):
         return None
     if snap is not None and abs(float(snap.quantity_fp if snap.quantity_fp is not None
                                      else snap.quantity or 0)) <= 0.01:
