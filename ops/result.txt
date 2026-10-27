@@ -1,140 +1,28 @@
-# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
-# readiness reported a problem — read the block above
-========================================================================
-!! MUTATING OPS REQUEST — this changes the running system !!
-========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=ws2-arm-1
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:34:24Z
-# target service: main
-# BEFORE:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 219 bytes, sha256:4e2778ca1c643a5d>
-  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:69da1ad0f693db30>
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
-# AFTER:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:69da1ad0f693db30>
-# VERDICT: VERIFIED
-
-# post-change canonical checks: enforcement, readiness
-# $ xos enforcement
-#   {
-#     "mode": "NEW_ONLY",
-#     "cutover_id": "prod-new-only-20260816",
-#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
-#     "resolver_degraded_alarms_24h": 0,
-#     "deployments": {
-#       "total": 65,
-#       "grandfathered": 13,
-#       "native": 52
-#     },
-#     "post_cutover_unstamped": {
-#       "paper_trades": [],
-#       "live_orders": []
-#     },
-#     "live_canaries": [
-#       {
-#         "deployment": "mmsell-ceiling-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-ceiling-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-winset-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-winset-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-capacity-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-capacity-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-contestcap-live-2",
-#         "grandfathered": false,
-#         "twin": "mmsell-contestcap-twin-2",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "limm-smoke-live-1",
-#         "grandfathered": false,
-#         "twin": "limm-smoke-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-sizesplit-live-2",
-#         "grandfathered": false,
-#         "twin": "mmsell-sizesplit-twin-2",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-cellsize-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-cellsize-twin-1",
-#         "boundary_match": true
-#       }
-#     ],
-#     "unresolved_integrity_events": 1,
-# $ xos readiness
-#   {
-#     "ok": false,
-#     "checked_at": "2026-10-27 11:34:37.870517+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
-#     "checks": {
-#       "import_ran": {
-#         "ok": true,
-#         "detail": "43 experiments recorded"
-#       },
-#       "coverage_complete": {
-#         "ok": true,
-#         "detail": {
-#           "unmapped_tags": []
-#         }
-#       },
-#       "live_books_represented": {
-#         "ok": true,
-#         "detail": {
-#           "registered_live_tags": [
-#             "Alimm1",
-#             "Cmmsell10",
-#             "Dmmsell10",
-#             "Fmmsell10",
-#             "Jmmsell10",
-#             "Kmmsell10",
-#             "Nmmsell10"
-#           ],
-#           "note": "no Settings supplied \u2014 presence-only check"
-#         }
-#       },
-#       "platform_snapshot_complete": {
-#         "ok": true,
-#         "detail": {
-#           "snapshot": "55b51990e0492e4b",
-#           "missing_components": []
-#         }
-#       },
-#       "grandfathered_identity": {
-#         "ok": true,
-#         "detail": {
-#           "deployments": 65,
-#           "grandfathered": 13,
-#           "native": 52
-#         }
-#       },
-#       "live_twin_links": {
-#         "ok": true,
-#         "detail": "all linked"
-#       },
-#       "no_unresolved_integrity": {
-#         "ok": false,
-#         "detail": "1 unresolved integrity events"
-#       },
-#       "no_unresolved_platform_impact": {
-#         "ok": false,
-#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
-#       },
-#       "lineage_columns_present": {
-#         "ok": true,
-#         "detail": {
+# ops request [READ]
+# type=xos  id=ws2-arm-rcpt-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:35:54Z
+{
+  "command_id": "ws2-arm-canary-1",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "64abedd815c25de4b71e7cbe995858ef5be1ee28d5f01d2663c518db1a28ffdf",
+  "completed_at": "2026-10-27 11:35:23.111201+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-win-set-2-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-winset2-live-1",
+    "live_started_at": "2026-10-27 11:35:22.712630+00:00",
+    "twin_deployment": "mmsell-winset2-twin-1",
+    "twin_started_at": "2026-10-27 11:35:22.712630+00:00",
+    "epoch_started_at": "2026-10-27 11:35:22.712630+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-win-set-2"
+}

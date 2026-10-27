@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=xos  id=ws2-arm-rcpt-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:35:54Z
+{
+  "command_id": "ws2-arm-canary-1",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "64abedd815c25de4b71e7cbe995858ef5be1ee28d5f01d2663c518db1a28ffdf",
+  "completed_at": "2026-10-27 11:35:23.111201+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-win-set-2-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-winset2-live-1",
+    "live_started_at": "2026-10-27 11:35:22.712630+00:00",
+    "twin_deployment": "mmsell-winset2-twin-1",
+    "twin_started_at": "2026-10-27 11:35:22.712630+00:00",
+    "epoch_started_at": "2026-10-27 11:35:22.712630+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-win-set-2"
+}
