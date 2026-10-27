@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=tm-impacts-rcpt-1
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T10:51:25Z
-command_id            action             status     completed_at                      err  res                                                                                                                                                                                                     
---------------------  -----------------  ---------  --------------------------------  ---  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-tm-register-20261027  REGISTER_REVISION  SUCCEEDED  2026-10-27 03:17:27.536404+00:00       {"kind": "platform_revision", "status": "pending", "version": "trumpmention_2026_10_27", "revision_id": 15, "activated_at": null}                                                                       
-tm-impacts-20261027   RECORD_IMPACTS     SUCCEEDED  2026-10-27 03:20:06.408313+00:00       {"kind": "impact_records", "count": 15, "records": [{"action": "NEW_EPOCH", "status": "accepted", "record_id": 54, "impact_class": "I2", "experiment_id": 41}, {"action": "NEW_EPOCH", "status": "accept
-
-(2 rows)
