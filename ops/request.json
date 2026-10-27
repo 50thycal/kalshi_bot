@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-win-set"],"id":"ws1-integrity-1027"}
+{"type":"env","action":"get","id":"ws1-restore-read-1"}
