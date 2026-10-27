@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1027p1540", "sql": "SELECT s.at, s.yes_levels_json, s.no_levels_json, p.period_reward_usd, p.target_size, p.discount_factor_bps, p.start_date, p.end_date FROM incentive_market_snapshots s JOIN incentive_programs p ON p.market_ticker=s.market_ticker AND p.superseded_at IS NULL AND p.disappeared_at IS NULL WHERE s.market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M' ORDER BY s.at DESC LIMIT 1"}
+{"type":"noop"}
