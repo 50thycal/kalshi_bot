@@ -125,3 +125,12 @@ the new taxonomy since 03:02:20Z. Football #13 can no longer cut over; `trumpmen
 supersedes it and carries its rows. Revised sequence, the drift window and one owner decision
 (`mmsell-type-tight` stays blocked by #13's unapplied NEW_EPOCH): the impact record's addendum.
 Still blocked on the token.
+
+**2026-10-27 03:20Z — token refreshed by the owner; steps 2–3 done.** `tm-register-20261027`
+SUCCEEDED (revision #15, PENDING); `tm-impacts-20261027` SUCCEEDED (15 rows, records #54–#68; the
+three I2 rows accepted, not yet applied). Side effect until CUTOVER: the three I2 experiments read
+BLOCKED_PLATFORM, `Kmmsell10`'s `live_canary_keep` among them. That gate is a recorded verdict, not
+an automatic stop; `max_daily_loss` still covers every live book. Drift window measured 10:56Z
+(`tm-drift-1`): **zero** KXTRUMPMENTION live orders or paper trades since 03:02:20Z. Default branch
+fingerprint unchanged (`cfbd6ba5`). **Next: owner hard stop — CUTOVER `tm-cutover-20261027`**
+(expect `9b3b8873…`, the three NEW_EPOCH keys), then REGISTER_PACKAGE, then ARM_CANARY + env swap.
