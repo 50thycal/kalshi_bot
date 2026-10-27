@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1027n1407", "sql": "SELECT market_ticker, side, action, limit_price, quantity, status, coalesce(cancel_reason,'-') cr, left(client_order_id,14) c, to_char(created_at,'MM-DD HH24:MI') t FROM live_orders WHERE strategy='Alimm1' AND (created_at > now()-interval '40 minutes' OR market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M') ORDER BY created_at DESC LIMIT 15"}
+{"type":"noop"}
