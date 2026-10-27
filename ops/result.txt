@@ -1,11 +1,9 @@
 # ops request [READ]
-# type=db  id=upd-1027-books
-# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-27T01:22:43Z
-book                 filled_mkts  settled  losers  usd 
--------------------  -----------  -------  ------  ----
-live Kmmsell10       159          149      6       6.48
-live Nmmsell10       29           26       1       2.31
-paper Nmmsell10_pt4  47           41       2       2.53
-paper Pmmsell10      47           41       2       0.66
+# type=db  id=upd-1027-spread
+# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-27T01:23:09Z
+spread  settled_mkts  losers  usd  
+------  ------------  ------  -----
+a 1c    92            4       6.35 
+b 2c+   32            1       -0.45
 
-(4 rows)
+(2 rows)

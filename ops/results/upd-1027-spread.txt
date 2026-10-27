@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=upd-1027-spread
+# code e8ed16f00cf10c766545e5809400a613fdc81f3e · started 2026-10-27T01:23:09Z
+spread  settled_mkts  losers  usd  
+------  ------------  ------  -----
+a 1c    92            4       6.35 
+b 2c+   32            1       -0.45
+
+(2 rows)
