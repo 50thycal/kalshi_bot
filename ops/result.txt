@@ -1,10 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1027n1407
-# code 7a5c1afa9e7a08c2565d3e5097678e08154bfdb9 · started 2026-10-27T14:06:23Z
-market_ticker                 side  action  limit_price  quantity  status    cr            c               t          
-----------------------------  ----  ------  -----------  --------  --------  ------------  --------------  -----------
-KXYTVIEWSHIGH-OLI26NOV-12.0M  no    sell    2            243       resting   -             limmsell:b:93d  10-27 13:59
-KXYTVIEWSHIGH-OLI26NOV-12.0M  no    sell    2            244       resting   -             limmsell:a:fcd  10-27 13:59
-KXYTVIEWSHIGH-OLI26NOV-12.0M  no    buy     1            500       canceled  partial_fill  5eecbca3-69e1-  10-24 17:37
-
-(3 rows)
+# type=noop
+# code 7a5c1afa9e7a08c2565d3e5097678e08154bfdb9 · started 2026-10-27T14:06:42Z
+(noop — nothing to do)
