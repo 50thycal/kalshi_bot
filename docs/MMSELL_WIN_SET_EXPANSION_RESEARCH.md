@@ -207,21 +207,26 @@ price there and the fills that arrive are informed. Caveats:
 book on the same universe, plus the live twin tape), judged after P-SPREAD reads out. Do not
 build a fill-speed rule.
 
+**Out-of-sample read (2026-10-27, `upd-1027-spread`, live fills placed after 10-18): the split
+did not hold.** 1¢ spread: 92 settled, 4 lost, **+$6.35**. 2¢ or wider: 32 settled, 1 lost,
+−$0.45. Skipping 1¢ entries would have discarded most of the period's profit; the 10-18 split
+reads as chance. **Dropped** — not pre-registered, not built. P-SPREAD's own gate is unaffected.
+
 ## 7. Recommended order (each needs its own owner decision)
 
 1. **KXTRUMPMENTION** into the WIN set — strongest replay, largest supply, same contract shape
-   as KXTRUMPSAY. Hard stop: graduation also opens it to `Kmmsell10`. **Parked** in
-   `docs/workstreams/ACTIVE.md` (owner, 2026-10-18: add eventually).
-2. **Spread ≥ 2¢ filter** — forward test (§6a); the stable signal of this research.
+   as KXTRUMPSAY. Hard stop: graduation also opens it to `Kmmsell10`. **Taken 2026-10-27**
+   (owner): the `mmsell-win-set-2` restart (`docs/MMSELL_WIN_SET_CANARY.md` §9).
+2. ~~**Spread ≥ 2¢ filter**~~ — **dropped 2026-10-27**: failed its out-of-sample read (§6a).
 3. **Rain late-entry window** — pre-register the late (1–6h) rule as a forward paper test; it
    sits at t 1.88 today.
 4. **Index 8–10¢** — only as a 1-lot live arm with a twin.
 5. **Do not pursue:** commodities with this entry, scanning deeper, the rain cap on its own, a
-   fill-speed rule (§6a).
+   fill-speed rule (§6a), a 1¢-spread skip (§6a).
 
 ## Ops reads (all read-only, 2026-10-17)
 
 `nm-series-paper-1/2`, `nm-series-live-1`, `nm-band-1/2`, `nm-commod-1`, `nm-adverse-1`,
 `nm-r1-idx810-1`, `nm-r1-idx-adv-1`, `nm-r2-cands-1` (void), `nm-r2-cands-2`, `nm-r2-rules-1`,
 `nm-r3-rain-time-1`, `nm-r3-rain-replay-1`, `nm-r4-commod-time-1`, `nm-r5-scan-1`, `nm-r5-fed-1`,
-`nm-r6-filltime-1`, `nm-r6-wait-1`. 2026-10-18: `ff-win-rows-2`, `ff-all-agg-1`, `ff-month-1`.
+`nm-r6-filltime-1`, `nm-r6-wait-1`. 2026-10-18: `ff-win-rows-2`, `ff-all-agg-1`, `ff-month-1`. 2026-10-27: `upd-1027-spread`.
