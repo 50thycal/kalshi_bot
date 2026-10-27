@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"tm-impacts-rcpt-1","sql":"select command_id, action, status, completed_at, left(error,200) err, left(result_json::text,200) res from experiment_os_platform_commands where command_id like 'tm-%' order by id"}
