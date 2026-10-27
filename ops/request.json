@@ -1,1 +1,1 @@
-{"type":"db","id":"tm-cutover-b-rcpt-1","sql":"select command_id, status, completed_at, left(error,300) err, left(result_json::text,400) res from experiment_os_platform_commands where command_id = 'tm-cutover-20261027b'"}
+{"type":"xos","command":"package-preflight","args":["mmsell-win-set-2-canary"],"id":"ws2-preflight-1"}
