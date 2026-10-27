@@ -1,8 +1,23 @@
 # ops request [READ]
-# type=db  id=tm-cutover-rcpt-2
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:19:54Z
-command_id           status    completed_at                      err                                                                                                                                                                                                       res
--------------------  --------  --------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ---
-tm-cutover-20261027  REJECTED  2026-10-27 11:19:04.675456+00:00  ExperimentOsError: cannot carry ['mmsell-cellsize-live-1 (live)', 'mmsell-cellsize-twin-1 (paper_twin)'] across an epoch boundary: only ['paper'] deployments may be re-registered automatically. Stand…     
-
-(1 row)
+# type=db  id=tm-deps-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:20:52Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 644, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 640, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 457, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 501, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedColumn: column ep.experiment_id does not exist
+LINE 1: ...ep on ep.id=d.epoch_id join experiments e on e.id=ep.experim...
+                                                             ^
