@@ -1,1 +1,1 @@
-{"type":"db","id":"tm-cutover-rcpt-1","sql":"select command_id, status, completed_at, left(error,250) err, left(result_json::text,500) res from experiment_os_platform_commands where command_id = 'tm-cutover-20261027'"}
+{"type":"db","id":"tm-cutover-rcpt-2","sql":"select command_id, status, completed_at, left(error,250) err, left(result_json::text,500) res from experiment_os_platform_commands where command_id = 'tm-cutover-20261027'"}
