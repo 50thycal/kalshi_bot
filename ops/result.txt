@@ -1,8 +1,25 @@
 # ops request [READ]
-# type=db  id=tm-cutover-b-rcpt-1
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:23:49Z
-command_id            status     completed_at                      err  res                                                                                                                                                                                                     
---------------------  ---------  --------------------------------  ---  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-tm-cutover-20261027b  SUCCEEDED  2026-10-27 11:23:06.210198+00:00       {"kind": "cutover", "status": "active", "new_epochs": [{"epoch_id": 45, "started_at": "2026-10-27 11:23:05.735977+00:00"}], "revision_id": 15, "activated_at": "2026-10-27 11:23:05.735977+00:00", "mea…
+# type=xos  id=ws2-preflight-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:24:44Z
+PACKAGE PREFLIGHT — mmsell-win-set-2-canary  (2026-10-27T11:24:45.443021+00:00)
 
-(1 row)
+  [ok  ] package_known: Successor of mmsell-win-set (owner decision 2026-10-27: restart now): the same WIN-set book with KXTRUMPMENTION added to its exact universe (eight series). Fres
+  [ok  ] package_registers: has a `register` verb
+  [info] enforcement_mode: NEW_ONLY
+         a tag trades only under an active deployment arm
+  [ok  ] platform_snapshot_complete: active snapshot 55b51990e049
+  [ok  ] experiment: 'mmsell-win-set-2' not registered — a fresh registration
+  [ok  ] tag_collisions: no declared tag is carried by another experiment
+  [ok  ] transport_idle: no experiment command is mid-execution
+
+VERDICT: GO
+
+envelope (ops request, one line):
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-win-set-2-canary-register-202610271124\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-win-set-2-canary\"}, \"schema_version\": 1}"}, "id": "mmsell-win-set-2-canary-register-202610271124-send"}
+
+then:
+  1. send env_request as printed (record approved_by/reason from `audit` in the PR)
+  2. read the receipt: xos experiment-command-show mmsell-win-set-2-canary-register-202610271124
+  3. xos show mmsell-win-set-2 — every declared tag on an ACTIVE arm
+  4. runtime step (separate `env` request, read the live value FIRST and append, never retype): ['LIVE_STRATEGIES', 'MMSELL_LIVE_SHARED_MARKET_PAIRS', 'MMSELL_VARIANTS']
+  5. xos control-tower after SILENT_ARM_HOURS — no silent arm
