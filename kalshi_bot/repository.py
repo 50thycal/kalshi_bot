@@ -1540,6 +1540,34 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
 CLOSING_ORDER_PREFIXES: tuple[str, ...] = ("limmexitleg:",)
 
 
+#: Cancel reasons stamped on a BUY that had already part-filled: the liquidity-incentive book's
+#: §9.70 partial-fill cancel, and §9.68's close of an order gone from Kalshi short of its size.
+#: The order is terminal; the contracts it bought are still held (thesis §9.71).
+PART_FILLED_CANCEL_REASONS: tuple[str, ...] = ("partial_fill", "gone_from_exchange")
+
+
+def _part_filled_cancels(session, strategy: str) -> list[tuple[str, str | None, int | None, int]]:
+    """`(market_ticker, event_ticker, limit_price, filled_qty)` for this book's cancelled BUYs
+    that bought something before they were cancelled. Only `PART_FILLED_CANCEL_REASONS` and only
+    with recorded fills, so a plain cancel — or a gone-from-exchange order that never filled —
+    is never read as a position."""
+    rows = session.execute(
+        select(m.LiveOrder.market_ticker, m.LiveOrder.event_ticker, m.LiveOrder.limit_price,
+               func.sum(m.Fill.quantity))
+        .join(m.Fill, m.Fill.kalshi_order_id == m.LiveOrder.kalshi_order_id)
+        .where(
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.status == "canceled",
+            m.LiveOrder.cancel_reason.in_(PART_FILLED_CANCEL_REASONS),
+            m.LiveOrder.kalshi_order_id.is_not(None),
+        )
+        .group_by(m.LiveOrder.id, m.LiveOrder.market_ticker, m.LiveOrder.event_ticker,
+                  m.LiveOrder.limit_price)
+    ).all()
+    return [(t, ev, p, int(got)) for t, ev, p, got in rows if got and int(got) > 0]
+
+
 def live_strategy_exposure(session, strategy: str) -> float:
     """Dollars this ONE strategy currently has committed to live orders and unsettled positions.
 
@@ -1564,6 +1592,9 @@ def live_strategy_exposure(session, strategy: str) -> float:
             m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
         )
     ).all()
+    # §9.71: a part-filled bid that was cancelled still holds what it bought, at what it bought.
+    rows = list(rows) + [(ticker, price, got, None)
+                         for ticker, _ev, price, got in _part_filled_cancels(session, strategy)]
     total = 0.0
     for (ticker, limit_price, quantity, coid) in rows:
         if (coid or "").startswith(CLOSING_ORDER_PREFIXES):
@@ -1637,6 +1668,10 @@ def _open_live_tickers(session, strategy: str) -> dict[str, str]:
             m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
         ).distinct()
     ).all()
+    # §9.71: a bid cancelled after it part-filled is terminal, but the contracts it bought are
+    # not — read it as "filled", so the position stays open until Kalshi shows it flat.
+    rows = list(rows) + [(ticker, event_ticker, "filled")
+                         for ticker, event_ticker, _p, _q in _part_filled_cancels(session, strategy)]
     statuses: dict[str, set[str]] = {}
     events: dict[str, str] = {}
     for ticker, event_ticker, status in rows:
