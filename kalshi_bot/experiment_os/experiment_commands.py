@@ -256,6 +256,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         liquidity_incentive_mm,
         marktangle,
         marktangle2,
+        mmsell_win_set_2,
         mmsell_win_set_canary,
         perp_v1,
         queue_aware_cancel,
@@ -654,6 +655,27 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=mmsell_win_set_canary.ACTIVATION_VARS,
             strategy_tags=(mmsell_win_set_canary.PAPER_TAG, mmsell_win_set_canary.LIVE_TAG,
                            mmsell_win_set_canary.TWIN_TAG),
+        ),
+        "mmsell-win-set-2-canary": ExperimentPackage(
+            name="mmsell-win-set-2-canary",
+            experiment_key=mmsell_win_set_2.EXPERIMENT_KEY,
+            description=(
+                "Successor of mmsell-win-set (owner decision 2026-10-27: restart now): the same "
+                "WIN-set book with KXTRUMPMENTION added to its exact universe (eight series). "
+                "Fresh tags — paper Qmmsell10, live Vmmsell10, twin Vmmsell10_pt4. Band, contest "
+                "semantics, 3-lot, risk envelope, keep gate and the owner-waiver promotion bar "
+                "are the predecessor's objects. Needs the MARKET_TAXONOMY revision that "
+                "classifies and graduates KXTRUMPMENTION ACTIVE first. Registering creates the "
+                "experiment in PAPER and ends nothing. Arming (ARM_CANARY) is an owner hard stop; "
+                "the env act swaps Nmmsell10 for Vmmsell10 in MMSELL_VARIANTS (after Kmmsell10), "
+                "LIVE_STRATEGIES and MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Vmmsell10:6:6.00. "
+                "Evidence: docs/MMSELL_WIN_SET_EXPANSION_RESEARCH.md §2."
+            ),
+            register=mmsell_win_set_2.register,
+            arm=mmsell_win_set_2.arm,
+            activation_vars=mmsell_win_set_2.ACTIVATION_VARS,
+            strategy_tags=(mmsell_win_set_2.PAPER_TAG, mmsell_win_set_2.LIVE_TAG,
+                           mmsell_win_set_2.TWIN_TAG),
         ),
         "mmsell-win-set-owner-waiver": ExperimentPackage(
             name="mmsell-win-set-owner-waiver",

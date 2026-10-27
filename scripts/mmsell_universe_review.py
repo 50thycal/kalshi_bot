@@ -115,6 +115,7 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXLIUSAELIMINATIONW", "outright", "discrete"), ("KXTRUMPSAY", "mention", "discrete"),
     ("KXTRUMPSAYMONTH", "mention", "discrete"), ("KXTRUMPSAYCOMPANY", "mention", "discrete"),
     ("KXFEDMENTION", "mention", "discrete"), ("KXWCMENTION", "mention", "discrete"),
+    ("KXTRUMPMENTION", "mention", "discrete"),
     ("KXWCFIRSTSONG", "mention", "discrete"), ("KXBTCD", "price_strike", "scheduled"),
     ("KXBTCMAXMON", "price_strike", "scheduled"), ("KXWTI", "price_strike", "scheduled"),
     ("KXWTIW", "price_strike", "scheduled"), ("KXBRENTW", "price_strike", "scheduled"),

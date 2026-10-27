@@ -172,7 +172,11 @@ def test_matches_pre_registry_behaviour_except_where_a_human_deliberately_moved_
     pre-registry behaviour must be an EXPLICIT row someone signed, with a recorded reason.
     A row that appears without a reviewer or a reason is the silent change this guards against.
     """
-    moved = {r["series"]: r for r in registry.rows() if r.get("state") != registry.GRADUATED}
+    # A deliberate move is any row a human signed: off graduated, or onto it after the PR #338
+    # seed (the first: KXTRUMPMENTION, 2026-10-27). Both need a reviewer and a reason.
+    moved = {r["series"]: r for r in registry.rows()
+             if r.get("state") != registry.GRADUATED
+             or r.get("reason") != "grandfathered-pr338"}
     for series, row in moved.items():
         assert row["state"] in registry.MANIFEST_STATES, (series, row["state"])
         assert row.get("rules_reviewed_by"), f"{series}: moved off graduated by nobody"

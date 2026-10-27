@@ -110,3 +110,13 @@ other pending revisions (`EXECUTION_ENGINE:shared_primary_ownership_20260921`,
 **Routed and recorded 2026-10-20:** I0/NO_ACTION on both revisions (#47 and #53, applied). The
 win-set gates are unaffected. See `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`, "Six new experiments
 on two pending revisions".
+
+**2026-10-27 — restart with KXTRUMPMENTION (owner decision, this session).** Successor
+`mmsell-win-set-2` (`Vmmsell10`, paper `Qmmsell10`) and the MARKET_TAXONOMY revision
+`trumpmention_2026_10_27` are built (`docs/MMSELL_WIN_SET_CANARY.md` §9,
+`docs/mmsell_taxonomy_repair/PLATFORM_IMPACT_20261027_TRUMPMENTION.md`). **Blocked** on the ops
+channel's Railway token, which now returns "Not Authorized" on every env read and write: the
+owner-confirmed football cutover (`fbtx-cutover-20261027`) set nothing. Unblocker: the owner
+refreshes the `RAILWAY_TOKEN` GitHub secret. Then the §Sequence of the impact record, with two
+owner hard stops (the new revision's CUTOVER, then ARM_CANARY + env swap). Do not merge the
+successor PR before the football cutover has run.

@@ -128,3 +128,19 @@ waiver is a new Version: package `mmsell-win-set-owner-waiver`
   does not overrule negative paper evidence.
 - **Sequence:** `REGISTER_PACKAGE mmsell-win-set-owner-waiver` → `ARM_CANARY
   mmsell-win-set-canary` (approved_by the owner) → the §6 line 5 env act → §6 line 6 readback.
+
+## 9. Restart with KXTRUMPMENTION — `mmsell-win-set-2` (2026-10-27)
+
+Owner decision (session `01D3m7Af5FnpLDG5eDQ6JJRL`): add the Trump word-mention markets now and
+restart the book rather than wait for its checkpoint. A live experiment's exact universe is
+frozen, so this is a successor (`kalshi_bot/experiment_os/mmsell_win_set_2.py`, package
+`mmsell-win-set-2-canary`) on fresh tags — paper `Qmmsell10`, live `Vmmsell10`, twin
+`Vmmsell10_pt4` — with everything but the universe imported from this book: band, contest
+semantics, 3-lot, envelope, keep gate and the §8 owner-waiver bar. Universe: the seven series
+plus KXTRUMPMENTION, which the same change classifies, graduates and subject-splits
+(`docs/mmsell_taxonomy_repair/PLATFORM_IMPACT_20261027_TRUMPMENTION.md`). KXTRUMPMENTIONB is held
+in_review so it does not inherit the graduation by prefix. The pair becomes
+`Kmmsell10+Vmmsell10:6:6.00`; `Nmmsell10` drains on the record.
+
+Its record at restart (10.5 days live): 29 markets filled, 26 settled, 1 loss, +$2.31 — about
++3.0c/contract against +4.7c expected, live within $0.22 of its paper twin.

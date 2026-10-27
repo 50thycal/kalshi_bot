@@ -55,7 +55,7 @@ RO_OPTIONS = "-c default_transaction_read_only=on"
 #: Mirrors `kalshi_bot.mmsell.regimes.SUBJECT_SPLIT_SERIES`, which is CANONICAL. Kept honest by
 #: `tests/test_mmsell_subject_split_contest.py`. The ops runner has no package to import from.
 SUBJECT_SPLIT_SERIES: frozenset[str] = frozenset({
-    "KXFEDMENTION", "KXRAIN", "KXTRUMPSAY", "KXTRUMPSAYCOMPANY",
+    "KXFEDMENTION", "KXRAIN", "KXTRUMPMENTION", "KXTRUMPSAY", "KXTRUMPSAYCOMPANY",
     "KXTRUMPSAYMONTH", "KXWCATTEND", "KXWCFIRSTSONG", "KXWCMENTION",
 })
 
