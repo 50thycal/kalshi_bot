@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1027g0504", "sql": "SELECT at, yes_levels_json, no_levels_json FROM incentive_market_snapshots WHERE market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M' AND at > now()-interval '3 hours' ORDER BY at DESC LIMIT 2"}
