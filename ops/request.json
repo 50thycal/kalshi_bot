@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1027e0500", "sql": "SELECT 'O' k, client_order_id, side, action, limit_price, quantity, status, coalesce(cancel_reason,'-') cr, to_char(created_at,'MM-DD HH24:MI') c FROM live_orders WHERE market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M' AND created_at > now()-interval '3 days' UNION ALL SELECT 'P', market_ticker, quantity_fp::text, '', NULL, NULL, '', '', to_char(captured_at,'MM-DD HH24:MI') FROM positions WHERE market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M' AND captured_at > now()-interval '1 hour' ORDER BY 1, 9 DESC"}
