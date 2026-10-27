@@ -1,0 +1,46 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "e8ed16f00cf10c766545e5809400a613fdc81f3e",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-10-27T01:58:57Z",
+  "id": "fbtx-cutover-20261027",
+  "mutation": {
+    "changes": {},
+    "command_guard": {
+      "EXPERIMENT_OS_PLATFORM_COMMAND": {
+        "blocked": false,
+        "conclusive": false,
+        "reason": "EXPERIMENT_OS_PLATFORM_COMMAND: the current value could not be read, so whether it holds unconsumed work is unknown",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "SKIPPED (nothing was set)",
+    "set_failed": [
+      "EXPERIMENT_OS_PLATFORM_COMMAND"
+    ],
+    "set_ok": 0,
+    "targets": [
+      "EXPERIMENT_OS_PLATFORM_COMMAND"
+    ],
+    "verdict": "FAILED"
+  },
+  "outcome": "FAILED",
+  "post_change_checks": {},
+  "provenance": {
+    "actor": "claude-code",
+    "purpose": "Owner-confirmed CUTOVER of MARKET_TAXONOMY football_coverage_2026_10_12 (session 01D3m7Af5FnpLDG5eDQ6JJRL)",
+    "workstream": "WS-027"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/fbtx-cutover-20261027.receipt.json",
+  "result_file": "ops/results/fbtx-cutover-20261027.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/40435714104",
+  "service": "main",
+  "started_at": "2026-10-27T01:58:56Z",
+  "targets": [
+    "EXPERIMENT_OS_PLATFORM_COMMAND"
+  ],
+  "type": "env"
+}
