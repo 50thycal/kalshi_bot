@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=ws1-drift-chk-1
-# code fc7d21964e443a60d180691cafdc15ca82484833 · started 2026-10-27T13:44:24Z
+# type=db  id=ws1-drift-chk-2
+# code fc7d21964e443a60d180691cafdc15ca82484833 · started 2026-10-27T13:46:01Z
 id  kind                             detected_at                       resolved_at                       res                                                                                                                                                             
 --  -------------------------------  --------------------------------  --------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 27  EXPERIMENT_CONFIG_DRIFT          2026-10-27 11:35:23.257532+00:00  2026-10-27 11:38:34.070477+00:00  resolved automatically: the LIVE trading worker observed mmsell-winset2-live-1's runtime config matching its registered material config                         
