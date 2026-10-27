@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"m676-boot-1","sql":"select id, created_at, level, component, left(message,160) as msg from system_events where created_at > '2026-10-27 02:50:00+00' and (component ilike '%boot%' or component ilike '%start%' or message ilike '%start%' or message ilike '%taxonomy%' or message ilike '%platform%' or component ilike '%experiment%') order by id limit 40"}
