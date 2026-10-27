@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-cell-size"],"id":"kstop-1027-show"}
