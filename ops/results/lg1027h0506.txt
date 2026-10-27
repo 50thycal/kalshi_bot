@@ -1,0 +1,194 @@
+# latest deployment 7b036be2-23a8-4e3f-996e-7826a2b67410 (status=SUCCESS, created=2026-10-27T03:20:03.630Z)
+# ops request [READ]
+# type=logs  service=main  id=lg1027h0506
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T05:01:42Z
+# target service: main
+2026-10-27T03:33:06.504997461Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":1,"too_expensive":5,"exposure_cap":1}
+2026-10-27T03:35:35.255415969Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"book_too_deep":3,"too_expensive":6,"exposure_cap":1}
+2026-10-27T03:37:49.949837811Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":4,"book_too_deep":2,"too_expensive":3,"exposure_cap":1}
+2026-10-27T03:40:04.402247725Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":10,"exposure_cap":1}
+2026-10-27T03:42:24.726969668Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":1,"too_expensive":12,"book_too_deep":1,"exposure_cap":1}
+2026-10-27T03:44:34.998893768Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":6,"exposure_cap":1}
+2026-10-27T03:46:49.162660847Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":8,"exposure_cap":1}
+2026-10-27T03:49:20.395165349Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":3,"too_expensive":6,"exposure_cap":1}
+2026-10-27T03:51:31.072552988Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":2,"too_expensive":4,"book_too_deep":1,"exposure_cap":1}
+2026-10-27T03:53:31.108362515Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":1,"too_expensive":3,"book_too_deep":2,"exposure_cap":1}
+2026-10-27T03:57:41.205164704Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":3,"book_too_deep":1,"exposure_cap":1}
+2026-10-27T03:59:52.114970790Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":1,"too_expensive":9,"exposure_cap":1}
+2026-10-27T04:02:03.656395705Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":2,"book_too_deep":1,"too_expensive":3,"exposure_cap":1}
+2026-10-27T04:04:45.509627847Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":1,"too_expensive":8,"exposure_cap":1}
+2026-10-27T04:07:12.641846798Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":2,"too_expensive":5,"exposure_cap":1}
+2026-10-27T04:09:23.164275617Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":2,"too_expensive":6,"exposure_cap":1}
+2026-10-27T04:11:48.365592195Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":6,"too_expensive":4,"book_too_deep":1,"exposure_cap":1}
+2026-10-27T04:14:00.650369757Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"low_projected_payout":3,"too_expensive":7,"exposure_cap":1}
+2026-10-27T04:16:14.221035378Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":9,"exposure_cap":1}
+2026-10-27T04:18:36.210211605Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":13,"exposure_cap":1}
+2026-10-27T04:20:58.929605648Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"not_two_sided":1,"too_expensive":4,"exposure_cap":1}
+2026-10-27T04:23:19.964661970Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":6,"exposure_cap":1}
+2026-10-27T04:25:45.478434657Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":6,"not_two_sided":1,"exposure_cap":1}
+2026-10-27T04:29:21.879431064Z INFO  incentive live order placed (resting post-only bid)
+2026-10-27T04:29:21.879437214Z INFO  incentive book: re-priced KXMAMDANIMENTION-26NOV18-BILL yes 7c -> 10c (placed)
+2026-10-27T04:29:26.446549616Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"repriced":1,"too_expensive":13,"exposure_cap":1}
+2026-10-27T04:32:00.837310095Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":5,"exposure_cap":1}
+2026-10-27T04:34:01.160766825Z INFO  incentive smoke cycle
+    considered| 419
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":4,"exposure_cap":1}
+2026-10-27T04:36:03.166811664Z INFO  incentive book: partial_fill: cancelled the rest of the bid on KXYTVIEWSHIGH-OLI26NOV-12.0M after 1 bid(s) started to fill
+2026-10-27T04:36:23.128329288Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"partial_fill":1,"too_expensive":1,"exposure_cap":1}
+2026-10-27T04:38:43.314555267Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"too_expensive":1,"exposure_cap":1}
+2026-10-27T04:40:33.344732479Z INFO  incentive book: out_of_band: cancelled resting no bid on KXTRUMPMENTION-26NOV01-AMER at 1c (reference 20c above 10c since 2026-10-27T03:39:30.896165+00:00)
+2026-10-27T04:40:42.804653332Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"out_of_band":1,"exposure_cap":1}
+2026-10-27T04:42:55.723905036Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:45:16.177658344Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:47:26.670515779Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:49:47.145846497Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:52:08.280862880Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:54:08.163522694Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T04:56:20.530949624Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
+2026-10-27T05:00:14.317628745Z INFO  incentive smoke cycle
+    considered| 416
+    fetched| 30
+    placed| 0
+    outcomes| {"exposure_cap":1}
