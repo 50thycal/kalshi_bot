@@ -1,9 +1,17 @@
 # ops request [READ]
-# type=db  id=tm-impacts-rcpt-1
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T10:51:25Z
-command_id            action             status     completed_at                      err  res                                                                                                                                                                                                     
---------------------  -----------------  ---------  --------------------------------  ---  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-tm-register-20261027  REGISTER_REVISION  SUCCEEDED  2026-10-27 03:17:27.536404+00:00       {"kind": "platform_revision", "status": "pending", "version": "trumpmention_2026_10_27", "revision_id": 15, "activated_at": null}                                                                       
-tm-impacts-20261027   RECORD_IMPACTS     SUCCEEDED  2026-10-27 03:20:06.408313+00:00       {"kind": "impact_records", "count": 15, "records": [{"action": "NEW_EPOCH", "status": "accepted", "record_id": 54, "impact_class": "I2", "experiment_id": 41}, {"action": "NEW_EPOCH", "status": "accept
+# type=xos  id=tm-platform-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T10:51:52Z
+component          active revision                        activated_at      revisions
+-----------------  -------------------------------------  ----------------  ---------
+DATA_PROVENANCE    live_vs_backfill_2026_08               -                 1        
+EXECUTION_ENGINE   live_executor_2026_08                  -                 2        
+EXPERIMENT_ENGINE  foundation_pr1                         -                 1        
+FEE_MODEL          maker_rate_2026_08_11                  2026-08-11 15:00  1        
+FILL_MODEL         assumed_fill_plus_mmsell3_calibration  -                 1        
+KALSHI_API_SCHEMA  advanced_tier_2026_08_12               -                 1        
+MARKET_TAXONOMY    settlement_repair_2026_08_24           2026-08-24 14:21  4        
+METRICS_ENGINE     live_fill_attribution_2026_10          2026-10-16 09:34  2        
+RISK_ENGINE        caps_2026_08                           -                 1        
+SETTLEMENT_ENGINE  hold_to_settlement_2026_08             -                 1        
 
-(2 rows)
+active snapshot: id=4 fingerprint=315bffccc104d1cc…
