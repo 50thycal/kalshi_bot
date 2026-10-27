@@ -50,18 +50,47 @@ BOUNDARY:        UNKNOWN until the change deploys; CUTOVER records the first ser
 Regime, correlated-date caps and skip lists are unchanged: the regime is a prefix rule
 (`KXTRUMP` → Politics), Politics is neither correlated (Elections) nor contest-grouped.
 
+## Addendum (2026-10-27 03:05Z): merged before the football cutover
+
+PR #676 was merged by the owner at 03:01:10Z, before steps 1–4 below could run (the ops token
+still fails). The worker rebooted on `4245de9c` — its boot-time `kalshi_limits` event is
+**03:02:20Z** (ops `m676-boot-2`). Production has served fingerprint `9b3b8873…` since then.
+Consequences, measured against the code:
+
+- **#13 can never cut over.** Its CUTOVER needs a worker serving `350e7f03…`
+  (`platform_commands.check_preconditions`); no deployed worker will again. It stays
+  PENDING. Same shape as #12 (`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`, "#12 cannot cut over").
+- **This revision supersedes the ACTIVE taxonomy revision directly**, carrying #13's 24 football
+  prefixes as well. Every #13 disposition (`PLATFORM_IMPACT_20261012.md` §4) is compatible with
+  the table above: `mmsell-type-tight` is NEW_EPOCH in both; every other #13 row is I0, and the
+  rows above that are I2 stay I2. Each row's reason must name both changes when recorded.
+- **The boundary is 03:02:20Z, but CUTOVER stamps the boot that runs it.** Evidence between the
+  two accrues in the old epochs of the three I2 experiments. Size that window at cutover (live
+  KXTRUMPMENTION fills on `Kmmsell10`; `Jmmsell10` / `Tmmsell*` paper on the new series) and record
+  it as an Experiment OS issue, not a re-dated boundary.
+- **`mmsell-type-tight` stays evidence-blocked after this cutover**: #13's ACCEPTED, never-applied
+  NEW_EPOCH still blocks it (`platform_impact.evidence_block_reasons`), and the platform transport
+  has no exempt action (`exempt_impact` exists in Python only). Paper only. **OWNER DECISION**:
+  add an `EXEMPT_IMPACT` platform action, or accept the block.
+- **Real money:** `Kmmsell10` may trade KXTRUMPMENTION live at its 3-lot from 03:02:20Z, as
+  approved. Nothing else live changed: `Nmmsell10` is `onlyx=` the seven series; `Vmmsell10` is not
+  armed.
+
 ## Sequence (each send is one ops `env` act; every one needs a working ops Railway token)
 
-1. `CUTOVER` football #13 — owner-confirmed 2026-10-27; retry once the token works.
+Revised by the addendum: steps 1 and 5 are void.
+
+1. ~~`CUTOVER` football #13~~ — void; #13 can no longer cut over.
 2. `REGISTER_REVISION` `MARKET_TAXONOMY` `trumpmention_2026_10_27`, fingerprint above,
-   `safety_class=I2`, `pr_ref` = this PR.
-3. `RECORD_IMPACTS` — the 15 rows above, verbatim.
+   `safety_class=I2`, `pr_ref` #676; the description names both the football prefixes and
+   KXTRUMPMENTION.
+3. `RECORD_IMPACTS` — the 15 rows above, each reason extended per the addendum.
 4. **Hard stop — owner confirms activation.** `CUTOVER` with
    `expect_taxonomy_fingerprint = 9b3b8873…` and
    `new_epoch_experiments = ["mmsell-price-ceiling-cell-size", "mmsell-type-tight",
-   "mmsell-price-ceiling-size-split"]`, queued BEFORE the merge so it runs on the first boot that
-   serves the change (it defers on any older worker).
-5. Merge and deploy this PR.
+   "mmsell-price-ceiling-size-split"]`. Production already serves the fingerprint, so it runs on
+   the next boot. Then the drift-window issue (addendum).
+5. ~~Merge and deploy this PR~~ — done 03:01:10Z.
 6. `REGISTER_PACKAGE mmsell-win-set-2-canary` (pins the new taxonomy).
 7. **Hard stop — owner confirms `ARM_CANARY`** (approved_by Calvin), then the env act:
    `MMSELL_VARIANTS` replace the `Nmmsell10` spec with `Vmmsell10` (after `Kmmsell10`, plus the

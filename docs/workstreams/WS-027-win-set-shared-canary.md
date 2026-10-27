@@ -118,5 +118,10 @@ on two pending revisions".
 channel's Railway token, which now returns "Not Authorized" on every env read and write: the
 owner-confirmed football cutover (`fbtx-cutover-20261027`) set nothing. Unblocker: the owner
 refreshes the `RAILWAY_TOKEN` GitHub secret. Then the §Sequence of the impact record, with two
-owner hard stops (the new revision's CUTOVER, then ARM_CANARY + env swap). Do not merge the
-successor PR before the football cutover has run.
+owner hard stops (the new revision's CUTOVER, then ARM_CANARY + env swap).
+
+**2026-10-27 03:01Z — #676 merged by the owner before the football cutover**; the worker has served
+the new taxonomy since 03:02:20Z. Football #13 can no longer cut over; `trumpmention_2026_10_27`
+supersedes it and carries its rows. Revised sequence, the drift window and one owner decision
+(`mmsell-type-tight` stays blocked by #13's unapplied NEW_EPOCH): the impact record's addendum.
+Still blocked on the token.
