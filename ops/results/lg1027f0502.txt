@@ -1,0 +1,6 @@
+# latest deployment 7b036be2-23a8-4e3f-996e-7826a2b67410 (status=SUCCESS, created=2026-10-27T03:20:03.630Z)
+# ops request [READ]
+# type=logs  service=main  id=lg1027f0502
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T05:00:30Z
+# target service: main
+2026-10-27T04:36:03.166811664Z INFO  incentive book: partial_fill: cancelled the rest of the bid on KXYTVIEWSHIGH-OLI26NOV-12.0M after 1 bid(s) started to fill
