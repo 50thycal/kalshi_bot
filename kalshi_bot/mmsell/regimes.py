@@ -97,6 +97,7 @@ SUBJECT_SPLIT_SERIES: frozenset[str] = frozenset({
     "KXFEDMENTION",        # -26JUL-ADP / -TRUM        28 distinct words
     "KXRAIN",              # -26AUG08-ATL / -SEA       22 distinct cities
     "KXTRUMPSAY",          # -26AUG03-AMER / -ZOHR     37 distinct words
+    "KXTRUMPMENTION",      # -26SEP29-CRYP             one word per market (2026-10-27)
     "KXTRUMPSAYCOMPANY",   # -26AUG01-ANTH / -VERI     10 distinct companies
     "KXTRUMPSAYMONTH",     # -26AUG01-AUTI / -UFO      14 distinct words
     "KXWCATTEND",          # -26JUL20-BRA / -ZEN       12 distinct teams

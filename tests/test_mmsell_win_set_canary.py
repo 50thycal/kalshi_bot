@@ -95,9 +95,13 @@ def test_the_sports_total_market_is_refused_end_to_end(settings):
 
 def test_the_series_list_is_exactly_the_graduated_win_set_of_the_manifest():
     """A manifest change that graduates or bars a WIN series must fail here, so the list
-    moves only by a new Version — never silently."""
+    moves only by a new experiment — never silently. Since 2026-10-27 the newest WIN-set
+    book is the successor (`mmsell_win_set_2`), which added KXTRUMPMENTION; this frozen v1
+    list is that one minus the added series."""
     import json
     from pathlib import Path
+
+    from kalshi_bot.experiment_os import mmsell_win_set_2 as ws2
 
     manifest = json.loads(Path("kalshi_bot/registry/series_manifest.json").read_text())
     found = sorted(
@@ -105,7 +109,8 @@ def test_the_series_list_is_exactly_the_graduated_win_set_of_the_manifest():
         if category_of(e["series"]) in WIN and state_of(e["series"]) == "graduated"
         and e["series"] not in ws.CATEGORY_ARTIFACTS
     )
-    assert tuple(found) == ws.WIN_SERIES
+    assert tuple(found) == ws2.WIN_SERIES
+    assert ws.WIN_SERIES == tuple(s for s in ws2.WIN_SERIES if s not in ws2.ADDED_SERIES)
 
 
 # --- bounds ----------------------------------------------------------------------------

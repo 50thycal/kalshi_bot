@@ -110,7 +110,8 @@ def test_the_revision_is_additive():
     for prefix, expected in pre_existing.items():
         assert classify(f"{prefix}-26OCT11-X") == expected, prefix
     prefixes = [p for p, _, _ in SERIES_TYPES]
-    assert len(prefixes) == len(set(prefixes)) == 388
+    # 388 at the football revision; +1 KXTRUMPMENTION (MARKET_TAXONOMY trumpmention_2026_10_27)
+    assert len(prefixes) == len(set(prefixes)) == 389
 
 
 def test_specific_entries_still_win_under_the_new_broad_prefixes():

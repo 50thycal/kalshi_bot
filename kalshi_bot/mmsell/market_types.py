@@ -143,6 +143,7 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXTRUMPSAYCOMPANY", "mention", DISCRETE),
     ("KXFEDMENTION", "mention", DISCRETE),
     ("KXWCMENTION", "mention", DISCRETE),
+    ("KXTRUMPMENTION", "mention", DISCRETE),  # one named appearance; graduated 2026-10-27
     ("KXWCFIRSTSONG", "mention", DISCRETE),
     # --- scheduled price strikes ----------------------------------------------------------
     ("KXBTCD", "price_strike", SCHEDULED),

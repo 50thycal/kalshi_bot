@@ -3,6 +3,7 @@ import threading
 import httpx
 import pytest
 
+from kalshi_bot import registry
 from kalshi_bot.catalog.economics import SCORING_REQUIREMENTS
 from kalshi_bot.catalog.ingest import seed
 from kalshi_bot.catalog.readiness import (
@@ -80,12 +81,13 @@ def approve(store, kind, ticker):
 def test_registry_provenance_does_not_approve_semantics_or_confidence(store):
     seed(store)
     packets = review_packets(store, limit=50)
-    assert packets["total"] == 140
+    n_rows = len(registry.rows())  # 140 at the PR #338 seed; grows only by a signed row
+    assert packets["total"] == n_rows
     assert len(packets["items"]) == 50
     assert all(p["series_review"]["known_field_count"] == 0 for p in packets["items"])
     assert all(p["legacy_is_semantic_approval"] is False for p in packets["items"])
     assert packets["qualified"] is False and packets["confidence_score"] is None
-    assert len(review_packets(store, offset=100, limit=50)["items"]) == 40
+    assert len(review_packets(store, offset=100, limit=50)["items"]) == n_rows - 100
 
 
 def test_priority_context_isolation_unknown_owner_and_verified_duration(store):

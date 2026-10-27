@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from kalshi_bot import registry
 from kalshi_bot.catalog.evaluators import EVALUATORS, mmsell, refresh, register
 from kalshi_bot.catalog.ingest import (
     SOURCE_COVERAGE_QUERIES,
@@ -98,7 +99,7 @@ def test_evaluation_runs_at_most_every_min_gap_unless_requested(since, changed, 
 
 def test_registry_is_provenance_not_permission(store):
     seed(store)
-    assert store.status()["objects"]["series"] == 140
+    assert store.status()["objects"]["series"] == len(registry.rows())
     doc = store.get("series", "KXTRUMPSAY")
     assert doc["legacy_registry"]["rules_reviewed_at"]
     assert doc["review_status"] == "needs_review"
