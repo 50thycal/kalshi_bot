@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["ws2-arm-canary-1"],"id":"ws2-arm-rcpt-1"}
+{"type":"env","action":"get","id":"ws2-env-read-1"}
