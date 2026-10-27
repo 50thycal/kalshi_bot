@@ -1,0 +1,18 @@
+# ops request [READ]
+# type=db  id=ci1027e0500
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T04:59:39Z
+k  client_order_id                       side       action  limit_price  quantity  status    cr            c          
+-  ------------------------------------  ---------  ------  -----------  --------  --------  ------------  -----------
+O  5eecbca3-69e1-4433-aaed-b0bd3f8d74b6  no         buy     1            500       canceled  partial_fill  10-24 17:37
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:55
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:53
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:50
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:48
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:46
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:43
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:41
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:39
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:37
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M          -487.9700                                                         10-27 04:35
+
+(11 rows)
