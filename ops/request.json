@@ -1,1 +1,1 @@
-{"type": "db", "id": "tm-deps-1", "sql": "select e.key, d.deployment_key, d.kind, d.stage, d.started_at, d.ended_at from experiment_deployments d join experiment_epochs ep on ep.id=d.epoch_id join experiments e on e.id=ep.experiment_id where e.key in ('mmsell-price-ceiling-cell-size','mmsell-price-ceiling-size-split','mmsell-type-tight') and d.ended_at is null order by 1,2"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"tm-show-ss-1"}
