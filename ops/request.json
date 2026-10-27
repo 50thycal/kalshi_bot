@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-reviewed-universe"],"id":"cc-rmm-end-show1"}
+{"type":"db","id":"tm-register-rcpt-1","sql":"select command_id, action, status, completed_at, left(error,200) err, left(result_json::text,300) res from experiment_os_platform_commands where command_id like 'tm-%' order by id"}
