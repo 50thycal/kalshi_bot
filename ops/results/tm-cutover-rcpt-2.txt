@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=tm-cutover-rcpt-2
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:19:54Z
+command_id           status    completed_at                      err                                                                                                                                                                                                       res
+-------------------  --------  --------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  ---
+tm-cutover-20261027  REJECTED  2026-10-27 11:19:04.675456+00:00  ExperimentOsError: cannot carry ['mmsell-cellsize-live-1 (live)', 'mmsell-cellsize-twin-1 (paper_twin)'] across an epoch boundary: only ['paper'] deployments may be re-registered automatically. Stand…     
+
+(1 row)
