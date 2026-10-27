@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"attribution-impact","args":["--days","17"],"id":"kstop-1027-attr2"}
