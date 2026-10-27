@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "env", "id": "tm-cutover-1", "set": {"EXPERIMENT_OS_PLATFORM_COMMAND": "{\"command_id\":\"tm-cutover-20261027\",\"action\":\"CUTOVER\",\"actor\":\"claude-code\",\"actor_role\":\"PLATFORM_CHANGE_REVIEW\",\"schema_version\":1,\"payload\":{\"revision\":\"MARKET_TAXONOMY:trumpmention_2026_10_27\",\"expect_taxonomy_fingerprint\":\"9b3b8873f61ddf2d2d82461e4eecc82b078aca7284fb19c42dfa03e090d05ae5\",\"new_epoch_experiments\":[\"mmsell-price-ceiling-cell-size\",\"mmsell-type-tight\",\"mmsell-price-ceiling-size-split\"]}}"}}
