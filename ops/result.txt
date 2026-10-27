@@ -1,76 +1,140 @@
-# ops request [READ]
-# type=env  service=main  id=tok-test-1
-# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:15:17Z
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_PLATFORM_COMMAND  id=tm-register-1
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:16:35Z
 # target service: main
-# current allowlisted env vars (secrets hidden):
-  BOT_MODE=live
-  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
-  EVO_WEEKLY_LLM_CEILING_USD=8
-  EVO_WEEKLY_TOKEN_BUDGET=6000000
-  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
-  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
-  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
-  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
-  EXPERIMENT_OS_EVALUATE_GATES=true
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:e5c6143014a2b77f>
-  EXPERIMENT_OS_IMPORT_ON_BOOT=false
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# BEFORE:
   EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 4902 bytes, sha256:8686998cabf0fcd7>
-  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
-  KALSHI_UPGRADE_API_TIER=true
-  KILL_SWITCH=false
-  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
-  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
-  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
-  LIVE_CELLS=
-  LIVE_CITIES=
-  LIVE_ENABLED=true
-  LIVE_ENTRY_GRACE_HOURS=2
-  LIVE_ENTRY_STYLE=marketable
-  LIVE_EXIT_MAX_ATTEMPTS=3
-  LIVE_EXIT_MODE=tp_sl
-  LIVE_EXIT_SLIPPAGE_CENTS=1
-  LIVE_EXIT_USE_MARKET_FALLBACK=false
-  LIVE_FRACTIONAL=true
-  LIVE_KILL_ON_DAILY_LOSS=true
-  LIVE_MAX_ORDER_DOLLARS=3.0
-  LIVE_ONE_POSITION_PER_EVENT=true
-  LIVE_ORDER_TIMEOUT_SECONDS=14400
-  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
-  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
-  LIVE_PAPER_TWIN_SUFFIX=_pt4
-  LIVE_PROBE=
-  LIVE_QUEUE_CANCEL_MODE=off
-  LIVE_SHAPE_PROBE=false
-  LIVE_STOP_LOSS_CENTS=
-  LIVE_STRATEGIES=Kmmsell10,Alimm1,Nmmsell10
-  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
-  LIVE_TAKE_PROFIT_CENTS=1
-  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
-  LIVE_WINDOWS=
-  LOG_LEVEL=INFO
-  MAX_DAILY_LOSS=50.0
-  MAX_MARKET_EXPOSURE=25.0
-  MAX_ORDER_SIZE=2
-  MAX_SPREAD_CENTS=30
-  MAX_TOTAL_EXPOSURE=125
-  MIN_HOURS_TO_CLOSE=1
-  MIN_OPEN_INTEREST=10
-  MIN_VOLUME=25
-  MMSELL_EVENT_RUNG_CAP=3
-  MMSELL_EVENT_RUNG_CAP_ENABLED=true
-  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
-  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
-  MMSELL_LIVE_OFFSET_AB_ARMS=
-  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
-  MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Nmmsell10:6:6.00
-  MMSELL_PREFILTER_ENABLED=false
-  MMSELL_SETTLEMENT_CAP_ENABLED=true
-  MMSELL_SETTLEMENT_CAP_PCT=0.25
-  MMSELL_SETTLEMENT_EVENT_CAP=5
-  MMSELL_TWIN_APPLIES_LIVE_BARS=true
-  MMSELL_VARIANTS=mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Jmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3;Kmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Pmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION;Nmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION
-  PERPS_COLLECTOR_ENABLED=false
-  RUN_ONCE=false
-  SCAN_INTERVAL_SECONDS=60
-  WEATHER_ENTRY_HOURS=20,14,8,17
+  set EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 908 bytes, sha256:c075e09766ffcaf4>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 908 bytes, sha256:c075e09766ffcaf4>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 63,
+#       "grandfathered": 12,
+#       "native": 51
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-sizesplit-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-sizesplit-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-10-27 03:16:41.116027+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "42 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10",
+#             "Jmmsell10",
+#             "Kmmsell10",
+#             "Nmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "315bffccc104d1cc",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 63,
+#           "grandfathered": 12,
+#           "native": 51
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "5 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
