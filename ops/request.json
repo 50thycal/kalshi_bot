@@ -1,1 +1,1 @@
-{"type":"db","id":"m676-boot-2","sql":"select component, count(*) n, min(created_at) first, max(created_at) last from system_events where created_at > '2026-10-26 20:00:00+00' group by component order by last desc limit 40"}
+{"type":"env","action":"get","id":"tok-test-1"}
