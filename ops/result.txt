@@ -1,248 +1,76 @@
 # ops request [READ]
-# type=xos  id=cc-rmm-end-show1
-# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:17:22Z
-{
-  "key": "mmsell-reviewed-universe",
-  "title": "mmsell reviewed universe \u2014 does the contest cap help where we understand the book",
-  "state": "PAPER",
-  "paused_from_state": null,
-  "origin": "operator",
-  "family": "risk_concentration",
-  "hypothesis": "Inside a universe of series a human has read and signed off on, capping open positions at one per CONTEST \u2014 on the corrected subject-split key \u2014 materially steadies the daily P&L series without destroying the edge.",
-  "legacy_class": null,
-  "migration_integrity": null,
-  "platform_snapshot_id": 2,
-  "predecessor_experiment_id": null,
-  "retired_at": null,
-  "docs": {
-    "review": "docs/MMSELL_SERIES_APPROVAL_REVIEW.md",
-    "thesis": "docs/MMSELL_REVIEWED_TAPE.md",
-    "manifest": "kalshi_bot/registry/series_manifest.json",
-    "spec_tool": "scripts/reviewed_tape_spec.py"
-  },
-  "versions": [
-    {
-      "version": 1,
-      "frozen_at": "2026-09-11 07:40:35.720232+00:00",
-      "fingerprint": "823214e766d4f1e7a259c65dc6c0ad40447d625f0c4550fc03628854749579a6",
-      "pre_registration_hash": "c19cedd09efb14a34984ca3a7ecff325c8dd6c52d0e4ecf843ea3609b4d8395c",
-      "independent_variable": "whether the book may hold more than one position on one contest",
-      "held_constant": [
-        "both arms trade the SAME series list, pinned literally into each book's own `onlyx=` spec. The universe is not an arm here and cannot drift under the comparison: a sign-off landing in the manifest tomorrow does not reach a running book",
-        "entry band and price ceiling are identical on both arms (lo=5, hi=10, maxyes=7)",
-        "no arm carries a stop, volatility gate or strangle leg; those are the anchor set's experiment and would confound this one",
-        "no arm selects on market TYPE. The Tmmsell family measured that axis to a verdict; re-introducing it here would make the cap and the type filter inseparable",
-        "neither arm names a review TIER (`universe=`). The explicit list already states exactly what a tier approximates, and setting both would narrow the books twice",
-        "the cap counts OPEN positions and never closed ones, so it bounds carried risk rather than acting as an entry-timing rule",
-        "which contract is kept within a capped contest is FIRST ARRIVAL, never a ranking",
-        "the GLOBAL mmsell_contest_cap_enabled stays off for the life of this version. The treatment opts in per book, so no other book's selection moves while this runs",
-        "both tags are PAPER and appear in no live arm set, so no live mirror fires for either"
-      ],
-      "change_reason": null,
-      "arms": [
-        {
-          "arm_key": "reviewed_capped",
-          "role": "treatment",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Rmmsell2",
-            "book": "lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split",
-            "universe": "operator-reviewed series, exact match",
-            "contestcap": 1,
-            "contestkey": "split"
-          }
-        },
-        {
-          "arm_key": "reviewed_uncapped",
-          "role": "control",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Rmmsell1",
-            "book": "lo=5,hi=10,maxyes=7",
-            "universe": "operator-reviewed series, exact match",
-            "contestcap": null
-          }
-        }
-      ],
-      "gates": [
-        {
-          "gate_key": "paper_keep",
-          "kind": "kill",
-          "from_state": null,
-          "to_state": null,
-          "spec": {
-            "sample": {
-              "reviewed_capped": {
-                "op": ">=",
-                "value": 60,
-                "metric": "settled_days"
-              },
-              "reviewed_uncapped": {
-                "op": ">=",
-                "value": 60,
-                "metric": "settled_days"
-              }
-            },
-            "fail_any": [
-              {
-                "op": "<",
-                "value": 0,
-                "metric": "delta.daily_pnl_stability",
-                "control": "reviewed_uncapped",
-                "treatment": "reviewed_capped"
-              },
-              {
-                "op": "<",
-                "value": -0.5,
-                "metric": "delta.pnl_cents_per_trade",
-                "control": "reviewed_uncapped",
-                "treatment": "reviewed_capped"
-              }
-            ],
-            "pass_all": [
-              {
-                "op": ">=",
-                "value": 0.05,
-                "metric": "delta.daily_pnl_stability",
-                "control": "reviewed_uncapped",
-                "treatment": "reviewed_capped"
-              },
-              {
-                "op": ">=",
-                "value": -0.5,
-                "metric": "delta.pnl_cents_per_trade",
-                "control": "reviewed_uncapped",
-                "treatment": "reviewed_capped"
-              }
-            ],
-            "description": "A concentration cap is a DRAWDOWN control: it trades total return for smoothness by construction and must be judged as one. Keep the capped arm only if it buys materially more daily stability than the uncapped control on the SAME universe, without destroying the edge. Read on the daily series, not on cents per trade \u2014 at this book's per-trade variance a c/trade test of the effect size in question is unreachable, and this universe trades less than the one that finding was measured on."
-          },
-          "spec_hash": "aeb2262c3bfa89b2be4ea3b8fb208d06bc27ca646b06d49e0282abde1f960490",
-          "evidence_started_at": null,
-          "results": []
-        }
-      ],
-      "epochs": [
-        {
-          "epoch_number": 1,
-          "started_at": "2026-09-11 07:40:35.720232+00:00",
-          "ended_at": null,
-          "reason": "v1's first operating interval, pinned to the platform snapshot active at registration. Both arms open together in one epoch, which is what makes the control poolable with the treatment without an external reference.",
-          "impact_class": null,
-          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
-          "platform_snapshot": [
-            [
-              "DATA_PROVENANCE",
-              "live_vs_backfill_2026_08"
-            ],
-            [
-              "EXECUTION_ENGINE",
-              "live_executor_2026_08"
-            ],
-            [
-              "EXPERIMENT_ENGINE",
-              "foundation_pr1"
-            ],
-            [
-              "FEE_MODEL",
-              "maker_rate_2026_08_11"
-            ],
-            [
-              "FILL_MODEL",
-              "assumed_fill_plus_mmsell3_calibration"
-            ],
-            [
-              "KALSHI_API_SCHEMA",
-              "advanced_tier_2026_08_12"
-            ],
-            [
-              "MARKET_TAXONOMY",
-              "settlement_repair_2026_08_24"
-            ],
-            [
-              "METRICS_ENGINE",
-              "pnl_scripts_2026_08"
-            ],
-            [
-              "RISK_ENGINE",
-              "caps_2026_08"
-            ],
-            [
-              "SETTLEMENT_ENGINE",
-              "hold_to_settlement_2026_08"
-            ]
-          ],
-          "deployments": [
-            {
-              "deployment_key": "mmsell-reviewed-paper-1",
-              "stage": "PAPER",
-              "kind": "paper",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-09-11 07:40:35.720232+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "reviewed_capped",
-                  "strategy_tag": "Rmmsell2"
-                },
-                {
-                  "arm_key": "reviewed_uncapped",
-                  "strategy_tag": "Rmmsell1"
-                }
-              ]
-            },
-            {
-              "deployment_key": "mmsell-reviewed-probe-1",
-              "stage": "PROBE",
-              "kind": "probe",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-09-11 07:40:35.720232+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "reviewed_capped",
-                  "strategy_tag": null
-                },
-                {
-                  "arm_key": "reviewed_uncapped",
-                  "strategy_tag": null
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "transitions": [
-    {
-      "from": null,
-      "to": "IDEA",
-      "occurred_at": "2026-09-11 07:40:35.720232+00:00",
-      "actor": "50cal",
-      "approved_by": null,
-      "reason": "experiment created",
-      "gate_result_id": null
-    },
-    {
-      "from": "IDEA",
-      "to": "PROBE",
-      "occurred_at": "2026-09-11 07:40:35.720232+00:00",
-      "actor": "50cal",
-      "approved_by": null,
-      "reason": "the four-check review is recorded on v1, including that it was fitted partly to the same tape it selected from and therefore authorizes nothing beyond fixing which series the arms trade",
-      "gate_result_id": null
-    },
-    {
-      "from": "PROBE",
-      "to": "PAPER",
-      "occurred_at": "2026-09-11 07:40:35.720232+00:00",
-      "actor": "50cal",
-      "approved_by": null,
-      "reason": "the review fixed the universe and the pre-registration is merged (docs/MMSELL_REVIEWED_TAPE.md); the forward test is the evidence that decides, and a retrospective screen authorizes nothing. The gate's bars are carried over from mmsell-correlation-cap rather than fitted here, so neither cap read was tuned to its own evidence",
-      "gate_result_id": null
-    }
-  ],
-  "integrity_events": [],
-  "legacy_evidence": []
-}
+# type=env  service=main  id=cc-rmm-end-env1
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:17:54Z
+# target service: main
+# current allowlisted env vars (secrets hidden):
+  BOT_MODE=live
+  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
+  EVO_WEEKLY_LLM_CEILING_USD=8
+  EVO_WEEKLY_TOKEN_BUDGET=6000000
+  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
+  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
+  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
+  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
+  EXPERIMENT_OS_EVALUATE_GATES=true
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:e5c6143014a2b77f>
+  EXPERIMENT_OS_IMPORT_ON_BOOT=false
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 908 bytes, sha256:c075e09766ffcaf4>
+  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
+  KALSHI_UPGRADE_API_TIER=true
+  KILL_SWITCH=false
+  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
+  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
+  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
+  LIVE_CELLS=
+  LIVE_CITIES=
+  LIVE_ENABLED=true
+  LIVE_ENTRY_GRACE_HOURS=2
+  LIVE_ENTRY_STYLE=marketable
+  LIVE_EXIT_MAX_ATTEMPTS=3
+  LIVE_EXIT_MODE=tp_sl
+  LIVE_EXIT_SLIPPAGE_CENTS=1
+  LIVE_EXIT_USE_MARKET_FALLBACK=false
+  LIVE_FRACTIONAL=true
+  LIVE_KILL_ON_DAILY_LOSS=true
+  LIVE_MAX_ORDER_DOLLARS=3.0
+  LIVE_ONE_POSITION_PER_EVENT=true
+  LIVE_ORDER_TIMEOUT_SECONDS=14400
+  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
+  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
+  LIVE_PAPER_TWIN_SUFFIX=_pt4
+  LIVE_PROBE=
+  LIVE_QUEUE_CANCEL_MODE=off
+  LIVE_SHAPE_PROBE=false
+  LIVE_STOP_LOSS_CENTS=
+  LIVE_STRATEGIES=Kmmsell10,Alimm1,Nmmsell10
+  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
+  LIVE_TAKE_PROFIT_CENTS=1
+  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
+  LIVE_WINDOWS=
+  LOG_LEVEL=INFO
+  MAX_DAILY_LOSS=50.0
+  MAX_MARKET_EXPOSURE=25.0
+  MAX_ORDER_SIZE=2
+  MAX_SPREAD_CENTS=30
+  MAX_TOTAL_EXPOSURE=125
+  MIN_HOURS_TO_CLOSE=1
+  MIN_OPEN_INTEREST=10
+  MIN_VOLUME=25
+  MMSELL_EVENT_RUNG_CAP=3
+  MMSELL_EVENT_RUNG_CAP_ENABLED=true
+  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
+  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
+  MMSELL_LIVE_OFFSET_AB_ARMS=
+  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
+  MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Nmmsell10:6:6.00
+  MMSELL_PREFILTER_ENABLED=false
+  MMSELL_SETTLEMENT_CAP_ENABLED=true
+  MMSELL_SETTLEMENT_CAP_PCT=0.25
+  MMSELL_SETTLEMENT_EVENT_CAP=5
+  MMSELL_TWIN_APPLIES_LIVE_BARS=true
+  MMSELL_VARIANTS=mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Jmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3;Kmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Pmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION;Nmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION
+  PERPS_COLLECTOR_ENABLED=false
+  RUN_ONCE=false
+  SCAN_INTERVAL_SECONDS=60
+  WEATHER_ENTRY_HOURS=20,14,8,17
