@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-size-split"],"id":"tm-show-ss-1"}
+{"type": "env", "id": "tm-cutover-2", "set": {"EXPERIMENT_OS_PLATFORM_COMMAND": "{\"command_id\":\"tm-cutover-20261027b\",\"action\":\"CUTOVER\",\"actor\":\"claude-code\",\"actor_role\":\"PLATFORM_CHANGE_REVIEW\",\"schema_version\":1,\"payload\":{\"revision\":\"MARKET_TAXONOMY:trumpmention_2026_10_27\",\"expect_taxonomy_fingerprint\":\"9b3b8873f61ddf2d2d82461e4eecc82b078aca7284fb19c42dfa03e090d05ae5\",\"new_epoch_experiments\":[\"mmsell-type-tight\"]}}"}}
