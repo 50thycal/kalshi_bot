@@ -1,0 +1,6 @@
+# ops request [READ]
+# type=xos  id=ws2-tag-v-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:39:18Z
+experiment        state        ver  arm     role       epoch  deployment             stage        kind
+----------------  -----------  ---  ------  ---------  -----  ---------------------  -----------  ----
+mmsell-win-set-2  LIVE_CANARY  1    winset  treatment  2      mmsell-winset2-live-1  LIVE_CANARY  live
