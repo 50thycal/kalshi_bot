@@ -1,76 +1,433 @@
 # ops request [READ]
-# type=env  service=main  id=cc-rmm-end-env1
-# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:17:54Z
-# target service: main
-# current allowlisted env vars (secrets hidden):
-  BOT_MODE=live
-  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
-  EVO_WEEKLY_LLM_CEILING_USD=8
-  EVO_WEEKLY_TOKEN_BUDGET=6000000
-  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
-  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
-  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
-  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
-  EXPERIMENT_OS_EVALUATE_GATES=true
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:e5c6143014a2b77f>
-  EXPERIMENT_OS_IMPORT_ON_BOOT=false
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 908 bytes, sha256:c075e09766ffcaf4>
-  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
-  KALSHI_UPGRADE_API_TIER=true
-  KILL_SWITCH=false
-  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
-  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
-  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
-  LIVE_CELLS=
-  LIVE_CITIES=
-  LIVE_ENABLED=true
-  LIVE_ENTRY_GRACE_HOURS=2
-  LIVE_ENTRY_STYLE=marketable
-  LIVE_EXIT_MAX_ATTEMPTS=3
-  LIVE_EXIT_MODE=tp_sl
-  LIVE_EXIT_SLIPPAGE_CENTS=1
-  LIVE_EXIT_USE_MARKET_FALLBACK=false
-  LIVE_FRACTIONAL=true
-  LIVE_KILL_ON_DAILY_LOSS=true
-  LIVE_MAX_ORDER_DOLLARS=3.0
-  LIVE_ONE_POSITION_PER_EVENT=true
-  LIVE_ORDER_TIMEOUT_SECONDS=14400
-  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
-  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
-  LIVE_PAPER_TWIN_SUFFIX=_pt4
-  LIVE_PROBE=
-  LIVE_QUEUE_CANCEL_MODE=off
-  LIVE_SHAPE_PROBE=false
-  LIVE_STOP_LOSS_CENTS=
-  LIVE_STRATEGIES=Kmmsell10,Alimm1,Nmmsell10
-  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
-  LIVE_TAKE_PROFIT_CENTS=1
-  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
-  LIVE_WINDOWS=
-  LOG_LEVEL=INFO
-  MAX_DAILY_LOSS=50.0
-  MAX_MARKET_EXPOSURE=25.0
-  MAX_ORDER_SIZE=2
-  MAX_SPREAD_CENTS=30
-  MAX_TOTAL_EXPOSURE=125
-  MIN_HOURS_TO_CLOSE=1
-  MIN_OPEN_INTEREST=10
-  MIN_VOLUME=25
-  MMSELL_EVENT_RUNG_CAP=3
-  MMSELL_EVENT_RUNG_CAP_ENABLED=true
-  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
-  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
-  MMSELL_LIVE_OFFSET_AB_ARMS=
-  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
-  MMSELL_LIVE_SHARED_MARKET_PAIRS=Kmmsell10+Nmmsell10:6:6.00
-  MMSELL_PREFILTER_ENABLED=false
-  MMSELL_SETTLEMENT_CAP_ENABLED=true
-  MMSELL_SETTLEMENT_CAP_PCT=0.25
-  MMSELL_SETTLEMENT_EVENT_CAP=5
-  MMSELL_TWIN_APPLIES_LIVE_BARS=true
-  MMSELL_VARIANTS=mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Rmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Rmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,onlyx=KXARGPREMDIVTOTAL+KXATPEXACTMATCH+KXFEDMENTION+KXINXU+KXITFMATCH+KXLEAGUESCUPTOTAL+KXLIGAMXTOTAL+KXMLBGAME+KXMLBSPREAD+KXMLSGAME+KXMLSTOTAL+KXNASDAQ100U+KXNATGASD+KXNFLTOTAL+KXNPBGAME+KXRAIN+KXTRUMPSAY+KXUCLGAME+KXUCLTOTAL+KXUFCMOV+KXWNBAGAME+KXWNBASPREAD+KXWTAMATCH+KXWTASETWINNER;Jmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3;Kmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Pmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION;Nmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION
-  PERPS_COLLECTOR_ENABLED=false
-  RUN_ONCE=false
-  SCAN_INTERVAL_SECONDS=60
-  WEATHER_ENTRY_HOURS=20,14,8,17
+# type=xos  id=cc-rmm-end-xcl1
+# code 4245de9c22916e7409bdaab0b44f83ebb82fee4f · started 2026-10-27T03:18:38Z
+[
+  {
+    "command_id": "ws027-arm-canary-2",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "9449f162dc833a2a3e00b7b62ac3137f25ad0da02192548c6ce55e9085196a94",
+    "completed_at": "2026-10-16 14:11:23.357540+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-win-set-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-winset-live-1",
+      "live_started_at": "2026-10-16 14:11:23.046444+00:00",
+      "twin_deployment": "mmsell-winset-twin-1",
+      "twin_started_at": "2026-10-16 14:11:23.046444+00:00",
+      "epoch_started_at": "2026-10-16 14:11:23.046444+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "ws027-arm-canary-1",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "REJECTED",
+    "payload_hash": "2f8675bdd5a67e0a37dcf5b756a972469e4c757121758d8aa0e6e51c69308d68",
+    "completed_at": "2026-10-16 14:06:52.397679+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: approved_by must name the person approving real-money capability",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "ws027-waiver-register-1",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "TASK_SPECIFIC",
+    "status": "SUCCEEDED",
+    "payload_hash": "344f1f99835df0b8250f9887b4aeee82e7fe1247bb7ba89c4efc9ba958e0338a",
+    "completed_at": "2026-10-16 14:02:39.781069+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-win-set-owner-waiver",
+      "version": 2,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-10-16 14:02:39.609508+00:00",
+      "version_frozen_at": "2026-10-16 14:02:39.609508+00:00",
+      "keep_gate_spec_hash": "dbe3b7262a000fe3",
+      "promotion_gate_spec_hash": "fcf2c642aff1b5da"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-win-set-canary-register-202610160911",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "a87a5677b2f9d9a35ec80bdc2611703e7a58852bd4ff7b17b35bd808a10ceb24",
+    "completed_at": "2026-10-16 09:14:32.841667+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-win-set-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-10-16 09:14:32.663051+00:00",
+      "version_frozen_at": "2026-10-16 09:14:32.663051+00:00",
+      "keep_gate_spec_hash": "dbe3b7262a000fe3",
+      "promotion_gate_spec_hash": "a43ed855400c16ee",
+      "paper_deployment_deployment": "mmsell-winset-paper-1",
+      "paper_deployment_started_at": "2026-10-16 09:14:32.663051+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-weather-bands-register-202610150953",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "7800982824f509f21db0469aee35a343a6c6472878b24df49595214a51d68d26",
+    "completed_at": "2026-10-15 09:55:19.028554+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-weather-bands",
+      "version": 1,
+      "epoch_number": 1,
+      "epoch_started_at": "2026-10-15 09:55:18.815540+00:00",
+      "probe_deployment": "mmsell-weather-bands-probe-1",
+      "probe_started_at": "2026-10-15 09:55:18.815540+00:00",
+      "fields_unreadable": [
+        "gates"
+      ],
+      "version_frozen_at": "2026-10-15 09:55:18.815540+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-temperature-season-register-202610150248",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "8c4efbb023c20bd0cdcb6735f70259294fc65517d2cd422184e390346bfd49c0",
+    "completed_at": "2026-10-15 02:50:08.681146+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-temperature-season",
+      "version": 1,
+      "epoch_number": 1,
+      "epoch_started_at": "2026-10-15 02:50:08.433875+00:00",
+      "probe_deployment": "mmsell-temperature-probe-1",
+      "probe_started_at": "2026-10-15 02:50:08.433875+00:00",
+      "fields_unreadable": [
+        "gates"
+      ],
+      "version_frozen_at": "2026-10-15 02:50:08.433875+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-rain-season-register-202610140320",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "b0e47d4ca1191b844d92f05052c53664adbc2578b436ea2d5187dec3a451fddd",
+    "completed_at": "2026-10-14 03:20:41.826091+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-rain-season",
+      "version": 1,
+      "epoch_number": 1,
+      "epoch_started_at": "2026-10-14 03:20:41.640884+00:00",
+      "probe_deployment": "mmsell-rain-probe-1",
+      "probe_started_at": "2026-10-14 03:20:41.640884+00:00",
+      "fields_unreadable": [
+        "gates"
+      ],
+      "version_frozen_at": "2026-10-14 03:20:41.640884+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-rain-season-register-202610140310",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "REJECTED",
+    "payload_hash": "64da43bc75d9efc1422c9e2e090b305d0dbcdf710341988547ba6e5fd0acafe6",
+    "completed_at": "2026-10-14 03:12:42.943543+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: REGISTER_PACKAGE: 2 unrecognised payload field(s) \u2014 names not echoed because they are author-supplied. Legal fields: ['package', 'promotion_sample_floor']",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "rl-retire-variants-20261011b",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "63efa4ef3c9875b5d4f45ab7464c27e10c6df02fe0be1eab97b9105e6fefe7a8",
+    "completed_at": "2026-10-11 22:58:26.356661+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-variants-2026-07",
+      "from_state": "PAPER",
+      "closed_epoch": 1,
+      "ended_deployments": [
+        "mmsell-variants-paper-legacy-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "rl-retire-variants-20261011",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "REJECTED",
+    "payload_hash": "007d4c9b8d834432d89f9efaac77a3d50fdeb134a1feb1b72cfbd27bc928fd7b",
+    "completed_at": "2026-10-11 22:55:16.145520+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: STAND_DOWN: a payload string is 531 chars; the limit is 256",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "cellsize-arm-1011",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "b459c8158cb4e5ad58f48ac87f8043a1fb32169c320b136ae1abd81a55f1e057",
+    "completed_at": "2026-10-11 15:29:29.548373+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-cell-size-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-cellsize-live-1",
+      "live_started_at": "2026-10-11 15:29:29.247200+00:00",
+      "twin_deployment": "mmsell-cellsize-twin-1",
+      "twin_started_at": "2026-10-11 15:29:29.247200+00:00",
+      "epoch_started_at": "2026-10-11 15:29:29.247200+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "cellsize-register-20261011b",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "38a625ef006c855153ac17e0b801e3c68af0ba1bdd0ee7827bb1a04e8d215367",
+    "completed_at": "2026-10-11 10:21:55.966928+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-cell-size-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-10-11 10:21:52.997717+00:00",
+      "version_frozen_at": "2026-10-11 10:21:52.997717+00:00",
+      "keep_gate_spec_hash": "29f491dcadebf37f",
+      "promotion_gate_spec_hash": "f15ea2a7bfb93f24",
+      "paper_deployment_deployment": "mmsell-cellsize-paper-1",
+      "paper_deployment_started_at": "2026-10-11 10:21:52.997717+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "cellsize-register-20261011",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "REJECTED",
+    "payload_hash": "ebaa900134b5bd87b1eba816abeb87802b29f4262aeb477abbe24935203c9235",
+    "completed_at": "2026-10-11 10:18:26.926622+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: REGISTER_PACKAGE: 2 unrecognised payload field(s) \u2014 names not echoed because they are author-supplied. Legal fields: ['package', 'promotion_sample_floor']",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "sizesplit-epoch3-arm-2",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "b920ef09626cef1e01ca60ac3529c152fa180bc416e73aad4ac956c76a7a06b2",
+    "completed_at": "2026-10-04 17:52:14.232137+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-sizesplit-epoch3",
+      "fields_unreadable": [
+        "epoch_number",
+        "epoch_started_at",
+        "impact_class",
+        "live_deployment",
+        "live_started_at",
+        "twin_deployment",
+        "twin_started_at"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "sizesplit-epoch3-arm-1",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "REJECTED",
+    "payload_hash": "b30f054d0a43d15fc292231951f8581a4be815da0eaeeb796e5710b536bb4260",
+    "completed_at": "2026-10-04 17:24:12.662250+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: ARM_CANARY would leave ['Hmmsell10', 'Hmmsell10_pt4'] with lineage and no active deployment arm: each had an open deployment on an open epoch before this command and has none after it. Under NEW_ONLY every entry they attempt would be refused at the write path and nothing would say why (XOS-000033). Rolled back; the package must re-register or carry forward every tag it e",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "hmmsell10-arm-202610040215",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "b5b34f7243abdbca63ce0139d7b5c23733c95282cec426a5eba977869fdbcfee",
+    "completed_at": "2026-10-04 02:18:55.302131+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-size-split-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-sizesplit-live-1",
+      "live_started_at": "2026-10-04 02:18:55.010348+00:00",
+      "twin_deployment": "mmsell-sizesplit-twin-1",
+      "twin_started_at": "2026-10-04 02:18:55.010348+00:00",
+      "epoch_started_at": "2026-10-04 02:18:55.010348+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-size-split-canary-register-202610032250",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "f40583ac1d742d6f4876ec0fe0b066e0b139bd7e4238cb2c33315f769c9eac74",
+    "completed_at": "2026-10-03 22:45:13.406988+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-size-split-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-10-03 22:45:08.243250+00:00",
+      "version_frozen_at": "2026-10-03 22:45:08.243250+00:00",
+      "keep_gate_spec_hash": "55352dd1b0708d2c",
+      "promotion_gate_spec_hash": "f15ea2a7bfb93f24",
+      "paper_deployment_deployment": "mmsell-sizesplit-paper-1",
+      "paper_deployment_started_at": "2026-10-03 22:45:08.243250+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-size-split-canary-register-202610032239",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "REJECTED",
+    "payload_hash": "c7edea06487485721aa159b561a6fc6ddda83aea4a296888e9089c313a86f13f",
+    "completed_at": "2026-10-03 22:41:24.718880+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: REGISTER_PACKAGE: 2 unrecognised payload field(s) \u2014 names not echoed because they are author-supplied. Legal fields: ['package', 'promotion_sample_floor']",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "limm-arm-2",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "c616f40636024a98f53d84ea8a5df4b9bcf2dace259c90ccc57a0aef8d71529e",
+    "completed_at": "2026-09-17 15:52:13.161124+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "liquidity-incentive-mm",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "limm-smoke-live-1",
+      "live_started_at": "2026-09-17 15:52:12.737385+00:00",
+      "twin_deployment": "limm-smoke-twin-1",
+      "twin_started_at": "2026-09-17 15:52:12.737385+00:00",
+      "epoch_started_at": "2026-09-17 15:52:12.737385+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "limm-arm-1",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "REJECTED",
+    "payload_hash": "f345bbaddd6ac15c5abe849b90b443bed4469d1d85b5da2dc51e79a6a679c8c9",
+    "completed_at": "2026-09-17 15:25:54.442712+00:00",
+    "result": null,
+    "error": "ExperimentOsError: cannot carry ['limm-shadow-probe-1 (probe)'] across an epoch boundary: only ['paper'] deployments may be re-registered automatically. Stand the live book down and re-arm it through arm_live_canary(), which is the only path that may create live lineage.",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  }
+]
