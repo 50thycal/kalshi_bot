@@ -3,16 +3,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_PLATFORM_COMMAND  id=tm-cutover-2
-# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:22:17Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=ws2-arm-1
+# code cfbd6ba5e53807cbcaf8c3d7349864256c7fbe86 · started 2026-10-27T11:34:24Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 409 bytes, sha256:3c7231795a849a62>
-  set EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 343 bytes, sha256:cc937c11c691d03e>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 219 bytes, sha256:4e2778ca1c643a5d>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:69da1ad0f693db30>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 343 bytes, sha256:cc937c11c691d03e>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 191 bytes, sha256:69da1ad0f693db30>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -24,9 +24,9 @@
 #     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
 #     "resolver_degraded_alarms_24h": 0,
 #     "deployments": {
-#       "total": 63,
-#       "grandfathered": 12,
-#       "native": 51
+#       "total": 65,
+#       "grandfathered": 13,
+#       "native": 52
 #     },
 #     "post_cutover_unstamped": {
 #       "paper_trades": [],
@@ -80,12 +80,12 @@
 # $ xos readiness
 #   {
 #     "ok": false,
-#     "checked_at": "2026-10-27 11:22:30.177191+00:00",
+#     "checked_at": "2026-10-27 11:34:37.870517+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
 #         "ok": true,
-#         "detail": "42 experiments recorded"
+#         "detail": "43 experiments recorded"
 #       },
 #       "coverage_complete": {
 #         "ok": true,
@@ -111,16 +111,16 @@
 #       "platform_snapshot_complete": {
 #         "ok": true,
 #         "detail": {
-#           "snapshot": "315bffccc104d1cc",
+#           "snapshot": "55b51990e0492e4b",
 #           "missing_components": []
 #         }
 #       },
 #       "grandfathered_identity": {
 #         "ok": true,
 #         "detail": {
-#           "deployments": 63,
-#           "grandfathered": 12,
-#           "native": 51
+#           "deployments": 65,
+#           "grandfathered": 13,
+#           "native": 52
 #         }
 #       },
 #       "live_twin_links": {
@@ -133,7 +133,7 @@
 #       },
 #       "no_unresolved_platform_impact": {
 #         "ok": false,
-#         "detail": "8 platform-impact dispositions awaiting acceptance/application"
+#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
 #       },
 #       "lineage_columns_present": {
 #         "ok": true,
