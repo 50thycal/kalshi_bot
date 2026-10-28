@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=kstop-1027-pnl
-# code fc7d21964e443a60d180691cafdc15ca82484833 · started 2026-10-27T13:43:38Z
-settled_markets  settled_contracts  realized_usd  worst_market_usd  worst_ticker        losing_markets  cents_per_contract
----------------  -----------------  ------------  ----------------  ------------------  --------------  ------------------
-272              376.65             3.72          -2.82             KXRAIN-26OCT13-MIN  19              0.99              
-
-(1 row)
