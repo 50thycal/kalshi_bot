@@ -359,36 +359,39 @@ def _pass(store, stopped, mode, pause):
     phase = progress["phase"]
     last_log = time.monotonic()
     while not stopped.is_set():
+        # Every write in here can meet a busy writer (the evaluation job holds the lock for
+        # longer than the 30 s busy timeout), the state writes as much as a page.
         try:
             advanced = step(store, progress, mode)
-        except sqlite3.OperationalError as error:  # a busy writer: retry the same page later
+            if advanced is None:
+                stopped.wait(60)
+                continue
+            pages += 1
+            finished = advanced is False
+            if finished:
+                progress["completed_at"] = now()
+            if finished or progress["phase"] != phase or pages % PERSIST_EVERY == 0:
+                store.set_state(key, progress)
+            phase = progress["phase"]
+            if finished:
+                summary = report(store, progress)
+                store.set_state(LAST_REPORT, summary)
+                LOG.info("catalog_retention_report=%s", json.dumps(summary, sort_keys=True))
+                return progress
+            if time.monotonic() - last_log >= PROGRESS_SECONDS:
+                store.set_state(key, progress)
+                summary = report(store, progress)
+                summary.pop("top_series")
+                LOG.info("catalog_retention_progress=%s", json.dumps(summary, sort_keys=True))
+                last_log = time.monotonic()
+        except sqlite3.OperationalError as error:  # a busy writer: retry from what is stored
             LOG.warning("catalog_retention status=retry error=%s", error)
-            # The failed page may have counted before it rolled back: resume from what is stored.
+            # A failed page may have counted before it rolled back, and a dry run's unpersisted
+            # tally and cursor move together: resume from the stored pair either way.
             progress = store.state(key) or _fresh(mode)
             phase = progress["phase"]
             stopped.wait(30)
             continue
-        if advanced is None:
-            stopped.wait(60)
-            continue
-        pages += 1
-        finished = advanced is False
-        if finished:
-            progress["completed_at"] = now()
-        if finished or progress["phase"] != phase or pages % PERSIST_EVERY == 0:
-            store.set_state(key, progress)
-        phase = progress["phase"]
-        if finished:
-            summary = report(store, progress)
-            store.set_state(LAST_REPORT, summary)
-            LOG.info("catalog_retention_report=%s", json.dumps(summary, sort_keys=True))
-            return progress
-        if time.monotonic() - last_log >= PROGRESS_SECONDS:
-            store.set_state(key, progress)
-            summary = report(store, progress)
-            summary.pop("top_series")
-            LOG.info("catalog_retention_progress=%s", json.dumps(summary, sort_keys=True))
-            last_log = time.monotonic()
         stopped.wait(pause)
     store.set_state(key, progress)
     return progress

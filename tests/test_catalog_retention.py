@@ -279,6 +279,29 @@ def test_failed_page_resumes_from_stored_progress(world, monkeypatch):
     )
 
 
+@pytest.mark.parametrize("mode", ["dry_run", "execute"])
+def test_locked_state_write_retries_instead_of_ending_the_pass(world, monkeypatch, mode):
+    # 2026-10-27: a progress write met the evaluation job's lock and killed the dry run.
+    real = world.set_state
+    failed = []
+
+    def flaky(key, value):
+        if key == retention.state_key(mode) and not failed:
+            failed.append(key)
+            raise retention.sqlite3.OperationalError("database is locked")
+        return real(key, value)
+
+    monkeypatch.setattr(world, "set_state", flaky)
+    monkeypatch.setattr(retention, "TREATMENT", "notes")
+    stopped = threading.Event()
+    monkeypatch.setattr(stopped, "wait", lambda seconds: False)
+    progress = retention.run(world, stopped, mode=mode, pause=0)
+    assert failed and progress["completed_at"]
+    assert progress["revisions"]["markets_eligible"] == 2
+    assert progress["assessments"]["superseded_rows"] == 1
+    assert world.state(retention.LAST_REPORT)["mode"] == mode
+
+
 @pytest.mark.parametrize("treatment", ["notes", "final_only"])
 def test_thinning_frees_pages_that_the_bulk_guard_counts(store, monkeypatch, treatment):
     for index in range(150):
