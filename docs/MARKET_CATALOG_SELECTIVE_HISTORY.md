@@ -373,3 +373,26 @@ more on older v1 rows, and only the dry run can measure it. The same measurement
    - `discovery:*` running again.
 4. Rollback: unset the mode. Removed rows are not recoverable from the catalog. Kalshi serves
    only current market state, which the current object already holds.
+
+**Result — 2026-10-28.**
+- **Dry run.** The first attempt (Oct 27) stopped at 1.64M of 6.08M markets: a state write met
+  the evaluation job's lock outside the retry. [#681](https://github.com/50thycal/kalshi_bot/pull/681)
+  fixed that, and the run resumed from its cursor. Measured notes at **73%** of a full row (a
+  27% saving), so the projections were `final_only` ≈ 8.9 GB and `notes` ≈ 4.6 GB.
+- **Owner choice:** `final_only` with `CATALOG_RETENTION_REPEAT_HOURS=24`.
+- **Execute pass** (14:38–18:17 UTC):
+  - removed the 1.27 GB backup;
+  - deleted 399,653 superseded assessments;
+  - deleted 4,737,257 revision rows from 3,273,093 markets.
+- **What it kept:**
+  - 1,736,191 selected markets;
+  - 164,874 open markets;
+  - 933,986 markets whose rules changed.
+- **Disk and service after the pass:**
+  - free plus reusable space went from 9.64 GB (24.5%) to **17.77 GB (45%)**: 10.90 GB on the
+    volume and 6.87 GB on the freelist;
+  - bulk discovery has run since 14:43;
+  - memory stayed at its 1 GB cap, as before;
+  - the lock retry fired about every 30 minutes and recovered each time.
+- **Realized vs estimate:** about 8.1 GB of the 8.97 GB estimate. Partially emptied pages stay
+  allocated.
