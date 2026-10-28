@@ -117,6 +117,11 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-10-26", 206, "KXTRUMPMENTION-26OCT25"),
     ("2026-10-26", 129, "KXTRUMPMENTION-26OCT25"),
     ("2026-10-26", 105, "KXTRUMPMENTION-26OCT25"),
+    # Operator screenshot 2026-10-28 (lifetime $79.07): Corpus Christi TX rally (the Oct 27 "B"
+    # event), three rows, observed as one 736c step at 10:29Z. Bids pulled 48h before (§9.63).
+    ("2026-10-28", 205, "KXTRUMPMENTIONB-26OCT27"),
+    ("2026-10-28", 191, "KXTRUMPMENTIONB-26OCT27"),
+    ("2026-10-28", 340, "KXTRUMPMENTIONB-26OCT27"),
 )
 
 
