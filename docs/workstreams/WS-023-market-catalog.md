@@ -625,5 +625,9 @@ space fell under its floor. Built `catalog/retention.py`:
 
 Audit figures, mechanics and rollout are in
 [selective history § Retention](../MARKET_CATALOG_SELECTIVE_HISTORY.md#retention--owner-decision-2026-10-21-dec-038).
-Next: the dry-run report, then the owner's choice of treatment and execute.
+2026-10-28: the dry run ran to completion after
+[#681](https://github.com/50thycal/kalshi_bot/pull/681). The owner chose `final_only` with a
+24-hour repeat, and the execute pass finished at 18:17 UTC. Free plus reusable space rose from
+24.5% to 45% (9.64 → 17.77 GB), and bulk discovery is running again. Measured figures are in
+[selective history § Retention — Result](../MARKET_CATALOG_SELECTIVE_HISTORY.md#retention--owner-decision-2026-10-21-dec-038).
 
