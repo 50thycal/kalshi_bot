@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=v24-held-1028
+# code f7e7161a8c5a83478ecf99a66817b547c2a8daf3 · started 2026-10-28T11:48:39Z
+market_ticker       recorded_at                       prior_holders      
+------------------  --------------------------------  -------------------
+KXRAIN-26OCT27-DAL  2026-10-27 12:17:15.172633+00:00  Kmmsell10,Nmmsell10
+
+(1 row)
