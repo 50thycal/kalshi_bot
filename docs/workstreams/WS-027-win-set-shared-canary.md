@@ -160,3 +160,23 @@ its keep contract and tells the owner on a breach. It changes nothing itself.
 
 Open: the 24h silent-arm check for `Vmmsell10`, and the first settled shared market's
 reconciliation (§6 line 6).
+
+**2026-10-27 13:43Z — swap defect fixed.** Replacing `Nmmsell10`'s `MMSELL_VARIANTS` entry put
+`mmsell-win-set` into BLOCKED_INTEGRITY: drift #28, because a stood-down book's `book_params` are
+compared in full (`enforcement._explained_by_stand_down`). The stood-down precedent (`Cmmsell10`,
+`Dmmsell10`, `Fmmsell10`, `Jmmsell10`) keeps the entry. Env act `ws1-restore-1` VERIFIED
+re-appended the exact registered `Nmmsell10` spec, with the tag not in `LIVE_STRATEGIES`. #28 was
+reclassified as an intentional stand-down, and #29 EXPERIMENT_EXECUTION_STOOD_DOWN is open, as
+recorded state. **Next swap: keep the old entry, append the new one.**
+
+**2026-10-28 11:48Z — 24h silent-arm check: PASS** (`v24-1028`):
+- **Live orders since the 11:38Z swap:**
+  - `Vmmsell10`: 8 live orders on 7 markets, 2 of them on KXTRUMPMENTION.
+  - `Kmmsell10`: 20 orders, 2 on KXTRUMPMENTION.
+  - `Nmmsell10`: no live orders.
+- **Paper side:** the twin `Vmmsell10_pt4` row is open, and twin and `Qmmsell10` paper each have 8 trades.
+- **Pair:** `gate:dedup` worked on both tags. One `gate:held` on `Vmmsell10`, on `KXRAIN-26OCT27-DAL`, which draining `Nmmsell10` also holds. That is correct: `Nmmsell10` is outside the pair now.
+- Kmmsell10's daily stop read (`kstop-1027-pnl`) found +$3.72 on 272 settled markets since 10-11. The worst market was -$2.82, which is the maximum loss of one 3-lot at 94c and so can never cross the $3.00 bound.
+
+Open: the first settled shared market's reconciliation (§6 line 6). KXWCMENTION has had no
+markets since 2026-07-20; drop it from the universe at the Kmmsell10+Vmmsell10 restart.
