@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=wcm-1028
+# code 6e530aee4d4b52ea09a91c250fc53aade0d0bced · started 2026-10-28T00:15:35Z
+last_close  open_markets  last_live_order                   live_orders_ever  last_paper_trade                
+----------  ------------  --------------------------------  ----------------  --------------------------------
+            0             2026-07-20 02:52:18.138490+00:00  730               2026-07-19 21:46:59.416179+00:00
+
+(1 row)
