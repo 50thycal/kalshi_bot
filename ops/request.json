@@ -1,1 +1,1 @@
-{"type":"db","id":"v24-held-1028","sql":"select p.market_ticker, p.recorded_at, (select string_agg(distinct o.strategy, ',') from live_orders o where o.market_ticker = p.market_ticker and o.created_at < p.recorded_at and o.status not in ('canceled','cancelled','rejected')) prior_holders from live_paper_parity_events p where p.live_tag = 'Vmmsell10' and p.live_outcome = 'gate:held' and p.recorded_at >= '2026-10-27 11:38+00'"}
+{"type":"noop"}
