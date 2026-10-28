@@ -1,24 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1028a1756
-# code e6384d138812821f01889c7721cbfc348936c39b · started 2026-10-28T17:55:34Z
-k  t                              d                                       ts                           
--  -----------------------------  --------------------------------------  -----------------------------
-F  KXYTVIEWSHIGH-BAD26DEC-24.0M   no/sell 2x500 fee 0.0000                2026-10-28 15:48:08.630182+00
-F  KXYTVIEWSHIGH-BAD26DEC-24.0M   yes/buy 99x500 fee 0.3465               2026-10-28 15:50:14.561508+00
-O  KXMAMDANIMENTION-26NOV18-NQE   yes/buy 3x333 resting  8d074f44-4be0-   2026-10-24 01:19:06.745673+00
-O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 1x500 resting  4a6ac860-d4a6-    2026-10-26 14:38:01.792085+00
-O  KXYTVIEWSHIGH-FUE26NOV-24.0M   no/buy 1x500 resting  6ee0fc6a-01b1-    2026-10-26 15:24:18.730413+00
-O  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10x200 resting  472f6c1b-f59e-  2026-10-27 04:29:18.109125+00
-O  KXYTVIEWSHIGH-OLI26DEC-7.5M    no/buy 10x200 resting  97d72469-dbd9-   2026-10-27 07:31:31.642581+00
-O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x244 resting  limmsell:a:fcd   2026-10-27 13:59:01.360672+00
-O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x243 resting  limmsell:b:93d   2026-10-27 13:59:01.436472+00
-O  KXYTVIEWSHIGH-MOR26NOV-7.5M    yes/sell 4x200 resting  limmsell:a:33d  2026-10-28 14:24:12.024433+00
-O  KXYTVIEWSHIGH-MOR26NOV-7.5M    yes/sell 5x200 resting  limmsell:b:c2f  2026-10-28 14:24:12.089379+00
-O  KXYTVIEWSHIGH-BAD26DEC-24.0M   no/buy 2x500 filled  dda6631e-c215-     2026-10-28 15:31:31.192821+00
-O  KXYTVIEWSHIGH-BAD26DEC-24.0M   no/sell 1x500 filled  limmexit:stop_    2026-10-28 15:48:48.457589+00
-P  KXYTVIEWSHIGH-BAD26DEC-24.0M   0.0000                                  2026-10-28 17:53:49.735574+00
-P  KXTRUMPMENTION-26OCT28-CEAS    -6.0000                                 2026-10-28 17:53:49.737415+00
-P  KXYTVIEWSHIGH-MOR26NOV-7.5M    400.0000                                2026-10-28 17:53:49.739068+00
-P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                               2026-10-28 17:53:49.74834+00 
-
-(17 rows)
+# type=noop
+# code e6384d138812821f01889c7721cbfc348936c39b · started 2026-10-28T17:55:58Z
+(noop — nothing to do)
