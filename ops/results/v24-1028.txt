@@ -1,0 +1,21 @@
+# ops request [READ]
+# type=db  id=v24-1028
+# code f7e7161a8c5a83478ecf99a66817b547c2a8daf3 · started 2026-10-28T11:48:11Z
+src                   tag            n     mkts  trumpmention  last                                    
+--------------------  -------------  ----  ----  ------------  ----------------------------------------
+live_orders           Kmmsell10      20    17    2             2026-10-28 11:14:20.067045+00           
+live_orders           Vmmsell10      8     7     2             2026-10-28 08:07:46.904749+00           
+paper                 Nmmsell10      1     1     0             2026-10-28 08:07:46.992079+00           
+paper                 Pmmsell10      1     1     0             2026-10-28 08:07:45.84583+00            
+paper                 Qmmsell10      8     8     2             2026-10-28 08:07:46.978628+00           
+paper                 Vmmsell10_pt4  8     8     2             2026-10-28 08:07:47.020561+00           
+parity:gate:dedup     Kmmsell10      45    8     3             2026-10-28 11:44:08.047936+00           
+parity:gate:dedup     Vmmsell10      7     3     3             2026-10-28 09:09:42.908534+00           
+parity:gate:held      Vmmsell10      1     1     0             2026-10-27 12:17:15.172633+00           
+parity:not_attempted  Kmmsell10      1324  302   3             2026-10-28 11:44:45.153193+00           
+parity:not_attempted  Vmmsell10      4     2     0             2026-10-27 21:50:16.725417+00           
+parity:placed         Kmmsell10      20    17    2             2026-10-28 11:14:20.215358+00           
+parity:placed         Vmmsell10      8     7     2             2026-10-28 08:07:47.023807+00           
+twin_row              Vmmsell10_pt4  1     0     0             open since 2026-10-27 11:41:21.473237+00
+
+(14 rows)
