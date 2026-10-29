@@ -1,4 +1,8 @@
-Only a single statement is allowed (found ';').
 # ops request [READ]
-# type=db  id=rl-sba-shape2-20261029
-# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:11:50Z
+# type=db  id=rl-sba-shape3-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:12:16Z
+est_rows  size    min_id  max_id   first_at                          last_at                           stats                                                                                                                                                                                                   
+--------  ------  ------  -------  --------------------------------  --------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+1239627   405 MB  1       1373332  2026-07-23 04:29:21.958976+00:00  2026-10-29 14:07:37.114949+00:00  id=-1 null0.000 | market_ticker=23092 null0.000 | captured_at=-1 null0.000 | series=523 null0.000 | hours_to_close=-1 null0.000 | yes_bid=39 null0.000 | yes_ask=72 null0.000 | no_bid=72 null0.000 | n…
+
+(1 row)
