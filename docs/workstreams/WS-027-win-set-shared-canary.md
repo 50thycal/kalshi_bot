@@ -180,3 +180,8 @@ recorded state. **Next swap: keep the old entry, append the new one.**
 
 Open: the first settled shared market's reconciliation (§6 line 6). KXWCMENTION has had no
 markets since 2026-07-20; drop it from the universe at the Kmmsell10+Vmmsell10 restart.
+
+**2026-10-29 — owner decision: restart Kmmsell10 without sports and other, and Vmmsell10 with it.**
+Built as `mmsell-cell-size-2-canary` (`Xmmsell10`, paper `Smmsell10`) and `mmsell-win-set-3-canary`
+(`Ymmsell10`, paper `Zmmsell10`), with the pair `Xmmsell10+Ymmsell10:6:6.00` registered in both.
+They arm after about a day of paper. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §10.

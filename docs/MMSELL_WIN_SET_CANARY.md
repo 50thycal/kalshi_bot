@@ -144,3 +144,42 @@ in_review so it does not inherit the graduation by prefix. The pair becomes
 
 Its record at restart (10.5 days live): 29 markets filled, 26 settled, 1 loss, +$2.31 — about
 +3.0c/contract against +4.7c expected, live within $0.22 of its paper twin.
+
+## 10. Joint restart without sports and other — `mmsell-price-ceiling-cell-size-2` + `mmsell-win-set-3` (2026-10-29)
+
+Owner decision (session `01D3m7Af5FnpLDG5eDQ6JJRL`), from the first 72h scorecard
+(`docs/mmsell/scorecards/2026-10-29.md`): restart Kmmsell10 without sports and other
+categories, restart this book with it, and arm after about a day of paper.
+
+| | new incumbent | new WIN-set book |
+|---|---|---|
+| package | `mmsell-cell-size-2-canary` (`successor_mmsell10_cell_size_2.py`) | `mmsell-win-set-3-canary` (`mmsell_win_set_3.py`) |
+| live / twin / paper | `Xmmsell10` / `Xmmsell10_pt4` / `Smmsell10` | `Ymmsell10` / `Ymmsell10_pt4` / `Zmmsell10` |
+| universe | `only=` weather, index, politics, mention substrings, `universe=graduated` | the seven series of `mmsell-win-set-2` less KXWCMENTION |
+| sizing | 3 on the slow-information cell, 1 elsewhere (unchanged) | 3 (unchanged) |
+| promotion bar | the predecessor's: realizable c/trade > 0 on `Smmsell10` (~1 day) | the owner-waiver bar (unchanged) |
+| keep gate | −$30, $3.00 per market (unchanged) | −$15, $3.00 per market (unchanged) |
+
+The pair `Xmmsell10+Ymmsell10:6:6.00` is registered in BOTH drift baselines, which is why the
+two restart together: a book's baseline names its partner, and a tag may sit in only one pair.
+
+**What it means in practice.** Live already trades only graduated series, and nine series in
+the kept categories are graduated. So the two books now trade nearly the same markets, up to 6
+contracts combined on each. Kmmsell10's sports (+$2.23) and other (−$1.32) results are given up.
+
+**Sequence.**
+1. Merge; then `REGISTER_PACKAGE` each. The experiment transport takes one envelope per boot,
+   so that is two sends (paper scope).
+2. Paper env act: append `Smmsell10` and `Zmmsell10` specs to `MMSELL_VARIANTS`. They are not in
+   `LIVE_STRATEGIES`, so they run as paper.
+3. About a day later, check that `xos show mmsell-price-ceiling-cell-size-2` reads a promotion
+   PASS.
+4. **Owner hard stop.** `ARM_CANARY` each (two sends, back to back), then one env act:
+   - append `Xmmsell10` then `Ymmsell10` to `MMSELL_VARIANTS`, keeping every old entry
+     (stood-down books are compared in full);
+   - `LIVE_STRATEGIES`: `Kmmsell10,Vmmsell10` → `Xmmsell10,Ymmsell10` (`Alimm1` kept);
+   - `MMSELL_LIVE_SHARED_MARKET_PAIRS=Xmmsell10+Ymmsell10:6:6.00`.
+5. Readback, then the 24h silent-arm check. Delete the Kmmsell10 manual stop routine.
+
+`Kmmsell10` and `Vmmsell10` drain on the record and keep their drift baselines. Kmmsell10's
+I2 impact record (#54) stays accepted and unapplied; that experiment is stood down.
