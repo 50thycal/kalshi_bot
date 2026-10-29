@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["mmsell-win-set-3-canary"],"id":"rs-pf-ws3"}
+{"type": "env", "id": "rs-reg-ws3-1", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"rs-reg-ws3-20261029\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"RESEARCH_LAB\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell-win-set-3-canary\"}}"}}
