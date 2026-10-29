@@ -1,8 +1,4 @@
 # ops request [READ]
-# type=db  id=kstop-1029-pnl
-# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T13:25:59Z
-settled_markets  settled_contracts  realized_usd  worst_market_usd  worst_ticker        losing_markets  cents_per_contract
----------------  -----------------  ------------  ----------------  ------------------  --------------  ------------------
-299              427.65             6.31          -2.82             KXRAIN-26OCT13-MIN  20              1.47              
-
-(1 row)
+# type=noop  id=noop-1029b
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T13:26:19Z
+(noop — nothing to do)
