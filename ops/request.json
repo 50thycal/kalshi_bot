@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["mmsell-cell-size-2-canary"],"id":"rs-pf-cs2"}
