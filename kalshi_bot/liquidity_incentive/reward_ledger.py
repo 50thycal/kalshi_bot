@@ -122,6 +122,13 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-10-28", 205, "KXTRUMPMENTIONB-26OCT27"),
     ("2026-10-28", 191, "KXTRUMPMENTIONB-26OCT27"),
     ("2026-10-28", 340, "KXTRUMPMENTIONB-26OCT27"),
+    # Operator screenshot 2026-10-29 (lifetime $85.92): Lubbock TX rally (the Oct 27 "A" event),
+    # four rows, observed as one 685c step at 10:43Z after Kalshi delisted the program 13:26Z
+    # Oct 28. Bids pulled 48h before (§9.63).
+    ("2026-10-29", 124, "KXTRUMPMENTION-26OCT27"),
+    ("2026-10-29", 199, "KXTRUMPMENTION-26OCT27"),
+    ("2026-10-29", 170, "KXTRUMPMENTION-26OCT27"),
+    ("2026-10-29", 192, "KXTRUMPMENTION-26OCT27"),
 )
 
 
