@@ -189,6 +189,16 @@ class MarkIndex:
     def _price_column(side: str):
         return m.MmSellPositionTick.no_bid if side == "no" else m.MmSellPositionTick.yes_bid
 
+    def add_latest(self, mark: Mark) -> bool:
+        """Cover a ticker the tape did not with one mark from another source (a latest-only
+        index). Never replaces a taped mark. True when it was added."""
+        if self.scope != SCOPE_LATEST or self._by_ticker.get(mark.ticker):
+            return False
+        self._requested.add(mark.ticker)
+        self._by_ticker[mark.ticker] = [mark]
+        self._times[mark.ticker] = [mark.at]
+        return True
+
     # --- lookup ---
 
     def mark_for(self, ticker: str) -> Mark | None:

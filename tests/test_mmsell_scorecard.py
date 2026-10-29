@@ -134,3 +134,22 @@ def test_the_scorecard_is_allowlisted_and_imports_nothing_heavy():
             mods.add(node.module.split(".")[0])
     # The ops runner installs psycopg and nothing else for a `script` request.
     assert not mods & {"kalshi_bot", "sqlalchemy", "pydantic"}
+
+
+def test_open_positions_are_marked_to_the_held_side_bid():
+    # A maker NO buy of 3 at 93c (fills as side=no action=sell at the NO price).
+    fills = [("Kmmsell10", "KXRAINLAXM-26OCT-3", "no", "buy", "no", 93, 3.0, 0.0,
+              "2026-10-21T15:26:00Z"),
+             ("Kmmsell10", "KXRT-WIC-96", "no", "buy", "no", 93, 1.0, 0.0, None)]
+    settlements = {"KXRAINLAXM-26OCT-3": {"yes_value": None, "open_qty": -3.0, "settled_at": None},
+                   "KXRT-WIC-96": {"yes_value": None, "open_qty": -1.0, "settled_at": None}}
+    s = sc.summarise(fills, settlements, [], set(), TYPES, now=NOW, days=3,
+                     marks={"KXRAINLAXM-26OCT-3": (2, 97)})
+    b = s["books"]["Kmmsell10"]
+    # 3 NO bid at 97c against 93c paid: +$0.12; the other market has no price.
+    assert (b["open"], b["unrealized"], b["unpriced"]) == (2, 0.12, 1)
+    assert s["totals"]["unrealized"] == 0.12 and s["totals"]["total"] == 0.12
+    assert "ALL BOOKS: realized" in sc.render(s)
+    rows = sc.as_rows(s)
+    assert rows["totals"]["unpriced"] == 1
+    assert {r["category"]: r["unrealized"] for r in rows["by_tag"]}["weather"] == 0.12

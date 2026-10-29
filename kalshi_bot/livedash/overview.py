@@ -226,8 +226,23 @@ def _open_marks(session, snaps, now) -> marks_mod.MarkIndex:
     tape and the same "latest" read the comparison page values open positions with."""
     held = [t for t, snap in snaps.items() if snap is not None and not _settled(snap)
             and abs(float(snap.quantity_fp or snap.quantity or 0))]
-    return marks_mod.MarkIndex.load_latest(
+    index = marks_mod.MarkIndex.load_latest(
         session, held, now - timedelta(days=MARK_LOOKBACK_DAYS), None, side="no")
+    # The tape covers only markets an mmsell paper book holds. The liquidity-incentive book's
+    # markets are priced by its own book snapshots instead, while they are fresh; a held
+    # market neither source covers stays unpriced.
+    for ticker in held:
+        if index.mark_for(ticker) is not None:
+            continue
+        book = incentive_book._latest_book(session, ticker, now)
+        if book is None or (book.best_yes_bid is None and book.best_no_bid is None):
+            continue
+        index.add_latest(marks_mod.Mark(
+            ticker=ticker, at=_aware(book.at),
+            price_cents=float(book.best_no_bid if book.best_no_bid is not None
+                              else book.best_yes_bid),
+            yes_bid=book.best_yes_bid, no_bid=book.best_no_bid))
+    return index
 
 
 def _unrealized(snap: m.Position, mark) -> float | None:
@@ -236,10 +251,13 @@ def _unrealized(snap: m.Position, mark) -> float | None:
     A long position is valued at the price it could be SOLD at now — the NO bid for a NO
     position, the YES bid for a YES one — against its cost basis. None when the tape has no
     price for the ticker or the snapshot has no cost basis: unmeasured, never zero."""
-    qty = abs(float(snap.quantity_fp or snap.quantity or 0))
+    signed = float(snap.quantity_fp or snap.quantity or 0)
+    qty = abs(signed)
     if mark is None or not qty or snap.market_exposure is None:
         return None
-    bid = mark.yes_bid if (snap.side or "").lower() == "yes" else mark.no_bid
+    # Kalshi's feed carries no side; a positive position is YES, a negative one NO.
+    side = (snap.side or ("yes" if signed > 0 else "no")).lower()
+    bid = mark.yes_bid if side == "yes" else mark.no_bid
     if bid is None:
         return None
     return qty * bid / 100.0 - abs(float(snap.market_exposure))

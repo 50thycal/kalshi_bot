@@ -103,3 +103,46 @@ def test_json_rows_for_the_dashboard():
     assert not ev["KXTRUMPMENTION-26OCT27"]["payout_recorded"]
     (loser,) = rows["losers"]
     assert loser["pnl"] == -5.33 and loser["fills"] == 2 and loser["lead_h"] == 74.5
+
+
+def test_open_positions_are_marked_to_the_held_side_bid():
+    # MOR: 400 YES at 5c, 200 sold at 4c (booked as 200 NO at 96c); 200 YES still held.
+    fills = [("yes", 5, 400, 0.0), ("no", 96, 200, 0.0)]
+    # 200 pairs pay $200, 200 YES at a 3c bid are worth $6, against $212 paid.
+    assert sc.marked_pnl(fills, (3, 96)) == -6.0
+    # OLI: 488 NO at 1c with nobody bidding NO -> worth nothing.
+    assert sc.marked_pnl([("no", 1, 488, 0.0)], (99, None)) == -4.88
+    assert sc.marked_pnl(fills, None) is None
+
+
+def test_summary_reports_unrealized_per_type_and_in_total():
+    fills = {
+        "KXYTVIEWSHIGH-MOR26NOV-7.5M": [("yes", 5, 400, 0.0, "2026-10-28T13:48Z"),
+                                         ("no", 96, 200, 0.0, "2026-10-29T05:22Z")],
+        "KXYTVIEWSHIGH-OLI26NOV-12.0M": [("no", 1, 488, 0.0, "2026-10-27T04:34Z")],
+        "KXTRUMPMENTION-26OCT27-SAVE": [("no", 6, 100, 0.0, None), ("yes", 100, 100, 0.0, None)],
+    }
+    positions = {"KXYTVIEWSHIGH-MOR26NOV-7.5M": 200.0, "KXYTVIEWSHIGH-OLI26NOV-12.0M": -487.97,
+                 "KXTRUMPMENTION-26OCT27-SAVE": 0.0}
+    s = sc.summarise([("2026-10-29", 685, "KXTRUMPMENTION-26OCT27")], fills, {}, positions, {},
+                     now=NOW, days=7, marks={"KXYTVIEWSHIGH-MOR26NOV-7.5M": (3, 96)})
+    yt = s["categories"]["youtube_views"]
+    assert (yt["open"], yt["unrealized"], yt["unpriced"]) == (2, -6.0, 1)
+    me = s["categories"]["mention_event"]
+    assert (me["net"], me["unrealized"], me["total"]) == (0.85, 0.0, 0.85)
+    assert s["totals"]["unrealized"] == -6.0 and s["totals"]["unpriced"] == 1
+    assert s["totals"]["total"] == round(s["totals"]["net"] - 6.0, 2)
+    text = sc.render(s)
+    assert "REALIZED vs UNREALIZED" in text and "unpriced" in text
+    rows = sc.as_rows(s)
+    assert rows["totals"]["unrealized"] == -6.0
+    assert {r["type"]: r["unrealized"] for r in rows["by_type"]}["youtube_views"] == -6.0
+
+
+def test_bids_are_read_from_a_market_object():
+    import market_marks as mm
+
+    assert mm.bids_from_market({"yes_bid_dollars": "0.0300", "no_bid_dollars": "0.9600"}) == (3, 96)
+    # No NO quote: the NO bid is the complement of the YES ask; a zero bid is no bid.
+    assert mm.bids_from_market({"yes_bid_dollars": "0.0000", "yes_ask_dollars": "0.0400"}) == (None, 96)
+    assert mm.bids_from_market({"yes_bid": 12, "yes_ask": 100}) == (12, None)

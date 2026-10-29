@@ -120,17 +120,41 @@ def market_pnl(fills: list[tuple[str, int, float, float]], settled_pnl: float | 
     return "closed", round(min(yq, nq) - cost - fees, 4), cost
 
 
+def marked_pnl(fills: list[tuple[str, int, float, float]],
+               bids: tuple[int | None, int | None] | None) -> float | None:
+    """Dollars an open market would net if everything held were sold at the bid now.
+
+    Matched YES+NO pairs are worth $1 each; what is left over is valued at its own side's best
+    bid (an empty side is worth nothing). Includes whatever part was already closed, so for a
+    half-sold position this is the whole market's result so far. None when there is no price."""
+    if bids is None:
+        return None
+    yes_bid, no_bid = bids
+    cost = sum(p * q for _s, p, q, _f in fills) / 100.0
+    fees = sum(f for *_x, f in fills)
+    yq = sum(q for s, _p, q, _f in fills if s == "yes")
+    nq = sum(q for s, _p, q, _f in fills if s == "no")
+    pairs = min(yq, nq)
+    value = pairs + ((yq - pairs) * (yes_bid or 0) + (nq - pairs) * (no_bid or 0)) / 100.0
+    return round(value - cost - fees, 4)
+
+
 def summarise(payouts, fills_by_market, settled, positions, bids_by_event, *, now: dt.datetime,
-              days: int) -> dict:
-    """Everything the report prints, as plain data."""
+              days: int, marks: dict | None = None) -> dict:
+    """Everything the report prints, as plain data. `marks` is {ticker: (yes bid, no bid)} for
+    the open markets (`market_marks.fetch_bids`); an open market without one is unpriced."""
+    marks = marks or {}
     since = (now - dt.timedelta(days=days)).date()
     markets = {}
     for tkr, fl in fills_by_market.items():
         status, pnl, cost = market_pnl([(s, p, q, f) for s, p, q, f, _t in fl],
                                        settled.get(tkr), positions.get(tkr))
         times = sorted(t for *_x, t in fl if t)
+        unreal = marked_pnl([(s, p, q, f) for s, p, q, f, _t in fl], marks.get(tkr)) \
+            if status == "open" else None
         markets[tkr] = {"event": event_of(tkr), "category": category(tkr), "status": status,
-                        "pnl": pnl, "cost": round(cost, 2), "fills": len(fl),
+                        "pnl": pnl, "unrealized": unreal, "cost": round(cost, 2),
+                        "fills": len(fl),
                         "first_fill": times[0] if times else None,
                         "last_fill": times[-1] if times else None}
     events: dict[str, dict] = {}
@@ -157,14 +181,27 @@ def summarise(payouts, fills_by_market, settled, positions, bids_by_event, *, no
 
     cats: dict[str, dict] = {}
     recent: dict[str, dict] = {}
+
+    def _cat():
+        return {"rewards": 0.0, "fill_pnl": 0.0, "events": 0, "events_with_loss": 0,
+                "losses": 0, "open": 0, "open_cost": 0.0, "unrealized": 0.0, "unpriced": 0}
     for row in events.values():
-        c = cats.setdefault(row["category"], {"rewards": 0.0, "fill_pnl": 0.0, "events": 0,
-                                              "events_with_loss": 0, "losses": 0})
+        c = cats.setdefault(row["category"], _cat())
         c["rewards"] += row["rewards"]
         c["fill_pnl"] += row["fill_pnl"]
         c["events"] += 1
         c["losses"] += len(row["loss_markets"])
         c["events_with_loss"] += 1 if row["loss_markets"] else 0
+    for mk in markets.values():
+        if mk["status"] != "open":
+            continue
+        c = cats.setdefault(mk["category"], _cat())
+        c["open"] += 1
+        c["open_cost"] += mk["cost"]
+        if mk["unrealized"] is None:
+            c["unpriced"] += 1
+        else:
+            c["unrealized"] += mk["unrealized"]
     for iso, cents, e in payouts:
         if dt.date.fromisoformat(iso) >= since:
             r = recent.setdefault(category(e), {"rewards": 0.0, "fill_pnl": 0.0})
@@ -175,13 +212,21 @@ def summarise(payouts, fills_by_market, settled, positions, bids_by_event, *, no
             r = recent.setdefault(mk["category"], {"rewards": 0.0, "fill_pnl": 0.0})
             r["fill_pnl"] += mk["pnl"]
     for d in list(cats.values()) + list(recent.values()):
-        for k in ("rewards", "fill_pnl"):
-            d[k] = round(d[k], 2)
+        for k in ("rewards", "fill_pnl", "open_cost", "unrealized"):
+            if k in d:
+                d[k] = round(d[k], 2)
         d["net"] = round(d["rewards"] + d["fill_pnl"], 2)
+        if "unrealized" in d:
+            d["total"] = round(d["net"] + d["unrealized"], 2)
+    totals = {k: round(sum(d[k] for d in cats.values()), 2)
+              for k in ("rewards", "fill_pnl", "net", "open_cost", "unrealized", "total")}
+    totals["open"] = sum(d["open"] for d in cats.values())
+    totals["unpriced"] = sum(d["unpriced"] for d in cats.values())
     losers = sorted(((t, m) for t, m in markets.items() if m["pnl"] is not None
                      and m["pnl"] <= -1.0), key=lambda x: x[1]["pnl"])
     return {"as_of": now.isoformat(timespec="minutes"), "days": days, "categories": cats,
-            "recent": recent, "events": events, "markets": markets, "losers": losers}
+            "totals": totals, "recent": recent, "events": events, "markets": markets,
+            "losers": losers}
 
 
 def render(s: dict) -> str:
@@ -202,6 +247,22 @@ def render(s: dict) -> str:
                    f"{tot['net']:>9.2f}")
         out.append("")
     cat_table("BY MARKET TYPE (lifetime)", s["categories"], True)
+    t = s["totals"]
+    out.append("REALIZED vs UNREALIZED (open positions marked to the held side's bid now; "
+               "an open market's figure includes any part already sold)")
+    out.append(f"  {'type':<16}{'realized':>10}{'open':>6}{'open $':>9}{'unreal.':>9}{'total':>9}")
+    for name, d in sorted(s["categories"].items(), key=lambda kv: -kv[1]["total"]):
+        flag = f"  [{d['unpriced']} unpriced]" if d["unpriced"] else ""
+        out.append(f"  {name:<16}{d['net']:>10.2f}{d['open']:>6}{d['open_cost']:>9.2f}"
+                   f"{d['unrealized']:>9.2f}{d['total']:>9.2f}{flag}")
+    flag = f"  [{t['unpriced']} unpriced]" if t["unpriced"] else ""
+    out.append(f"  {'TOTAL':<16}{t['net']:>10.2f}{t['open']:>6}{t['open_cost']:>9.2f}"
+               f"{t['unrealized']:>9.2f}{t['total']:>9.2f}{flag}")
+    for tkr, mk in sorted(s["markets"].items()):
+        if mk["status"] == "open":
+            u = "unpriced" if mk["unrealized"] is None else f"{mk['unrealized']:+.2f}"
+            out.append(f"    open: {tkr:<34} cost {mk['cost']:>7.2f}  marked {u}")
+    out.append("")
     cat_table(f"BY MARKET TYPE (last {s['days']} days: payouts dated / fills closed)",
               s["recent"], False)
 
@@ -244,6 +305,7 @@ def render(s: dict) -> str:
         out.append(f"  {t:<36}{m['pnl']:>8.2f}  {m['fills']} fills over {span}  {lead}")
     out.append("")
     summary = {"as_of": s["as_of"], "categories": s["categories"], "recent": s["recent"],
+               "totals": s["totals"],
                "loss_markets": len(s["losers"]),
                "avg_loss": round(sum(m["pnl"] for _t, m in s["losers"]) / len(s["losers"]), 2)
                if s["losers"] else 0.0}
@@ -274,7 +336,9 @@ def as_rows(s: dict) -> dict:
                 "events_with_loss": d["events_with_loss"],
                 "recent_rewards": recent.get(t, {}).get("rewards", 0.0),
                 "recent_fills": recent.get(t, {}).get("fill_pnl", 0.0),
-                "recent_net": recent.get(t, {}).get("net", 0.0)}
+                "recent_net": recent.get(t, {}).get("net", 0.0),
+                "open": d["open"], "open_cost": d["open_cost"], "unrealized": d["unrealized"],
+                "unpriced": d["unpriced"], "total": d["total"]}
                for t, d in s["categories"].items()]
     by_event = []
     for e, r in s["events"].items():
@@ -292,7 +356,7 @@ def as_rows(s: dict) -> dict:
                "pnl": round(m["pnl"], 2), "fills": m["fills"], "span_h": span_hours(m),
                "lead_h": lead_hours(m)} for t, m in s["losers"]]
     return {"as_of": s["as_of"], "days": s["days"], "by_type": by_type,
-            "by_event": by_event, "losers": losers}
+            "by_event": by_event, "losers": losers, "totals": s["totals"]}
 
 
 # ------------------------------------------------------------------ database
@@ -343,12 +407,25 @@ def fetch(cur, tag: str):
     return fills, settled, positions, bids
 
 
+def snapshot_marks(cur, tickers) -> dict[str, tuple[int | None, int | None]]:
+    """The book's own newest incentive snapshot per market, when no older than two hours: the
+    fallback mark when Kalshi does not answer. Programs that have ended have no snapshots."""
+    cur.execute(
+        """SELECT DISTINCT ON (market_ticker) market_ticker, best_yes_bid, best_no_bid
+           FROM incentive_market_snapshots
+           WHERE market_ticker = ANY(%s) AND at > now() - interval '2 hours'
+           ORDER BY market_ticker, at DESC""", (list(tickers),))
+    return {t: (y or None, n or None) for t, y, n in cur.fetchall()}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Liquidity-incentive scorecard.")
     ap.add_argument("--days", type=int, default=7, help="recent window in days (default 7)")
     ap.add_argument("--tag", default=LIVE_TAG)
     ap.add_argument("--json", action="store_true",
                     help="print the full data as one JSON object (for the dashboard)")
+    ap.add_argument("--no-marks", action="store_true",
+                    help="skip the Kalshi price read; open positions show as unpriced")
     args = ap.parse_args(argv)
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
@@ -361,8 +438,19 @@ def main(argv=None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             fills, settled, positions, bids = fetch(cur, args.tag)
+    marks = {}
+    if not args.no_marks:
+        from market_marks import fetch_bids
+        held = [t for t in fills if t not in settled and abs(positions.get(t) or 0) >= 1.0]
+        marks = fetch_bids(held)
+        missing = [t for t in held if t not in marks]
+        if missing:
+            with psycopg.connect(url, options=RO_OPTIONS, connect_timeout=15) as conn:
+                conn.read_only = True
+                with conn.cursor() as cur:
+                    marks.update(snapshot_marks(cur, missing))
     s = summarise(payouts, fills, settled, positions, bids,
-                  now=dt.datetime.now(dt.timezone.utc), days=args.days)
+                  now=dt.datetime.now(dt.timezone.utc), days=args.days, marks=marks)
     print(json.dumps(as_rows(s), sort_keys=True) if args.json else render(s))
     return 0
 
