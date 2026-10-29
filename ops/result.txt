@@ -1,16 +1,16 @@
 # ops request [READ]
-# type=xos  id=rl-sba-iss47-20261029
-# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:09:14Z
+# type=xos  id=rl-sba-iss31-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:09:51Z
 {
-  "issue_key": "XOS-000047",
-  "title": "Forward test: MMSELL tail edge on KXNFLTOTAL and KXITFMATCH (pre-registered 2026-10-14)",
+  "issue_key": "XOS-000031",
+  "title": "paper_trades is not real-money P&L for a LIVE tag: never-filled orders inflate it",
   "status": "OPEN",
-  "classification": "STRATEGY",
-  "severity": "LOW",
-  "priority": "P3",
-  "owner_role": "RESEARCH_LAB",
-  "opened_by_role": "RESEARCH_LAB",
-  "opened_at": "2026-10-14 03:21:05.537510+00:00",
+  "classification": "DATA",
+  "severity": "HIGH",
+  "priority": "P2",
+  "owner_role": "LIVE_OPS",
+  "opened_by_role": "LIVE_OPS",
+  "opened_at": "2026-09-10 15:13:45.851055+00:00",
   "scope": "system-wide",
   "experiment_id": null,
   "version_id": null,
@@ -18,9 +18,9 @@
   "detector_fingerprint": null,
   "occurrence_count": 1,
   "disposition": null,
-  "latest_evidence": "RESEARCH_DOCUMENT: Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper",
-  "problem_statement": "Two positive scorecard leads (WS-023 series-scorecard-v2) were picked from 13 series after looking, so each is held as a hypothesis. Research Lab call 2026-10-14: KXNFLTOTAL KEEP at current live size (Kmmsell10, 1 contract), no growth; KXITFMATCH KEEP in paper, live tennis pause unchanged (XOS-000039). Frozen forward test on mmsell10 paper from 2026-10-15T00:00Z, unit game/match: NFL floor 100 games, ITF floor 200 matches with ITF women as control; branches GROW-eligible (LCB>0) / STOP (mean<=0) / KEEP. Any growth, stop or pause lift is an operator decision and a recorded transition. Source: docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md (PR #620).",
-  "evidence_summary": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+  "latest_evidence": null,
+  "problem_statement": "The live path writes SIMULATED paper_trades rows under the LIVE tag, including for orders that never filled on the exchange. Any P&L read from paper_trades for a live tag therefore counts trades real money never got, and can read positive while the book is losing. Measured 2026-09-10 on the mmsell contest-cap live canary, scoped to its epoch: paper_trades read +2.56 USD (n=194) while the exchange's own realized P&L for the same tag and window was -1.41 USD (settled=123); the difference was 70 tickers whose live order never filled, worth +4.54 USD. On the subset that DID fill the simulator read -1.97 USD vs -1.41 USD real, so the apparent paper edge is selection at the fill, not a modelling error. Fill rate over the epoch: 136 of 180 tickers ordered. This is the same class of error as the open-position count, where the bound is enforced by count_live_book_open and NOT by a paper_trades row count; it has now produced a materially wrong operator report twice. NOT a safety defect: the max_daily_loss breaker (LiveExecutor._daily_loss_hit -> repository.live_realized_pnl_today) already reads positions.realized_pnl, and the live dashboard already attributes via live_orders.strategy -> fills -> newest positions snapshot (kalshi_bot/livedash/legs.py). The gap is that there is no canonical, ops-reachable read of live realized P&L and open count BY TAG, so every ad-hoc analysis re-derives it and the wrong source is the easy one. Asks: (a) a named, ops-callable read for live realized P&L and live open count by tag, using the same attribution chain the dashboard and the breaker use; (b) make the provenance visible where a live tag appears in paper_trades, so a simulated row for a live tag cannot be mistaken for a real fill.",
+  "evidence_summary": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
   "proposed_fix": null,
   "validation_plan": null,
   "resolution_summary": null,
@@ -32,34 +32,29 @@
   "duplicate_of_issue_id": null,
   "supersedes_issue_id": null,
   "discovered_from_issue_id": null,
-  "first_observed_at": "2026-10-14 03:21:05.537510+00:00",
-  "last_observed_at": "2026-10-14 03:21:05.537510+00:00",
+  "first_observed_at": "2026-09-10 15:13:45.851055+00:00",
+  "last_observed_at": "2026-09-10 15:13:45.851055+00:00",
   "details_json": {
-    "discovery": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+    "discovery": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
     "reported_via": "issue_command_transport",
     "manual_report": true
   },
   "events": [
     {
       "event_type": "CREATED",
-      "occurred_at": "2026-10-14 03:21:05.537510+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
+      "occurred_at": "2026-09-10 15:13:45.851055+00:00",
+      "actor": "50cal",
+      "actor_role": "LIVE_OPS",
       "from_status": null,
       "to_status": "OPEN",
       "from_owner_role": null,
-      "to_owner_role": "RESEARCH_LAB",
+      "to_owner_role": "LIVE_OPS",
       "from_classification": null,
-      "to_classification": "STRATEGY",
-      "reason": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+      "to_classification": "DATA",
+      "reason": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
       "payload": {
         "scope": "system-wide",
         "anomaly_kind": null,
-        "owner_override": {
-          "chosen": "RESEARCH_LAB",
-          "rationale": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
-          "recommended": "LIVE_OPS"
-        },
         "recommended_owner": {
           "priority": "P2",
           "severity": "MEDIUM",
@@ -70,36 +65,8 @@
           "requires_operator_triage": true
         }
       }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-14 03:23:20.656261+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper; deduped regular season +2.0c/market (0.9 s.e.); pooled +2.76c mostly preseason; live 0 losses in 31 markets. ITF men: mmsell10 paper +2.6c (2.0 s.e.); not distinguishable from ITF women in traded band; no walkover settlements. Read due: NFL at 100 games (~early Jan 2027), ITF at 200 matches (~end Dec 2026). Gate SQL in doc section 6.",
-      "payload": {
-        "source_ref": "docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md",
-        "evidence_id": 103,
-        "content_hash": null,
-        "evidence_type": "RESEARCH_DOCUMENT"
-      }
     }
   ],
-  "evidence": [
-    {
-      "evidence_type": "RESEARCH_DOCUMENT",
-      "summary": "Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper; deduped regular season +2.0c/market (0.9 s.e.); pooled +2.76c mostly preseason; live 0 losses in 31 markets. ITF men: mmsell10 paper +2.6c (2.0 s.e.); not distinguishable from ITF women in traded band; no walkover settlements. Read due: NFL at 100 games (~early Jan 2027), ITF at 200 matches (~end Dec 2026). Gate SQL in doc section 6.",
-      "source_ref": "docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md",
-      "captured_at": "2026-10-14 03:23:20.645010+00:00",
-      "captured_by": "cal",
-      "content_hash": null
-    }
-  ],
+  "evidence": [],
   "links": []
 }
