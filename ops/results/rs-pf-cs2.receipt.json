@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "67cdbd97a0f052f24a93a968ccdc581ac97fc946",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-29T10:42:31Z",
+  "id": "rs-pf-cs2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rs-pf-cs2.receipt.json",
+  "result_file": "ops/results/rs-pf-cs2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/40859646640",
+  "service": null,
+  "started_at": "2026-10-29T10:42:30Z",
+  "targets": [],
+  "type": "xos"
+}
