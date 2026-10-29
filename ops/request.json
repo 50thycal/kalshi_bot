@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1029a_pnl1", "sql": "with lp as (select distinct on (market_ticker) * from positions where captured_at > now()-interval '20 minutes' order by market_ticker, captured_at desc), st as (select market_ticker, string_agg(distinct strategy, ',') s from live_orders group by market_ticker) select lp.market_ticker, st.s, lp.quantity_fp, lp.avg_price, lp.market_exposure, lp.realized_pnl, lp.unrealized_pnl, left(lp.raw_json::text,160) from lp left join st using (market_ticker) where coalesce(lp.quantity_fp,0)<>0 order by st.s, lp.market_ticker"}
+{"type":"noop"}
