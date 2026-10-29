@@ -522,3 +522,21 @@ def test_a_closed_position_reported_again_later_counts_when_it_went_flat(session
     h = ov.build_overview(session, now=NOW)["headline"]
     assert h["month_realized_usd"] == pytest.approx(0.07)
     assert _book({"headline": h}, "Hbook")["settled_this_month"] == 1
+
+
+def test_a_market_off_the_tape_is_marked_from_the_incentive_book_snapshot(session):
+    # The liquidity-incentive book's markets are never on the mmsell tape; their own book
+    # snapshots price them while fresh. A stale snapshot leaves the position unpriced.
+    _order(session, "KXYT-1", book="Alimm1", qty=200, filled=200, price=5)
+    session.add(m.Position(market_ticker="KXYT-1", captured_at=NOW - timedelta(minutes=5),
+                           side="yes", quantity=200, quantity_fp=200, market_exposure=10.0))
+    session.add(m.IncentiveMarketSnapshot(market_ticker="KXYT-1", at=NOW - timedelta(minutes=10),
+                                          best_yes_bid=3, best_no_bid=96))
+    _order(session, "KXYT-2", book="Alimm1", qty=488, filled=488, price=1)
+    _hold(session, "KXYT-2", 488, 4.88)
+    session.add(m.IncentiveMarketSnapshot(market_ticker="KXYT-2", at=NOW - timedelta(hours=5),
+                                          best_yes_bid=99, best_no_bid=None))
+    session.flush()
+    b = _book(ov.build_overview(session, now=NOW), "Alimm1")
+    assert b["unrealized_usd"] == pytest.approx(-4.0)       # 200 x 3c - $10.00
+    assert b["open_unpriced"] == 1

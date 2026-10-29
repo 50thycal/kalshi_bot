@@ -140,13 +140,26 @@ def market_pnl(legs: list[tuple[int, float, int, float]], order_side: str,
                  - sum(f for *_x, f in legs), 4)
 
 
+def marked_pnl(legs: list[tuple[int, float, int, float]], order_side: str,
+               bids: tuple[int | None, int | None] | None) -> float | None:
+    """Dollars one tag's open position would net if sold at the held side's bid now (an empty
+    side is worth nothing), or None with no price — the Railway overview's convention."""
+    if bids is None:
+        return None
+    bid = (bids[0] if order_side == "yes" else bids[1]) or 0
+    net_q = sum(s * q for s, q, _px, _f in legs)
+    return round((net_q * bid - sum(s * q * px for s, q, px, _f in legs)) / 100.0
+                 - sum(f for *_x, f in legs), 4)
+
+
 def _blank():
     return {"settled": 0, "contracts": 0.0, "pnl": 0.0, "losing": 0, "open": 0,
-            "open_cost": 0.0, "recent_settled": 0, "recent_pnl": 0.0}
+            "open_cost": 0.0, "unrealized": 0.0, "unpriced": 0, "recent_settled": 0,
+            "recent_pnl": 0.0}
 
 
 def _finish(d: dict) -> dict:
-    for k in ("contracts", "pnl", "open_cost", "recent_pnl"):
+    for k in ("contracts", "pnl", "open_cost", "unrealized", "recent_pnl"):
         d[k] = round(d[k], 2)
     d["cents_per_contract"] = round(100.0 * d["pnl"] / d["contracts"], 2) if d["contracts"] else None
     return d
@@ -154,12 +167,14 @@ def _finish(d: dict) -> dict:
 
 def summarise(fills: list[tuple], settlements: dict[str, dict], twin_rows: list[tuple],
               limm_markets: set[str], types: dict[str, str], *, now: dt.datetime,
-              days: int, tags=LIVE_TAGS) -> dict:
+              days: int, tags=LIVE_TAGS, marks: dict | None = None) -> dict:
     """Everything the report prints, as plain data.
 
     `fills`: (tag, ticker, order_side, order_action, fill_side, price, qty, fee, time).
     `settlements`: ticker -> {"yes_value": float|None, "open_qty": float, "settled_at": iso}.
-    `twin_rows`: (twin tag, ticker, quantity, pnl $) for settled paper trades."""
+    `twin_rows`: (twin tag, ticker, quantity, pnl $) for settled paper trades.
+    `marks`: {ticker: (yes bid, no bid)} for open markets (`market_marks.fetch_bids`)."""
+    marks = marks or {}
     since = now - dt.timedelta(days=days)
     per: dict[tuple[str, str], dict] = {}
     for tag, tkr, oside, oact, fside, price, qty, fee, t in fills:
@@ -178,6 +193,8 @@ def summarise(fills: list[tuple], settlements: dict[str, dict], twin_rows: list[
         markets[(tag, tkr)] = {
             "tag": tag, "ticker": tkr, "event": event_of(tkr), "series": series_of(tkr),
             "category": category(tkr, types), "pnl": pnl, "contracts": round(contracts, 2),
+            "unrealized": marked_pnl(m["legs"], m["side"], marks.get(tkr))
+            if pnl is None else None,
             "entry_px": round(sum(q * px for q, px in bought) / contracts, 1) if contracts else None,
             "cost": round(sum(q * px for q, px in bought) / 100.0, 2),
             "fills": len(m["legs"]), "first_fill": min(m["times"]) if m["times"] else None,
@@ -192,6 +209,10 @@ def summarise(fills: list[tuple], settlements: dict[str, dict], twin_rows: list[
             if mk["pnl"] is None:
                 d["open"] += 1
                 d["open_cost"] += mk["cost"]
+                if mk["unrealized"] is None:
+                    d["unpriced"] += 1
+                else:
+                    d["unrealized"] += mk["unrealized"]
                 continue
             d["settled"] += 1
             d["contracts"] += mk["contracts"]
@@ -232,8 +253,14 @@ def summarise(fills: list[tuple], settlements: dict[str, dict], twin_rows: list[
 
     losers = sorted((mk for mk in markets.values() if mk["pnl"] is not None and mk["pnl"] < 0),
                     key=lambda mk: (mk["pnl"], mk["ticker"]))
+    finished = {t: _finish(b) for t, b in books.items()}
+    totals = {k: round(sum(b[k] for b in finished.values()), 2)
+              for k in ("pnl", "open_cost", "unrealized", "recent_pnl")}
+    totals.update({k: sum(b[k] for b in finished.values())
+                   for k in ("settled", "open", "unpriced")})
+    totals["total"] = round(totals["pnl"] + totals["unrealized"], 2)
     return {"as_of": now.isoformat(timespec="minutes"), "days": days,
-            "books": {t: _finish(b) for t, b in books.items()},
+            "books": finished, "totals": totals,
             "cells": {k: _finish(v) for k, v in cells.items()},
             "overlap": overlap, "losers": losers, "markets": markets}
 
@@ -252,13 +279,15 @@ def _money(v) -> str:
 def render(s: dict, *, max_losers: int = 25) -> str:
     out = [f"MMSELL scorecard  as of {s['as_of']}  (live books, own fills, settled markets)", ""]
     head = (f"  {'book / category':<22}{'settled':>8}{'contr':>8}{'P&L $':>9}{'c/ct':>7}"
-            f"{'losing':>7}{'open':>6}{'open $':>8}   last {s['days']}d: {'n':>4}{'P&L $':>8}")
+            f"{'losing':>7}{'open':>6}{'open $':>8}{'unreal.':>9}"
+            f"   last {s['days']}d: {'n':>4}{'P&L $':>8}")
 
     def line(name, d):
         cpc = "     -" if d["cents_per_contract"] is None else f"{d['cents_per_contract']:>6.2f}"
         return (f"  {name:<22}{d['settled']:>8}{d['contracts']:>8.1f}{d['pnl']:>9.2f} {cpc}"
-                f"{d['losing']:>7}{d['open']:>6}{d['open_cost']:>8.2f}   "
-                f"{'':>9}{d['recent_settled']:>4}{d['recent_pnl']:>8.2f}")
+                f"{d['losing']:>7}{d['open']:>6}{d['open_cost']:>8.2f}{d['unrealized']:>9.2f}   "
+                f"{'':>9}{d['recent_settled']:>4}{d['recent_pnl']:>8.2f}"
+                + (f"  [{d['unpriced']} unpriced]" if d["unpriced"] else ""))
     out.append("BY BOOK, THEN CATEGORY (lifetime of the tag = its epoch)")
     out.append(head)
     for tag, b in s["books"].items():
@@ -274,6 +303,10 @@ def render(s: dict, *, max_losers: int = 25) -> str:
                        f"gap {tw['gap']:+.2f}c")
         else:
             out.append(f"    twin {tag}{TWIN_SUFFIX}: no settled same-market pairs yet")
+    t = s["totals"]
+    out.append(f"  ALL BOOKS: realized {t['pnl']:.2f}  open {t['open']} (${t['open_cost']:.2f})  "
+               f"unrealized {t['unrealized']:.2f} (marked to the held side's bid now)  "
+               f"total {t['total']:.2f}" + (f"  [{t['unpriced']} unpriced]" if t["unpriced"] else ""))
     out.append("")
     out.append(f"{OVERLAP_SERIES} (also quoted by {LIMM_TAG} for rewards)")
     if s["overlap"]:
@@ -294,11 +327,14 @@ def render(s: dict, *, max_losers: int = 25) -> str:
         out.append("  (none)")
     out.append("")
     summary = {"as_of": s["as_of"], "days": s["days"],
+               "totals": s["totals"],
                "books": {t: {k: b[k] for k in ("settled", "contracts", "pnl",
                                                 "cents_per_contract", "losing", "open",
+                                                "unrealized", "unpriced",
                                                 "recent_settled", "recent_pnl", "twin")}
                          for t, b in s["books"].items()},
                "categories": {f"{t}/{c}": {"settled": d["settled"], "pnl": d["pnl"],
+                                           "unrealized": d["unrealized"],
                                            "recent_pnl": d["recent_pnl"]}
                               for (t, c), d in s["cells"].items()},
                "overlap": s["overlap"], "loss_markets": len(s["losers"]),
@@ -312,10 +348,12 @@ def as_rows(s: dict) -> dict:
     """Flat row lists for the dashboard datasets: by_tag, by_book, by_event, losers, overlap."""
     by_tag = [{"book": t, "category": c, **{k: d[k] for k in (
         "settled", "contracts", "pnl", "cents_per_contract", "losing", "open", "open_cost",
-        "recent_settled", "recent_pnl")}} for (t, c), d in sorted(s["cells"].items())]
+        "unrealized", "unpriced", "recent_settled", "recent_pnl")}}
+        for (t, c), d in sorted(s["cells"].items())]
     by_book = [{"book": t, **{k: b[k] for k in (
         "settled", "contracts", "pnl", "cents_per_contract", "losing", "open", "open_cost",
-        "recent_settled", "recent_pnl")}, "twin_pairs": b["twin"]["pairs"],
+        "unrealized", "unpriced", "recent_settled", "recent_pnl")},
+        "twin_pairs": b["twin"]["pairs"],
         "twin_gap_cents": b["twin"]["gap"]} for t, b in s["books"].items()]
     since = dt.datetime.fromisoformat(s["as_of"]) - dt.timedelta(days=s["days"])
     events: dict[tuple[str, str], dict] = {}
@@ -339,7 +377,7 @@ def as_rows(s: dict) -> dict:
     overlap = [{"book": t, **o} for t, o in s["overlap"].items()]
     return {"as_of": s["as_of"], "days": s["days"], "by_tag": by_tag, "by_book": by_book,
             "by_event": sorted(events.values(), key=lambda e: e["pnl"]),
-            "losers": losers, "overlap": overlap}
+            "losers": losers, "overlap": overlap, "totals": s["totals"]}
 
 
 # ------------------------------------------------------------------ database
@@ -405,6 +443,8 @@ def main(argv=None) -> int:
                     help="comma-separated live tags (default: the current books)")
     ap.add_argument("--json", action="store_true",
                     help="print the full data as one JSON object (for the dashboard)")
+    ap.add_argument("--no-marks", action="store_true",
+                    help="skip the Kalshi price read; open positions show as unpriced")
     args = ap.parse_args(argv)
     tags = tuple(t.strip() for t in args.tags.split(",") if t.strip())
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
@@ -418,8 +458,14 @@ def main(argv=None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             fills, settlements, twin_rows, limm = fetch(cur, tags)
+    marks = {}
+    if not args.no_marks:
+        from market_marks import fetch_bids
+        held = {f[1] for f in fills
+                if abs((settlements.get(f[1]) or {}).get("open_qty") or 0.0) >= DUST}
+        marks = fetch_bids(held)
     s = summarise(fills, settlements, twin_rows, limm, types,
-                  now=dt.datetime.now(dt.timezone.utc), days=args.days, tags=tags)
+                  now=dt.datetime.now(dt.timezone.utc), days=args.days, tags=tags, marks=marks)
     print(json.dumps(as_rows(s), sort_keys=True, default=str) if args.json else render(s))
     return 0
 
