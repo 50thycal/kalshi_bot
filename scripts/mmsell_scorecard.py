@@ -283,11 +283,11 @@ def render(s: dict, *, max_losers: int = 25) -> str:
     else:
         out.append("  (none yet)")
     out.append("")
-    out.append(f"LOSING MARKETS (newest worst {max_losers}): entry price, fills, hours from "
+    out.append(f"LOSING MARKETS (worst {max_losers}): entry price, fills, hours from "
                "first fill to settlement")
     for mk in s["losers"][:max_losers]:
         hrs = _hours(mk["first_fill"], mk["settled_at"])
-        out.append(f"  {mk['ticker']:<38}{mk['tag']:<11}{mk['category']:<10}{mk['pnl']:>7.2f}"
+        out.append(f"  {mk['ticker']:<46} {mk['tag']:<11}{mk['category']:<10}{mk['pnl']:>7.2f}"
                    f"  {mk['contracts']:>4.1f} @ {mk['entry_px'] or 0:>4.1f}c  {mk['fills']} fills"
                    + (f"  {hrs}h" if hrs is not None else ""))
     if not s["losers"]:

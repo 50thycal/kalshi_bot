@@ -47,7 +47,7 @@ verdict. **A recommendation here is not a gate verdict** and never moves a lifec
 4. **Write the file** `YYYY-MM-DD.md`: the scorecard output verbatim (fenced), then the trend
    review and recommendations, in under 60 lines of prose. Open a docs-only PR and merge it
    when CI is green.
-5. **Update the dashboard** (link in the newest file): run the script again with
+5. **Update the dashboard** (https://claude.ai/artifact/GKUXvPcdU7RJRUEsNvNCfP): run the script again with
    `--json --days 7`. Then update the datasets:
    - upload `by_tag`, `by_book`, `by_event`, `losers` and `overlap` as JSON files, one per call;
    - append this run's per-book totals to `history`;
@@ -65,3 +65,9 @@ verdict. **A recommendation here is not a gate verdict** and never moves a lifec
   erases about 15 wins, so read the losing-market count before the P&L.
 - Tags are fresh at every arming, so a tag never spans two Experiment OS epochs. Never add a
   retired tag's totals to its successor's.
+
+## The routine
+
+A self-bound 72h trigger in the owning session runs this protocol and re-arms itself first
+(`MMSELL 72h scorecard + trend review`, first run 2026-11-01 03:30Z). Its stored prompt is the
+procedure above, adapted from `docs/handoffs/HANDOFF-72h-review-for-mmsell.md`.
