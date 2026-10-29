@@ -1,0 +1,31 @@
+# ops request [READ]
+# type=xos  id=rs-reg-cs2-rc1
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T10:44:44Z
+{
+  "command_id": "rs-reg-cs2-20261029",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "payload_hash": "81330556fc85e313457a305266ad5b0d458e6590f3becf3c8253a52ab6e62606",
+  "completed_at": "2026-10-29 10:44:01.123343+00:00",
+  "result": {
+    "kind": "register",
+    "package": "mmsell-cell-size-2-canary",
+    "version": 1,
+    "keep_gate": "live_canary_keep",
+    "epoch_number": 1,
+    "promotion_gate": "paper_to_live_canary",
+    "epoch_started_at": "2026-10-29 10:44:00.927887+00:00",
+    "version_frozen_at": "2026-10-29 10:44:00.927887+00:00",
+    "keep_gate_spec_hash": "de7df3c97f9aaea9",
+    "promotion_gate_spec_hash": "f15ea2a7bfb93f24",
+    "paper_deployment_deployment": "mmsell-cellsize2-paper-1",
+    "paper_deployment_started_at": "2026-10-29 10:44:00.927887+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-price-ceiling-cell-size-2"
+}
