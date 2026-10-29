@@ -1,14 +1,29 @@
 # Weather-markets research journal
 
-## MMSELL selection-bias audit 2026-10-29 — pre-registered (catalog study 1)
+## MMSELL selection-bias audit 2026-10-29 — HOLD; the edge is the fill, and fills select losers
 
-Research Lab, [thesis](MMSELL_SELECTION_BIAS_AUDIT.md), `scripts/mmsell_selection_audit.py`.
-Scores every market in `mmsell_candidate_ticks` (entered or not) at its first in-band tick
-against Kalshi's settled result: taker (sell into the bid, clip capped at
-`depth_at_best_bid`) and fill-assumed maker, event-clustered, by series, strike structure,
-price band and hours to expiration, plus the auditable skip rules (XOS-000009's substring list,
-the live pause, the live tier, `maxyes`). Predictions P1–P4 and cell labels frozen before the
-run. XOS-000046/000047 series are reported without labels. Verdict: pending the first run.
+Research Lab, catalog study 1 ([doc](MMSELL_SELECTION_BIAS_AUDIT.md),
+`scripts/mmsell_selection_audit.py`, ops `rl-sba-run1-20261029`). Every market the MMSELL scan
+taped, entered or not: 102,587 settled, 98 days, pre-registered.
+
+**Live cell (YES ask ≤ 7¢):**
+- **Maker, fill assumed:** +0.87¢ (LCB +0.24). P1 HOLD: positive, under the +1.0¢ bar.
+- **Taker:** −0.99¢. P2 FAIL: nothing survives crossing the spread.
+- **Live market choice is representative:** P3 PASS, −0.43 ± 0.72.
+- **The fill is where it goes wrong:** live orders that filled made −0.98¢ against +4.04¢ for orders
+  that did not (diff −5.0 ± 1.1). The fill proxy is negative in every band and timing bucket.
+
+**Cells:**
+- **No SIZE-SAFE cell.** KXRAIN is the only one that holds at taker, and its own gate owns growth.
+- **No confident CUT.** Leaning cuts: entries ≥ 24h from expiration; KXBTCD and KXNFLSPREAD (already
+  paused); KXMLBKS, KXNBASPREAD, KXNFLRECYDS.
+
+**Skip rules:**
+- The crypto list and the live pause remove losers.
+- XOS-000009's false positives are 2 markets in 98 days.
+- The tier and `maxyes` drop only maker-only edge.
+
+**What it means:** more coverage would buy more adverse fills, not profit.
 
 ## WIN-set expansion 2026-10-17 — commodities closed, KXTRUMPMENTION first, fast fills lose
 

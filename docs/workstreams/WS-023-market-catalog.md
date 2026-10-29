@@ -631,3 +631,10 @@ Audit figures, mechanics and rollout are in
 24.5% to 45% (9.64 → 17.77 GB), and bulk discovery is running again. Measured figures are in
 [selective history § Retention — Result](../MARKET_CATALOG_SELECTIVE_HISTORY.md#retention--owner-decision-2026-10-21-dec-038).
 
+
+## Catalog research study 1 — 2026-10-29
+
+The MMSELL selection-bias audit ran over the whole candidate tape, with outcomes from Kalshi's public
+endpoint (D1 option (a)). Verdict: HOLD. Result and reading:
+[MMSELL_SELECTION_BIAS_AUDIT.md §8](../MMSELL_SELECTION_BIAS_AUDIT.md#8-results) (PRs #693 and this
+one). D1 option (b), catalog access for the ops runner, is still the owner's call before study 2.

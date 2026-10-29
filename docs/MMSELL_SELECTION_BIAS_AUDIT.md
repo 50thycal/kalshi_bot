@@ -1,7 +1,8 @@
 # MMSELL selection-bias audit — does the tail-sell edge hold across everything the scan saw?
 
 **Status:** PRE-REGISTERED 2026-10-29 (Research Lab), written before the probe ran and before any
-outcome of this population was read. Verdict: _pending — filled in §8 after the run._
+outcome of this population was read. **Verdict 2026-10-29 (`rl-sba-run1-20261029`): HOLD** —
+P1 HOLD, P2 FAIL, P3 PASS; P4 per rule in §8. No cell is SIZE-SAFE; the edge is MAKER-ONLY.
 
 Catalog research plan, study 1 (WS-023; plan in PR #692, `docs/CATALOG_RESEARCH_PLAN.md`).
 Probe: `scripts/mmsell_selection_audit.py` (ops-allowlisted, read-only). Experiment OS is
@@ -139,4 +140,88 @@ books is total by design: this audits MMSELL's own universe.
 
 ## 8. Results
 
-_Pending the first run._
+Ops run `rl-sba-run1-20261029` (2026-10-29 14:46Z, default-branch code `c1c0169b`, 402 s).
+**102,587 settled markets** from 104,023 taped tickers (2,475 unsettled or void excluded), 23,904
+events, 2026-07-23 → 2026-10-29. Cents per contract, event-clustered SE. Labels are applied exactly as
+§4–§5 define them; nothing was re-scoped.
+
+### 8.1 Predictions
+
+| # | Measured (live cell, ask ≤ 7¢, 7,806 markets / 4,363 events) | Result |
+|---|---|---|
+| P1 | maker (fill assumed) **+0.87 ± 0.32**, 95% LCB +0.24 | **HOLD**: positive, below the +1.0¢ bar, not a kill |
+| P2 | taker **−0.99**, 95% CI [−1.62, −0.35] | **FAIL**: crossing the spread loses |
+| P3 | live-traded +0.52 vs never-live +0.95, diff −0.43 ± 0.72 | **PASS**: live picks representative markets |
+| P4 | per rule below | see §8.3 |
+
+**Study: HOLD.** The opportunity population carries a small fill-assumed edge, but nothing survives
+crossing the spread, and the maker edge exists only if resting orders fill without adverse
+selection. They do not:
+
+- **Live orders, same population, maker price at the tape's first tick:** filled 1,079 markets at −0.98¢
+  vs ordered-but-unfilled 461 markets at +4.04¢ (diff −5.03 ± 1.08). The losers fill and the winners do
+  not. This is XOS-000031's mechanism, measured on the whole candidate set.
+- **Quote-crossing fill proxy:** −1.65¢ in the live cell, and negative in every price band and every
+  hours-to-expiration bucket. The proxy catches only 29% of fills, against about 70% live, so treat it as
+  directional only.
+- **Selection is in the fill, not the market:** paper `mmsell10` entered vs not differs by +0.23 ± 0.71,
+  and live-chosen markets match the population (P3).
+
+### 8.2 Cells
+
+- **Price band:** every band is MAKER-ONLY. Maker +0.87 (≤7) / +1.57 (8–10) / +1.81 / +2.19 / +2.61 /
+  +5.82 (31+); taker −0.99 / −1.34 / −1.78 / −2.13 / −2.54 / −3.89. The maker-minus-taker gap is the
+  spread, and the outcome edge is negative at the bid.
+- **Hours to expiration (live cell):** maker declines with distance. `<=0` +2.12, `0-1` +1.32, `1-3`
+  +0.91, `3-6` +0.60, `6-24` +0.57, `24-72` **−0.21**, `>72` **−0.81** (both CUT-LEANING).
+- **Strike structure / mode / type:** every cell with a floor is MAKER-ONLY or NO-CALL; none holds at
+  taker. In the live cell `price_strike` (−2.06) and `outright` (−0.70) are CUT-LEANING, and `h2h`
+  (+2.00) and `player_prop` (+1.25) are MAKER-ONLY.
+- **Series, live cell (z 3.29):**
+  - **HOLDS: KXRAIN only** (taker +3.38 ± 0.89, maker +5.44, median depth 32). It misses SIZE-SAFE only
+    on events (51 < 60). Its registered gate (`mmsell-rain-season`) owns any growth.
+  - **CUT-LEANING:** KXBTCD (−5.02) and KXNFLSPREAD (−5.13), both already live-paused; KXMLBKS (−0.41),
+    KXNBASPREAD (−1.04), KXNFLRECYDS (−0.33).
+  - **NO-CALL:** 9 series. **THIN:** 429. **No confident CUT anywhere.**
+- **Series, all bands:** CUT-LEANING concentrates in soccer and team game-winner markets (KXMLBGAME,
+  KXEPLGAME, KXMLSGAME, KXLALIGAGAME, KXNFLGAME …) and in KXWTI, KXUFCFIGHT, KXSERIEATOTAL, KXBTCD.
+
+### 8.3 Skip rules (P4, removed set, 95% CI)
+
+| Rule | Removed | taker | maker | Reading |
+|---|---|---|---|---|
+| crypto `skip=`, true crypto (live cell) | 349 / 132 ev | −7.72 [−14.8, −0.7] | −5.69 | correct: it removes losers |
+| crypto `skip=`, **not** crypto (XOS-000009) | **2** / 2 ev | +4.63 | +5.90 | mechanical label "throws away profit", but **n = 2 in 98 days** (KXHEGSETHANNOUNCEOUT, KXHEGSETHOUT) |
+| live pause (`KXNFLSPREAD,KXATP,KXWTA,KXITF,KXBTCD`) | 1,018 / 760 ev | −2.60 [−5.44, +0.25] | −0.92 | ok: the paused set does not pay |
+| live tier < graduated | 3,686 / 1,785 ev | −0.68 | +1.20 [+0.38, +2.02] | maker-only, weak |
+| `maxyes=7` (ask 8–10) | 12,205 / 6,034 ev | −1.34 | +1.57 [+1.01, +2.12] | maker-only, weak |
+
+### 8.4 Issue views (inform, never re-score)
+
+- **XOS-000046:**
+  - KXMLBTOTAL all bands: taker −4.82, maker −1.23 ± 1.32. In the live cell it is 43 markets at maker −2.78.
+  - KXMLBSPREAD all bands: maker +1.61. Live cell +2.45, but live-traded −0.92 vs never-live +3.39
+    (diff −4.3 ± 5.5).
+  - Same direction as the §5 addendum (live fills select losers). The frozen 2027 test is unchanged.
+- **XOS-000047:**
+  - KXNFLTOTAL ≤7 maker +0.42 ± 3.83 (84 markets); 8–10 +3.48 ± 2.03.
+  - ITF men ≤7 +2.87 ± 1.56 vs ITF women +2.09 ± 1.58: the two do not separate.
+  - The forward test is unchanged.
+
+### 8.5 What it means
+
+- **Where size is safe:** nowhere by the pre-registered test. KXRAIN is the one cell whose edge
+  survives the taker price; it waits on its own gate.
+- **Coverage is not the route to real money.** Paper's extra ~30× coverage earns fill-assumed spread
+  capture. On every cut of the population, realized maker P&L (fill proxy; live filled orders) is at
+  or below zero. Expanding live to more markets would buy more adverse fills.
+- **What to cut:** nothing with confidence. The leaning cuts are entries ≥ 24h from expiration,
+  `price_strike`/`outright` in the live cell, and the five series in §8.2. KXBTCD and KXNFLSPREAD are
+  already paused, and this keeps them paused.
+- **Skip rules:** the crypto list and the live pause remove losers. XOS-000009's false positives are
+  real but negligible (2 markets). The tier and `maxyes` drop only maker-only edge.
+- **Limits that bind this reading:** the capture cap truncated about half of all scan cycles (2,196 of
+  4,415 twenty-minute buckets at ≥ 400 ticks), so the tape over-represents what the scan reaches first.
+  The fill proxy misses most fills.
+
+A study authorizes nothing. Each item above is an owner decision recorded through Experiment OS.
