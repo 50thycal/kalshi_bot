@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rs-reg-cs2-20261029"],"id":"rs-reg-cs2-rc1"}
+{"type":"xos","command":"package-preflight","args":["mmsell-win-set-3-canary"],"id":"rs-pf-ws3"}
