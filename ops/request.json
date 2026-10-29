@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rs-reg-ws3-20261029"],"id":"rs-reg-ws3-rc1"}
+{"type":"env","action":"get","id":"rs-env-read-1"}
