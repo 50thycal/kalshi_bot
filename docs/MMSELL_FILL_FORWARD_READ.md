@@ -1,7 +1,8 @@
 # MMSELL fill forward read — P-SLOW and P-SPREAD on live fills since 2026-10-01
 
 **Status:** READ RULES FIXED 2026-10-29 (Research Lab), before any forward outcome was read by this
-session. Verdict: _pending — §5 after the run._
+session. **Read 2026-10-29 (`rl-ffr-run1-20261029`): P-SLOW NO PASS at its floor; P-SPREAD HOLD
+(40/80).** The 3-contract ceiling on the slow cell stands.
 
 Follow-up to the selection-bias audit (`docs/MMSELL_SELECTION_BIAS_AUDIT.md` §8), which found that the
 MMSELL edge depends on which resting orders fill. The owner asked for a fill study next (2026-10-29).
@@ -67,4 +68,47 @@ descriptive output only: fill rate and realized ¢ per fill by market type, by t
 
 ## 5. Results
 
-_Pending._
+Ops run `rl-ffr-run1-20261029` on default-branch code `204330e2`.
+- **Orders:** 1,103 live buy-NO orders decided since 2026-10-01; 1,017 are on the lineage tags.
+- **Scored:** 599 lineage orders filled and settled. 53 orders were unsettled or void.
+- **Unclassified types:** 0. **Missing spread context:** 0.
+
+| tag | orders | fill rate | settled fills | ¢/fill |
+|---|---|---|---|---|
+| Fmmsell10 | 87 | 64.4% | 56 | +5.27 |
+| Hmmsell10 | 39 | 43.6% | 17 | +0.59 |
+| Jmmsell10 | 325 | 68.0% | 221 | −1.42 |
+| Kmmsell10 | 566 | 55.5% | 305 | +0.46 |
+| (diag) Nmmsell10 / Vmmsell10 | 69 / 17 | | 34 / 12 | +3.97 / +6.75 |
+
+**P-SLOW — NO PASS (at floor).**
+- **Cell:** 104 fills at **+3.00¢**, against REST 495 fills at −0.37¢.
+- **Separation:** +3.37¢, but the settlement-date bootstrap 5th percentile is **−1.34¢**. The bar needs
+  it above 0.
+- **Clauses:** the floor (≥ 100) and the cell mean (≥ +2.0¢) pass; the interval fails.
+- **No forward kill clause exists,** so this is NO PASS, not KILL.
+
+**P-SPREAD — HOLD (accrual).**
+- **Wide spread (≥ 3¢):** 40 fills at +2.52¢, against 559 narrow-spread fills at +0.05¢.
+- **Separation:** +2.47¢, 5th percentile −4.11¢.
+- **Floor:** 40 of 80.
+
+**Descriptive only; never decides.**
+- **Within the cell:**
+  - `event_stat` (mostly rain): 57 fills, +3.53¢, 3.5% losses;
+  - `game_prop`: 16 fills, +6.75¢;
+  - `mention`: 22 fills, −2.55¢.
+- **Largest REST type:** `h2h`, 268 fills at −0.51¢, with a 75.7% fill rate, the highest.
+- **By decision week:** the cell was positive in 4 of 5 weeks; all lineage fills were positive in 3 of 5.
+
+**Reading.**
+- **The direction holds out of sample, but the interval does not clear.** The cell earns about 3¢
+  more per fill than the rest of the book, yet the date-to-date spread is still too wide to rule out
+  zero.
+- **Under §4:** the ceiling stays at 3 contracts, and no larger size is supported.
+- **Don't re-read this sample as it grows.** That would let the stopping point choose the answer.
+- **If the owner wants another look:** pre-register a fresh forward window from 2026-10-30 on
+  `Kmmsell10`, with the same bars and floor, read once at 100 cell fills (about four to five weeks at
+  the current rate of ~20 a week).
+- **The fill study adds nothing beyond this.** The study-1 finding stands: realized edge sits in the
+  slow cell and in rain, not in the broad book.

@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## MMSELL fill forward read 2026-10-29 — P-SLOW NO PASS at floor; P-SPREAD HOLD
+
+Research Lab ([doc](MMSELL_FILL_FORWARD_READ.md), `scripts/mmsell_fill_forward_read.py`, ops
+`rl-ffr-run1-20261029`). Reads the two fill tests frozen on 2026-10-03, on live fills from 10-01
+across the Fmmsell10 → Kmmsell10 lineage: 599 settled fills. No new fill hypotheses; the doc lists the
+closed fill levers.
+
+- **P-SLOW** (slow-information cell): 104 fills at +3.00¢ against −0.37¢ for the rest (+3.37¢
+  separation). The bootstrap 5th percentile is −1.34¢, so it is **NO PASS**: the right direction, not
+  proven. The 3-contract ceiling stays.
+- **P-SPREAD:** 40 of 80 fills, +2.47¢ separation, **HOLD**.
+- **Do not re-read this sample as it grows.** A fresh, read-once forward window is the honest next
+  look (about 4–5 weeks to 100 cell fills).
+
 ## MMSELL selection-bias audit 2026-10-29 — HOLD; the edge is the fill, and fills select losers
 
 Research Lab, catalog study 1 ([doc](MMSELL_SELECTION_BIAS_AUDIT.md),
