@@ -1,0 +1,77 @@
+# ops request [READ]
+# type=xos  id=rl-sba-iss09-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:08:34Z
+{
+  "issue_key": "XOS-000009",
+  "title": "MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets",
+  "status": "OPEN",
+  "classification": "STRATEGY",
+  "severity": "LOW",
+  "priority": "P3",
+  "owner_role": "RESEARCH_LAB",
+  "opened_by_role": "PLATFORM_CHANGE_REVIEW",
+  "opened_at": "2026-08-24 14:55:25.628166+00:00",
+  "scope": "system-wide",
+  "experiment_id": null,
+  "version_id": null,
+  "detector": "manual.reported",
+  "detector_fingerprint": null,
+  "occurrence_count": 1,
+  "disposition": null,
+  "latest_evidence": null,
+  "problem_statement": "The MMSELL arm specs exclude crypto with skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO, which matches as a SUBSTRING of the series ticker rather than as a token. KXHEGSETHANNOUNCEOUT contains the letters ETH inside H-EGS-ETH-ANNOUNCE-OUT and is therefore dropped by BOTH arms as though it were an Ethereum market, which it is not. The effect is symmetric across treatment and control, so this is not a confound and does not invalidate the 2026-08-24 taxonomy work - it is a universe-definition defect. It quietly removes eligible non-crypto markets from a design whose supply and calendar were just measured, and any future series whose ticker happens to contain one of those six strings will be removed the same way, silently and without any log line saying so. The correct fix is a matching rule question - token boundaries, an explicit series allowlist, or classification-based exclusion now that the settlement taxonomy covers 99.8% of the population - not a patch to the string. That choice is part of the experiment's scientific contract.",
+  "evidence_summary": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
+  "proposed_fix": null,
+  "validation_plan": null,
+  "resolution_summary": null,
+  "resolved_at": null,
+  "requires_new_version": null,
+  "requires_new_epoch": null,
+  "requires_platform_revision": null,
+  "requires_pause_or_stand_down": null,
+  "duplicate_of_issue_id": null,
+  "supersedes_issue_id": null,
+  "discovered_from_issue_id": null,
+  "first_observed_at": "2026-08-24 14:55:25.628166+00:00",
+  "last_observed_at": "2026-08-24 14:55:25.628166+00:00",
+  "details_json": {
+    "discovery": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
+    "reported_via": "issue_command_transport",
+    "manual_report": true
+  },
+  "events": [
+    {
+      "event_type": "CREATED",
+      "occurred_at": "2026-08-24 14:55:25.628166+00:00",
+      "actor": "claude-code",
+      "actor_role": "PLATFORM_CHANGE_REVIEW",
+      "from_status": null,
+      "to_status": "OPEN",
+      "from_owner_role": null,
+      "to_owner_role": "RESEARCH_LAB",
+      "from_classification": null,
+      "to_classification": "STRATEGY",
+      "reason": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
+      "payload": {
+        "scope": "system-wide",
+        "anomaly_kind": null,
+        "owner_override": {
+          "chosen": "RESEARCH_LAB",
+          "rationale": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
+          "recommended": "LIVE_OPS"
+        },
+        "recommended_owner": {
+          "priority": "P2",
+          "severity": "MEDIUM",
+          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
+          "owner_role": "LIVE_OPS",
+          "disposition": null,
+          "classification": "UNCLASSIFIED",
+          "requires_operator_triage": true
+        }
+      }
+    }
+  ],
+  "evidence": [],
+  "links": []
+}
