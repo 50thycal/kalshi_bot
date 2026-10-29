@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1029a1216", "sql": "select distinct p.market_ticker, p.disappeared_at::text, p.end_date::text from incentive_programs p where p.disappeared_at > now()-interval '30 hours' and p.market_ticker in (select distinct market_ticker from live_orders where strategy='Alimm1' and created_at > now()-interval '20 days') order by 2"}
