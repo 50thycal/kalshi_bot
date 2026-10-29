@@ -1,20 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1029a1213
-# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T12:13:09Z
-k  t                              d                                        ts                           
--  -----------------------------  ---------------------------------------  -----------------------------
-O  KXMAMDANIMENTION-26NOV18-NQE   yes/buy 3x333 resting  8d074f44-4be0-    2026-10-24 01:19:06.745673+00
-O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 1x500 resting  4a6ac860-d4a6-     2026-10-26 14:38:01.792085+00
-O  KXYTVIEWSHIGH-FUE26NOV-24.0M   no/buy 1x500 resting  6ee0fc6a-01b1-     2026-10-26 15:24:18.730413+00
-O  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10x200 resting  472f6c1b-f59e-   2026-10-27 04:29:18.109125+00
-O  KXYTVIEWSHIGH-OLI26DEC-7.5M    no/buy 10x200 resting  97d72469-dbd9-    2026-10-27 07:31:31.642581+00
-O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x244 resting  limmsell:a:fcd    2026-10-27 13:59:01.360672+00
-O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x243 resting  limmsell:b:93d    2026-10-27 13:59:01.436472+00
-O  KXYTVIEWSHIGH-MOR26NOV-7.5M    yes/sell 15x100 resting  limmsell:a:0d8  2026-10-29 12:10:19.196147+00
-O  KXYTVIEWSHIGH-MOR26NOV-7.5M    yes/sell 15x100 resting  limmsell:b:0bf  2026-10-29 12:10:19.276601+00
-P  KXYTVIEWSHIGH-MOR26NOV-7.5M    200.0000                                 2026-10-29 12:11:46.679297+00
-P  KXYTVIEWSHIGH-BAD26DEC-24.0M   0.0000                                   2026-10-29 12:11:46.686734+00
-P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                                2026-10-29 12:11:46.69407+00 
-R                                 685                                      2026-10-29 10:43:20.101894+00
-
-(13 rows)
+# type=noop
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T12:13:29Z
+(noop — nothing to do)
