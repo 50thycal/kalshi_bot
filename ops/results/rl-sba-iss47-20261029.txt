@@ -1,0 +1,105 @@
+# ops request [READ]
+# type=xos  id=rl-sba-iss47-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:09:14Z
+{
+  "issue_key": "XOS-000047",
+  "title": "Forward test: MMSELL tail edge on KXNFLTOTAL and KXITFMATCH (pre-registered 2026-10-14)",
+  "status": "OPEN",
+  "classification": "STRATEGY",
+  "severity": "LOW",
+  "priority": "P3",
+  "owner_role": "RESEARCH_LAB",
+  "opened_by_role": "RESEARCH_LAB",
+  "opened_at": "2026-10-14 03:21:05.537510+00:00",
+  "scope": "system-wide",
+  "experiment_id": null,
+  "version_id": null,
+  "detector": "manual.reported",
+  "detector_fingerprint": null,
+  "occurrence_count": 1,
+  "disposition": null,
+  "latest_evidence": "RESEARCH_DOCUMENT: Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper",
+  "problem_statement": "Two positive scorecard leads (WS-023 series-scorecard-v2) were picked from 13 series after looking, so each is held as a hypothesis. Research Lab call 2026-10-14: KXNFLTOTAL KEEP at current live size (Kmmsell10, 1 contract), no growth; KXITFMATCH KEEP in paper, live tennis pause unchanged (XOS-000039). Frozen forward test on mmsell10 paper from 2026-10-15T00:00Z, unit game/match: NFL floor 100 games, ITF floor 200 matches with ITF women as control; branches GROW-eligible (LCB>0) / STOP (mean<=0) / KEEP. Any growth, stop or pause lift is an operator decision and a recorded transition. Source: docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md (PR #620).",
+  "evidence_summary": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+  "proposed_fix": null,
+  "validation_plan": null,
+  "resolution_summary": null,
+  "resolved_at": null,
+  "requires_new_version": null,
+  "requires_new_epoch": null,
+  "requires_platform_revision": null,
+  "requires_pause_or_stand_down": null,
+  "duplicate_of_issue_id": null,
+  "supersedes_issue_id": null,
+  "discovered_from_issue_id": null,
+  "first_observed_at": "2026-10-14 03:21:05.537510+00:00",
+  "last_observed_at": "2026-10-14 03:21:05.537510+00:00",
+  "details_json": {
+    "discovery": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+    "reported_via": "issue_command_transport",
+    "manual_report": true
+  },
+  "events": [
+    {
+      "event_type": "CREATED",
+      "occurred_at": "2026-10-14 03:21:05.537510+00:00",
+      "actor": "cal",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": "OPEN",
+      "from_owner_role": null,
+      "to_owner_role": "RESEARCH_LAB",
+      "from_classification": null,
+      "to_classification": "STRATEGY",
+      "reason": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+      "payload": {
+        "scope": "system-wide",
+        "anomaly_kind": null,
+        "owner_override": {
+          "chosen": "RESEARCH_LAB",
+          "rationale": "Durable home for a pre-registered forward test so the read is scheduled state, not chat.",
+          "recommended": "LIVE_OPS"
+        },
+        "recommended_owner": {
+          "priority": "P2",
+          "severity": "MEDIUM",
+          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
+          "owner_role": "LIVE_OPS",
+          "disposition": null,
+          "classification": "UNCLASSIFIED",
+          "requires_operator_triage": true
+        }
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-14 03:23:20.656261+00:00",
+      "actor": "cal",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper; deduped regular season +2.0c/market (0.9 s.e.); pooled +2.76c mostly preseason; live 0 losses in 31 markets. ITF men: mmsell10 paper +2.6c (2.0 s.e.); not distinguishable from ITF women in traded band; no walkover settlements. Read due: NFL at 100 games (~early Jan 2027), ITF at 200 matches (~end Dec 2026). Gate SQL in doc section 6.",
+      "payload": {
+        "source_ref": "docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md",
+        "evidence_id": 103,
+        "content_hash": null,
+        "evidence_type": "RESEARCH_DOCUMENT"
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_type": "RESEARCH_DOCUMENT",
+      "summary": "Pre-registration and evidence (merged PR #620). NFL: maker fee verified in paper; deduped regular season +2.0c/market (0.9 s.e.); pooled +2.76c mostly preseason; live 0 losses in 31 markets. ITF men: mmsell10 paper +2.6c (2.0 s.e.); not distinguishable from ITF women in traded band; no walkover settlements. Read due: NFL at 100 games (~early Jan 2027), ITF at 200 matches (~end Dec 2026). Gate SQL in doc section 6.",
+      "source_ref": "docs/MMSELL_NFLTOTAL_ITF_FORWARD_TEST.md",
+      "captured_at": "2026-10-14 03:23:20.645010+00:00",
+      "captured_by": "cal",
+      "content_hash": null
+    }
+  ],
+  "links": []
+}
