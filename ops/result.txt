@@ -1,72 +1,21 @@
 # ops request [READ]
-# type=xos  id=rl-sba-iss31-20261029
-# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:09:51Z
-{
-  "issue_key": "XOS-000031",
-  "title": "paper_trades is not real-money P&L for a LIVE tag: never-filled orders inflate it",
-  "status": "OPEN",
-  "classification": "DATA",
-  "severity": "HIGH",
-  "priority": "P2",
-  "owner_role": "LIVE_OPS",
-  "opened_by_role": "LIVE_OPS",
-  "opened_at": "2026-09-10 15:13:45.851055+00:00",
-  "scope": "system-wide",
-  "experiment_id": null,
-  "version_id": null,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": null,
-  "latest_evidence": null,
-  "problem_statement": "The live path writes SIMULATED paper_trades rows under the LIVE tag, including for orders that never filled on the exchange. Any P&L read from paper_trades for a live tag therefore counts trades real money never got, and can read positive while the book is losing. Measured 2026-09-10 on the mmsell contest-cap live canary, scoped to its epoch: paper_trades read +2.56 USD (n=194) while the exchange's own realized P&L for the same tag and window was -1.41 USD (settled=123); the difference was 70 tickers whose live order never filled, worth +4.54 USD. On the subset that DID fill the simulator read -1.97 USD vs -1.41 USD real, so the apparent paper edge is selection at the fill, not a modelling error. Fill rate over the epoch: 136 of 180 tickers ordered. This is the same class of error as the open-position count, where the bound is enforced by count_live_book_open and NOT by a paper_trades row count; it has now produced a materially wrong operator report twice. NOT a safety defect: the max_daily_loss breaker (LiveExecutor._daily_loss_hit -> repository.live_realized_pnl_today) already reads positions.realized_pnl, and the live dashboard already attributes via live_orders.strategy -> fills -> newest positions snapshot (kalshi_bot/livedash/legs.py). The gap is that there is no canonical, ops-reachable read of live realized P&L and open count BY TAG, so every ad-hoc analysis re-derives it and the wrong source is the easy one. Asks: (a) a named, ops-callable read for live realized P&L and live open count by tag, using the same attribution chain the dashboard and the breaker use; (b) make the provenance visible where a live tag appears in paper_trades, so a simulated row for a live tag cannot be mistaken for a real fill.",
-  "evidence_summary": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
-  "proposed_fix": null,
-  "validation_plan": null,
-  "resolution_summary": null,
-  "resolved_at": null,
-  "requires_new_version": null,
-  "requires_new_epoch": null,
-  "requires_platform_revision": null,
-  "requires_pause_or_stand_down": null,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-09-10 15:13:45.851055+00:00",
-  "last_observed_at": "2026-09-10 15:13:45.851055+00:00",
-  "details_json": {
-    "discovery": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-09-10 15:13:45.851055+00:00",
-      "actor": "50cal",
-      "actor_role": "LIVE_OPS",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "LIVE_OPS",
-      "from_classification": null,
-      "to_classification": "DATA",
-      "reason": "Opened by Live Ops after a real-money report was given to the operator from the wrong source and corrected against the exchange's own realized P&L. Recurrence of a known trap, so it belongs in durable state rather than a session note.",
-      "payload": {
-        "scope": "system-wide",
-        "anomaly_kind": null,
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    }
-  ],
-  "evidence": [],
-  "links": []
-}
+# type=db  id=rl-sba-shape1-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:10:40Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 645, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 641, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 458, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 502, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.QueryCanceled: canceling statement due to statement timeout
