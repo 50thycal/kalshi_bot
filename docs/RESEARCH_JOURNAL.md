@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## MMSELL selection-bias audit 2026-10-29 — pre-registered (catalog study 1)
+
+Research Lab, [thesis](MMSELL_SELECTION_BIAS_AUDIT.md), `scripts/mmsell_selection_audit.py`.
+Scores every market in `mmsell_candidate_ticks` (entered or not) at its first in-band tick
+against Kalshi's settled result: taker (sell into the bid, clip capped at
+`depth_at_best_bid`) and fill-assumed maker, event-clustered, by series, strike structure,
+price band and hours to expiration, plus the auditable skip rules (XOS-000009's substring list,
+the live pause, the live tier, `maxyes`). Predictions P1–P4 and cell labels frozen before the
+run. XOS-000046/000047 series are reported without labels. Verdict: pending the first run.
+
 ## WIN-set expansion 2026-10-17 — commodities closed, KXTRUMPMENTION first, fast fills lose
 
 Research Lab read for the owner ([doc](MMSELL_WIN_SET_EXPANSION_RESEARCH.md)), read-only.

@@ -35,7 +35,9 @@ every cohort. This study supplies it.
 - **Outcomes:** Kalshi public REST, `GET /markets?tickers=` then `/historical/markets?tickers=`,
   for this bounded candidate set only (decision D1 option (a): no new access). `result` in
   {yes, no} scores; anything else (void, scalar, unsettled) is excluded and counted.
-- **Series category** (for the XOS-000009 split): `GET /series/{s}` → `category`.
+- **Series category** (for the XOS-000009 split): `GET /series/{s}` → `category`, read only for
+  series the substring rule hits (fallback when a read fails: the exact crypto series list in
+  `scripts/mmsell_canary_slices.py`).
 - **Who entered:** `live_orders` (any `%mmsell%` buy) and `paper_trades` (`mmsell10`, the live
   rule's paper control). Used only to label tickers, never as a P&L yardstick (XOS-000031).
 
