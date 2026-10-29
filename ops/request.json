@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["mmsell-cell-size-2-canary"],"id":"rs-pf-cs2"}
+{"type": "env", "id": "rs-reg-cs2-1", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"rs-reg-cs2-20261029\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"RESEARCH_LAB\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell-cell-size-2-canary\"}}"}}
