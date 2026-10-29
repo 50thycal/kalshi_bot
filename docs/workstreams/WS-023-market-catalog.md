@@ -631,3 +631,8 @@ Audit figures, mechanics and rollout are in
 24.5% to 45% (9.64 → 17.77 GB), and bulk discovery is running again. Measured figures are in
 [selective history § Retention — Result](../MARKET_CATALOG_SELECTIVE_HISTORY.md#retention--owner-decision-2026-10-21-dec-038).
 
+2026-10-29: on the owner's request, a plan for using the catalog to grow real-money profit is in
+[CATALOG_RESEARCH_PLAN.md](../CATALOG_RESEARCH_PLAN.md). It holds four ordered studies, each a
+Research Lab probe; the first is the MMSELL selection-bias audit. The plan is not a probe and
+authorizes nothing.
+
