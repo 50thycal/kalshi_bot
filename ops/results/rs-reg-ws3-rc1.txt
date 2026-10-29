@@ -1,0 +1,31 @@
+# ops request [READ]
+# type=xos  id=rs-reg-ws3-rc1
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T10:47:28Z
+{
+  "command_id": "rs-reg-ws3-20261029",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "SUCCEEDED",
+  "payload_hash": "5f0efd972a64e4055d1ddb8776e77e47b1189cbd7fc3dcf98ce5b3ca5c91b36f",
+  "completed_at": "2026-10-29 10:46:46.099579+00:00",
+  "result": {
+    "kind": "register",
+    "package": "mmsell-win-set-3-canary",
+    "version": 1,
+    "keep_gate": "live_canary_keep",
+    "epoch_number": 1,
+    "promotion_gate": "paper_to_live_canary",
+    "epoch_started_at": "2026-10-29 10:46:45.893244+00:00",
+    "version_frozen_at": "2026-10-29 10:46:45.893244+00:00",
+    "keep_gate_spec_hash": "dbe3b7262a000fe3",
+    "promotion_gate_spec_hash": "fcf2c642aff1b5da",
+    "paper_deployment_deployment": "mmsell-winset3-paper-1",
+    "paper_deployment_started_at": "2026-10-29 10:46:45.893244+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-win-set-3"
+}
