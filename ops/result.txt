@@ -1,14 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1029a_pnl2
-# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T13:34:48Z
-tk                                ims                                  ms  ob
---------------------------------  -----------------------------------  --  --
-KXYTVIEWSHIGH-MOR26NOV-7.5M       3/96 @2026-10-29 13:24:57.175486+00        
-KXYTVIEWSHIGH-OLI26NOV-12.0M                                                 
-KXBTC-26OCT3017-B78250                                                       
-KXRAINLAXM-26OCT-3                                                           
-KXRT-WIC-96                                                                  
-KXTESTMATCH-26OCT270430AUSSA-TIE                                             
-KXYTVIEWSW-TAT26NOV01-9.0M                                                   
-
-(7 rows)
+# type=noop
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T13:35:06Z
+(noop — nothing to do)
