@@ -1,4 +1,528 @@
 # ops request [READ]
-# type=noop
-# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:05:36Z
-(noop — nothing to do)
+# type=xos  id=rl-sba-iss46-20261029
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:07:43Z
+{
+  "issue_key": "XOS-000046",
+  "title": "Should MMSELL stop trading MLB totals and spreads? Live ledger negative across books",
+  "status": "VALIDATING",
+  "classification": "STRATEGY",
+  "severity": "LOW",
+  "priority": "P3",
+  "owner_role": "RESEARCH_LAB",
+  "opened_by_role": "TASK_SPECIFIC",
+  "opened_at": "2026-10-13 03:19:25.471208+00:00",
+  "scope": "system-wide",
+  "experiment_id": null,
+  "version_id": null,
+  "detector": "manual.reported",
+  "detector_fingerprint": null,
+  "occurrence_count": 1,
+  "disposition": "RESEARCH_ONLY",
+  "latest_evidence": "MANUAL_OBSERVATION: OWNER DECISION 2026-10-14 (Calvin): hold until the 2027 MLB season. No stop, no ",
+  "problem_statement": "The catalog series scorecard (series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4) shows KXMLBTOTAL net -5.06 USD over 88 independent games (75 won, mean -0.057 +/- 0.050 per game) and KXMLBSPREAD net -4.91 USD over 84 games (70 won, mean -0.059 +/- 0.045) from 2026-07-15 to 2026-10-04, negative across most books. Rules for both series are owner-approved in the catalog (DEC-035) and the contract terms say a game postponed >48h settles at a fair price. Totals, spreads, home-run and strikeout markets on one game share one outcome; a per-game view across all MLB series is in PR #609 and will be added as evidence. Question for Research Lab: is MLB totals/spreads a negative selection cell to stop, or too thin to call? Related: XOS-000020 (correlation unit), XOS-000022 (negative selection cell). Snapshot: docs/workstreams/WS-023-market-catalog.md (Scorecard snapshot 2026-10-13). Descriptive evidence only; this issue authorizes nothing.",
+  "evidence_summary": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
+  "proposed_fix": "No change now. MMSELL keeps KXMLBTOTAL and KXMLBSPREAD in its universe; paper keeps trading both. Run the pre-registered 2027 regular-season test (validation plan). Only a CONFIRM there leads to proposing removal of both series from live books, each as a recorded XOS transition (new epoch or Version) with operator confirmation.",
+  "validation_plan": "Frozen 2026-10-13 (doc section 3). Population: live MMSELL fills on KXMLBTOTAL and KXMLBSPREAD, 2027 regular season only. 2026 data is not pooled because it produced the hypothesis; postseason excluded. Unit: the game, all markets of both series on one game summed across live books. Statistic: mean net USD per game, with standard error, from source-ledger economics (catalog scorecard family method, or the doc's query as a fallback). Floor: n >= 150 games. CONFIRM (propose a stop) if mean + 1.96*SE < 0. REFUTE (keep, resolve) if mean >= 0. Otherwise INCONCLUSIVE: extend to n >= 300 games and read once; CONFIRM if mean + 1.645*SE < 0, else REFUTE. Fewer than 150 games by the end of the 2027 regular season: close with no action (the exposure is too small to matter). Power: 300 games detect -0.069 USD/game at 80pct (one-sided alpha 0.05, sd 0.48). Diagnostic only, not part of the decision: live market loss pct minus paper loss pct in the same window and band. The branches are exhaustive and are not to be re-interpreted after results.",
+  "resolution_summary": null,
+  "resolved_at": null,
+  "requires_new_version": false,
+  "requires_new_epoch": false,
+  "requires_platform_revision": false,
+  "requires_pause_or_stand_down": false,
+  "duplicate_of_issue_id": null,
+  "supersedes_issue_id": null,
+  "discovered_from_issue_id": null,
+  "first_observed_at": "2026-10-13 03:19:25.471208+00:00",
+  "last_observed_at": "2026-10-13 03:19:25.471208+00:00",
+  "details_json": {
+    "discovery": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
+    "reported_via": "issue_command_transport",
+    "manual_report": true
+  },
+  "events": [
+    {
+      "event_type": "CREATED",
+      "occurred_at": "2026-10-13 03:19:25.471208+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": "OPEN",
+      "from_owner_role": null,
+      "to_owner_role": "RESEARCH_LAB",
+      "from_classification": null,
+      "to_classification": "STRATEGY",
+      "reason": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
+      "payload": {
+        "scope": "system-wide",
+        "anomaly_kind": null,
+        "owner_override": {
+          "chosen": "RESEARCH_LAB",
+          "rationale": "Owner (Calvin) asked to send the MLB totals/spreads stop question to the research process after the catalog scorecard.",
+          "recommended": "LIVE_OPS"
+        },
+        "recommended_owner": {
+          "priority": "P2",
+          "severity": "MEDIUM",
+          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
+          "owner_role": "LIVE_OPS",
+          "disposition": null,
+          "classification": "UNCLASSIFIED",
+          "requires_operator_triage": true
+        }
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-13 08:53:13.021196+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Per-game MLB view after PR #609 (catalog scorecard families, series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4, logged 2026-10-13T08:49Z). Every MLB market on one game (KXMLBTOTAL, KXMLBSPREAD, KXMLBHR, KXMLBKS) grouped by the approved exposure key candidate-game:MLB:<game> and counted as ONE bet: 332 games, 277 won, 80 games traded in two or more MLB series. Net -12.55 USD; mean -0.038 USD per game, standard error 0.026 (about 1.4 SE below zero, so negati",
+      "payload": {
+        "source_ref": "PR #609; catalog deploy log line catalog_scorecard_family 2026-10-13T08:49Z; docs/MARKET_CATALOG_SERVICE.md",
+        "evidence_id": 95,
+        "content_hash": null,
+        "evidence_type": "LOG"
+      }
+    },
+    {
+      "event_type": "TRIAGED",
+      "occurred_at": "2026-10-13 09:37:25.580267+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "OPEN",
+      "to_status": "TRIAGE",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Research Lab takes the stop question. No live MLB totals/spreads exposure until the 2027 season; dollars are small (about 4 USD a month). Present impact LOW, ordering P3.",
+      "payload": {
+        "priority": "P3",
+        "severity": "LOW"
+      }
+    },
+    {
+      "event_type": "STATUS_CHANGED",
+      "occurred_at": "2026-10-13 09:37:25.627845+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "TRIAGE",
+      "to_status": "INVESTIGATING",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "evidence read 2026-10-13: live per-game, live break-even, paper same window and band",
+      "payload": null
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.660131+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Live MMSELL, KXMLBTOTAL and KXMLBSPREAD on one game counted once (the XOS-000020 unit): 144 games, net -9.94 USD, mean -0.069 +/- 0.040 USD per game (z -1.72), 26 games lost. Reproduces the catalog scorecard (SPREAD -4.91 over 82 games exactly; TOTAL -5.03 vs -5.06 over 88). Market level against break-even: TOTAL 117 markets, avg NO 91.75c, break-even loss 8.25pct vs observed 11.97pct (+3.7pp); SPREAD 104 markets, avg NO 91.99c, 8.01pct vs 13.46pct (+5.5pp). All live MMSELL since 2026-07-01: 2,8",
+      "payload": {
+        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 1 and 4 (query embedded); ops ids rl46-live-cal3, rl46-live-all",
+        "evidence_id": 96,
+        "content_hash": null,
+        "evidence_type": "DATABASE_QUERY"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.690265+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Paper family (fill-everything, twins excluded), same series, last 90 days, entry <= 11c: KXMLBTOTAL 516 contests, loss 8.1pct vs break-even 7.4pct, edge -0.7pp, -0.66c/trade; KXMLBSPREAD 525 contests, loss 5.6pct vs 7.1pct, edge +1.4pp, +1.39c/trade. All time, all prices: TOTAL -0.6pp over 663 contests, SPREAD +2.1pp over 570. A mispriced MLB market would lose on paper too (KXNFLSPREAD did, -11.1pp). The live shortfall is a paper-to-live gap; live spread market loss 13.5pct vs paper 5.6pct is a ",
+      "payload": {
+        "source_ref": "mmsell_series_pnl --days 90 --maxyes 11 --split-subjects --series <S>; ops ids rl46-band-kxmlbtotal, rl46-band-kxmlbspread, rl46-sp-total, rl46-sp-spread",
+        "evidence_id": 97,
+        "content_hash": null,
+        "evidence_type": "OPS_RESULT"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.721526+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Verdict HOLD. Post hoc selection: the cell was picked from 13 series; under a true null, the second-worst of 13 z-scores is at or below -1.14 about 51pct of the time (simulation), and the combined one-sided p 0.043 becomes 0.55 after Bonferroni over 13. Combining TOTAL and SPREAD was also chosen after seeing both negative. Paper does not show the effect. Money is about 4 USD a month against the 100 USD/month goal. Last total traded 2026-09-27, last spread 2026-10-04. Stop is not supported; the q",
+      "payload": {
+        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md (PR #614)",
+        "evidence_id": 98,
+        "content_hash": null,
+        "evidence_type": "RESEARCH_DOCUMENT"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.765272+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "adjudication + pre-registered 2027 test",
+      "payload": {
+        "link_id": 38,
+        "link_type": "RESEARCH_DOC",
+        "reference": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.802957+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "research document PR",
+      "payload": {
+        "link_id": 39,
+        "link_type": "PR",
+        "reference": "https://github.com/50thycal/kalshi_bot/pull/614"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.830334+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "correlation unit: the game; the test scores per game",
+      "payload": {
+        "link_id": 40,
+        "link_type": "OTHER",
+        "reference": "XOS-000020"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-10-13 09:37:25.857832+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "precedent loss cell (KXNFLSPREAD) that also lost on paper; this one does not",
+      "payload": {
+        "link_id": 41,
+        "link_type": "OTHER",
+        "reference": "XOS-000022"
+      }
+    },
+    {
+      "event_type": "DISPOSITION_DECIDED",
+      "occurred_at": "2026-10-13 09:37:25.884243+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "HOLD on thin, post hoc evidence. No stop, no universe change, no new epoch or Version: the evidence does not establish a defect in any book's contract, and there is no live MLB totals/spreads exposure until 2027. The open question is answered by the pre-registered 2027 test in the validation plan. Recorded only; authorizes nothing.",
+      "payload": {
+        "note": "recorded only \u2014 no canonical action is performed by this call",
+        "disposition": "RESEARCH_ONLY",
+        "requires_new_epoch": false,
+        "requires_new_version": false,
+        "requires_platform_revision": false,
+        "version_and_epoch_rationale": null,
+        "requires_pause_or_stand_down": false
+      }
+    },
+    {
+      "event_type": "FIX_PROPOSED",
+      "occurred_at": "2026-10-13 09:37:25.912841+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "the remedy is a held universe plus a frozen forward test",
+      "payload": {
+        "proposed_fix": "No change now. MMSELL keeps KXMLBTOTAL and KXMLBSPREAD in its universe; paper keeps trading both. Run the pre-registered 2027 regular-season test (validation plan). Only a CONFIRM there leads to proposing removal of both series from live books, each as a recorded XOS transition (new epoch or Version) with operator confirmation."
+      }
+    },
+    {
+      "event_type": "STATUS_CHANGED",
+      "occurred_at": "2026-10-13 09:37:25.919485+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "INVESTIGATING",
+      "to_status": "ACTION_REQUIRED",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "the remedy is a held universe plus a frozen forward test",
+      "payload": null
+    },
+    {
+      "event_type": "VALIDATION_PLANNED",
+      "occurred_at": "2026-10-13 09:37:25.941034+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "pre-registered 2026-10-13, before any 2027 data exists",
+      "payload": {
+        "validation_plan": "Frozen 2026-10-13 (doc section 3). Population: live MMSELL fills on KXMLBTOTAL and KXMLBSPREAD, 2027 regular season only. 2026 data is not pooled because it produced the hypothesis; postseason excluded. Unit: the game, all markets of both series on one game summed across live books. Statistic: mean net USD per game, with standard error, from source-ledger economics (catalog scorecard family method, or the doc's query as a fallback). Floor: n >= 150 games. CONFIRM (propose a stop) if mean + 1.96*SE < 0. REFUTE (keep, resolve) if mean >= 0. Otherwise INCONCLUSIVE: extend to n >= 300 games and read once; CONFIRM if mean + 1.645*SE < 0, else REFUTE. Fewer than 150 games by the end of the 2027 regular season: close with no action (the exposure is too small to matter). Power: 300 games detect -0.069 USD/game at 80pct (one-sided alpha 0.05, sd 0.48). Diagnostic only, not part of the decision: live market loss pct minus paper loss pct in the same window and band. The branches are exhaustive and are not to be re-interpreted after results."
+      }
+    },
+    {
+      "event_type": "STATUS_CHANGED",
+      "occurred_at": "2026-10-13 09:37:25.950335+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "ACTION_REQUIRED",
+      "to_status": "VALIDATING",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "pre-registered 2026-10-13, before any 2027 data exists",
+      "payload": null
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-14 02:30:55.926458+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Catalog scorecard v2, paper beside live. All MMSELL paper on KXMLBSPREAD: +167.85 USD over 8,000 trades and 717 games, mean +0.234 +/- 0.090 USD per game (about 2.6 SE), +2.10 c/contract. Live: -4.91 USD, -3.90 c/contract. On live's own 104 markets, paper was also negative (-2.26 c/contract), and the twin tracked live (-2.75 vs -4.28 c on 60 shared markets). Paper books on spreads: mmsell +4.53c (771 trades, +34.91 USD), mmsell6 +1.96c, mmsell10 +1.37c, mmsell5 +0.80c (1,442 trades), mmsell9 +0.",
+      "payload": {
+        "source_ref": "docs/workstreams/WS-023-market-catalog.md (Paper beside live, snapshot 2026-10-13 12:30Z, series-scorecard-v2)",
+        "evidence_id": 99,
+        "content_hash": null,
+        "evidence_type": "LOG"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-14 02:30:55.969832+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Selection comparison, KXMLBSPREAD. Live sells about 7.9c tails with line mix 22/64/14 pct (lines 1-2/3-4/5+), entering a median 1.8h after listed start (99pct in-game). That matches its cheap-band paper lineage (6.5-7.7c tails, same line mix and timing; +0.34 to +2.20 c/contract, per-game z 0.2 to 1.9). The profitable paper books (mmsell, mmsell1, mmsell2, W*) sell 14-22c tails, a band live never trades. After correcting for about 30 variants, none is established: best mmsell1 z 2.81, Bonferroni",
+      "payload": {
+        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 5; ops ids rl46b-books, rl46b-livesubset",
+        "evidence_id": 100,
+        "content_hash": null,
+        "evidence_type": "DATABASE_QUERY"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-14 02:30:56.006637+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Is the live-fill penalty specific to MLB? Cheap-band paper split by live-filled vs not, 8 series, market-level loss, design effect 1.3, Bonferroni over 8. KXMLBSPREAD -4.65c (13.5pct) vs +2.50c (6.5pct), z 2.36, p 0.07. KXMLBTOTAL -5.06c (13.7pct) vs +0.46c (7.8pct), z 1.94, p 0.21. Combined score lines z 3.04, p about 0.01 (counted as a ninth look). No penalty on KXMLBHR (z 0.9), KXMLBKS, KXITFWMATCH, KXITFMATCH, KXNFLTOTAL or KXRAIN (the last three are better when live-filled). Reading: the lo",
+      "payload": {
+        "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 5; ops id rl46b-xseries",
+        "evidence_id": 101,
+        "content_hash": null,
+        "evidence_type": "DATABASE_QUERY"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-10-14 02:30:56.048777+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "addendum: selection vs live-fill mechanism",
+      "payload": {
+        "link_id": 42,
+        "link_type": "PR",
+        "reference": "https://github.com/50thycal/kalshi_bot/pull/618"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-10-14 15:51:52.285465+00:00",
+      "actor": "claude-code-for-calvin",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "OWNER DECISION 2026-10-14 (Calvin): hold until the 2027 MLB season. No stop, no universe change, and no pre-2027 test of the in-play fill fix (pre-game-only or cancel-on-move bids on MLB score lines). The pre-registered 2027 regular-season test in the validation plan runs as written. Any later fill-mechanics change before or during 2027 must be noted on this ticket because it would change what the 2027 test measures.",
+      "payload": {
+        "source_ref": "operator decision in the Research Lab session, 2026-10-14",
+        "evidence_id": 104,
+        "content_hash": null,
+        "evidence_type": "MANUAL_OBSERVATION"
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_type": "LOG",
+      "summary": "Per-game MLB view after PR #609 (catalog scorecard families, series-scorecard-v1, live MMSELL only, source-ledger economics exclusive-binary-ledger-v4, logged 2026-10-13T08:49Z). Every MLB market on one game (KXMLBTOTAL, KXMLBSPREAD, KXMLBHR, KXMLBKS) grouped by the approved exposure key candidate-game:MLB:<game> and counted as ONE bet: 332 games, 277 won, 80 games traded in two or more MLB series. Net -12.55 USD; mean -0.038 USD per game, standard error 0.026 (about 1.4 SE below zero, so negative but not statistically clear). Net by series inside the family: TOTAL -5.06, SPREAD -4.91, HR -3.86, KS +1.28. Worst single game -2.46 USD. Per-series rows unchanged: TOTAL 88 games mean -0.057 +/- 0.050; SPREAD 82 games mean -0.060 +/- 0.046. Family covers only markets with an approved exposure key (2 unreviewed HR markets, net +0.14, are outside it). Independence between games is not verified (see XOS-000020). Descriptive evidence only; authorizes nothing.",
+      "source_ref": "PR #609; catalog deploy log line catalog_scorecard_family 2026-10-13T08:49Z; docs/MARKET_CATALOG_SERVICE.md",
+      "captured_at": "2026-10-13 08:53:13.009294+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "DATABASE_QUERY",
+      "summary": "Live MMSELL, KXMLBTOTAL and KXMLBSPREAD on one game counted once (the XOS-000020 unit): 144 games, net -9.94 USD, mean -0.069 +/- 0.040 USD per game (z -1.72), 26 games lost. Reproduces the catalog scorecard (SPREAD -4.91 over 82 games exactly; TOTAL -5.03 vs -5.06 over 88). Market level against break-even: TOTAL 117 markets, avg NO 91.75c, break-even loss 8.25pct vs observed 11.97pct (+3.7pp); SPREAD 104 markets, avg NO 91.99c, 8.01pct vs 13.46pct (+5.5pp). All live MMSELL since 2026-07-01: 2,879 markets, +0.45pp. Other live cells with 40+ markets range -5.9pp (KXRAIN) to +5.6pp (KXWTI), KXBTCD +4.3pp, so the MLB cells sit in the bad tail, not outside it. Aggregates only.",
+      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 1 and 4 (query embedded); ops ids rl46-live-cal3, rl46-live-all",
+      "captured_at": "2026-10-13 09:37:25.653060+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "OPS_RESULT",
+      "summary": "Paper family (fill-everything, twins excluded), same series, last 90 days, entry <= 11c: KXMLBTOTAL 516 contests, loss 8.1pct vs break-even 7.4pct, edge -0.7pp, -0.66c/trade; KXMLBSPREAD 525 contests, loss 5.6pct vs 7.1pct, edge +1.4pp, +1.39c/trade. All time, all prices: TOTAL -0.6pp over 663 contests, SPREAD +2.1pp over 570. A mispriced MLB market would lose on paper too (KXNFLSPREAD did, -11.1pp). The live shortfall is a paper-to-live gap; live spread market loss 13.5pct vs paper 5.6pct is a pointer to live-fill selection, chosen post hoc and not a measurement.",
+      "source_ref": "mmsell_series_pnl --days 90 --maxyes 11 --split-subjects --series <S>; ops ids rl46-band-kxmlbtotal, rl46-band-kxmlbspread, rl46-sp-total, rl46-sp-spread",
+      "captured_at": "2026-10-13 09:37:25.688256+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "RESEARCH_DOCUMENT",
+      "summary": "Verdict HOLD. Post hoc selection: the cell was picked from 13 series; under a true null, the second-worst of 13 z-scores is at or below -1.14 about 51pct of the time (simulation), and the combined one-sided p 0.043 becomes 0.55 after Bonferroni over 13. Combining TOTAL and SPREAD was also chosen after seeing both negative. Paper does not show the effect. Money is about 4 USD a month against the 100 USD/month goal. Last total traded 2026-09-27, last spread 2026-10-04. Stop is not supported; the question is pre-registered on 2027 data.",
+      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md (PR #614)",
+      "captured_at": "2026-10-13 09:37:25.719717+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "LOG",
+      "summary": "Catalog scorecard v2, paper beside live. All MMSELL paper on KXMLBSPREAD: +167.85 USD over 8,000 trades and 717 games, mean +0.234 +/- 0.090 USD per game (about 2.6 SE), +2.10 c/contract. Live: -4.91 USD, -3.90 c/contract. On live's own 104 markets, paper was also negative (-2.26 c/contract), and the twin tracked live (-2.75 vs -4.28 c on 60 shared markets). Paper books on spreads: mmsell +4.53c (771 trades, +34.91 USD), mmsell6 +1.96c, mmsell10 +1.37c, mmsell5 +0.80c (1,442 trades), mmsell9 +0.63c. Paper MLB totals -0.46c, HR +0.59c. Paper pools about 30 variants (multiple-comparison risk). Descriptive only.",
+      "source_ref": "docs/workstreams/WS-023-market-catalog.md (Paper beside live, snapshot 2026-10-13 12:30Z, series-scorecard-v2)",
+      "captured_at": "2026-10-14 02:30:55.918664+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "DATABASE_QUERY",
+      "summary": "Selection comparison, KXMLBSPREAD. Live sells about 7.9c tails with line mix 22/64/14 pct (lines 1-2/3-4/5+), entering a median 1.8h after listed start (99pct in-game). That matches its cheap-band paper lineage (6.5-7.7c tails, same line mix and timing; +0.34 to +2.20 c/contract, per-game z 0.2 to 1.9). The profitable paper books (mmsell, mmsell1, mmsell2, W*) sell 14-22c tails, a band live never trades. After correcting for about 30 variants, none is established: best mmsell1 z 2.81, Bonferroni p 0.07; mmsell z 2.25, p 0.37. KEY: cheap-band paper in the same window loses only on markets live was filled on. 104 live-filled markets: -4.65 c/contract, 11.6pct trade losses. Other markets in the same games: +5.09c, 2.0pct. Games live never filled: +2.10c, 5.0pct. Same tail price. The live fill itself selects losers (in-play adverse selection on resting NO bids), not band, line or timing.",
+      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 5; ops ids rl46b-books, rl46b-livesubset",
+      "captured_at": "2026-10-14 02:30:55.967705+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "DATABASE_QUERY",
+      "summary": "Is the live-fill penalty specific to MLB? Cheap-band paper split by live-filled vs not, 8 series, market-level loss, design effect 1.3, Bonferroni over 8. KXMLBSPREAD -4.65c (13.5pct) vs +2.50c (6.5pct), z 2.36, p 0.07. KXMLBTOTAL -5.06c (13.7pct) vs +0.46c (7.8pct), z 1.94, p 0.21. Combined score lines z 3.04, p about 0.01 (counted as a ninth look). No penalty on KXMLBHR (z 0.9), KXMLBKS, KXITFWMATCH, KXITFMATCH, KXNFLTOTAL or KXRAIN (the last three are better when live-filled). Reading: the loss is resting bids on in-play MLB score lines, not the spread market and not the selection rule. The frozen 2027 gate (validation plan) is unchanged; all of this is 2026 data, the same data that raised the question. The likelier remedy is fill mechanics (no in-play resting bids on MLB score lines, or cancel on line move), for fill/queue research, not a universe cut. Authorizes nothing.",
+      "source_ref": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md section 5; ops id rl46b-xseries",
+      "captured_at": "2026-10-14 02:30:56.004065+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "MANUAL_OBSERVATION",
+      "summary": "OWNER DECISION 2026-10-14 (Calvin): hold until the 2027 MLB season. No stop, no universe change, and no pre-2027 test of the in-play fill fix (pre-game-only or cancel-on-move bids on MLB score lines). The pre-registered 2027 regular-season test in the validation plan runs as written. Any later fill-mechanics change before or during 2027 must be noted on this ticket because it would change what the 2027 test measures.",
+      "source_ref": "operator decision in the Research Lab session, 2026-10-14",
+      "captured_at": "2026-10-14 15:51:52.271983+00:00",
+      "captured_by": "claude-code-for-calvin",
+      "content_hash": null
+    }
+  ],
+  "links": [
+    {
+      "link_type": "RESEARCH_DOC",
+      "reference": "docs/MMSELL_MLB_TOTALS_SPREADS_CELL.md",
+      "label": "adjudication + pre-registered 2027 test",
+      "created_at": "2026-10-13 09:37:25.759002+00:00"
+    },
+    {
+      "link_type": "PR",
+      "reference": "https://github.com/50thycal/kalshi_bot/pull/614",
+      "label": "research document PR",
+      "created_at": "2026-10-13 09:37:25.801331+00:00"
+    },
+    {
+      "link_type": "OTHER",
+      "reference": "XOS-000020",
+      "label": "correlation unit: the game; the test scores per game",
+      "created_at": "2026-10-13 09:37:25.828733+00:00"
+    },
+    {
+      "link_type": "OTHER",
+      "reference": "XOS-000022",
+      "label": "precedent loss cell (KXNFLSPREAD) that also lost on paper; this one does not",
+      "created_at": "2026-10-13 09:37:25.856219+00:00"
+    },
+    {
+      "link_type": "PR",
+      "reference": "https://github.com/50thycal/kalshi_bot/pull/618",
+      "label": "addendum: selection vs live-fill mechanism",
+      "created_at": "2026-10-14 02:30:56.045013+00:00"
+    }
+  ]
+}
