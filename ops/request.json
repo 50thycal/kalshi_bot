@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1029a0812", "sql": "select f.side, f.action, f.price, f.quantity, f.filled_at::text, f.kalshi_order_id, left(f.raw_fill_json::text,300) from fills f where f.market_ticker='KXYTVIEWSHIGH-MOR26NOV-7.5M' order by f.filled_at"}
+{"type":"noop"}
