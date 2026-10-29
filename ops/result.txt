@@ -1,9 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1029a0812
-# code a187e00cfbf43e7f56904aef2ebbac35b9689af4 · started 2026-10-29T08:05:56Z
-side  action  price  quantity  filled_at                      kalshi_order_id                       left                                                                                                                                                                                                    
-----  ------  -----  --------  -----------------------------  ------------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-yes   buy     5      400       2026-10-28 13:48:51.534094+00  01a17911-f758-7a5d-adcf-63c0229f6b9a  {"ts": 1793195166, "side": "yes", "action": "buy", "ticker": "KXYTVIEWSHIGH-MOR26NOV-7.5M", "fill_id": "0727721a-d399-afe3-50dc-b3477dbd680e", "count_fp": "400.00", "fee_cost": "0.000000", "is_taker"…
-no    sell    96     200       2026-10-29 05:22:34.564451+00  01a182e5-aae0-7aab-b3d0-ced4a4e16ca3  {"ts": 1793251350, "side": "no", "action": "sell", "ticker": "KXYTVIEWSHIGH-MOR26NOV-7.5M", "fill_id": "07279a95-fd21-b0f1-5f20-c373a938e6ab", "count_fp": "200.00", "fee_cost": "0.000000", "is_taker"…
-
-(2 rows)
+# type=noop
+# code a187e00cfbf43e7f56904aef2ebbac35b9689af4 · started 2026-10-29T08:06:28Z
+(noop — nothing to do)
