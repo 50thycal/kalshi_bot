@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"ct-catalog-research-1793281640"}
+{"type": "script", "name": "limm_scorecard", "args": ["--days", "3"], "id": "sc1029u1"}
