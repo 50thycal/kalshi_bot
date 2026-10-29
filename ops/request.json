@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"rs-tags-1029","sql":"select t, count(*) from (select strategy t from paper_trades union all select strategy from live_orders union all select strategy_tag from experiment_deployment_arms) x where t ~ '^[BMSUWXYZbmsuwxyz]' group by t order by t"}
