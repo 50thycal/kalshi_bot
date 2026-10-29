@@ -1,444 +1,86 @@
 # ops request [READ]
-# type=xos  id=ct-catalog-research-1793281640
-# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T13:47:41Z
-SESSION: Experiment Control Tower
-MODE: READ ONLY
-EXPERIMENT OS: experiment_os:pr4+metrics_engine:pr3_v1
-ENFORCEMENT: NEW_ONLY since 2026-08-16 14:34:42.892897+00:00 (cutover prod-new-only-20260816)
-PLATFORM SNAPSHOT: 55b51990e0492e4b…
-AS OF: 2026-10-29 08:47 CDT
+# type=script  id=sc1029u1
+# code 7df56bc1181f0b7066c5e426e6d894ead1338f2a · started 2026-10-29T14:04:08Z
+LIMM scorecard  as of 2026-10-29T14:04+00:00  (rewards = operator-confirmed payouts)
 
-GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator result can authorize a transition.
+BY MARKET TYPE (lifetime)
+  type              rewards     fills      net  events  w/loss
+  mention_event       73.32    -49.54    23.78      18       7
+  mention_window       1.99      0.00     1.99       1       0
+  youtube_views        5.05     -5.35    -0.30      14       1
+  ai_share             2.21    -16.04   -13.83       5       3
+  moving_number        3.35    -26.14   -22.79      77       5
+  TOTAL               85.92    -97.07   -11.15
 
-=== SYSTEM / INTEGRITY ===
-    !! 1 unresolved integrity event(s) — affected experiments cannot be evaluated
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → liquidity-incentive-mm [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling-capacity [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling-contest-cap [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:trumpmention_2026_10_27 → mmsell-price-ceiling-cell-size [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:trumpmention_2026_10_27 → mmsell-price-ceiling-size-split [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:football_coverage_2026_10_12 → mmsell-type-tight [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! PENDING REVISION EXECUTION_ENGINE:shared_primary_ownership_20260921 is NOT safe to activate — unaccounted: ['mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-2', 'mmsell-win-set-3']
-    !! PENDING REVISION MARKET_TAXONOMY:football_coverage_2026_10_12 is NOT safe to activate — unaccounted: ['mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-2', 'mmsell-win-set-3']
-    RECORDED STATE (not an anomaly — explained by construction, blocks no evaluation):
-        mmsell-price-ceiling: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-ceiling-live-1 is intentionally stood down — none of its registered live tags (Cmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-        mmsell-price-ceiling-capacity: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-capacity-live-1 is intentionally stood down — none of its registered live tags (Dmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-        mmsell-price-ceiling-contest-cap: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-contestcap-live-2 is intentionally stood down — none of its registered live tags (Fmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-        mmsell-price-ceiling-contest-cap: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-contestcap-live-2 is intentionally stood down — none of its registered live tags (Fmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-        mmsell-price-ceiling-size-split: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-sizesplit-live-2 is intentionally stood down — none of its registered live tags (Jmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-        mmsell-win-set: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-winset-live-1 is intentionally stood down — none of its registered live tags (Nmmsell10) appear in the runtime live allowlist, so this book places no new entries while other books do. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-    active deployments: 70 (grandfathered 13, native 57)
+REALIZED vs UNREALIZED (open positions marked to the held side's bid now; an open market's figure includes any part already sold)
+  type              realized  open   open $  unreal.    total
+  mention_event        23.78     0     0.00     0.00    23.78
+  mention_window        1.99     0     0.00     0.00     1.99
+  youtube_views        -0.30     2   216.88   -10.88   -11.18
+  ai_share            -13.83     0     0.00     0.00   -13.83
+  moving_number       -22.79     1     0.02    -0.02   -22.81
+  TOTAL               -11.15     3   216.90   -10.90   -22.05
+    open: KXBIGGESTQUAKE-21SEP26-6.4         cost    0.02  marked -0.02
+    open: KXYTVIEWSHIGH-MOR26NOV-7.5M        cost  212.00  marked -6.00
+    open: KXYTVIEWSHIGH-OLI26NOV-12.0M       cost    4.88  marked -4.88
 
-=== OPEN INVESTIGATIONS ===
-    Durable Experiment OS issues. Ticket status is WORKFLOW state: it never changes a gate verdict,
-    a lifecycle state or a recorded result.
-    `recurring` = the anomaly is still being detected right now, not merely under investigation.
-    issue       severity  pri  classification  owner                   status           scope                                                              age    latest evidence                                             
-    ----------  --------  ---  --------------  ----------------------  ---------------  -----------------------------------------------------------------  -----  ------------------------------------------------------------
-    XOS-000020  HIGH      P1   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-capacity                                      54.1d  RESEARCH_DOCUMENT: NEGATIVE result recorded so it is not re-
-    XOS-000022  MEDIUM    P1   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  mmsell-price-ceiling · v2                                          53.4d  OPS_RESULT: First production run of the detector (post-merge
-    XOS-000038  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e2 · mmsell-sizesplit-live-1  24.9d  OPS_RESULT: 24h validation 2026-10-05T18Z (epoch 3, Jmmsell1
-    XOS-000040  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  20.0d  (no evidence recorded)                                      
-    XOS-000014  HIGH      P2   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1               60.0d  OPS_RESULT: THIS PROBLEM IS ALREADY GONE, AND NOT BY OUR HAN
-    XOS-000015  HIGH      P2   OPS             LIVE_OPS                OPEN             system-wide                                                        59.1d  (no evidence recorded)                                      
-    XOS-000031  HIGH      P2   DATA            LIVE_OPS                OPEN             system-wide                                                        48.9d  (no evidence recorded)                                      
-    XOS-000008  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             revision:settlement_repair_2026_08_24                              66.0d  (no evidence recorded)                                      
-    XOS-000012  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        61.9d  (no evidence recorded)                                      
-    XOS-000013  MEDIUM    P2   DATA            LIVE_OPS                OPEN             mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1               61.7d  (no evidence recorded)                                      
-    XOS-000016  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-capacity                                      57.2d  (no evidence recorded)                                      
-    XOS-000019  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        55.8d  (no evidence recorded)                                      
-    XOS-000023  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN             mmsell-correlation-cap                                             53.4d  OPS_RESULT: False-positive check across all 30 active deploy
-    XOS-000024  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             mmsell-price-ceiling-contest-cap · v1 · live_canary_keep           53.1d  GATE_RESULT: CORRECTION - this ticket is NOT the same defect
-    XOS-000025  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             mmsell-scheduled-settle-live · v1 · live_canary_keep               53.1d  GATE_RESULT: VERIFIED against the recorded evaluator reasons
-    XOS-000026  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             theta4-fat-tail · v1 · live_canary_keep                            53.1d  GATE_RESULT: VERIFIED against the recorded evaluator reasons
-    XOS-000027  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        53.0d  (no evidence recorded)                                      
-    XOS-000029  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        51.3d  (no evidence recorded)                                      
-    XOS-000032  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        48.7d  (no evidence recorded)                                      
-    XOS-000042  MEDIUM    P2   INTEGRITY       RESEARCH_LAB            OPEN             liquidity-incentive-mm                                             18.4d  (no evidence recorded)                                      
-    XOS-000045  MEDIUM    P2   DATA            LIVE_OPS                OPEN             system-wide                                                        17.6d  (no evidence recorded)                                      
-    XOS-000030  LOW       P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        49.0d  OPS_RESULT: The defect is a FAMILY, not the two rows this is
-    XOS-000009  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             system-wide                                                        66.0d  (no evidence recorded)                                      
-    XOS-000010  LOW       P3   OPS             LIVE_OPS                OPEN             system-wide                                                        65.6d  (no evidence recorded)                                      
-    XOS-000017  LOW       P3   UNCLASSIFIED    OPERATOR                OPEN             system-wide                                                        57.0d  (no evidence recorded)                                      
-    XOS-000039  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  20.0d  RESEARCH_DOCUMENT: Proposed lift criterion for KXITFMATCH on
-    XOS-000041  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  19.4d  (no evidence recorded)                                      
-    XOS-000043  LOW       P3   OPS             TASK_SPECIFIC           OPEN             system-wide                                                        17.9d  (no evidence recorded)                                      
-    XOS-000046  LOW       P3   STRATEGY        RESEARCH_LAB            VALIDATING       system-wide                                                        16.4d  MANUAL_OBSERVATION: OWNER DECISION 2026-10-14 (Calvin): hold
-    XOS-000047  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             system-wide                                                        15.4d  RESEARCH_DOCUMENT: Pre-registration and evidence (merged PR 
-    XOS-000020  Concentration caps key on event_ticker, but the unit of correlation is the GAME
-    XOS-000022  KXNFLSPREAD is a negative selection cell at the contest level, and it is graduated
-    XOS-000038  mmsell live mirror: paper-only position in a live-paused series consumes the contest cap
-    XOS-000040  mmsell successor cutover: new live tag stacks on markets the predecessor still holds
-    XOS-000014  31% of live entry orders rejected 'user_not_found' — 100% concentrated in MLB, ITF and BTCD series
-    XOS-000015  Worker crash-looped 16h51m on an invalid config set through the ops env transport
-    XOS-000031  paper_trades is not real-money P&L for a LIVE tag: never-filled orders inflate it
-    XOS-000008  Settlement-taxonomy coverage decays over a long-running experiment; there is no maintenance cadence
-    XOS-000012  Standing a live book down by naming a different one in LIVE_STRATEGIES is recorded as config drift, not stand-down
-    XOS-000013  live_fill_rate_pct reads 0% on a filling book: fills do not join to their live_orders row by kalshi_order_id
-    XOS-000016  A capacity-only successor is forced to re-prove a paper edge it does not change
-    XOS-000019  Evo service: LLM-provider payment failures (402) went unalerted for ~3 days
-    XOS-000023  An armed experiment collecting NOTHING was not a detectable condition
-    XOS-000024  live_canary_keep is BLOCKED_DATA
-    XOS-000025  live_canary_keep is BLOCKED_DATA
-    XOS-000026  live_canary_keep is BLOCKED_DATA
-    XOS-000027  A failing boot hook wedges the single-slot command transports with no receipt and no way to clear
-    XOS-000029  sync_twin_epoch cannot reopen a closed twin epoch, so any re-arm after any stand-down is invisible on the live dashboard
-    XOS-000032  Series with no manifest row inherit the nearest prefix row's state and sign-off
-    XOS-000042  Alimm1_pt3 twin P&L is invalid for the liquidity-incentive book
-    XOS-000045  Live held-position exposure never clears for a market whose settlement was not captured on its own UTC day
-    XOS-000030  Two mmsell series are recorded under the wrong market taxonomy
-    XOS-000009  MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets
-    XOS-000010  Platform-command receipt metadata is invisible through the production ops logs channel
-    XOS-000017  Experiment OS cannot record an experiment that ran and finished outside it
-    XOS-000039  Size-split canary: real money paused on tennis (operator decision 2026-10-09)
-    XOS-000041  Size-split canary: real money paused on BTC daily price KXBTCD (operator decision 2026-10-10)
-    XOS-000043  kalshi_desk_board category-filter scan undersamples Economics-category markets
-    XOS-000046  Should MMSELL stop trading MLB totals and spreads? Live ledger negative across books
-    XOS-000047  Forward test: MMSELL tail edge on KXNFLTOTAL and KXITFMATCH (pre-registered 2026-10-14)
+BY MARKET TYPE (last 3 days: payouts dated / fills closed)
+  type              rewards     fills      net
+  mention_event       18.61      0.00    18.61
+  youtube_views        0.00     -5.35    -5.35
+  TOTAL               18.61     -5.35    13.26
 
-=== UNTICKETED ANOMALIES ===
-    Anomalies above that NO open issue covers. Each is a ticket CANDIDATE — this report cannot open one
-    (it is read-only); hand off to the recommended owner, who ADOPTS it with `issue open-candidate <fingerprint>`.
-    Adoption, not `issue create`: only it carries the fingerprint printed under each anomaly, so the
-    ticket covers this anomaly instead of leaving it listed here forever.
-    The recommended owner is who looks FIRST. Where the classification reads UNCLASSIFIED, the cause is
-    genuinely not yet established — that is the honest state, not a gap to be filled in by guessing.
-    detector                              severity  pri  would-classify  recommended owner       scope                                                    anomaly                                                 
-    ------------------------------------  --------  ---  --------------  ----------------------  -------------------------------------------------------  --------------------------------------------------------
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm                                   unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling                                     unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-capacity                            unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-contest-cap                         unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-cell-size                           unresolved platform impact MARKET_TAXONOMY:trumpmention_
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-size-split                          unresolved platform impact MARKET_TAXONOMY:trumpmention_
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight                                        unresolved platform impact MARKET_TAXONOMY:football_cove
-    platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                                 pending revision EXECUTION_ENGINE:shared_primary_ownersh
-    platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                                 pending revision MARKET_TAXONOMY:football_coverage_2026_
-    experiment.zero_evidence              LOW       P2   UNCLASSIFIED    LIVE_OPS                liquidity-incentive-mm                                   liquidity-incentive-mm is deployed but has produced zero
-    integrity.unresolved_event            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-size-split                          unresolved integrity event [EXPERIMENT_CONFIG_DRIFT]    
-    gate.blocked                          MEDIUM    P2   DATA            RESEARCH_LAB            mmsell-price-ceiling-cell-size-2 · live_canary_keep      live_canary_keep is BLOCKED_DATA                        
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight · paper_keep                           paper_keep is BLOCKED_PLATFORM                          
-    gate.blocked                          MEDIUM    P2   DATA            RESEARCH_LAB            mmsell-win-set-3 · live_canary_keep                      live_canary_keep is BLOCKED_DATA                        
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · live_canary_keep                live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · paper_to_live_smoke             paper_to_live_smoke is BLOCKED_PLATFORM                 
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · shadow_instrument_ready         shadow_instrument_ready is BLOCKED_PLATFORM             
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling · live_canary_keep                  live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling · paper_to_live_canary              paper_to_live_canary is BLOCKED_PLATFORM                
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-capacity · live_canary_keep         live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-capacity · paper_to_live_canary     paper_to_live_canary is BLOCKED_PLATFORM                
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-cell-size · live_canary_keep        live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-cell-size · paper_to_live_canary    paper_to_live_canary is BLOCKED_PLATFORM                
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-contest-cap · live_canary_keep      live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-contest-cap · paper_to_live_canary  paper_to_live_canary is BLOCKED_PLATFORM                
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-size-split · live_canary_keep       live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-size-split · paper_to_live_canary   paper_to_live_canary is BLOCKED_PLATFORM                
-    liquidity-incentive-mm · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate d47a9ab01ade633efc6d327aa6bb84ed7a07ad276d95f19cbbad342be0d1164e
-    mmsell-price-ceiling · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate fffc2cf374b60c9f51fa5a88535a0009a4f9aa29e9da1f955df8837333a1d63d
-    mmsell-price-ceiling-capacity · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 55490bc2de37c5ad89fa2f928eaeafad3fba429e39db797c2c6e9938831c1bfc
-    mmsell-price-ceiling-contest-cap · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 4911378d3eada9ec00a49305aca26211a292fb167fdf24d501505683d36ba97d
-    mmsell-price-ceiling-cell-size · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate ef00fe2e174a2a763b62545b8e9165433c3c4d4cb6f0d8f2afc57f81e4154bdc
-    mmsell-price-ceiling-size-split · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 2238e5c4ac645cc2c41bc0f03fe98eb53544ecaf6786707f38efe0c4787371ea
-    mmsell-type-tight · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 8886999aa6f5a61ee6a6e8fab62552faa019e4523111a287cfe0ad73c8e51734
-    platform · platform.revision_unsafe_to_activate: unaccounted: ['mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-2', 'mmsell-win-set-3']
-        adopt: issue open-candidate 37ab767067d625f5eb4ba73f0bfc60b8b1ef2c808382288943a9975a843982b2
-    platform · platform.revision_unsafe_to_activate: unaccounted: ['mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-2', 'mmsell-win-set-3']
-        adopt: issue open-candidate 900af73b76a5b5217106c0c1f5ef0d31da03947f75ea23d93ddd2e4900d4d536
-    liquidity-incentive-mm · experiment.zero_evidence: cause unknown: broken runtime/config/wiring, enforcement rejection, filters eliminating every candidate, or genuinely no qualifying opportunities
-        adopt: issue open-candidate 0e41bfcb4a65f3d264d43dc1a0e9657dc5851c1d6f298d8afd2241011249cd9a
-    mmsell-price-ceiling-size-split · integrity.unresolved_event: runtime config for mmsell-sizesplit-live-1 differs from the registered deployment — classify: harmless deployment revision, new epoch, new version, or platform impact. Gate evaluation is blocked while unresolved.
-        adopt: issue open-candidate f7ae5ad15525359d8c592670730e261cc61ea79f8213b1e6604f1123dc4e3b56
-    mmsell-price-ceiling-cell-size-2 · live_canary_keep · gate.blocked: live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct
-        adopt: issue open-candidate b02cb28df6b404534d413e4441d432dc282240578132f49fda7990aea7da31b0
-    mmsell-type-tight · paper_keep · gate.blocked: MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 7392c28d0d65e74e9e405f0498da4cca1468c2e84f8efab675866a3da33ea3ed
-    mmsell-win-set-3 · live_canary_keep · gate.blocked: live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct
-        adopt: issue open-candidate 2d4c4ce5397b682e390476dcbffb9c6f8faf76b515090b59da9e8ac82fa47ade
-    liquidity-incentive-mm · live_canary_keep · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 9651f4a940296e2726757ad26b91e26887907fb323615a181135255cc8933790
-    liquidity-incentive-mm · paper_to_live_smoke · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 490b03042ad10396c6a912d125d9578e9b3bd54c5a298057b59849911132d3e3
-    liquidity-incentive-mm · shadow_instrument_ready · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 4425c49bedd08936d2d52c29f031af7a8962299f8883fe7830463bf2d7335a62
-    mmsell-price-ceiling · live_canary_keep · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate e756d0c4d3347c8465deb9afd38f20e8ebcecaa3b09aebed294c68b44476d8d7
-    mmsell-price-ceiling · paper_to_live_canary · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 816fdf717b3bc19858e0457f81e292ca673129c99de49fcbd64e4beb04814aaf
-    mmsell-price-ceiling-capacity · live_canary_keep · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 05b27cab054a5bee64b799a981aeb649262de19b6a68c7b687c548f92c4399cb
-    mmsell-price-ceiling-capacity · paper_to_live_canary · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 8be63e973a083af0d0b37715f22306a9d9287b1bdce478abb390cab1495093fa
-    mmsell-price-ceiling-cell-size · live_canary_keep · gate.blocked: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        adopt: issue open-candidate fc671275174611a7cd88144ba46be94d7469ac1acca56fdc5f1888696eaa2da3
-    mmsell-price-ceiling-cell-size · paper_to_live_canary · gate.blocked: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        adopt: issue open-candidate 40432d5362f4c227dd382e3a054e64de73f478baddc542834cbc694e21b55901
-    mmsell-price-ceiling-contest-cap · live_canary_keep · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 841a5d7db6eea60e9c04c090057ab4f0cde69e6560231ed9fe7d3ab671d8edb7
-    mmsell-price-ceiling-contest-cap · paper_to_live_canary · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 64c1a779902e025392153481994a47fc3bd2630b1544e3f3af2ffca22f86c30a
-    mmsell-price-ceiling-size-split · live_canary_keep · gate.blocked: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        adopt: issue open-candidate 8aaea58011991f5b84bd4ed69d18a54872aaf3b2c12d907f5e307f2180b16734
-    mmsell-price-ceiling-size-split · paper_to_live_canary · gate.blocked: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        adopt: issue open-candidate dc91e2e7c674bb076c5083a5d92ff478a2b3509d9d195d9b2847a4485639e5b9
+BY EVENT (newest 30 that earned, lost or still hold money, plus current-universe events quoted; rewards / closed fill P&L / net)
+  KXMAMDANIMENTION-26NOV18          mention_event    0.00    0.00    0.00  orders 16  [no payout recorded]
+  KXMILLERLITEPOS-26NOV03           moving_number    0.00   -5.33   -5.33  orders 6  losers: T84 -5.33  [no payout recorded]
+  KXMCDSBIGMAC-26NOV02              moving_number    0.00   -0.06   -0.06  orders 2  [no payout recorded]
+  KXTRUMPMENTION-26NOV01            mention_event    0.00    0.00    0.00  orders 1  [no payout recorded]
+  KXTRUMPMENTIONB-26OCT27           mention_event    7.36    0.14    7.50  orders 15
+  KXTRUMPMENTION-26OCT27            mention_event    6.85  -11.70   -4.85  orders 16  losers: SAVE -6.27, CHEA -5.43
+  KXTRUMPMENTION-26OCT25            mention_event    4.40  -12.24   -7.84  orders 10  losers: CEAS -6.89, PEAC -5.35
+  KXTRUMPMENTION-26OCT24            mention_event    1.82    0.07    1.89  orders 6
+  KXYTVIEWSHIGH-TAT26NOV            youtube_views    5.05    0.00    5.05  orders 4
+  KXTRUMPMENTION-26OCT23            mention_event    0.00    0.00    0.00  orders 6  [no payout recorded]
+  KXTRUMPMENTION-26OCT22            mention_event    6.10   -5.99    0.11  orders 6  losers: DIVI -5.99
+  KXTRUMPMENTION-26OCT20            mention_event    7.96    0.00    7.96  orders 24
+  KXTRUMPMENTIONB-26OCT19           mention_event   20.75   -7.06   13.69  orders 19  losers: NQE -4.70, FENT -2.36
+  KXTRUMPMENTION-26OCT19            mention_event   10.98   -4.14    6.84  orders 14  losers: CEAS -4.14
+  KXTRUMPMENTION-26OCT17            mention_event    1.70   -2.50   -0.80  orders 30  losers: PALE -2.50
+  KXCPI-26OCT                       moving_number    2.04    0.00    2.04  orders 2
+  KXTRUMPMENTION-26OCT14            mention_event    0.00    0.00    0.00  orders 1  [no payout recorded]
+  KXTRUMPMENTION-26OCT13            mention_event    3.31   -6.89   -3.58  orders 8  losers: OIL -6.89
+  KXTRUMPSAY-26OCT12                mention_windo    1.99    0.00    1.99  orders 1
+  KXMSFTPERM-26OCT                  moving_number    1.31    0.00    1.31  orders 5
+  KXTRUMPMENTION-26OCT09            mention_event    2.09    0.00    2.09  orders 3
+  KXTRUMPMENTION-26OCT06            mention_event    0.00    0.00    0.00  orders 7  [no payout recorded]
+  KXVHGCB-26SEP28                   moving_number    0.00   -0.33   -0.33  orders 2  [no payout recorded]
+  KXTRUMPAPPROVE-26SEP28            moving_number    0.00   -0.81   -0.81  orders 2  [no payout recorded]
+  KXTOKENUSE-26SEP28                ai_share         0.00   -0.93   -0.93  orders 2  [no payout recorded]
+  KXGOOGVREQ-28SEP26                ai_share         0.00   -3.32   -3.32  orders 2  losers: T13 -3.32  [no payout recorded]
+  KXANTHVREQ-28SEP26                ai_share         2.21   -9.99   -7.78  orders 2  losers: T9P5 -9.99
+  KXAAAGASDGA-26SEP28               moving_number    0.00   -1.32   -1.32  orders 2  losers: 4.1700 -1.32  [no payout recorded]
+  KXVHGCB-26SEP27                   moving_number    0.00   -0.34   -0.34  orders 2  [no payout recorded]
+  KXOPENVREQ-26SEP26                ai_share         0.00   -1.80   -1.80  orders 2  losers: T17 -1.80  [no payout recorded]
 
-=== IDEA (0) ===
-    (none)
+LOSING MARKETS (≤ -$1): how they filled (lead < 0 = first fill on the event day)
+  KXANTHVREQ-28SEP26-T9P5                -9.99  1 fills over 0.0h  -19h before event day
+  KXAAAGASDCO-26SEP26-4.2350             -8.33  8 fills over 2.1h  -0h before event day
+  KXTRUMPMENTION-26OCT13-OIL             -6.89  3 fills over 0.3h  -9h before event day
+  KXTRUMPMENTION-26OCT25-CEAS            -6.89  2 fills over 0.0h  151h before event day
+  KXTRUMPMENTION-26OCT27-SAVE            -6.27  3 fills over 0.0h  153h before event day
+  KXTRUMPMENTION-26OCT22-DIVI            -5.99  7 fills over 49.8h  44h before event day
+  KXTRUMPMENTION-26OCT27-CHEA            -5.43  10 fills over 27.2h  75h before event day
+  KXTRUMPMENTION-26OCT25-PEAC            -5.35  5 fills over 128.3h  146h before event day
+  KXYTVIEWSHIGH-BAD26DEC-24.0M           -5.35  2 fills over 0.0h  
+  KXMILLERLITEPOS-26NOV03-T84            -5.33  2 fills over 6.7h  506h before event day
+  KXTOP10BBSPOTS-26OCT24-TSWIF-10        -4.99  2 fills over 3.3h  
+  KXTRUMPMENTIONB-26OCT19-NQE            -4.70  6 fills over 1.0h  -1h before event day
+  KXTRUMPMENTION-26OCT19-CEAS            -4.14  4 fills over 38.7h  46h before event day
+  KXGOOGVREQ-28SEP26-T13                 -3.32  1 fills over 0.0h  -18h before event day
+  KXAAAGASDCA-26SEP26-6.3150             -3.10  5 fills over 0.0h  3h before event day
+  KXTRUMPMENTION-26OCT17-PALE            -2.50  6 fills over 38.9h  21h before event day
+  KXTRUMPMENTIONB-26OCT19-FENT           -2.36  11 fills over 9.9h  -5h before event day
+  KXOPENVREQ-26SEP26-T17                 -1.80  1 fills over 0.0h  -22h before event day
+  KXAAAGASDGA-26SEP28-4.1700             -1.32  2 fills over 0.0h  3h before event day
 
-=== PROBE (0) ===
-    (none)
-
-=== PAPER (8) ===
-    experiment                        ver/epoch  treatment       n     c/trade  control c/trade  gate              last evidence                   
-    --------------------------------  ---------  --------------  ----  -------  ---------------  ----------------  --------------------------------
-    mmsell-correlation-cap            v1/e1      contest_capped  3857  1.21     1.05             none/NOT_STARTED  2026-10-29 12:57:59.726688+00:00
-    mmsell-price-ceiling-cell-size-2  v1/e1      mmsell10        0     -        -                BLOCKED_DATA      2026-10-29 12:57:40.627266+00:00
-    mmsell-rain-season                v1/e1      rain_adjacent   45    10.61    4.24             none/NOT_STARTED  2026-10-29 11:55:23.275338+00:00
-    mmsell-temperature-season         v1/e1      -               -     -        1.45             none/NOT_STARTED  2026-10-29 12:26:54.567037+00:00
-    mmsell-type-tight                 v1/e3      Tmmsell6        62    0.07     -                BLOCKED_PLATFORM  2026-10-29 12:57:59.669045+00:00
-    mmsell-weather-bands              v1/e1      hight_ultra     665   1.57     1.46             none/NOT_STARTED  2026-10-29 13:28:54.549038+00:00
-    mmsell-wide-control               v1/e1      -               -     -        1.74             no gate           2026-10-29 13:28:15.450377+00:00
-    mmsell-win-set-3                  v1/e1      winset          0     -        -                BLOCKED_DATA      2026-10-29 12:57:40.642618+00:00
-
-=== LIVE_CANARY (8) ===
-    experiment                        live                      twin                      boundary  resting  held  at risk  gate            
-    --------------------------------  ------------------------  ------------------------  --------  -------  ----  -------  ----------------
-    liquidity-incentive-mm            limm-smoke-live-1         limm-smoke-twin-1         exact     9        4     $93.64   BLOCKED_PLATFORM
-    mmsell-price-ceiling              mmsell-ceiling-live-1     mmsell-ceiling-twin-1     exact     0        1     $0.94    BLOCKED_PLATFORM
-    mmsell-price-ceiling-capacity     mmsell-capacity-live-1    mmsell-capacity-twin-1    exact     0        6     $5.60    BLOCKED_PLATFORM
-    mmsell-price-ceiling-cell-size    mmsell-cellsize-live-1    mmsell-cellsize-twin-1    exact     4        6     $14.67   BLOCKED_PLATFORM
-    mmsell-price-ceiling-contest-cap  mmsell-contestcap-live-2  mmsell-contestcap-twin-2  exact     0        9     $6.88    BLOCKED_PLATFORM
-    mmsell-price-ceiling-size-split   mmsell-sizesplit-live-2   mmsell-sizesplit-twin-2   exact     0        0     $0.00    BLOCKED_PLATFORM
-    mmsell-win-set                    mmsell-winset-live-1      mmsell-winset-twin-1      exact     0        0     $0.00    PASS            
-    mmsell-win-set-2                  mmsell-winset2-live-1     mmsell-winset2-twin-1     exact     2        0     $5.40    PASS            
-    `at risk` = resting-order notional + held-position exposure. A stood-down book drains its
-    resting orders within a cycle; its HELD positions do not go away and are still real money.
-
-=== PRODUCTION (0) ===
-    (none)
-
-=== PAUSED (1) ===
-    experiment       ver/epoch  treatment  n  c/trade  control c/trade  gate     last evidence
-    ---------------  ---------  ---------  -  -------  ---------------  -------  -------------
-    theta-tail-sell  -          -          -  -        -                no gate  -            
-
-=== BLOCKED EVIDENCE ===
-    An experiment can carry MORE THAN ONE blocker class. The evaluator's verdict and a proven contract
-    defect are independent: clearing one does not clear the other. Read every class listed for a book
-    before deciding what would unblock it.
-
-    EVALUATOR BLOCK — cause is the canonical evaluator's, not an inference. Do not attribute a block
-    to anything not named here.
-    mmsell-price-ceiling-cell-size-2 · live_canary_keep
-        BLOCKED_DATA (recorded)
-            missing providers:
-              - live_cents_per_contract
-              - live_fill_rate_pct
-              - live_max_realized_loss_usd
-              - live_realized_pnl_usd
-              - live_settled_contracts
-              - twin_live_paired_gap_cents
-              - twin_live_winrate_gap_pp
-              - twin_mirror_coverage_pct
-        · sample 'live_settled_contracts' on mmsell-price-ceiling-cell-size-2/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
-        · horizon 'live_settled_contracts' on mmsell-price-ceiling-cell-size-2/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
-        · pass_all 'live_cents_per_contract' on mmsell-price-ceiling-cell-size-2/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
-        · pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size-2/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
-        owner: Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
-    mmsell-type-tight · paper_keep
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · pass_all clause 'delta.pnl_cents_per_trade': external control mmsell-price-ceiling/v2/e2/mmsell10 is pinned to a different platform snapshot and a cross-snapshot delta would pool incomparable evidence — MARKET_TAXONOMY differs (this epoch pins 'trumpmention_2026_10_27', the control pins 'settlement_repair_2026_08_24') and no APPLIED NO_ACTION/RECOMPUTE disposition licenses that transition for this epoch
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-win-set-3 · live_canary_keep
-        BLOCKED_DATA (recorded)
-            missing providers:
-              - live_cents_per_contract
-              - live_fill_rate_pct
-              - live_max_realized_loss_usd
-              - live_realized_pnl_usd
-              - live_settled_contracts
-              - twin_live_paired_gap_cents
-              - twin_live_winrate_gap_pp
-              - twin_mirror_coverage_pct
-        · sample 'live_settled_contracts' on mmsell-win-set-3/v1/e1/winset: no live deployment tags for this scope in this epoch
-        · horizon 'live_settled_contracts' on mmsell-win-set-3/v1/e1/winset: no live deployment tags for this scope in this epoch
-        · pass_all 'live_cents_per_contract' on mmsell-win-set-3/v1/e1/winset: no live deployment tags for this scope in this epoch
-        · pass_all 'twin_live_winrate_gap_pp' on mmsell-win-set-3/v1/e1/winset: no live deployment tags for this scope in this epoch
-        owner: Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
-    liquidity-incentive-mm · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    liquidity-incentive-mm · paper_to_live_smoke
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    liquidity-incentive-mm · shadow_instrument_ready
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling · paper_to_live_canary
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-capacity · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-capacity · paper_to_live_canary
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-cell-size · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY:trumpmention_2026_10_27 impact #54 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-cell-size · paper_to_live_canary
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY:trumpmention_2026_10_27 impact #54 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-contest-cap · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-contest-cap · paper_to_live_canary
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-size-split · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY:trumpmention_2026_10_27 impact #56 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    mmsell-price-ceiling-size-split · paper_to_live_canary
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it
-        · MARKET_TAXONOMY:trumpmention_2026_10_27 impact #56 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-
-=== REALIZABLE-PROJECTION CONTEXT ===
-    These gates decide on the live-fill projection, NOT on paper profitability. Both numbers are shown so the
-    verdict is read as the claim it is.
-    mmsell-price-ceiling-cell-size-2 · paper_to_live_canary  [promotion PAPER→LIVE_CANARY]
-        verdict: HOLD (recorded)
-        mmsell-price-ceiling-cell-size-2/v1/e1/mmsell10:  realizable projection n/a  ·  observed paper n/a  ·  calibration coverage 0/0 (calib 2026-08-11)
-        Interpretation: the gate is satisfied on the calibrated live-fill projection.
-        This is NOT a claim that observed paper P&L was positive.
-
-=== DATA COLLECTORS ===
-    collector                 status  age_min  cadence
-    ------------------------  ------  -------  -------
-    weather_forecasts         fresh   2.40     15     
-    weather_observations      fresh   4.50     15     
-    weather_ensembles         fresh   6.70     60     
-    weather_bucket_snapshots  fresh   6.70     5      
-    crypto_spot_candles       fresh   2.80     5      
-    crypto_ladder_snapshots   fresh   1.80     5      
-    mmsell_position_ticks     fresh   2.40     5      
-
-    NOT ACTIVE IN THIS DEPLOYMENT (no data for >7d) — informational, NOT an outage:
-        market_snapshots: INACTIVE, last write 143.0d ago — scanner-mode table; the live worker does not write it
-
-    COLLECTOR LEGEND: fresh = running normally · STALE = overdue, may be stalled · EMPTY = no rows · UNAVAILABLE = table absent ·
-    INACTIVE = not expected to be active in the current deployment.
-    Only STALE / EMPTY / UNAVAILABLE warrant collector-health investigation (Live Ops). INACTIVE is informational and is never, on its
-    own, the cause of a blocked gate — see BLOCKED EVIDENCE for the evaluator's actual reasons.
-
-=== PORTFOLIO (north star: $100/month realized) ===
-    PAPER realized 30d: $8521.3  (all-time $9797.36)  → AHEAD by $8421.30
-    Paper assumes fills it would not always get; the north star is REAL money. Live realized is per-canary — see `mmsell_live` / `live_paper_parity`.
-
-=== READY / DUE ===
-    - BLOCKED_DATA mmsell-price-ceiling-cell-size-2 · live_canary_keep — missing provider: live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-type-tight · paper_keep — MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_DATA mmsell-win-set-3 · live_canary_keep — missing provider: live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct — this experiment's numbers cannot be interpreted until it clears
-    - GATE PASS (RECORDED, system @ 2026-10-29 10:46:57.871336+00:00) mmsell-win-set-3 · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
-    - BLOCKED_PLATFORM liquidity-incentive-mm · live_canary_keep — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM liquidity-incentive-mm · paper_to_live_smoke — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM liquidity-incentive-mm · shadow_instrument_ready — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling · live_canary_keep — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling · paper_to_live_canary — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-capacity · live_canary_keep — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-capacity · paper_to_live_canary — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-cell-size · live_canary_keep — MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-cell-size · paper_to_live_canary — MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-contest-cap · live_canary_keep — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-contest-cap · paper_to_live_canary — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-size-split · live_canary_keep — MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM mmsell-price-ceiling-size-split · paper_to_live_canary — MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evidence window while the epoch pins 'settlement_repair_2026_08_24' — the sample spans a platform boundary; open a new epoch (or classify the impact) rather than pooling across it — this experiment's numbers cannot be interpreted until it clears
-    - GATE PASS (RECORDED, system @ 2026-10-27 13:43:38.879596+00:00) mmsell-win-set · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
-    - GATE PASS (RECORDED, system @ 2026-10-27 11:38:39.218071+00:00) mmsell-win-set-2 · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
-
-=== RECENTLY RETIRED — last 7 days ===
-    Dated by the experiment's retired_at (when the book actually died), not by when its record was written.
-    - mmsell-reviewed-universe @ 2026-10-27 03:20:47.092699+00:00: Operator ended the reviewed-universe paper pair (Rmmsell1/Rmmsell2) on 2026-10-27 before its 60-day gate; interim mechanism ledger in docs/MMSELL_REVIEWED_TAPE.md (PR #651).
-    5 retired record(s) carry NO retired_at — undated legacy history, not recent: live-shape-probe, origin-scanner-books, wcprop, weather-legacy-cells, xgame
-
-=== RECOMMENDED NEXT ACTIONS ===
-    - mmsell-price-ceiling-size-split: unresolved integrity event [EXPERIMENT_CONFIG_DRIFT] — Platform Change Review (deployed config no longer matches the registered arm) — Live Ops if the runtime config is what is wrong
-    - blocked evidence — mmsell-price-ceiling-cell-size-2·live_canary_keep (live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct), mmsell-win-set-3·live_canary_keep (live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct) → Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
-    - blocked evidence — liquidity-incentive-mm·live_canary_keep, liquidity-incentive-mm·paper_to_live_smoke, liquidity-incentive-mm·shadow_instrument_ready, mmsell-price-ceiling-capacity·live_canary_keep, mmsell-price-ceiling-capacity·paper_to_live_canary, mmsell-price-ceiling-cell-size·live_canary_keep, mmsell-price-ceiling-cell-size·paper_to_live_canary, mmsell-price-ceiling-contest-cap·live_canary_keep, mmsell-price-ceiling-contest-cap·paper_to_live_canary, mmsell-price-ceiling-size-split·live_canary_keep, mmsell-price-ceiling-size-split·paper_to_live_canary, mmsell-price-ceiling·live_canary_keep, mmsell-price-ceiling·paper_to_live_canary, mmsell-type-tight·paper_keep → Platform Change Review — evidence comparability across a platform revision is what is blocking
-    - unresolved platform-impact dispositions — Platform Change Review
-    - liquidity-incentive-mm: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-capacity: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-contest-cap: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-cell-size: unresolved platform impact MARKET_TAXONOMY:trumpmention_2026_10_27 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-size-split: unresolved platform impact MARKET_TAXONOMY:trumpmention_2026_10_27 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-type-tight: unresolved platform impact MARKET_TAXONOMY:football_coverage_2026_10_12 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - platform: pending revision EXECUTION_ENGINE:shared_primary_ownership_20260921 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - platform: pending revision MARKET_TAXONOMY:football_coverage_2026_10_12 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm: liquidity-incentive-mm is deployed but has produced zero evidence — NO open issue covers this; recommended owner LIVE_OPS [UNCLASSIFIED/LOW/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-size-split: unresolved integrity event [EXPERIMENT_CONFIG_DRIFT] — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-cell-size-2 · live_canary_keep: live_canary_keep is BLOCKED_DATA — NO open issue covers this; recommended owner RESEARCH_LAB [DATA/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-type-tight · paper_keep: paper_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-win-set-3 · live_canary_keep: live_canary_keep is BLOCKED_DATA — NO open issue covers this; recommended owner RESEARCH_LAB [DATA/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · paper_to_live_smoke: paper_to_live_smoke is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · shadow_instrument_ready: shadow_instrument_ready is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling · paper_to_live_canary: paper_to_live_canary is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-capacity · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-capacity · paper_to_live_canary: paper_to_live_canary is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-cell-size · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-cell-size · paper_to_live_canary: paper_to_live_canary is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-contest-cap · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-contest-cap · paper_to_live_canary: paper_to_live_canary is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-size-split · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-size-split · paper_to_live_canary: paper_to_live_canary is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-
-Control Tower is READ ONLY. Route the write by what is actually blocking:
-    BLOCKED_DATA (missing metric provider / analysis / evidence transform) → Research Lab or task-specific Experiment OS metrics work.
-        This is NOT automatically a Platform Revision.
-    BLOCKED_PLATFORM → Platform Change Review (evidence comparability across a revision).
-    BLOCKED_INTEGRITY → by cause: runtime/live/collector → Live Ops; shared semantic or config → Platform Change Review;
-        experiment definition or evidence contract → Research Lab.
-    New hypothesis or successor experiment → Research Lab.
-    Recommend Platform Change Review only when shared platform semantics actually changed or need to change.
+JSON {"as_of": "2026-10-29T14:04+00:00", "avg_loss": -4.95, "categories": {"ai_share": {"events": 5, "events_with_loss": 3, "fill_pnl": -16.04, "losses": 3, "net": -13.83, "open": 0, "open_cost": 0.0, "rewards": 2.21, "total": -13.83, "unpriced": 0, "unrealized": 0.0}, "mention_event": {"events": 18, "events_with_loss": 7, "fill_pnl": -49.54, "losses": 10, "net": 23.78, "open": 0, "open_cost": 0.0, "rewards": 73.32, "total": 23.78, "unpriced": 0, "unrealized": 0.0}, "mention_window": {"events": 1, "events_with_loss": 0, "fill_pnl": 0.0, "losses": 0, "net": 1.99, "open": 0, "open_cost": 0.0, "rewards": 1.99, "total": 1.99, "unpriced": 0, "unrealized": 0.0}, "moving_number": {"events": 77, "events_with_loss": 5, "fill_pnl": -26.14, "losses": 5, "net": -22.79, "open": 1, "open_cost": 0.02, "rewards": 3.35, "total": -22.81, "unpriced": 0, "unrealized": -0.02}, "youtube_views": {"events": 14, "events_with_loss": 1, "fill_pnl": -5.35, "losses": 1, "net": -0.3, "open": 2, "open_cost": 216.88, "rewards": 5.05, "total": -11.18, "unpriced": 0, "unrealized": -10.88}}, "loss_markets": 19, "recent": {"mention_event": {"fill_pnl": 0.0, "net": 18.61, "rewards": 18.61}, "youtube_views": {"fill_pnl": -5.35, "net": -5.35, "rewards": 0.0}}, "totals": {"fill_pnl": -97.07, "net": -11.15, "open": 3, "open_cost": 216.9, "rewards": 85.92, "total": -22.05, "unpriced": 0, "unrealized": -10.9}}
