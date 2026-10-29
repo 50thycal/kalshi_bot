@@ -221,6 +221,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_cell_size_census",
     "mmsell_queue_depth_probe",
     "mmsell_type_rank_probe",
+    "mmsell_selection_audit",
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",
