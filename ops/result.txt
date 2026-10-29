@@ -1,122 +1,140 @@
-# ops request [READ]
-# type=xos  id=rl-sba-iss09-after-20261029
-# code c1c0169bc141ec4fff697e03f1f3c316572251a3 · started 2026-10-29T14:58:28Z
-{
-  "issue_key": "XOS-000009",
-  "title": "MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets",
-  "status": "TRIAGE",
-  "classification": "STRATEGY",
-  "severity": "LOW",
-  "priority": "P3",
-  "owner_role": "RESEARCH_LAB",
-  "opened_by_role": "PLATFORM_CHANGE_REVIEW",
-  "opened_at": "2026-08-24 14:55:25.628166+00:00",
-  "scope": "system-wide",
-  "experiment_id": null,
-  "version_id": null,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": null,
-  "latest_evidence": "RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog study 1, pre-registered 2026-10-29) measure",
-  "problem_statement": "The MMSELL arm specs exclude crypto with skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO, which matches as a SUBSTRING of the series ticker rather than as a token. KXHEGSETHANNOUNCEOUT contains the letters ETH inside H-EGS-ETH-ANNOUNCE-OUT and is therefore dropped by BOTH arms as though it were an Ethereum market, which it is not. The effect is symmetric across treatment and control, so this is not a confound and does not invalidate the 2026-08-24 taxonomy work - it is a universe-definition defect. It quietly removes eligible non-crypto markets from a design whose supply and calendar were just measured, and any future series whose ticker happens to contain one of those six strings will be removed the same way, silently and without any log line saying so. The correct fix is a matching rule question - token boundaries, an explicit series allowlist, or classification-based exclusion now that the settlement taxonomy covers 99.8% of the population - not a patch to the string. That choice is part of the experiment's scientific contract.",
-  "evidence_summary": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
-  "proposed_fix": null,
-  "validation_plan": null,
-  "resolution_summary": null,
-  "resolved_at": null,
-  "requires_new_version": null,
-  "requires_new_epoch": null,
-  "requires_platform_revision": null,
-  "requires_pause_or_stand_down": null,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-08-24 14:55:25.628166+00:00",
-  "last_observed_at": "2026-08-24 14:55:25.628166+00:00",
-  "details_json": {
-    "discovery": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-08-24 14:55:25.628166+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "RESEARCH_LAB",
-      "from_classification": null,
-      "to_classification": "STRATEGY",
-      "reason": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
-      "payload": {
-        "scope": "system-wide",
-        "anomaly_kind": null,
-        "owner_override": {
-          "chosen": "RESEARCH_LAB",
-          "rationale": "Found during the XOS-000006 platform review and routed to Research Lab rather than repaired in PR #257: skip= is part of the experiment's scientific contract, and Platform Change Review does not edit a researcher's universe definition on their behalf. Recorded now because the MMSELL 2x2 design is not yet registered, so this can still be settled before any evidence depends on it.",
-          "recommended": "LIVE_OPS"
-        },
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-10-29 14:57:40.174192+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "MMSELL selection-bias audit (catalog study 1, pre-registered 2026-10-29) measured this rule on the whole candidate tape: 102,587 settled markets over 98 days (2026-07-23 to 2026-10-29). The substring list BTC+ETH+SOL+DOGE+XRP+CRYPTO matched 14 true crypto series (Kalshi category Crypto) and exactly 2 non-crypto markets: KXHEGSETHANNOUNCEOUT and KXHEGSETHOUT (Politics), 1 market each. The false positives are real but economically negligible (2 markets in 98 days; +4.6c taker each, n far below any",
-      "payload": {
-        "source_ref": "docs/MMSELL_SELECTION_BIAS_AUDIT.md section 8; PR #693 (probe) and PR #694 (verdict); ops rl-sba-run1-20261029",
-        "evidence_id": 106,
-        "content_hash": null,
-        "evidence_type": "RESEARCH_DOCUMENT"
-      }
-    },
-    {
-      "event_type": "TRIAGED",
-      "occurred_at": "2026-10-29 14:57:40.208302+00:00",
-      "actor": "claude-code-for-calvin",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "OPEN",
-      "to_status": "TRIAGE",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Measured 2026-10-29 (selection-bias audit): the substring rule dropped 2 non-crypto markets in 98 days and correctly removes losing crypto markets. Universe-definition hygiene for the next Version that carries a crypto skip; no exposure impact.",
-      "payload": {
-        "priority": "P3",
-        "severity": "LOW"
-      }
-    }
-  ],
-  "evidence": [
-    {
-      "evidence_type": "RESEARCH_DOCUMENT",
-      "summary": "MMSELL selection-bias audit (catalog study 1, pre-registered 2026-10-29) measured this rule on the whole candidate tape: 102,587 settled markets over 98 days (2026-07-23 to 2026-10-29). The substring list BTC+ETH+SOL+DOGE+XRP+CRYPTO matched 14 true crypto series (Kalshi category Crypto) and exactly 2 non-crypto markets: KXHEGSETHANNOUNCEOUT and KXHEGSETHOUT (Politics), 1 market each. The false positives are real but economically negligible (2 markets in 98 days; +4.6c taker each, n far below any floor). The true-crypto markets the rule removes lose: live cell (YES ask <=7c) 349 markets / 132 events, taker -7.72 [95% CI -14.8, -0.7], maker -5.69. So the exclusion itself is correct; the defect is only the matching rule. Recommendation for whoever authors the next MMSELL Version that carries a crypto skip: exact series names or classification by Kalshi category, not substrings. No live or paper change is warranted on this evidence alone.",
-      "source_ref": "docs/MMSELL_SELECTION_BIAS_AUDIT.md section 8; PR #693 (probe) and PR #694 (verdict); ops rl-sba-run1-20261029",
-      "captured_at": "2026-10-29 14:57:40.171787+00:00",
-      "captured_by": "claude-code-for-calvin",
-      "content_hash": null
-    }
-  ],
-  "links": []
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-sba-iss-clear-20261029
+# code c1c0169bc141ec4fff697e03f1f3c316572251a3 · started 2026-10-29T14:59:03Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 5302 bytes, sha256:444482c325e17bd7>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 70,
+#       "grandfathered": 13,
+#       "native": 57
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-sizesplit-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-sizesplit-twin-2",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset2-live-1",
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-10-29 14:59:18.532462+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "45 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10",
+#             "Jmmsell10",
+#             "Kmmsell10",
+#             "Nmmsell10",
+#             "Vmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "55b51990e0492e4b",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 70,
+#           "grandfathered": 13,
+#           "native": 57
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
