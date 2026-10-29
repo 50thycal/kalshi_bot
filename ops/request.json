@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["rl-sba-31-ev-20261029"],"id":"rl-sba-iss-rcpt1-20261029"}
+{"type":"xos","command":"issue-show","args":["XOS-000009"],"id":"rl-sba-iss09-after-20261029"}
