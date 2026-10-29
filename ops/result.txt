@@ -1,31 +1,25 @@
 # ops request [READ]
-# type=xos  id=rs-reg-cs2-rc1
-# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T10:44:44Z
-{
-  "command_id": "rs-reg-cs2-20261029",
-  "action": "REGISTER_PACKAGE",
-  "actor": "claude-code",
-  "actor_role": "RESEARCH_LAB",
-  "status": "SUCCEEDED",
-  "payload_hash": "81330556fc85e313457a305266ad5b0d458e6590f3becf3c8253a52ab6e62606",
-  "completed_at": "2026-10-29 10:44:01.123343+00:00",
-  "result": {
-    "kind": "register",
-    "package": "mmsell-cell-size-2-canary",
-    "version": 1,
-    "keep_gate": "live_canary_keep",
-    "epoch_number": 1,
-    "promotion_gate": "paper_to_live_canary",
-    "epoch_started_at": "2026-10-29 10:44:00.927887+00:00",
-    "version_frozen_at": "2026-10-29 10:44:00.927887+00:00",
-    "keep_gate_spec_hash": "de7df3c97f9aaea9",
-    "promotion_gate_spec_hash": "f15ea2a7bfb93f24",
-    "paper_deployment_deployment": "mmsell-cellsize2-paper-1",
-    "paper_deployment_started_at": "2026-10-29 10:44:00.927887+00:00"
-  },
-  "error": null,
-  "replayed": false,
-  "collision": false,
-  "executed": true,
-  "experiment": "mmsell-price-ceiling-cell-size-2"
-}
+# type=xos  id=rs-pf-ws3
+# code 67cdbd97a0f052f24a93a968ccdc581ac97fc946 · started 2026-10-29T10:45:22Z
+PACKAGE PREFLIGHT — mmsell-win-set-3-canary  (2026-10-29T10:45:22.917168+00:00)
+
+  [ok  ] package_known: Successor of mmsell-win-set-2 (owner decision 2026-10-29), restarted with the cell-size book so the pair Xmmsell10+Ymmsell10:6:6.00 is registered in both; KXWCM
+  [ok  ] package_registers: has a `register` verb
+  [info] enforcement_mode: NEW_ONLY
+         a tag trades only under an active deployment arm
+  [ok  ] platform_snapshot_complete: active snapshot 55b51990e049
+  [ok  ] experiment: 'mmsell-win-set-3' not registered — a fresh registration
+  [ok  ] tag_collisions: no declared tag is carried by another experiment
+  [ok  ] transport_idle: no experiment command is mid-execution
+
+VERDICT: GO
+
+envelope (ops request, one line):
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-win-set-3-canary-register-202610291045\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-win-set-3-canary\"}, \"schema_version\": 1}"}, "id": "mmsell-win-set-3-canary-register-202610291045-send"}
+
+then:
+  1. send env_request as printed (record approved_by/reason from `audit` in the PR)
+  2. read the receipt: xos experiment-command-show mmsell-win-set-3-canary-register-202610291045
+  3. xos show mmsell-win-set-3 — every declared tag on an ACTIVE arm
+  4. runtime step (separate `env` request, read the live value FIRST and append, never retype): ['LIVE_STRATEGIES', 'MMSELL_LIVE_SHARED_MARKET_PAIRS', 'MMSELL_VARIANTS']
+  5. xos control-tower after SILENT_ARM_HOURS — no silent arm
