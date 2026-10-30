@@ -1,8 +1,4 @@
 # ops request [READ]
-# type=db  id=rl-limm-collect-chk2-20261030
-# code 0f016c1d866d0b1040bb1aca849dc156209104cc · started 2026-10-30T21:11:22Z
-last_trade                        trades_30m  mkts_15m
---------------------------------  ----------  --------
-2026-10-30 21:10:32.350930+00:00  15          147     
-
-(1 row)
+# type=noop  id=rl-lexit-noop-20261030
+# code 0f016c1d866d0b1040bb1aca849dc156209104cc · started 2026-10-30T21:12:03Z
+(noop — nothing to do)
