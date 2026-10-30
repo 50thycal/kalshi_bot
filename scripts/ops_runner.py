@@ -223,6 +223,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_type_rank_probe",
     "mmsell_selection_audit",
     "mmsell_fill_forward_read",
+    "limm_programme_outcomes",
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",
