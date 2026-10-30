@@ -1,8 +1,21 @@
 # ops request [READ]
-# type=db  id=rl-limm-collect-chk-20261030
-# code 3a600c61f3defee24da8f84d88f061db5e6e0bc3 · started 2026-10-30T20:57:37Z
-last_discovery                    liq_programs  mkts_15m  non_universe_mkts_15m  snaps_15m  last_trade                      
---------------------------------  ------------  --------  ---------------------  ---------  --------------------------------
-2026-10-30 20:51:12.394988+00:00  35944         147       141                    306        2026-10-07 02:49:13.489006+00:00
+# type=script  id=rl-lexit-run2-20261030
+# code 0f016c1d866d0b1040bb1aca849dc156209104cc · started 2026-10-30T21:11:03Z
+LIMM exits vs holding to settlement — Alimm1 (pre-registered docs/LIMM_PROGRAMME_OUTCOMES.md §9)
 
-(1 row)
+markets with fills: 41; settled with a position row: 17; scored: 17
+
+  actual (Kalshi realized): $-40.10   held to settlement: $-51.42
+  exit value per market: +0.67 ± +0.38 (17 markets, 15 events), total +11.32
+  instrument check (from exit fills): +0.66 ± +0.38, total +11.26
+
+== descriptive: by exit kind
+  stop     3 markets  exit value +3.56 ± +1.11  total +10.68
+  take     3 markets  exit value +0.21 ± +0.10  total +0.64
+  none    11 markets  exit value +0.00 ± +0.00  total +0.00
+
+  worst market, actual: KXANTHVREQ-28SEP26-T9P5 -9.99; worst market, held: KXANTHVREQ-28SEP26-T9P5 -9.99
+
+== VERDICT
+  H1: HOLD (accrual)
+  Authorizes nothing; a live risk-rule change is an owner decision recorded as an epoch.
