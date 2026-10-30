@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## LIMM study 3 v2 + exits vs holding 2026-10-30 — NFL ladders pay ~2x; the stop has saved money so far
+
+[Doc §8–11](LIMM_PROGRAMME_OUTCOMES.md).
+- **Reward-only re-run, 09-17 → 10-07:** 11 programme types outside the live universe are
+  REWARD-LEAD. The best are NFL player-yardage ladders at about $1.00 per market-day, against
+  $0.45 for today's universe. Fill and settlement risk are not measured, so they are nominated
+  for collection only.
+- **Shadow collector re-enabled (owner, 2026-10-30):** requote 300 s, about 2 GB a month. It is
+  recording 141 out-of-universe markets and the trade tape again.
+- **Exits vs holding on real fills:** 17 of 30 settled markets, so HOLD (accrual). Exits added
+  +$11.32 against holding, nearly all of it from 3 stopped markets.
+- **The first run's sign error is fixed:** the fill `action` field is unreliable; every fill is
+  read as an acquisition.
+
 ## LIMM programme outcomes 2026-10-30 — HOLD (instrument); out-of-universe collection stopped 10-07
 
 Research Lab, catalog study 3 ([doc](LIMM_PROGRAMME_OUTCOMES.md),
