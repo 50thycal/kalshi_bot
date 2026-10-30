@@ -1,53 +1,8 @@
 # ops request [READ]
-# type=script  id=rl-s3-v2-20261030
-# code 3a600c61f3defee24da8f84d88f061db5e6e0bc3 · started 2026-10-30T20:55:12Z
-LIMM programme outcomes — reward per market-day vs cheap-side settlement (pre-registered docs/LIMM_PROGRAMME_OUTCOMES.md)
+# type=db  id=rl-limm-collect-chk-20261030
+# code 3a600c61f3defee24da8f84d88f061db5e6e0bc3 · started 2026-10-30T20:57:37Z
+last_discovery                    liq_programs  mkts_15m  non_universe_mkts_15m  snaps_15m  last_trade                      
+--------------------------------  ------------  --------  ---------------------  ---------  --------------------------------
+2026-10-30 20:51:12.394988+00:00  35944         147       141                    306        2026-10-07 02:49:13.489006+00:00
 
-hourly snapshots since 2026-09-17T00:00:00+00:00: 90265
-qualifying cheap-side hours: 42801; markets: 831
-settled markets scored: 0; excluded {}
-
-== series (reward window 2026-09-17T00:00 -> 2026-10-07T03:00; settlement since 2026-09-17; REWARD-ONLY, settlement not used)
-  series                     live mkt-days    $/md  thin% settled  evts  G c/ct   ±se  label
-  KXMLBPLAYOFFHOST                      22   $2.61      0       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLESCALATORREC                    432   $1.06      0       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLESCALATORRECYDS                 366   $1.05      0       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLESCALATORRSHYDS                 116   $1.02      0       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLLADDERRECYDS                    153   $1.00      1       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLLADDERREC                        54   $0.86      3       0     0     n/a   n/a  REWARD-LEAD
-  KXAAAGASEOYNJ                         36   $0.84      0       0     0     n/a   n/a  REWARD-LEAD
-  KXALMWP                               26   $0.76      0       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLLADDERRSHYDS                     67   $0.76      1       0     0     n/a   n/a  REWARD-LEAD
-  KXNFLFFPTSLADDER                     102   $0.74      1       0     0     n/a   n/a  REWARD-LEAD
-  KXPAPER                               20   $0.66      0       0     0     n/a   n/a  REWARD-LEAD
-  KXMLBPLAYOFFS                         55   $0.38      0       0     0     n/a   n/a  NO-LEAD
-  KXNYCSUBWAY                           60   $0.32      0       0     0     n/a   n/a  NO-LEAD
-  KXCAFAIRPLAN                         101   $0.31      0       0     0     n/a   n/a  NO-LEAD
-  KXCABUILDPERMITS                      83   $0.25      0       0     0     n/a   n/a  NO-LEAD
-  KXNYNJPORTTEU                         81   $0.20      0       0     0     n/a   n/a  NO-LEAD
-  KXNFLPLAYOFFC                         21   $0.19      0       0     0     n/a   n/a  NO-LEAD
-  KXNJPHARMAEMP                         21   $0.19      0       0     0     n/a   n/a  NO-LEAD
-  KXWATECHEMP                          161   $0.19      0       0     0     n/a   n/a  NO-LEAD
-  KXPAMFGEMP                            78   $0.18      0       0     0     n/a   n/a  NO-LEAD
-  KXTXOIL                               58   $0.18      0       0     0     n/a   n/a  NO-LEAD
-  KXFLVISITORCOUNT                      82   $0.15      0       0     0     n/a   n/a  NO-LEAD
-  KXTXERCOTPEAK                        143   $0.14      0       0     0     n/a   n/a  NO-LEAD
-  KXWALLSTBONUS                         81   $0.14      0       0     0     n/a   n/a  NO-LEAD
-  KXORDPAX                              21   $0.14      0       0     0     n/a   n/a  NO-LEAD
-  KXILNUCLEAR                          103   $0.13      0       0     0     n/a   n/a  NO-LEAD
-  KXCITYCHAMPS                          80   $0.12      0       0     0     n/a   n/a  NO-LEAD
-  KXPJMEMERGENCY                        43   $0.11      0       0     0     n/a   n/a  NO-LEAD
-  KXWAAEROEMP                          165   $0.11      0       0     0     n/a   n/a  NO-LEAD
-  KXNYCASKRENT                         105   $0.07      0       0     0     n/a   n/a  NO-LEAD
-  KXBAA                                105   $0.07      0       0     0     n/a   n/a  NO-LEAD
-  ... 59 series below every floor not printed
-
-== live universe pooled
-  reward $0.19/market-day over 4 market-days; settlement G n/ac ± n/a (0 markets, 0 events)
-
-== VERDICT (descriptive; authorizes nothing)
-  S1 universe is not the bottleneck: FAIL — outside-universe ADD-CANDIDATEs above the live figure: KXMLBPLAYOFFHOST, KXNFLESCALATORREC, KXNFLESCALATORRECYDS, KXNFLESCALATORRSHYDS, KXNFLLADDERRECYDS, KXNFLLADDERREC, KXAAAGASEOYNJ, KXALMWP, KXNFLLADDERRSHYDS, KXNFLFFPTSLADDER, KXPAPER
-  S2 live-universe cheap side: n/a
-  REWARD-LEAD     11  KXMLBPLAYOFFHOST, KXNFLESCALATORREC, KXNFLESCALATORRECYDS, KXNFLESCALATORRSHYDS, KXNFLLADDERRECYDS, KXNFLLADDERREC, KXAAAGASEOYNJ, KXALMWP, KXNFLLADDERRSHYDS, KXNFLFFPTSLADDER, KXPAPER
-  NO-LEAD         20  KXMLBPLAYOFFS, KXNYCSUBWAY, KXCAFAIRPLAN, KXCABUILDPERMITS, KXNYNJPORTTEU, KXNFLPLAYOFFC, KXNJPHARMAEMP, KXWATECHEMP, KXPAMFGEMP, KXTXOIL, KXFLVISITORCOUNT, KXTXERCOTPEAK, KXWALLSTBONUS, KXORDPAX, KXILNUCLEAR, KXCITYCHAMPS, KXPJMEMERGENCY, KXWAAEROEMP, KXNYCASKRENT, KXBAA
-  (* = in the live universe)
+(1 row)

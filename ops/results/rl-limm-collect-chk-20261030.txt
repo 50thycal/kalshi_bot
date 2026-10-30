@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rl-limm-collect-chk-20261030
+# code 3a600c61f3defee24da8f84d88f061db5e6e0bc3 · started 2026-10-30T20:57:37Z
+last_discovery                    liq_programs  mkts_15m  non_universe_mkts_15m  snaps_15m  last_trade                      
+--------------------------------  ------------  --------  ---------------------  ---------  --------------------------------
+2026-10-30 20:51:12.394988+00:00  35944         147       141                    306        2026-10-07 02:49:13.489006+00:00
+
+(1 row)
