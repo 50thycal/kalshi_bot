@@ -608,6 +608,13 @@ def _dispatch(rtype: str, req: dict, receipt: dict) -> int:
         results_dir = os.path.join(os.path.dirname(os.path.abspath(REQUEST_PATH)), "results")
         return desk_diag.run(req, results_dir=results_dir)
 
+    if rtype == "catalog":
+        # One read-only GET of the market-catalog API with the GET-only CATALOG_READ_TOKEN
+        # (the catalog refuses it on every POST), so this channel gains no writable path.
+        import catalog_read
+
+        return catalog_read.run(req)
+
     if rtype == "script":
         name = (req.get("name") or "").strip()
         if name not in ALLOWED_SCRIPTS:

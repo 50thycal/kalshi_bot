@@ -49,6 +49,7 @@ To run a request:
    {"type": "doctor", "id": "doc-1"}                        # one-request operating snapshot
    {"type": "incident", "service": "main", "window_minutes": 30, "id": "inc-1"}
    {"type": "desks", "id": "desk-diag-<unique>"}            # sanitized desk-service diagnostic
+   {"type": "catalog", "path": "/v1/status", "id": "cat-1"} # read-only market-catalog API GET
    {"type": "env"}                                          # read allowlisted Railway vars
    {"type": "env", "action": "set", "values": {"KILL_SWITCH": "false"}}  # MUTATING + redeploy
    {"type": "noop"}
@@ -65,6 +66,15 @@ To run a request:
    branch, read-only, one GET with no retry. `id` is required and must be unused. It needs
    the `DESKS_DIAGNOSTIC_TOKEN` secret (a diagnostic-only role, never the operator or a desk
    token). Format, fields, failure codes and provisioning: `docs/desks/DIAGNOSTICS.md`.
+
+   `catalog` makes one GET against the **market-catalog** API (`/v1/...`, optional
+   `params` object), which lives on its own volume and is not in Postgres. It uses
+   `CATALOG_READ_TOKEN`, a GET-only credential that the catalog refuses on every POST,
+   so the channel still has no writable path; the full `CATALOG_API_TOKEN` never
+   reaches GitHub. Scripts reuse `scripts/catalog_read.py`'s `get()`. Provisioning:
+   set the same random value (≥ 24 characters) as `CATALOG_READ_TOKEN` on the
+   `market-catalog` Railway service and as a GitHub Actions secret. The URL defaults
+   to the catalog's public domain; override with the `CATALOG_URL` secret.
 
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).

@@ -103,6 +103,12 @@ REQUEST_TYPES: tuple[RequestType, ...] = (
         example='{"type":"desks","id":"desk-diag-1"}',
     ),
     RequestType(
+        "catalog",
+        "One read-only GET of the market-catalog API (/v1/...) with the GET-only "
+        "CATALOG_READ_TOKEN; the catalog refuses that token on every write.",
+        example='{"type":"catalog","path":"/v1/status","id":"cat-1"}',
+    ),
+    RequestType(
         "env",
         "Read allowlisted Railway variables; with an explicit set action, CHANGE them "
         "and redeploy the service.",

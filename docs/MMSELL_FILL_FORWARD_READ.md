@@ -112,3 +112,21 @@ Ops run `rl-ffr-run1-20261029` on default-branch code `204330e2`.
   the current rate of ~20 a week).
 - **The fill study adds nothing beyond this.** The study-1 finding stands: realized edge sits in the
   slow cell and in rain, not in the broad book.
+
+## 6. Fresh forward window — P-SLOW v2 (pre-registered 2026-10-30)
+
+Opened at the owner's request (2026-10-30), before any fill in this window exists. It is a new
+sample: no fill read in §5 is reused. The bars are identical to P-SLOW.
+
+- **Sample:** live buy-NO orders on `Kmmsell10` (or a successor declared in `docs/DECISIONS.md`)
+  decided from **2026-10-30T00:00Z**. Filled, settled yes/no, one contract, settlement from
+  Kalshi, settlement-date bootstrap with 5,000 resamples and seed 20261003 (all as in §2).
+- **Read once, on a fixed date: 2026-12-04.**
+  - **PASS:** ≥ 100 cell fills, cell mean ≥ +2.0¢, separation > 0 and bootstrap 5th percentile > 0.
+  - Fewer than 100 cell fills → one extension to **2027-01-08**, read once, the same bars.
+  - Otherwise **NO PASS**.
+  - A fixed date, not "when it looks good", so the stopping point cannot choose the answer.
+- **Command:** `{"type":"script","name":"mmsell_fill_forward_read","args":["--since","2026-10-30T00:00:00+00:00"],"id":"rl-ffr-v2-20261204"}`.
+  Read only its P-SLOW block. The lineage tags other than `Kmmsell10` place no orders in this window.
+- **A PASS** makes more than 3 contracts on the cell an owner decision through a successor
+  package (a hard stop). It is never automatic.
