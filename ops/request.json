@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rs-arm-ws3-20261030"],"id":"rs-arm-ws3-rc1"}
+{"type":"env","action":"get","id":"rs-swap-read-1"}
