@@ -1,241 +1,59 @@
 # ops request [READ]
-# type=xos  id=rl-s2-cc-20261030
-# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:59:38Z
-{
-  "key": "mmsell-correlation-cap",
-  "title": "mmsell correlation cap \u2014 the unit of correlation is the occasion, not the event",
-  "state": "PAPER",
-  "paused_from_state": null,
-  "origin": "operator",
-  "family": "risk_concentration",
-  "hypothesis": "mmsell's diversification premise fails because its caps count `event_ticker`, which is series x contest. Capping open positions per CONTEST instead materially steadies the daily P&L series without destroying the edge.",
-  "legacy_class": null,
-  "migration_integrity": null,
-  "platform_snapshot_id": 2,
-  "predecessor_experiment_id": null,
-  "retired_at": null,
-  "docs": {
-    "key": "kalshi_bot/mmsell/correlation.py",
-    "issue": "XOS-000020",
-    "thesis": "docs/MMSELL_CORRELATION_CAP.md"
-  },
-  "versions": [
-    {
-      "version": 1,
-      "frozen_at": "2026-09-05 13:57:08.116743+00:00",
-      "fingerprint": "9f39cd7fefbb931d91d467ed676859ed83322dc89cdd83cad63471f053910335",
-      "pre_registration_hash": "ff1e278a505111ef2ee9725cbdf4d7017d78d24f6c3d30ebae90ca86545e5542",
-      "independent_variable": "whether the book may hold more than one position on one contest",
-      "held_constant": [
-        "entry band and price ceiling are identical on all three arms (lo=5, hi=10, maxyes=7) \u2014 the price band is not an arm, and the type-book family already established that it does the work a selection filter is usually credited with",
-        "no arm carries a stop, volatility gate or strangle leg; those are the anchor set's experiment and would confound this one",
-        "no arm selects on market TYPE or on historical per-cell performance. The Tmmsell family measured that axis to a verdict at n in the hundreds; re-introducing it here would make the cap and the selection inseparable",
-        "the cap counts OPEN positions and never closed ones, so it bounds carried risk rather than acting as an entry-timing rule",
-        "which contract is kept within a capped contest is FIRST ARRIVAL, never a ranking. A ranking would be a second, unvalidated hypothesis riding on this one",
-        "the GLOBAL mmsell_contest_cap_enabled stays off for the life of this version. The treatment opts in per book, so no other book's selection moves while this runs"
-      ],
-      "change_reason": null,
-      "arms": [
-        {
-          "arm_key": "contest_capped",
-          "role": "treatment",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Gmmsell1",
-            "book": "lo=5,hi=10,maxyes=7,contestcap=1",
-            "contestcap": 1
-          }
-        },
-        {
-          "arm_key": "uncapped",
-          "role": "control",
-          "strategy_tag": null,
-          "params": {
-            "tag": "Gmmsell0",
-            "book": "lo=5,hi=10,maxyes=7",
-            "contestcap": null
-          }
-        }
-      ],
-      "gates": [
-        {
-          "gate_key": "paper_keep",
-          "kind": "kill",
-          "from_state": null,
-          "to_state": null,
-          "spec": {
-            "sample": {
-              "uncapped": {
-                "op": ">=",
-                "value": 60,
-                "metric": "settled_days"
-              },
-              "contest_capped": {
-                "op": ">=",
-                "value": 60,
-                "metric": "settled_days"
-              }
-            },
-            "fail_any": [
-              {
-                "op": "<",
-                "value": 0,
-                "metric": "delta.daily_pnl_stability",
-                "control": "uncapped",
-                "treatment": "contest_capped"
-              },
-              {
-                "op": "<",
-                "value": -0.5,
-                "metric": "delta.pnl_cents_per_trade",
-                "control": "uncapped",
-                "treatment": "contest_capped"
-              }
-            ],
-            "pass_all": [
-              {
-                "op": ">=",
-                "value": 0.05,
-                "metric": "delta.daily_pnl_stability",
-                "control": "uncapped",
-                "treatment": "contest_capped"
-              },
-              {
-                "op": ">=",
-                "value": -0.5,
-                "metric": "delta.pnl_cents_per_trade",
-                "control": "uncapped",
-                "treatment": "contest_capped"
-              }
-            ],
-            "description": "A concentration cap is a DRAWDOWN control: it trades total return for smoothness by construction and must be judged as one. Keep an arm only if it buys materially more daily stability than the uncapped control while not destroying the edge. Read on the daily series, not on cents per trade \u2014 at this book's per-trade variance a c/trade test of the effect size in question needs ~95,700 trades per arm."
-          },
-          "spec_hash": "4b2d059101d140947c0345d5d706bc48e445a74f26a64764b0dd5634b0a81eb1",
-          "evidence_started_at": null,
-          "results": []
-        }
-      ],
-      "epochs": [
-        {
-          "epoch_number": 1,
-          "started_at": "2026-09-05 13:57:08.116743+00:00",
-          "ended_at": null,
-          "reason": "v1's first operating interval, pinned to the platform snapshot active at registration. All three arms open together in one epoch, which is what makes the control poolable with the treatments without an external reference.",
-          "impact_class": null,
-          "platform_snapshot_fingerprint": "4f9adf15daa6403513a443ae698080f3a5e946533ea05e35f234d9ff8fc527d2",
-          "platform_snapshot": [
-            [
-              "DATA_PROVENANCE",
-              "live_vs_backfill_2026_08"
-            ],
-            [
-              "EXECUTION_ENGINE",
-              "live_executor_2026_08"
-            ],
-            [
-              "EXPERIMENT_ENGINE",
-              "foundation_pr1"
-            ],
-            [
-              "FEE_MODEL",
-              "maker_rate_2026_08_11"
-            ],
-            [
-              "FILL_MODEL",
-              "assumed_fill_plus_mmsell3_calibration"
-            ],
-            [
-              "KALSHI_API_SCHEMA",
-              "advanced_tier_2026_08_12"
-            ],
-            [
-              "MARKET_TAXONOMY",
-              "settlement_repair_2026_08_24"
-            ],
-            [
-              "METRICS_ENGINE",
-              "pnl_scripts_2026_08"
-            ],
-            [
-              "RISK_ENGINE",
-              "caps_2026_08"
-            ],
-            [
-              "SETTLEMENT_ENGINE",
-              "hold_to_settlement_2026_08"
-            ]
-          ],
-          "deployments": [
-            {
-              "deployment_key": "mmsell-corrcap-paper-1",
-              "stage": "PAPER",
-              "kind": "paper",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-09-05 13:57:08.116743+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "contest_capped",
-                  "strategy_tag": "Gmmsell1"
-                },
-                {
-                  "arm_key": "uncapped",
-                  "strategy_tag": "Gmmsell0"
-                }
-              ]
-            },
-            {
-              "deployment_key": "mmsell-corrcap-probe-1",
-              "stage": "PROBE",
-              "kind": "probe",
-              "twin_of_deployment_id": null,
-              "started_at": "2026-09-05 13:57:08.116743+00:00",
-              "ended_at": null,
-              "arms": [
-                {
-                  "arm_key": "contest_capped",
-                  "strategy_tag": null
-                },
-                {
-                  "arm_key": "uncapped",
-                  "strategy_tag": null
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "transitions": [
-    {
-      "from": null,
-      "to": "IDEA",
-      "occurred_at": "2026-09-05 13:57:08.116743+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "experiment created",
-      "gate_result_id": null
-    },
-    {
-      "from": "IDEA",
-      "to": "PROBE",
-      "occurred_at": "2026-09-05 13:57:08.116743+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "the cap counterfactual is recorded on v1, including its falsification of the contest axis XOS-000020 named",
-      "gate_result_id": null
-    },
-    {
-      "from": "PROBE",
-      "to": "PAPER",
-      "occurred_at": "2026-09-05 13:57:08.116743+00:00",
-      "actor": "claude-code",
-      "approved_by": null,
-      "reason": "the counterfactual fixed the bars and the pre-registration is merged (docs/MMSELL_CORRELATION_CAP.md); the forward test is the evidence that decides, and a replay authorizes nothing",
-      "gate_result_id": null
-    }
-  ],
-  "integrity_events": [],
-  "legacy_evidence": []
-}
+# type=script  id=msc-now-10301432
+# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:32:57Z
+MMSELL scorecard  as of 2026-10-30T14:33+00:00  (live books, own fills, settled markets)
+
+BY BOOK, THEN CATEGORY (lifetime of the tag = its epoch)
+  book / category        settled   contr    P&L $   c/ct losing  open  open $  unreal.   last 1d:    n   P&L $
+  Xmmsell10                    0     0.0     0.00      -      0     0    0.00     0.00               0    0.00
+    twin Xmmsell10_pt4: no settled same-market pairs yet
+  Ymmsell10                    0     0.0     0.00      -      0     0    0.00     0.00               0    0.00
+    twin Ymmsell10_pt4: no settled same-market pairs yet
+  Kmmsell10                  310   444.6     6.60   1.48     21    10   18.51    -0.76              11    0.30
+    weather                   42   126.0     5.85   4.64      1     4   11.07     0.48               1    0.30
+    index                      4     4.0     0.27   6.75      0     0    0.00     0.00               0    0.00
+    politics                   8    22.2    -1.52  -6.83      1     0    0.00     0.00               0    0.00
+    mentions                   6    18.0     1.20   6.67      0     0    0.00     0.00               2    0.42
+    sports                   212   234.4     1.93   0.82     15     3    2.79    -1.40               6   -0.54
+    other                     38    40.0    -1.13  -2.82      4     3    4.65     0.16               2    0.12
+    twin Kmmsell10_pt4: 309 same-market pairs, live +1.48c/ct vs twin +1.51c/ct, gap -0.03c
+  Vmmsell10                   13    39.0     2.73   7.00      0     3    8.37     0.21               3    0.72
+    weather                    6    18.0     1.26   7.00      0     3    8.37     0.21               1    0.30
+    mentions                   7    21.0     1.47   7.00      0     0    0.00     0.00               2    0.42
+    twin Vmmsell10_pt4: 13 same-market pairs, live +7.00c/ct vs twin +6.96c/ct, gap +0.04c
+  Nmmsell10                   34    97.0     3.63   3.74      1     0    0.00     0.00               0    0.00
+    weather                   29    82.0     5.67   6.92      0     0    0.00     0.00               0    0.00
+    index                      2     6.0     0.39   6.50      0     0    0.00     0.00               0    0.00
+    politics                   3     9.0    -2.43 -27.00      1     0    0.00     0.00               0    0.00
+    twin Nmmsell10_pt4: 34 same-market pairs, live +3.74c/ct vs twin +3.89c/ct, gap -0.14c
+  ALL BOOKS: realized 12.96  open 13 ($26.88)  unrealized -0.55 (marked to the held side's bid now)  total 12.41
+
+KXTRUMPMENTION (also quoted by Alimm1 for rewards)
+  Vmmsell10    markets   6  settled   6  P&L   1.20  also traded by Alimm1: 1
+  Kmmsell10    markets   6  settled   6  P&L   1.20  also traded by Alimm1: 1
+
+LOSING MARKETS (worst 25): entry price, fills, hours from first fill to settlement
+  KXRAIN-26OCT13-MIN                             Kmmsell10  weather     -2.82   3.0 @ 94.0c  3 fills  46.9h
+  KXTRUMPSAY-26OCT26-EPST                        Nmmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  69.2h
+  KXTRUMPSAY-26OCT26-EPST                        Kmmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  69.2h
+  KXUCLGAME-26OCT13VIKBMU-TIE                    Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  36.4h
+  KXMLBHR-26OCT112000LADMIL-MILBTURANG2-1        Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  3.2h
+  KXMLBHR-26OCT272000MILTB-MILCPRATT87-1         Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  4.1h
+  KXPERLIGA1GAME-26OCT29CHACUS-CUS               Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  0.2h
+  KXRT-WILDW-99                                  Kmmsell10  other       -0.94   1.0 @ 94.0c  1 fills  158.5h
+  KXWTI-26OCT1514-T95.49                         Kmmsell10  other       -0.94   1.0 @ 94.0c  1 fills  21.7h
+  KXNFLTOTAL-26OCT18HOUJAC-64                    Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  3.3h
+  KXBTC-26OCT1617-B81750                         Kmmsell10  other       -0.93   1.0 @ 93.0c  1 fills  102.6h
+  KXDIMAYORGAME-26OCT11JAGTOL-JAG                Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  0.1h
+  KXMLSGAME-26OCT17MINSTL-MIN                    Kmmsell10  sports      -0.93   1.0 @ 93.0c  2 fills  1.4h
+  KXUCLTOTAL-26OCT14ASKLFC-8                     Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  1.0h
+  KXUCLTOTAL-26OCT14ROMRMA-7                     Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  1.6h
+  KXWTI-26OCT1614-T98.49                         Kmmsell10  other       -0.93   1.0 @ 93.0c  1 fills  64.8h
+  KXCS2GAME-26OCT160400TLNIP-NIP                 Kmmsell10  sports      -0.91   1.0 @ 91.0c  1 fills  1.9h
+  KXJLEAGUEGAME-26OCT21MARVER-TIE                Kmmsell10  sports      -0.91   1.0 @ 91.0c  1 fills  0.5h
+  KXODIMATCH-26OCT130200BULWEA-BUL               Kmmsell10  sports      -0.91   1.0 @ 91.0c  1 fills  1.6h
+  KXSAUDIPLGAME-26OCT15HAZFAT-FAT                Kmmsell10  sports      -0.90   1.0 @ 90.0c  1 fills  0.2h
+  KXT20MATCH-26OCT240300INDNZ-IND                Kmmsell10  sports      -0.90   1.0 @ 90.0c  1 fills  1.9h
+  KXT20MATCH-26OCT112115MDVHKG-MDV               Kmmsell10  sports      -0.44   1.0 @ 94.0c  1 fills  26.0h
+
+JSON {"as_of": "2026-10-30T14:33+00:00", "avg_loss": -1.16, "books": {"Kmmsell10": {"cents_per_contract": 1.48, "contracts": 444.65, "losing": 21, "open": 10, "pnl": 6.6, "recent_pnl": 0.3, "recent_settled": 11, "settled": 310, "twin": {"gap": -0.03, "live_cpc": 1.48, "pairs": 309, "twin_cpc": 1.51}, "unpriced": 0, "unrealized": -0.76}, "Nmmsell10": {"cents_per_contract": 3.74, "contracts": 96.96, "losing": 1, "open": 0, "pnl": 3.63, "recent_pnl": 0.0, "recent_settled": 0, "settled": 34, "twin": {"gap": -0.14, "live_cpc": 3.74, "pairs": 34, "twin_cpc": 3.89}, "unpriced": 0, "unrealized": 0.0}, "Vmmsell10": {"cents_per_contract": 7.0, "contracts": 39.0, "losing": 0, "open": 3, "pnl": 2.73, "recent_pnl": 0.72, "recent_settled": 3, "settled": 13, "twin": {"gap": 0.04, "live_cpc": 7.0, "pairs": 13, "twin_cpc": 6.96}, "unpriced": 0, "unrealized": 0.21}, "Xmmsell10": {"cents_per_contract": null, "contracts": 0.0, "losing": 0, "open": 0, "pnl": 0.0, "recent_pnl": 0.0, "recent_settled": 0, "settled": 0, "twin": {"gap": null, "live_cpc": null, "pairs": 0, "twin_cpc": null}, "unpriced": 0, "unrealized": 0.0}, "Ymmsell10": {"cents_per_contract": null, "contracts": 0.0, "losing": 0, "open": 0, "pnl": 0.0, "recent_pnl": 0.0, "recent_settled": 0, "settled": 0, "twin": {"gap": null, "live_cpc": null, "pairs": 0, "twin_cpc": null}, "unpriced": 0, "unrealized": 0.0}}, "categories": {"Kmmsell10/index": {"pnl": 0.27, "recent_pnl": 0.0, "settled": 4, "unrealized": 0.0}, "Kmmsell10/mentions": {"pnl": 1.2, "recent_pnl": 0.42, "settled": 6, "unrealized": 0.0}, "Kmmsell10/other": {"pnl": -1.13, "recent_pnl": 0.12, "settled": 38, "unrealized": 0.16}, "Kmmsell10/politics": {"pnl": -1.52, "recent_pnl": 0.0, "settled": 8, "unrealized": 0.0}, "Kmmsell10/sports": {"pnl": 1.93, "recent_pnl": -0.54, "settled": 212, "unrealized": -1.4}, "Kmmsell10/weather": {"pnl": 5.85, "recent_pnl": 0.3, "settled": 42, "unrealized": 0.48}, "Nmmsell10/index": {"pnl": 0.39, "recent_pnl": 0.0, "settled": 2, "unrealized": 0.0}, "Nmmsell10/politics": {"pnl": -2.43, "recent_pnl": 0.0, "settled": 3, "unrealized": 0.0}, "Nmmsell10/weather": {"pnl": 5.67, "recent_pnl": 0.0, "settled": 29, "unrealized": 0.0}, "Vmmsell10/mentions": {"pnl": 1.47, "recent_pnl": 0.42, "settled": 7, "unrealized": 0.0}, "Vmmsell10/weather": {"pnl": 1.26, "recent_pnl": 0.3, "settled": 6, "unrealized": 0.21}}, "days": 1, "loss_markets": 22, "overlap": {"Kmmsell10": {"markets": 6, "pnl": 1.2, "settled": 6, "with_limm": 1}, "Vmmsell10": {"markets": 6, "pnl": 1.2, "settled": 6, "with_limm": 1}}, "totals": {"open": 13, "open_cost": 26.88, "pnl": 12.96, "recent_pnl": 1.02, "settled": 357, "total": 12.41, "unpriced": 0, "unrealized": -0.55}}
