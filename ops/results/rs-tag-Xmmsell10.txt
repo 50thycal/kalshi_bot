@@ -1,0 +1,6 @@
+# ops request [READ]
+# type=xos  id=rs-tag-Xmmsell10
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:48:16Z
+experiment                        state        ver  arm       role       epoch  deployment               stage        kind
+--------------------------------  -----------  ---  --------  ---------  -----  -----------------------  -----------  ----
+mmsell-price-ceiling-cell-size-2  LIVE_CANARY  1    mmsell10  treatment  2      mmsell-cellsize2-live-1  LIVE_CANARY  live
