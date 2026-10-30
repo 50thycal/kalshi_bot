@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T10:43:52Z
-(noop — nothing to do)
+# type=db  id=rs-d1-paper
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T11:01:30Z
+strategy   trades  settled  pnl   losers
+---------  ------  -------  ----  ------
+Smmsell10  8       3        0.21  0     
+Zmmsell10  6       3        0.21  0     
+
+(2 rows)
