@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=rs-swap-integ
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:47:51Z
+id  kind                             deployment_key           detected_at                       resolved_at                       res                                                                                       
+--  -------------------------------  -----------------------  --------------------------------  --------------------------------  ------------------------------------------------------------------------------------------
+30  EXPERIMENT_CONFIG_DRIFT          mmsell-cellsize2-live-1  2026-10-30 13:39:00.991446+00:00  2026-10-30 13:43:47.517548+00:00  resolved automatically: the LIVE trading worker observed mmsell-cellsize2-live-1's runtime
+31  EXPERIMENT_CONFIG_DRIFT          mmsell-winset3-live-1    2026-10-30 13:40:55.980934+00:00  2026-10-30 13:43:47.528933+00:00  resolved automatically: the LIVE trading worker observed mmsell-winset3-live-1's runtime c
+32  EXPERIMENT_EXECUTION_STOOD_DOWN  mmsell-cellsize-live-1   2026-10-30 13:43:47.484020+00:00                                                                                                                              
+33  EXPERIMENT_EXECUTION_STOOD_DOWN  mmsell-winset2-live-1    2026-10-30 13:43:47.506644+00:00                                                                                                                              
+
+(4 rows)
