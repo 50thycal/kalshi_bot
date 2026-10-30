@@ -1,4 +1,4 @@
 # ops request [READ]
-# type=noop
-# code 2b77598c79acef52b6e9f1c01a0d8afe80d90e52 · started 2026-10-30T02:39:53Z
+# type=noop  id=ops-maint-20261030-cat
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T03:38:10Z
 (noop — nothing to do)
