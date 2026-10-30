@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000020"],"id":"rl-s2-iss20-20261030"}
+{"type":"xos","command":"show","args":["mmsell-correlation-cap"],"id":"rl-s2-cc-20261030"}
