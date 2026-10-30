@@ -154,6 +154,13 @@ def label(market_days: int, reward_md: float | None, g: dict | None) -> str:
     return "NO-CALL"
 
 
+def label_reward(market_days: int, reward_md: float | None) -> str:
+    """v2 (reward-only) label, docs/LIMM_PROGRAMME_OUTCOMES.md §8."""
+    if market_days < MIN_MARKET_DAYS or reward_md is None:
+        return "THIN"
+    return "REWARD-LEAD" if reward_md >= REWARD_BAR_USD else "NO-LEAD"
+
+
 def market_cheap_side(hours: list[tuple[str, int]]) -> tuple[str, float] | None:
     """Majority cheap side over a market's qualifying hours and that side's mean price."""
     if not hours:
@@ -173,6 +180,10 @@ def _f(x, spec="{:+.2f}"):
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--min-print-md", type=int, default=MIN_MARKET_DAYS)
+    ap.add_argument("--reward-since", default=REWARD_SINCE)
+    ap.add_argument("--reward-until", default=None)
+    ap.add_argument("--reward-only", action="store_true",
+                    help="v2 (§8): rank on reward alone; settlement is neither fetched nor used")
     args = ap.parse_args(argv)
 
     import psycopg
@@ -189,7 +200,8 @@ def main(argv: list[str] | None = None) -> int:
     with psycopg.connect(url, options=opts) as conn, conn.cursor() as cur:
         cur.execute(SNAP_SQL, {"since": SETTLE_SINCE})
         raw = cur.fetchall()
-    reward_since = _aware(REWARD_SINCE)
+    reward_since = _aware(args.reward_since)
+    reward_until = _aware(args.reward_until) if args.reward_until else None
     print(f"hourly snapshots since {SETTLE_SINCE}: {len(raw)}")
 
     rew = defaultdict(lambda: {"usd": 0.0, "days": set(), "thin_h": 0, "h": 0, "event": None})
@@ -209,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         event = event or tk.rsplit("-", 1)[0]
         meta[tk] = (series, event)
         settle_hours[tk].append(cs)
-        if _aware(hr) < reward_since:
+        if _aware(hr) < reward_since or (reward_until is not None and _aware(hr) >= reward_until):
             continue
         side, price = cs
         hrw = hourly_reward(pool, start, end, live_qty(price), ys if side == "yes" else ns)
@@ -224,11 +236,13 @@ def main(argv: list[str] | None = None) -> int:
         r["days"].add((tk, _aware(hr).date()))
     print(f"qualifying cheap-side hours: {nq}; markets: {len(settle_hours)}")
 
-    markets = fetch_markets(sorted(settle_hours))
+    markets = {} if args.reward_only else fetch_markets(sorted(settle_hours))
     gvals: dict[str, list[tuple[str, float]]] = defaultdict(list)
     excl = Counter()
     for tk, hours in settle_hours.items():
         res = _result(markets.get(tk) or {})
+        if args.reward_only:
+            break
         if res not in ("yes", "no"):
             excl["unsettled/void"] += 1
             continue
@@ -244,12 +258,14 @@ def main(argv: list[str] | None = None) -> int:
         md = len(r["days"]) if r else 0
         rmd = (r["usd"] / md) if r and md else None
         g = cluster_mean(gvals.get(s, []))
+        lab = label_reward(md, rmd) if args.reward_only else label(md, rmd, g)
         rows.append((s, md, rmd, r["thin_h"] / r["h"] if r and r["h"] else None, g,
-                     label(md, rmd, g), in_live_universe(s)))
+                     lab, in_live_universe(s)))
     rows.sort(key=lambda t: -(t[2] or -1))
 
-    print(f"\n== series (reward window from {REWARD_SINCE[:10]}; settlement since "
-          f"{SETTLE_SINCE[:10]})")
+    print(f"\n== series (reward window {args.reward_since[:16]} -> "
+          f"{(args.reward_until or 'now')[:16]}; settlement since {SETTLE_SINCE[:10]}"
+          f"{'; REWARD-ONLY, settlement not used' if args.reward_only else ''})")
     print(f"  {'series':26s} {'live':>4} {'mkt-days':>8} {'$/md':>7} {'thin%':>6} "
           f"{'settled':>7} {'evts':>5} {'G c/ct':>7} {'±se':>5}  label")
     hidden = 0
@@ -269,7 +285,8 @@ def main(argv: list[str] | None = None) -> int:
     live_usd = sum((r[2] or 0) * r[1] for r in live_rows)
     live_rmd = live_usd / live_md if live_md else None
     live_g = cluster_mean([v for s in series_all if in_live_universe(s) for v in gvals.get(s, [])])
-    out_cands = [r for r in rows if not r[6] and r[5] == "ADD-CANDIDATE"
+    lead = "REWARD-LEAD" if args.reward_only else "ADD-CANDIDATE"
+    out_cands = [r for r in rows if not r[6] and r[5] == lead
                  and live_rmd is not None and (r[2] or 0) > live_rmd]
     print("\n== live universe pooled")
     print(f"  reward {_fmt_usd(live_rmd)}/market-day over {live_md} market-days; settlement G "
@@ -285,7 +302,9 @@ def main(argv: list[str] | None = None) -> int:
     print("\n== VERDICT (descriptive; authorizes nothing)")
     print(f"  S1 universe is not the bottleneck: {s1}")
     print(f"  S2 live-universe cheap side: {s2}")
-    for lab in ("ADD-CANDIDATE", "COSTLY-REWARD", "REWARD-ONLY", "AVOID"):
+    labs = (("REWARD-LEAD", "NO-LEAD") if args.reward_only
+            else ("ADD-CANDIDATE", "COSTLY-REWARD", "REWARD-ONLY", "AVOID"))
+    for lab in labs:
         names = [r[0] + ("*" if r[6] else "") for r in rows if r[5] == lab]
         print(f"  {lab:14s} {len(names):3d}  {', '.join(names)}")
     print("  (* = in the live universe)")

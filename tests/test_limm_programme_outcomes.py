@@ -84,3 +84,9 @@ def test_allowlisted_on_the_ops_runner():
     import ops_runner
 
     assert "limm_programme_outcomes" in ops_runner.ALLOWED_SCRIPTS
+
+
+def test_reward_only_label():
+    assert lo.label_reward(19, 5.0) == "THIN"
+    assert lo.label_reward(20, 0.5) == "REWARD-LEAD"
+    assert lo.label_reward(20, 0.49) == "NO-LEAD"
