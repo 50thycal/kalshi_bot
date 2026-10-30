@@ -1,1 +1,1 @@
-{"type":"noop","id":"noop-1030a"}
+{"type": "env", "id": "rs-arm-cs2-1", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"rs-arm-cs2-20261030\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell-cell-size-2-canary\",\"approved_by\":\"Calvin\"}}"}}
