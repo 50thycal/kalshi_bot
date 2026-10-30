@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=par-now-10301434
+# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:34:49Z
+live_tag   outcome        n   mkts  last                         
+---------  -------------  --  ----  -----------------------------
+Kmmsell10  not_attempted  14  14    2026-10-30 13:43:28.867551+00
+Kmmsell10  gate:dedup     1   1     2026-10-30 13:43:05.973086+00
+Xmmsell10  gate:held      1   1     2026-10-30 14:09:25.468825+00
+Ymmsell10  gate:held      1   1     2026-10-30 14:09:25.468927+00
+
+(4 rows)
