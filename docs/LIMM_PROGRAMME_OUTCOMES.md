@@ -246,3 +246,19 @@ against a floor of 30, so **H1: HOLD (accrual)**.
   `limm_scorecard` already uses.
 - **No threshold changed,** and the verdict is unchanged (it is below the floor either way). The
   numbers are re-read after the fix and reported in §11.
+
+## 11. Exits vs holding, run 2, after the fix (2026-10-30, `rl-lexit-run2-20261030`)
+
+- **Sample:** 17 settled markets in 15 events, so **H1: HOLD (accrual)**. The floor is 30.
+- **Totals:** actual (Kalshi realized) −$40.10; held to settlement −$51.42.
+- **Exit value:** **+$0.67 ± 0.38 per market, +$11.32 in total.** The instrument check agrees
+  (+$0.66, +$11.26), so the defect is closed.
+- **By exit kind:**
+  - stop-type, 3 markets: +$3.56 each, +$10.68 in total;
+  - take-profit-type, 3 markets: +$0.64 in total;
+  - no exit, 11 markets: $0.
+- **Reading:** on the book's own settled fills so far, the stop has **saved** money. The §7
+  settlement surprise (mention long shots winning more often than priced) does not show up in
+  the markets the book actually exited. Re-read at 30 settled markets, same bars.
+- **Collector check** (`rl-limm-collect-chk2-20261030`): the public trade tape is writing again
+  (15 prints in 30 minutes), with 147 markets snapshotted in 15 minutes.
