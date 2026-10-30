@@ -1,114 +1,15 @@
 # ops request [READ]
-# type=catalog  id=rl-s3-catmk2-20261030
-# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:39:52Z
-{
- "items": [
-  {
-   "contract_documents": [],
-   "contract_type": "binary",
-   "exchange_created_at": "2023-10-23T20:55:51.333351Z",
-   "first_seen_at": "2026-10-05T19:16:26.398326+00:00",
-   "kind": "market",
-   "last_seen_at": "2026-10-30T02:06:57.625598+00:00",
-   "legacy_classification": null,
-   "legacy_registry": null,
-   "parent_rules_changed": false,
-   "parent_rules_hashes": {
-    "event:AMAZONFTC-29DEC31": "326c15fd1f0f3766995398fe333d5b720241e013c93af99edd65e501aee10c69",
-    "series:KXAMAZONFTC": "56e2122d3b358408f3e985b094f38e59efe6f708c7bc0697a8c91a27df0d4d24"
-   },
-   "raw": {
-    "can_close_early": true,
-    "close_time": "2030-01-01T18:58:00Z",
-    "created_time": "2023-10-23T20:55:51.333351Z",
-    "early_close_condition": "If this event occurs, the market will close the following 10am ET.",
-    "event_ticker": "AMAZONFTC-29DEC31",
-    "exchange_index": 0,
-    "expected_expiration_time": "2030-01-01T09:04:00Z",
-    "expiration_time": "2030-01-02T04:59:00Z",
-    "expiration_value": "",
-    "last_price_dollars": "0.4000",
-    "latest_expiration_time": "2030-01-02T04:59:00Z",
-    "market_type": "binary",
-    "no_ask_dollars": "0.6000",
-    "no_bid_dollars": "0.5800",
-    "no_sub_title": "Government wins",
-    "notional_value_dollars": "1.0000",
-    "open_interest_fp": "6819.14",
-    "open_time": "2023-10-23T21:00:00Z",
-    "previous_price_dollars": "0.4200",
-    "previous_yes_ask_dollars": "0.4200",
-    "previous_yes_bid_dollars": "0.4000",
-    "price_level_structure": "tapered_deci_cent",
-    "price_ranges": [
-     {
-      "end": "0.1000",
-      "start": "0.0000",
-      "step": "0.0010"
-     },
-     {
-      "end": "0.9000",
-      "start": "0.1000",
-      "step": "0.0100"
-     },
-     {
-      "end": "1.0000",
-      "start": "0.9000",
-      "step": "0.0010"
-     }
-    ],
-    "result": "",
-    "rules_primary": "If U.S. District Court for the Western District of Washington rules that Amazon has illegally maintained a monopoly by Dec 31, 2029, then the market resolves to Yes.",
-    "rules_secondary": "Change as of 5:00 AM ET December 15 2023: The market's terms and conditions note that, \"The Expiration Date of the Contract shall be the sooner of the date of the first 10:00 AM ET following the occurrence of an event that is encompassed in the Payout Criterion or the first 10:00 AM ET after date.\" However, the Payout Criterion only encompasses Amazon being found liable for the counts alleged by the FTC, and not just a decision or settlement happening. The language will be amended such that expiration, like the last trading date, will happen once claims are settled, regardless of whether Amazon is found liable for the counts alleged. This will be done as part of the CFTC's provisions that allow for non-economic changes to contracts, and will be reflected in the rules today, December 15th.",
-    "settlement_bounds_type": "default",
-    "settlement_timer_seconds": 3600,
-    "status": "active",
-    "ticker": "AMAZONFTC-29DEC31",
-    "title": "Will a court find that Amazon has illegally maintained a monopoly?",
-    "updated_time": "2026-07-20T23:08:33.002695Z",
-    "volume_24h_fp": "3.79",
-    "volume_fp": "32288.15",
-    "yes_ask_dollars": "0.4200",
-    "yes_ask_size_fp": "1.95",
-    "yes_bid_dollars": "0.4000",
-    "yes_bid_size_fp": "225.01",
-    "yes_sub_title": "Government wins"
-   },
-   "review": null,
-   "review_basis": null,
-   "review_completion_pct": 0,
-   "review_status": "needs_review",
-   "risk_score": null,
-   "rules_hash": "5d4d6454a43326831a1aca6ab1356d5b03ee88966bf813065e34c28698ac5c0c",
-   "schema_version": 1,
-   "semantics": {
-    "alternative_operator": null,
-    "alternatives": null,
-    "exclusions": null,
-    "observation_end": null,
-    "observation_start": null,
-    "payout_relationship": null,
-    "resolution_mechanism": null,
-    "risk_components": null,
-    "settlement_source": null,
-    "shared_exposure_key": null
-   },
-   "series_ticker": "KXAMAZONFTC",
-   "settlement_type": null,
-   "source": "kalshi_rest",
-   "ticker": "AMAZONFTC-29DEC31",
-   "timing": {
-    "expected_determination_at": "2030-01-01T09:04:00Z",
-    "expected_payout_at": null,
-    "hours_to_close": 27820.302180575,
-    "hours_to_expected_determination": 27810.402180575,
-    "latest_expiration_at": "2030-01-02T04:59:00Z",
-    "observation_end": null,
-    "observation_start": null,
-    "observed_settlement_at": null,
-    "settlement_timer_seconds": 3600,
-    "trading_close_at": "2030-01-01T18:58:00Z"
-   }
-  }
- ]
-}
+# type=db  id=ci1030a1445
+# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:45:46Z
+k  t                              d                                       ts                           
+-  -----------------------------  --------------------------------------  -----------------------------
+O  KXMAMDANIMENTION-26NOV18-NQE   yes/buy 3x333 resting  8d074f44-4be0-   2026-10-24 01:19:06.745673+00
+O  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10x200 resting  472f6c1b-f59e-  2026-10-27 04:29:18.109125+00
+O  KXYTVIEWSHIGH-OLI26DEC-7.5M    no/buy 10x200 resting  97d72469-dbd9-   2026-10-27 07:31:31.642581+00
+O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x244 resting  limmsell:a:fcd   2026-10-27 13:59:01.360672+00
+O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x243 resting  limmsell:b:93d   2026-10-27 13:59:01.436472+00
+O  KXYTVIEWSHIGH-FUT26DEC-7.0M    no/buy 5x400 resting  f95dfe5e-25a0-    2026-10-30 06:00:49.288806+00
+O  KXYTVIEWSHIGH-DRA26DEC-12.0M   no/buy 6x333 resting  e4c80bef-d33e-    2026-10-30 14:33:45.331356+00
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                               2026-10-30 14:42:45.294856+00
+
+(8 rows)
