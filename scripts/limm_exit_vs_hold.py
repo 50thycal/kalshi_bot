@@ -53,11 +53,11 @@ SELECT DISTINCT ON (market_ticker) market_ticker, realized_pnl
 
 def fill_settle_pnl(fill_action: str, side: str, price: int, qty: float, fee: float,
                     result: str) -> float:
-    """Dollars one fill contributes when held to settlement. A `sell` fill disposes of `side`
-    at `price`; anything else acquires it (Kalshi books a YES sell as a NO acquisition)."""
+    """Dollars one fill contributes when held to settlement. Every fill ACQUIRES `side` at
+    `price` (Kalshi books a YES sale as a NO acquisition), the convention `limm_scorecard`
+    uses. The fill row's own `action` is NOT read: on this book's fills it is inconsistent
+    (entry buys of NO arrive as action=sell, side=no), which the first run exposed."""
     won = 100.0 if (side or "").lower() == result else 0.0
-    if (fill_action or "").lower() == "sell":
-        return qty * (price - won) / 100.0 - fee
     return qty * (won - price) / 100.0 - fee
 
 
@@ -75,10 +75,8 @@ def market_view(fills: list[tuple], result: str, realized: float | None) -> dict
     entry_px = [int(p) for _oa, _fa, _s, p, _q, _f in entries]
     kind = "none"
     if exits:
-        # An exit books as the opposite side at (100 - sale price) unless the row says `sell`;
-        # normalize to the sale price of the held side before comparing with the entry.
-        sale = [int(p) if (fa or "").lower() == "sell" else 100 - int(p)
-                for _oa, fa, _s, p, _q, _f in exits]
+        # An exit books as the opposite side at (100 - sale price): recover the sale price.
+        sale = [100 - int(p) for _oa, _fa, _s, p, _q, _f in exits]
         kind = "stop" if (sum(sale) / len(sale)) < (sum(entry_px) / len(entry_px)) else "take"
     actual = realized if realized is not None else None
     return {"hold": hold, "actual": actual,
