@@ -204,3 +204,45 @@ directly on real money. Probe: `scripts/limm_exit_vs_hold.py`.
     that sold above (take-profit-type);
   - each policy's worst single market (holding carries the bigger tail);
   - totals in dollars.
+
+## 10. Results — v2 and the first exits-vs-hold run (2026-10-30)
+
+**v2, reward only, shadow window 09-17 → 10-07** (`rl-s3-v2-20261030`): 831 markets, 42,801
+qualifying hours, thin-book share about 0–3% on every printed series.
+
+| series (outside the live universe) | market-days | reward $/md | label |
+|---|---|---|---|
+| KXMLBPLAYOFFHOST | 22 | $2.61 | REWARD-LEAD |
+| KXNFLESCALATORREC | 432 | $1.06 | REWARD-LEAD |
+| KXNFLESCALATORRECYDS | 366 | $1.05 | REWARD-LEAD |
+| KXNFLESCALATORRSHYDS | 116 | $1.02 | REWARD-LEAD |
+| KXNFLLADDERRECYDS | 153 | $1.00 | REWARD-LEAD |
+| KXNFLLADDERREC | 54 | $0.86 | REWARD-LEAD |
+| KXAAAGASEOYNJ | 36 | $0.84 | REWARD-LEAD |
+| KXALMWP / KXNFLLADDERRSHYDS / KXNFLFFPTSLADDER / KXPAPER | 26 / 67 / 102 / 20 | $0.66–0.76 | REWARD-LEAD |
+
+Twenty more series are NO-LEAD ($0.07–0.38 per market-day).
+
+- **S1-v2 reads FAIL:** 11 REWARD-LEADs sit above the live universe's pooled figure in the same
+  window.
+- **Caveat on that comparison:** the live universe had only 4 market-days in that window ($0.19).
+  Against today's live figure (§7: $0.45 pooled, best $0.87) the NFL player-yardage ladders
+  (about $1.00 per market-day over hundreds of market-days) still pay about twice as much per
+  market-day.
+- **Settlement and fill risk are not measured here.** These are in-play player props, the kind of
+  market where fills are informed.
+- **Per §8 they are nominated for collection, not trading.** The owner turned the shadow collector
+  back on the same day (`LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true`, requote 300 s, ops
+  `rl-limm-shadow-on-20261030`). Fifteen minutes later it was recording 147 markets, 141 of
+  them outside the live universe (`rl-limm-collect-chk-20261030`).
+
+**Exits vs holding, run 1** (`rl-lexit-run1-20261030`): 41 markets with fills, **17 settled**
+against a floor of 30, so **H1: HOLD (accrual)**.
+- **The run exposed an instrument defect, now fixed.** The probe read the fill row's `action`
+  field, which is inconsistent on this book (entry NO buys arrive as `action=sell, side=no`), so
+  the hold leg had the wrong sign on several markets.
+- **Signature of the defect:** the primary (−$39.14) and the instrument check (−$0.28) disagreed.
+- **The fix:** every fill is an acquisition of its side at its price, the convention
+  `limm_scorecard` already uses.
+- **No threshold changed,** and the verdict is unchanged (it is below the floor either way). The
+  numbers are re-read after the fix and reported in §11.

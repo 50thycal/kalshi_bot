@@ -16,11 +16,11 @@ le = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(le)  # type: ignore[union-attr]
 
 
-def test_fill_settle_pnl_acquire_and_dispose():
+def test_every_fill_is_an_acquisition_whatever_its_action_says():
     assert math.isclose(le.fill_settle_pnl("buy", "no", 5, 100, 0.0, "no"), 95.0)
     assert math.isclose(le.fill_settle_pnl("buy", "no", 5, 100, 0.0, "yes"), -5.0)
-    assert math.isclose(le.fill_settle_pnl("sell", "no", 3, 100, 0.0, "no"), -97.0)
-    assert math.isclose(le.fill_settle_pnl("sell", "no", 3, 100, 0.0, "yes"), 3.0)
+    # production rows: an entry buy of NO arrives as action=sell, side=no; same meaning
+    assert math.isclose(le.fill_settle_pnl("sell", "no", 5, 100, 0.0, "no"), 95.0)
 
 
 def test_stopped_winner_shows_negative_exit_value():
@@ -34,7 +34,7 @@ def test_stopped_winner_shows_negative_exit_value():
 
 
 def test_take_profit_and_no_exit_kinds():
-    take = [("buy", "buy", "no", 5, 10, 0.0), ("sell", "sell", "no", 10, 10, 0.0)]
+    take = [("buy", "buy", "no", 5, 10, 0.0), ("sell", "buy", "yes", 90, 10, 0.0)]
     assert le.market_view(take, "yes", realized=0.5)["kind"] == "take"
     held = [("buy", "buy", "no", 5, 10, 0.0)]
     v = le.market_view(held, "no", realized=9.5)
