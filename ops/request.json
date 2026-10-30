@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"rs-d1-paper","sql":"select strategy, count(*) trades, count(pnl) settled, round(coalesce(sum(pnl),0)::numeric,2) pnl, sum(case when pnl < 0 then 1 else 0 end) losers from paper_trades where strategy in ('Smmsell10','Zmmsell10') group by strategy order by 1"}
