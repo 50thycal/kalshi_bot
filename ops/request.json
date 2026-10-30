@@ -1,1 +1,1 @@
-{"type": "env", "id": "rs-arm-cs2-1", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"rs-arm-cs2-20261030\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell-cell-size-2-canary\",\"approved_by\":\"Calvin\"}}"}}
+{"type":"xos","command":"experiment-command-show","args":["rs-arm-cs2-20261030"],"id":"rs-arm-cs2-1-rc1"}
