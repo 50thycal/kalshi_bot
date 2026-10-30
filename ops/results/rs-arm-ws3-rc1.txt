@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=xos  id=rs-arm-ws3-rc1
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:41:20Z
+{
+  "command_id": "rs-arm-ws3-20261030",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "3154e9a9549f4551b16523c571bdc1d899d485eb6a54227bad1d4f7ef640174d",
+  "completed_at": "2026-10-30 13:40:55.789166+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-win-set-3-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-winset3-live-1",
+    "live_started_at": "2026-10-30 13:40:55.565405+00:00",
+    "twin_deployment": "mmsell-winset3-twin-1",
+    "twin_started_at": "2026-10-30 13:40:55.565405+00:00",
+    "epoch_started_at": "2026-10-30 13:40:55.565405+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-win-set-3"
+}
