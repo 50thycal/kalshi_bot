@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select (select max(received_at) from incentive_trade_events) last_trade, (select count(*) from incentive_trade_events where received_at > now() - interval '30 minutes') trades_30m, (select count(distinct market_ticker) from incentive_market_snapshots where at > now() - interval '15 minutes') mkts_15m", "max_rows": 5, "id": "rl-limm-collect-chk2-20261030"}
+{"type":"noop","id":"rl-lexit-noop-20261030"}
