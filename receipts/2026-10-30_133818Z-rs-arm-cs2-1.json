@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "7cd07ca2a9e1ead71de7e0be45c49444ab1ea551",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-30T13:38:17Z",
+  "id": "rs-arm-cs2-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 196 bytes, sha256:2c48537e98eb2e38>",
+        "before": "<redacted 181 bytes, sha256:6314d4ee31e408a1>",
+        "requested": "<redacted 196 bytes, sha256:2c48537e98eb2e38>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rs-arm-cs2-1.receipt.json",
+  "result_file": "ops/results/rs-arm-cs2-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41064853291",
+  "service": "main",
+  "started_at": "2026-10-30T13:38:11Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
