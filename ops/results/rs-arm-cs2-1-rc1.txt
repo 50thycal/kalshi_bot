@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=xos  id=rs-arm-cs2-1-rc1
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:39:25Z
+{
+  "command_id": "rs-arm-cs2-20261030",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "8bbe3cc466f177f42d2474959e8af12c80b412cca68f496a93cc98a66b6c7d70",
+  "completed_at": "2026-10-30 13:39:00.873590+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-cell-size-2-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-cellsize2-live-1",
+    "live_started_at": "2026-10-30 13:39:00.571751+00:00",
+    "twin_deployment": "mmsell-cellsize2-twin-1",
+    "twin_started_at": "2026-10-30 13:39:00.571751+00:00",
+    "epoch_started_at": "2026-10-30 13:39:00.571751+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-price-ceiling-cell-size-2"
+}
