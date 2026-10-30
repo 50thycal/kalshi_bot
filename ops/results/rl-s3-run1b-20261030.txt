@@ -1,0 +1,49 @@
+# ops request [READ]
+# type=script  id=rl-s3-run1b-20261030
+# code ef0ef89a6b96535653611b31442b32b978104ab6 · started 2026-10-30T14:50:23Z
+LIMM programme outcomes — reward per market-day vs cheap-side settlement (pre-registered docs/LIMM_PROGRAMME_OUTCOMES.md)
+
+hourly snapshots since 2026-09-17T00:00:00+00:00: 90088
+qualifying cheap-side hours: 42726; markets: 811
+settled markets scored: 95; excluded {'unsettled/void': 716}
+
+== series (reward window from 2026-10-16; settlement since 2026-09-17)
+  series                     live mkt-days    $/md  thin% settled  evts  G c/ct   ±se  label
+  KXTRUMPMENTIONB             yes       26   $0.87      0       8     2  +18.54  5.46  REWARD-ONLY
+  KXTRUMPMENTION              yes       67   $0.42      0      32    11  +12.79  6.87  NO-CALL
+  KXYTVIEWSHIGH               yes       42   $0.29      0       0     0     n/a   n/a  NO-CALL
+  KXMAMDANIMENTION            yes       11   $0.21      0       0     0     n/a   n/a  THIN
+  KXBRAZILTURNOUT                        0     n/a    n/a       1     1   -5.00   n/a  THIN
+  KXBRRATECUT                            0     n/a    n/a       1     1   -1.00   n/a  THIN
+  KXCAFAIRPLAN                           0     n/a    n/a       5     1   -3.99   n/a  THIN
+  KXDIESELMONAK                          0     n/a    n/a       7     1   -4.14   n/a  THIN
+  KXDISNEYAPP                            0     n/a    n/a       1     1   -5.00   n/a  THIN
+  KXEOWEEK                               0     n/a    n/a       1     1   -1.00   n/a  THIN
+  KXFEAR                                 0     n/a    n/a       2     1   -1.50   n/a  THIN
+  KXGEMINI                               0     n/a    n/a       1     1   -7.89   n/a  THIN
+  KXGRUBHUBAPP                           0     n/a    n/a       1     1   -8.40   n/a  THIN
+  KXLOCALLAW                             0     n/a    n/a       1     1   -1.00   n/a  THIN
+  KXMLBPLAYOFFHOST                       0     n/a    n/a       3     1   -7.88   n/a  THIN
+  KXMLBPLAYOFFS                          0     n/a    n/a      11     1   -3.48   n/a  THIN
+  KXNCAAFUNDEFEATED                      0     n/a    n/a       9     1   -2.89   n/a  THIN
+  KXNEXTMANAGERMLB                       0     n/a    n/a       1     1  +99.00   n/a  THIN
+  KXPADATACENTERS                        0     n/a    n/a       2     1  +41.54   n/a  THIN
+  KXPJMEMERGENCY                         0     n/a    n/a       1     1   -1.00   n/a  THIN
+  KXRAINCLLM                             0     n/a    n/a       1     1   -1.00   n/a  THIN
+  KXRAINDNYC                             0     n/a    n/a       1     1   -6.53   n/a  THIN
+  KXRAINWKND                             0     n/a    n/a       1     1   -5.22   n/a  THIN
+  KXRT                                   0     n/a    n/a       2     1   -4.42   n/a  THIN
+  KXTRUMPSAY                             0     n/a    n/a       1     1   -3.08   n/a  THIN
+  KXYUMTBFT                              0     n/a    n/a       1     1   -4.00   n/a  THIN
+
+== live universe pooled
+  reward $0.45/market-day over 146 market-days; settlement G +13.94c ± 5.57 (40 markets, 13 events)
+
+== VERDICT (descriptive; authorizes nothing)
+  S1 universe is not the bottleneck: PASS (none)
+  S2 live-universe cheap side: not shown overpriced
+  ADD-CANDIDATE    0  
+  COSTLY-REWARD    0  
+  REWARD-ONLY      1  KXTRUMPMENTIONB*
+  AVOID            0  
+  (* = in the live universe)
