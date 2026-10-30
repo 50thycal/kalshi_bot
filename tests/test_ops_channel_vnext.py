@@ -617,3 +617,9 @@ def test_a_long_log_block_is_truncated_not_dumped(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "more lines (bounded)" in out
     assert "line 4999" not in out
+
+
+def test_the_catalog_read_token_is_passed_through_and_the_full_token_is_not(steps):
+    env = _step(steps, "Run ops request")["env"]
+    assert "secrets.CATALOG_READ_TOKEN" in env["CATALOG_READ_TOKEN"]
+    assert "CATALOG_API_TOKEN" not in env

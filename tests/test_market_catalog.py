@@ -916,3 +916,36 @@ def test_dictionary_encoding_never_grows_an_unlike_document(dictionary_writes):
         v1 = pack(unlike)
     assert len(pack(unlike)) <= len(v1)
     assert unpack(pack(unlike)) == unlike
+
+
+def test_read_token_reads_but_never_writes(store):
+    doc = store.upsert("market", "KXTEST-E-M", {"rules_primary": "old"}, "KXTEST")
+    server = make_server(store, "a" * 32, ("127.0.0.1", 0), read_token="r" * 32)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with httpx.Client(
+            base_url=f"http://127.0.0.1:{server.server_port}", trust_env=False
+        ) as client:
+            client.headers["Authorization"] = "Bearer " + "r" * 32
+            assert client.get("/v1/status").status_code == 200
+            assert client.get("/v1/markets?limit=5").status_code == 200
+            assert client.post("/v1/reviews", json=review_payload(doc)).status_code == 403
+            payload = {"source": "paper", "records": [trade()], "provenance": "read-only fixture"}
+            assert client.post("/v1/import", json=payload).status_code == 403
+            assert not store.status()["evidence"].get("paper")
+            client.headers["Authorization"] = "Bearer " + "x" * 32
+            assert client.get("/v1/status").status_code == 401
+            client.headers["Authorization"] = "Bearer " + "a" * 32
+            assert client.post("/v1/reviews", json=review_payload(doc)).status_code == 201
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
+
+def test_read_token_must_be_long_and_distinct(store):
+    with pytest.raises(ValueError):
+        make_server(store, "a" * 32, ("127.0.0.1", 0), read_token="short")
+    with pytest.raises(ValueError):
+        make_server(store, "a" * 32, ("127.0.0.1", 0), read_token="a" * 32)

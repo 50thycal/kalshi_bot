@@ -305,9 +305,17 @@ def collect(store, stopped, source_url, interval):
     contracts.client.close()
 
 
-def make_server(store, token, address=("::", 8080)):
+def make_server(store, token, address=("::", 8080), read_token=None):
     if len(token) < 24:
         raise ValueError("CATALOG_API_TOKEN must have at least 24 characters")
+    # Optional GET-only credential (CATALOG_READ_TOKEN) for consumers that must never write,
+    # such as the ops runner, whose results are published on a public branch. It authorizes
+    # every read and is refused on every POST.
+    if read_token is not None:
+        if len(read_token) < 24:
+            raise ValueError("CATALOG_READ_TOKEN must have at least 24 characters")
+        if hmac.compare_digest(read_token, token):
+            raise ValueError("CATALOG_READ_TOKEN must differ from CATALOG_API_TOKEN")
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args):
@@ -322,9 +330,15 @@ def make_server(store, token, address=("::", 8080)):
             self.end_headers()
             self.wfile.write(body)
 
-        def authorized(self):
-            if hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer " + token):
+        def authorized(self, write=False):
+            header = self.headers.get("Authorization", "")
+            if hmac.compare_digest(header, "Bearer " + token):
                 return True
+            if read_token is not None and hmac.compare_digest(header, "Bearer " + read_token):
+                if not write:
+                    return True
+                self.respond(403, {"error": "read-only token"})
+                return False
             self.respond(401, {"error": "Bearer token required"})
             return False
 
@@ -504,7 +518,7 @@ def make_server(store, token, address=("::", 8080)):
                 self.respond(400, {"error": "Invalid query parameters"})
 
         def do_POST(self):
-            if not self.authorized():
+            if not self.authorized(write=True):
                 return
             if self.path not in ("/v1/reviews", "/v1/import", "/v1/selection"):
                 self.respond(404, {"error": "Not found"})
@@ -586,8 +600,10 @@ def main():
     )
     store = Store(os.environ.get("CATALOG_DB_PATH", "/data/catalog.sqlite3"))
     token = os.environ.get("CATALOG_API_TOKEN", "")
+    read_token = os.environ.get("CATALOG_READ_TOKEN") or None
     interval = max(10, int(os.environ.get("CATALOG_INTERVAL_SECONDS", "30")))
-    server = make_server(store, token, ("::", int(os.environ.get("PORT", "8080"))))
+    server = make_server(store, token, ("::", int(os.environ.get("PORT", "8080"))),
+                         read_token=read_token)
     LOG.info("catalog_backup status=starting")
     backup = store.backup_before_compression()
     if backup is None:

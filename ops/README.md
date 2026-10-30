@@ -71,6 +71,7 @@ the report, not a failed request.
 | `doctor` | read | one-request operating snapshot |
 | `incident` | read | bounded investigation bundle for one service |
 | `desks` | read | sanitized desk-service diagnostic (needs a unique `id`; `docs/desks/DIAGNOSTICS.md`) |
+| `catalog` | read | one GET of the market-catalog API with the GET-only `CATALOG_READ_TOKEN` |
 | `env` | read **or MUTATING** | read allowlisted Railway variables — or change them |
 
 ```jsonc
@@ -80,6 +81,7 @@ the report, not a failed request.
 {"type": "xos",    "command": "control-tower", "id": "ct-1"}
 {"type": "incident", "service": "main", "window_minutes": 30, "id": "inc-1"}
 {"type": "desks",  "id": "desk-diag-20261002T120000Z"}
+{"type": "catalog", "path": "/v1/markets", "params": {"series": "KXRAIN", "limit": 50}, "id": "cat-1"}
 {"type": "env",    "service": "evo", "id": "env-1"}
 {"type": "noop",   "id": "idle"}
 ```
