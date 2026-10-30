@@ -43,8 +43,10 @@ RO_OPTIONS = (
     "-c idle_in_transaction_session_timeout=120000"
 )
 
-#: The live books, incumbent first. `Nmmsell10` drains after the 2026-10-27 swap (WS-027).
-LIVE_TAGS = ("Kmmsell10", "Vmmsell10", "Nmmsell10")
+#: The live books, current pair first (armed 2026-10-30, `docs/MMSELL_WIN_SET_CANARY.md` §10),
+#: then the stood-down books while their open positions settle: `Kmmsell10` and `Vmmsell10`
+#: (swapped out 2026-10-30), `Nmmsell10` (2026-10-27). Each tag is its own epoch: never pooled.
+LIVE_TAGS = ("Xmmsell10", "Ymmsell10", "Kmmsell10", "Vmmsell10", "Nmmsell10")
 TWIN_SUFFIX = "_pt4"
 #: The liquidity-incentive book also quotes KXTRUMPMENTION; the overlap gets its own section.
 LIMM_TAG = "Alimm1"

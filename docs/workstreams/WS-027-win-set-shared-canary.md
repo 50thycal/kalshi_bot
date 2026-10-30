@@ -185,3 +185,22 @@ markets since 2026-07-20; drop it from the universe at the Kmmsell10+Vmmsell10 r
 Built as `mmsell-cell-size-2-canary` (`Xmmsell10`, paper `Smmsell10`) and `mmsell-win-set-3-canary`
 (`Ymmsell10`, paper `Zmmsell10`), with the pair `Xmmsell10+Ymmsell10:6:6.00` registered in both.
 They arm after about a day of paper. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §10.
+
+**2026-10-30 13:39–13:43Z — joint restart ARMED (owner confirmed in session).**
+- `REGISTER_PACKAGE` for both packages SUCCEEDED 2026-10-29. Paper `Smmsell10`/`Zmmsell10` were
+  appended by `rs-paper-env-1`.
+- Day-1 paper: both books 3 settled, +$0.21 each, no loss. The promotion bars read PASS
+  (cell-size-2 realizable 0.92c/trade; win-set-3 waiver bar).
+- `rs-arm-cs2-20261030` SUCCEEDED: `mmsell-cellsize2-live-1` + `twin-1`, 13:39:00Z.
+- `rs-arm-ws3-20261030` SUCCEEDED: `mmsell-winset3-live-1` + `twin-1`, 13:40:55Z.
+- Env act `rs-swap-1` VERIFIED, computed from the live values:
+  - `Xmmsell10` and `Ymmsell10` appended to `MMSELL_VARIANTS`, every old entry kept;
+  - `LIVE_STRATEGIES=Xmmsell10,Alimm1,Ymmsell10`;
+  - `MMSELL_LIVE_SHARED_MARKET_PAIRS=Xmmsell10+Ymmsell10:6:6.00`.
+- Readback: the arming drift events #30/#31 resolved automatically at the swap. `Kmmsell10` and
+  `Vmmsell10` are recorded EXPERIMENT_EXECUTION_STOOD_DOWN (#32/#33), not drift. `xos tag` shows
+  both new books LIVE_CANARY e2.
+- Kmmsell10's last manual stop read: +$6.60 on 310 settled. Its manual routine is deleted, since
+  the new book's keep gate evaluates. The scorecard now lists the new books first.
+
+Open: the 24h silent-arm check (scheduled 2026-10-31 14:00Z).
