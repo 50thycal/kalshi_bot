@@ -1,1 +1,1 @@
-{"type":"db","id":"rs-swap-integ","sql":"select e.id, e.kind, d.deployment_key, e.detected_at, e.resolved_at, left(e.resolution,90) res from experiment_integrity_events e join experiment_deployments d on d.id = e.deployment_id where e.detected_at > '2026-10-30 13:35+00' order by e.id"}
+{"type":"xos","command":"tag","args":["Xmmsell10"],"id":"rs-tag-Xmmsell10"}
