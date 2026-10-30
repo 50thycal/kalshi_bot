@@ -1,4 +1,4 @@
 # ops request [READ]
-# type=catalog  id=cat-validate-20261030a
-# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T03:38:33Z
-catalog: FAILED not_configured — the CATALOG_READ_TOKEN secret is not available to the ops runner (docs/OPS_RUNBOOK.md, catalog access)
+# type=noop  id=cat-noop-20261030
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T03:38:58Z
+(noop — nothing to do)
