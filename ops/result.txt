@@ -1,4 +1,4 @@
 # ops request [READ]
-# type=catalog  id=rl-s3-catmk-20261030
-# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:37:57Z
-catalog: FAILED unreachable
+# type=catalog  id=rl-s3-catobj-20261030
+# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:39:24Z
+catalog: FAILED not_found (HTTP 404)
