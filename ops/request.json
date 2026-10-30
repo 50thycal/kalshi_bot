@@ -1,1 +1,1 @@
-{"type":"db","id":"live-now-10301433","sql":"select strategy, count(*) orders, count(distinct market_ticker) mkts, sum(case when market_ticker like 'KXTRUMPMENTION%' then 1 else 0 end) trump, max(created_at)::text last from live_orders where created_at >= '2026-10-30 13:43+00' and strategy in ('Xmmsell10','Ymmsell10','Kmmsell10','Vmmsell10') group by strategy order by 1"}
+{"type":"noop","id":"noop-now"}
