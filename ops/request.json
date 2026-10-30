@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select relname, pg_size_pretty(pg_total_relation_size(c.oid)) sz, c.reltuples::bigint est_rows from pg_class c where relname in ('incentive_market_snapshots','incentive_trade_events','incentive_shadow_quotes','incentive_shadow_fills','incentive_shadow_outcomes','incentive_shadow_marks','incentive_book_events','incentive_programs') union all select 'DATABASE', pg_size_pretty(pg_database_size(current_database())), null order by 1", "max_rows": 20, "id": "rl-limm-dbsize-20261030"}
