@@ -136,6 +136,19 @@ jobs:
           # operator adds the secret, and an unset service reports that rather than failing
           # obscurely — so shipping this ahead of the secret is safe.
           RAILWAY_LIVEDASH_SERVICE_ID: ${{ secrets.RAILWAY_LIVEDASH_SERVICE_ID }}
+          # desk-service diagnostic-role token for `{"type":"desks"}`: it can read ONLY the
+          # sanitized GET /api/diagnostics (no status, claims, Continue, orders, pause/resume).
+          # Never put the operator or a desk token here. Unset until the operator adds the
+          # secret; the request then answers not_configured. docs/desks/DIAGNOSTICS.md.
+          DESKS_DIAGNOSTIC_TOKEN: ${{ secrets.DESKS_DIAGNOSTIC_TOKEN }}
+          # market-catalog GET-only token for `{"type":"catalog"}` and catalog-reading scripts:
+          # the catalog refuses it on every POST, so this adds no writable path. Never put the
+          # full CATALOG_API_TOKEN here. Unset until the operator adds the secret; requests then
+          # answer not_configured. CATALOG_URL is optional (defaults to the public domain).
+          CATALOG_READ_TOKEN: ${{ secrets.CATALOG_READ_TOKEN }}
+          CATALOG_URL: ${{ secrets.CATALOG_URL }}
+          # Catalog liveness for the global monitor (WS-026 D1): its public /health only.
+          MONITOR_CATALOG_URL: https://market-catalog-production-6beb.up.railway.app
         run: |
           set -o pipefail
           # Snapshot the triggering request BEFORE running: the robust publish step
