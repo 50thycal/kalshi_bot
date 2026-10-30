@@ -1,4 +1,24 @@
 # ops request [READ]
-# type=noop  id=cat-noop-20261030
-# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T03:38:58Z
-(noop — nothing to do)
+# type=db  id=ci1030a0440
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T04:40:03Z
+k  t                              d                                                 ts                           
+-  -----------------------------  ------------------------------------------------  -----------------------------
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 1x500 canceled repriced e782dec1-1dd4-     2026-10-11 06:25:46.0029+00  
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 6x166 canceled repriced 1964ca8e-e775-     2026-10-11 07:46:39.305735+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 7x142 canceled replaced fa66f906-3935-     2026-10-11 10:04:39.01494+00 
+O  KXMAMDANIMENTION-26NOV18-NQE   yes/buy 3x333 resting  8d074f44-4be0-             2026-10-24 01:19:06.745673+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 1x500 canceled repriced 0f401a5a-c4e9-     2026-10-25 01:07:33.203501+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 2x500 canceled repriced 7cac84b9-1628-     2026-10-25 02:08:00.210123+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 5x400 canceled repriced 18539f9d-24d4-     2026-10-25 12:52:26.166884+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 8x250 canceled out_of_band ec85fbc1-69ab-  2026-10-25 13:54:11.873853+00
+O  KXYTVIEWSHIGH-YE26NOV-5.0M     no/buy 1x500 canceled pre_event 4a6ac860-d4a6-    2026-10-26 14:38:01.792085+00
+O  KXYTVIEWSHIGH-FUE26NOV-24.0M   no/buy 1x500 canceled pre_event 6ee0fc6a-01b1-    2026-10-26 15:24:18.730413+00
+O  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10x200 resting  472f6c1b-f59e-            2026-10-27 04:29:18.109125+00
+O  KXYTVIEWSHIGH-OLI26DEC-7.5M    no/buy 10x200 resting  97d72469-dbd9-             2026-10-27 07:31:31.642581+00
+O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x244 resting  limmsell:a:fcd             2026-10-27 13:59:01.360672+00
+O  KXYTVIEWSHIGH-OLI26NOV-12.0M   no/sell 2x243 resting  limmsell:b:93d             2026-10-27 13:59:01.436472+00
+O  KXYTVIEWSHIGH-FUT26DEC-7.0M    no/buy 4x500 resting  c92c28c2-6755-              2026-10-29 14:24:49.529668+00
+O  KXYTVIEWSHIGH-DRA26DEC-12.0M   no/buy 5x400 resting  adbc55c4-c74a-              2026-10-30 04:00:43.240576+00
+P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                                         2026-10-30 04:36:46.621607+00
+
+(17 rows)
