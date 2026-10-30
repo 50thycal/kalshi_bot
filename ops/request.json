@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-correlation-cap"],"id":"rl-s2-cc-20261030"}
+{"type":"script","name":"mmsell_scorecard","args":["--days","1"],"id":"msc-now-10301432"}
