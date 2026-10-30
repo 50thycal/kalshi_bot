@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=live-now-10301433
-# code 334b0bb2dc5bda5ea01b795173a5607061093ba3 · started 2026-10-30T14:33:35Z
-strategy  orders  mkts  trump  last
---------  ------  ----  -----  ----
-
-(0 rows)
