@@ -161,3 +161,46 @@ same run with every series printed.
     150 markets.
   - (b) Pre-register a v2 on the 2026-09-17 → 10-07 shadow window. Its reward side is unread; its
     settlement side was partly printed here, so it would be read as reward-only.
+
+## 8. v2 — reward-only on the shadow window (pre-registered 2026-10-30, before the run)
+
+Owner chose option (b) on 2026-10-30. Same construction as §3, with these changes, all fixed now:
+
+- **Reward window:** 2026-09-17T00:00Z → 2026-10-07T03:00Z, while the shadow collector watched
+  the top 150 programmes by reward.
+- **Reward only.** The settlement side was partly printed in §7, so it is neither fetched nor
+  used. Labels come from reward alone:
+  - `REWARD-LEAD`: ≥ 20 market-days and ≥ $0.50 per market-day;
+  - `NO-LEAD`: at the floor but below $0.50;
+  - `THIN`: under 20 market-days.
+- **"Live universe"** keeps today's definition (`MENTION` series and `KXYTVIEWSHIGH`), because
+  the question is whether today's universe is the best place to quote.
+- **S1-v2:** any series outside the live universe that is `REWARD-LEAD` and above the live
+  universe's pooled reward per market-day in the same window is nominated. It is nominated for
+  **collection** (option (a), an owner decision), never directly for trading.
+- **Command:** `{"type":"script","name":"limm_programme_outcomes","args":["--reward-since","2026-09-17T00:00:00+00:00","--reward-until","2026-10-07T03:00:00+00:00","--reward-only"],"id":"rl-s3-v2-20261030"}`.
+
+## 9. Exits vs holding on real fills (pre-registered 2026-10-30, before the run)
+
+The §7 surprise was that mention long shots settled above their price. If that holds on the
+book's own fills, the stop at half price sells contracts that would have won. This tests it
+directly on real money. Probe: `scripts/limm_exit_vs_hold.py`.
+
+- **Sample:** every `Alimm1` market with at least one filled entry (a `buy` order's fills) whose
+  position has settled. Settlement means Kalshi's position row carries `settled_time`; the
+  result comes from Kalshi's public market endpoint.
+- **Actual P&L:** Kalshi's own `realized_pnl` for the market (positions). It includes every exit
+  the book made.
+- **Hold P&L:** every entry fill held to settlement:
+  `Σ qty × (100·[fill side won] − price) / 100 − entry-fill fees`.
+- **Exit value:** `actual − hold`, in dollars per market, clustered by event. Rewards are
+  excluded; they are the same either way.
+- **H1 (exits add value): PASS** if exit value 95% LCB > 0. **FAIL** if UCB < 0: exits cost
+  money, and holding (or a looser stop) is nominated for an owner decision. Changing a live
+  risk rule is a recorded epoch and never automatic. **Otherwise HOLD.** Floor: ≥ 30 settled
+  markets and ≥ 15 events, else HOLD (accrual).
+- **Descriptive:**
+  - split by exit kind: a market whose exits sold below the entry price (stop-type) against one
+    that sold above (take-profit-type);
+  - each policy's worst single market (holding carries the bigger tail);
+  - totals in dollars.
