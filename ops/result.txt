@@ -1,751 +1,281 @@
 # ops request [READ]
-# type=catalog  id=cat-validate-20261030b
-# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:57:29Z
+# type=xos  id=rl-s2-iss20-20261030
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:59:05Z
 {
- "assessment_contexts": 176513,
- "backfill": {
-  "live": {
-   "coverage": {
-    "checked_at": "2026-10-30T13:55:21.098645+00:00",
-    "definition": "sorted-source-ids-sha256-v1",
-    "ids_match": true,
-    "local_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
-    "local_records": 3294,
-    "payload_parity_verified": false,
-    "source_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
-    "source_records": 3294,
-    "through_source_id": 4964
-   },
-   "initial_complete": true,
-   "local_records": 3294,
-   "reconciliation_complete": true
+  "issue_key": "XOS-000020",
+  "title": "Concentration caps key on event_ticker, but the unit of correlation is the GAME",
+  "status": "OPEN",
+  "classification": "STRATEGY",
+  "severity": "HIGH",
+  "priority": "P1",
+  "owner_role": "RESEARCH_LAB",
+  "opened_by_role": "TASK_SPECIFIC",
+  "opened_at": "2026-09-05 11:44:52.712444+00:00",
+  "scope": "mmsell-price-ceiling-capacity",
+  "experiment_id": 28,
+  "version_id": null,
+  "detector": "manual.reported",
+  "detector_fingerprint": null,
+  "occurrence_count": 1,
+  "disposition": null,
+  "latest_evidence": "RESEARCH_DOCUMENT: NEGATIVE result recorded so it is not re-investigated: KXALBUMEQUIV is NOT an ac",
+  "problem_statement": "Dmmsell10's entire live drawdown (-6.44 USD of -4.46 net) landed on one MLB slate, 26SEP02: 31 markets across 23 distinct event_tickers but only ELEVEN real games. One game (NYYLAA) carried positions under five separate series (F5TOTAL, HR, SPREAD, TEAMTOTAL, TOTAL) = five 'events'. STLLAD and BALCOL carried three each. Two gaps compound. (1) The 5-events-per-date settlement cap only applies to regimes in mmsell_settlement_correlated_regimes, which defaults to 'Elections' alone, so it never fires for MLB. (2) Even where it does fire, every cap keys on event_ticker (series x game), while the thing that actually moves together is the GAME: one high-scoring game resolves TOTAL, TEAMTOTAL, SPREAD and HR against the book simultaneously. The rung cap allows 3 per event_ticker, so a single game can legally hold ~15 correlated positions with no cap noticing. The book believes it holds N independent 7c lottery tickets; it holds one bet on 'is this a high-scoring night'. Verified from live_orders + positions, not inferred: 10/10 losing markets were MLB, 9 on that one slate across 5 games, while 33 settled non-MLB markets lost nothing.",
+  "evidence_summary": "Found 2026-09-05 investigating the Dmmsell10 canary drawdown after its live_canary_keep gate recorded FAIL. This is a POST-HOC slice and must not become a stopping criterion for the running contract; it is a pre-registered hypothesis for the next one.",
+  "proposed_fix": "MERGED (PR #331), DEFAULT OFF. A fourth concentration cap keyed on contest_key_of() rather than the event ticker, so five MLB series on one game count as one thing. Regime-namespaced and restricted to CONTEST_GROUPED_REGIMES (the sports, whose SERIES-<date><time><matchup>-<outcome> convention was verified against live tickers); everywhere else the key IS the event ticker, so enabling it cannot re-scope the three caps that already exist. Mutually-exclusive events stay exempt, as the rung cap exempts them. Rides the query the date cap already runs, so no extra read. OVER-GROUPING was the design driver: a first cut keyed on the bare token made KXPAYROLLS-26SEP and KXCPI-26SEP one contest, which would have refused independent entries SILENTLY; its own test caught it. REMAINING DECISION, NOT MINE: tracker.py is shared by every mmsell book, so enabling this globally changes selection for all of them at once - a shared-semantic change for Platform Change Review. Alternative is per-book opt-in through a registered risk envelope on the next contract. Suggested value when enabled is 1: two positions on one game is twice the same bet. That is a structural argument, NOT the P&L-maximising pick - choosing off the replay table would be fitting to 97 fills of history.",
+  "validation_plan": null,
+  "resolution_summary": null,
+  "resolved_at": null,
+  "requires_new_version": null,
+  "requires_new_epoch": null,
+  "requires_platform_revision": null,
+  "requires_pause_or_stand_down": null,
+  "duplicate_of_issue_id": null,
+  "supersedes_issue_id": null,
+  "discovered_from_issue_id": null,
+  "first_observed_at": "2026-09-05 11:44:52.712444+00:00",
+  "last_observed_at": "2026-09-05 11:44:52.712444+00:00",
+  "details_json": {
+    "discovery": "Found 2026-09-05 investigating the Dmmsell10 canary drawdown after its live_canary_keep gate recorded FAIL. This is a POST-HOC slice and must not become a stopping criterion for the running contract; it is a pre-registered hypothesis for the next one.",
+    "reported_via": "issue_command_transport",
+    "manual_report": true
   },
-  "paper": {
-   "coverage": {
-    "checked_at": "2026-10-30T13:51:49.048806+00:00",
-    "definition": "sorted-source-ids-sha256-v1",
-    "ids_match": true,
-    "local_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
-    "local_records": 168418,
-    "payload_parity_verified": false,
-    "source_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
-    "source_records": 168418,
-    "through_source_id": 183216
-   },
-   "initial_complete": true,
-   "local_records": 168418,
-   "reconciliation_complete": true
-  }
- },
- "captured_at": "2026-10-30T13:58:08.088494+00:00",
- "confidence_calibrated": false,
- "consumer_cutover": false,
- "contract_archive": {
-  "blobs": 5362,
-  "bytes": 648503467,
-  "historical_versions_verified": false,
-  "observations": 42449,
-  "targets_by_status": {
-   "captured": 6124,
-   "refresh_failed": 47
-  }
- },
- "evidence": {
-  "live": 3294,
-  "paper": 168418
- },
- "history_policy": {
-  "active_by_reason": {
-   "legacy_registry": 142,
-   "live_evidence": 3174,
-   "paper_evidence": 51430,
-   "review_draft": 3,
-   "series_review": 13
-  },
-  "bootstrap": {
-   "added": 45130,
-   "complete": true,
-   "completed_at": "2026-10-12T03:25:29.178151+00:00",
-   "examined": 141697,
-   "last_page_at": "2026-10-12T03:25:29.927435+00:00",
-   "phase": 4,
-   "started_at": "2026-10-12T02:03:53.202740+00:00",
-   "version": "selection-membership-v1"
-  },
-  "bootstrap_phase_name": null,
-  "compact_revisions_satisfy_payload_proof": false,
-  "first_selective_at": null,
-  "hydration": {
-   "by_status": {},
-   "oldest_pending_enqueued_at": null
-  },
-  "membership_ready": true,
-  "membership_version": "selection-membership-v1",
-  "policy_configured": "broad_full",
-  "policy_effective": false,
-  "policy_history": [
-   {
-    "at": "2026-10-12T02:03:53.214994+00:00",
-    "configured": "broad_full",
-    "effective": false
-   }
-  ],
-  "revision_writes": {
-   "compact": 0,
-   "full": 8500753,
-   "since": "2026-10-12T02:04:49.906173+00:00"
-  },
-  "selected_by_scope": {
-   "market": 51430,
-   "series": 142
-  },
-  "selected_sample_is_unbiased_control": false,
-  "selection_is_qualification": false
- },
- "jobs": {
-  "cursor:live": {
-   "after": 4964,
-   "caught_up_at": "2026-10-30T13:56:27.463715+00:00",
-   "initial_complete": true,
-   "initial_coverage_verified": true,
-   "last_complete_at": "2026-10-30T13:55:21.098645+00:00",
-   "last_coverage_check_at": "2026-10-30T13:55:21.098645+00:00",
-   "last_success_at": "2026-10-30T13:56:27.463694+00:00",
-   "pass_started_at": "2026-10-29T14:39:00.323141+00:00",
-   "reconciliation_complete": true
-  },
-  "cursor:paper": {
-   "after": 183216,
-   "caught_up_at": "2026-10-30T13:56:27.359374+00:00",
-   "initial_complete": true,
-   "initial_coverage_verified": true,
-   "last_complete_at": "2026-10-30T13:51:49.048806+00:00",
-   "last_coverage_check_at": "2026-10-30T13:51:49.048806+00:00",
-   "last_success_at": "2026-10-30T13:56:27.359346+00:00",
-   "pass_started_at": "2026-10-29T14:39:00.304184+00:00",
-   "reconciliation_complete": true
-  },
-  "discovery:backoff": {
-   "failures": 0,
-   "not_before_unix": 0
-  },
-  "discovery:events": {
-   "complete": false,
-   "completed_at": null,
-   "cursor": "CgYI1Ju11gYSFEtYV1RJMTVNLTI2T0NUMTIxMTMw",
-   "last_success_at": "2026-10-30T13:56:25.725898+00:00",
-   "previous_sweep": {
-    "completed_at": "2026-10-30T02:05:21.764738+00:00",
-    "sweep_pages": 4364,
-    "sweep_records": 872730,
-    "sweep_started_at": "2026-10-19T01:00:20.025575+00:00"
-   },
-   "sweep_pages": 614,
-   "sweep_records": 122800,
-   "sweep_started_at": "2026-10-30T02:06:00.072982+00:00"
-  },
-  "discovery:live_outcomes": {
-   "after": "KXRAIN-26OCT14-DET",
-   "last_not_found": null,
-   "last_success_at": "2026-10-30T13:56:27.746023+00:00"
-  },
-  "discovery:series": {
-   "complete": true,
-   "completed_at": "2026-10-29T14:42:04.221187+00:00",
-   "cursor": null,
-   "last_success_at": "2026-10-29T14:42:04.221163+00:00",
-   "previous_sweep": {
-    "completed_at": "2026-10-28T14:43:03.105527+00:00",
-    "sweep_pages": 1,
-    "sweep_records": 15441,
-    "sweep_started_at": "2026-10-28T14:38:51.831808+00:00"
-   },
-   "sweep_pages": 1,
-   "sweep_records": 15462,
-   "sweep_started_at": "2026-10-29T14:39:01.142004+00:00"
-  },
-  "discovery:updates": {
-   "cursor": "",
-   "last_success_at": "2026-10-30T13:56:27.111691+00:00",
-   "scan_started_at": 1793368585,
-   "since": 1793368525
-  },
-  "documents:backoff": 1791838231.5613632,
-  "documents:priority_after": "KXXRPMAXMON",
-  "documents:scan": {
-   "after": "",
-   "restart_at": 1793398134.6759467
-  },
-  "evaluation": {
-   "calibration": "pending",
-   "contexts": 176513,
-   "last_success_at": "2026-10-30T13:57:36.615421+00:00",
-   "qualified": 0
-  },
-  "evaluation_requested": null,
-  "evidence:changes": 74040,
-  "history:writes": {
-   "compact": 0,
-   "full": 8500743,
-   "since": "2026-10-12T02:04:49.906173+00:00"
-  },
-  "job:discovery:events": {
-   "error": null,
-   "http_status": null,
-   "last_deferred_at": "2026-10-30T10:17:38.275292+00:00",
-   "last_error_at": "2026-10-18T17:46:24.511893+00:00",
-   "last_success_at": "2026-10-30T13:56:25.753425+00:00",
-   "records": 200,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:discovery:live_outcomes": {
-   "error": null,
-   "http_status": null,
-   "last_error_at": "2026-10-22T07:56:59.617370+00:00",
-   "last_success_at": "2026-10-30T13:56:27.751200+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:discovery:series": {
-   "error": null,
-   "http_status": null,
-   "last_deferred_at": "2026-10-30T10:17:38.270002+00:00",
-   "last_success_at": "2026-10-30T13:55:51.443447+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:discovery:updates": {
-   "error": null,
-   "http_status": null,
-   "last_deferred_at": "2026-10-30T10:17:38.281335+00:00",
-   "last_error_at": "2026-10-16T10:37:28.385971+00:00",
-   "last_success_at": "2026-10-30T13:56:27.117259+00:00",
-   "records": 102,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:documents:capture": {
-   "error": null,
-   "http_status": null,
-   "last_error_at": "2026-10-30T00:46:09.373219+00:00",
-   "last_success_at": "2026-10-30T13:56:27.296743+00:00",
-   "records": 1,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:evaluation": {
-   "error": null,
-   "http_status": null,
-   "last_success_at": "2026-10-30T13:57:36.633344+00:00",
-   "records": 176513,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:import:live": {
-   "error": null,
-   "http_status": null,
-   "last_error_at": "2026-10-07T02:33:37.780265+00:00",
-   "last_success_at": "2026-10-30T13:56:27.475147+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:import:paper": {
-   "error": null,
-   "http_status": null,
-   "last_error_at": "2026-10-07T02:33:37.774509+00:00",
-   "last_success_at": "2026-10-30T13:56:27.367880+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:selection:bootstrap": {
-   "error": null,
-   "http_status": null,
-   "last_success_at": "2026-10-30T13:55:51.429422+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:selection:hydration": {
-   "error": null,
-   "http_status": null,
-   "last_success_at": "2026-10-30T13:56:27.129199+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "job:storage:compression": {
-   "error": null,
-   "http_status": null,
-   "last_success_at": "2026-10-05T22:05:26.371636+00:00",
-   "records": 0,
-   "retry_at_unix": null
-  },
-  "job:storage:metrics": {
-   "error": null,
-   "http_status": null,
-   "last_success_at": "2026-10-30T13:55:21.408563+00:00",
-   "records": 0,
-   "retry_at_unix": null,
-   "storage_deferral": null
-  },
-  "last_reconciliation": 1793284740.162741,
-  "live_economics_summary": {
-   "attributed": 3074,
-   "blocked": 100,
-   "blocked_reason_counts": {
-    "final_settlement_missing": 9,
-    "ownership_ambiguous_or_unverified": 88,
-    "settlement_time_missing_or_future": 9,
-    "unsupported_or_conflicting_settlement": 16
-   },
-   "exchange_fill_coverage_verified": false,
-   "markets": 3174,
-   "source_execution_time_restored_fills": 3294,
-   "source_quantity_rounding_restored_fills": 113
-  },
-  "live_projection_version": "canonical-direction-v2",
-  "manual_import:live": {
-   "last_success_at": "2026-10-05T19:16:59.645300+00:00",
-   "provenance": "ops SELECT-only bounded latest-200 export catalog-live-export-20261005-1; partial source coverage",
-   "records": 200
-  },
-  "manual_import:paper": {
-   "last_success_at": "2026-10-05T19:16:59.504256+00:00",
-   "provenance": "ops SELECT-only bounded latest-200 export catalog-paper-export-20261005-1; partial source coverage",
-   "records": 200
-  },
-  "registry_seed": {
-   "historical_signatures": 40,
-   "last_success_at": "2026-10-30T03:36:49.898215+00:00",
-   "series": 142
-  },
-  "selection:bootstrap": {
-   "added": 45130,
-   "after": null,
-   "complete": true,
-   "completed_at": "2026-10-12T03:25:29.178151+00:00",
-   "covered": {
-    "evidence": 141554,
-    "evidence_markets": 141554,
-    "reviews": 0
-   },
-   "examined": 141697,
-   "last_page_at": "2026-10-12T03:25:29.927435+00:00",
-   "phase": 4,
-   "started_at": "2026-10-12T02:03:53.202740+00:00",
-   "version": "selection-membership-v1"
-  },
-  "selection:counts": {
-   "active_by_reason": {
-    "legacy_registry": 142,
-    "live_evidence": 3174,
-    "paper_evidence": 51430,
-    "review_draft": 3,
-    "series_review": 13
-   },
-   "selected_by_scope": {
-    "market": 51430,
-    "series": 142
-   }
-  },
-  "selection:policy": {
-   "configured": "broad_full",
-   "effective": false,
-   "first_selective_at": null,
-   "since": "2026-10-12T02:03:53.214994+00:00",
-   "transitions": [
+  "events": [
     {
-     "at": "2026-10-12T02:03:53.214994+00:00",
-     "configured": "broad_full",
-     "effective": false
+      "event_type": "CREATED",
+      "occurred_at": "2026-09-05 11:44:52.712444+00:00",
+      "actor": "claude-code",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": "OPEN",
+      "from_owner_role": null,
+      "to_owner_role": "RESEARCH_LAB",
+      "from_classification": null,
+      "to_classification": "STRATEGY",
+      "reason": "Found 2026-09-05 investigating the Dmmsell10 canary drawdown after its live_canary_keep gate recorded FAIL. This is a POST-HOC slice and must not become a stopping criterion for the running contract; it is a pre-registered hypothesis for the next one.",
+      "payload": {
+        "scope": "mmsell-price-ceiling-capacity",
+        "anomaly_kind": null,
+        "owner_override": {
+          "chosen": "RESEARCH_LAB",
+          "rationale": "Found 2026-09-05 investigating the Dmmsell10 canary drawdown after its live_canary_keep gate recorded FAIL. This is a POST-HOC slice and must not become a stopping criterion for the running contract; it is a pre-registered hypothesis for the next one.",
+          "recommended": "LIVE_OPS"
+        },
+        "recommended_owner": {
+          "priority": "P2",
+          "severity": "MEDIUM",
+          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
+          "owner_role": "LIVE_OPS",
+          "disposition": null,
+          "classification": "UNCLASSIFIED",
+          "requires_operator_triage": true
+        }
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-05 12:46:41.442814+00:00",
+      "actor": "claude-code",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Cap sizing by replay of Dmmsell10's own 97 live fills, ranked by entry time within each contest, keeping the first N: cap 4 -> -3.22 USD, cap 3 -> -0.49, cap 2 -> -0.09, cap 1 -> +0.43, against an actual -3.87. The 4th position on a contest averages -0.68 USD. Concentration detail: NYYLAA 6 markets across 5 series (-1.48), STLLAD 5 across 3 (-2.60), NYMTB 5 across 2 (-1.58) = -5.66 of a -6.78 MLB drawdown; every contest holding 5+ markets lost; 33 settled non-MLB markets lost nothing. FIRST-ORDE",
+      "payload": {
+        "source_ref": "live_orders x positions, strategy=Dmmsell10, 2026-09-02..04",
+        "evidence_id": 35,
+        "content_hash": null,
+        "evidence_type": "DATABASE_QUERY"
+      }
+    },
+    {
+      "event_type": "FIX_PROPOSED",
+      "occurred_at": "2026-09-05 12:50:21.888411+00:00",
+      "actor": "claude-code",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Mechanism shipped and provably inert; the enable decision is deliberately left to the owning role rather than taken by the session that built it.",
+      "payload": {
+        "proposed_fix": "MERGED (PR #331), DEFAULT OFF. A fourth concentration cap keyed on contest_key_of() rather than the event ticker, so five MLB series on one game count as one thing. Regime-namespaced and restricted to CONTEST_GROUPED_REGIMES (the sports, whose SERIES-<date><time><matchup>-<outcome> convention was verified against live tickers); everywhere else the key IS the event ticker, so enabling it cannot re-scope the three caps that already exist. Mutually-exclusive events stay exempt, as the rung cap exempts them. Rides the query the date cap already runs, so no extra read. OVER-GROUPING was the design driver: a first cut keyed on the bare token made KXPAYROLLS-26SEP and KXCPI-26SEP one contest, which would have refused independent entries SILENTLY; its own test caught it. REMAINING DECISION, NOT MINE: tracker.py is shared by every mmsell book, so enabling this globally changes selection for all of them at once - a shared-semantic change for Platform Change Review. Alternative is per-book opt-in through a registered risk envelope on the next contract. Suggested value when enabled is 1: two positions on one game is twice the same bet. That is a structural argument, NOT the P&L-maximising pick - choosing off the replay table would be fitting to 97 fills of history."
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-05 14:00:45.749518+00:00",
+      "actor": "claude-code",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "DECOMPOSED, and the axis this ticket names is the half that does nothing. The merged mechanism (576bcfa) was sized on Dmmsell10's 97 live fills, all from the one 26SEP02 MLB slate. Replayed over mmsell10's 3,296 settled PAPER trades across 35 settlement days (post-cohort >= 2026-08-13T18:09:40Z), keying the contest exactly as regimes.contest_key_of does: capping ONLY the cross-series contest is worth +0.09c/trade (0.649 -> 0.739), does NOT improve the worst day at all (-9.49 -> -9.56 USD), and i",
+      "payload": {
+        "source_ref": "docs/MMSELL_CORRELATION_CAP.md",
+        "evidence_id": 36,
+        "content_hash": null,
+        "evidence_type": "RESEARCH_DOCUMENT"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-05 14:03:30.987886+00:00",
+      "actor": "claude-code",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "SEPARATE GAP in the merged mechanism, found while building the forward test and NOT fixed there. The contest counter rides open_positions_settlement_summary, which filters open positions to the candidate's own UTC settlement DATE (day_start <= close_time < day_end). A contest's markets do not all share one date: an F5 total closes about an hour into a game and the full-game total about three, so a start around 18:30 ET puts the early legs before UTC midnight and the late ones after. On such a sl",
+      "payload": {
+        "source_ref": "576bcfa",
+        "evidence_id": 37,
+        "content_hash": null,
+        "evidence_type": "COMMIT"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-05 14:49:02.557393+00:00",
+      "actor": "cal",
+      "actor_role": "TASK_SPECIFIC",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Contest cap did not fire on a contest whose markets close on two UTC dates. As merged (576bcfa) the contest counter came from open_positions_settlement_summary, scoped to the candidate's own UTC close DATE, so one contest's legs counted against two days' budgets. Silent: skipped_contest_cap stayed 0, which is also the pre-registered gate's HOLD condition, so a broken cap and an idle one were indistinguishable. Fixed by giving the contest cap its own non-date-scoped read over the book's whole ope",
+      "payload": {
+        "source_ref": "https://github.com/50thycal/kalshi_bot/pull/335",
+        "evidence_id": 38,
+        "content_hash": null,
+        "evidence_type": "PR"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-06 13:38:30.200793+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "INDEPENDENT CORROBORATION of this ticket's central reading, from a different tape. KXALBUMEQUIV rungs are strike_type=greater ('Above 90K/100K/110K'), a strictly nested one-sided MONOTONE ladder, so one realized number resolves every rung beneath it at once - the most legible instance of the correlation unit this cap bounds. Holding entry price flat to 0.2c in the cheap band, damage rises step by step with rungs held on one album-week: 1 rung +6.28c/trade with ZERO losses in 31; 2 rungs -12.11c ",
+      "payload": {
+        "source_ref": "ops/results/rl-albumequiv-1..4; docs/MMSELL_CORRELATION_CAP.md (PR #349)",
+        "evidence_id": 53,
+        "content_hash": null,
+        "evidence_type": "DATABASE_QUERY"
+      }
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-06 13:38:30.238191+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "NEGATIVE result recorded so it is not re-investigated: KXALBUMEQUIV is NOT an actionable series cell despite showing the family's worst edge (-25.5pp, -55.06 USD) on the first production run of mmsell_series_pnl. 38 distinct markets across 9 album-weeks; contest-level bootstrap CI [-26.5, +5.0], P(mean>=0)=0.136; median contest +7.17c; five of nine contests positive; three contests carry 108% of the net loss; 71% of the dollars sit above 7c, in the wide band the live regime does not trade. Real ",
+      "payload": {
+        "source_ref": "docs/MMSELL_CORRELATION_CAP.md (PR #349)",
+        "evidence_id": 54,
+        "content_hash": null,
+        "evidence_type": "RESEARCH_DOCUMENT"
+      }
+    },
+    {
+      "event_type": "LINK_ADDED",
+      "occurred_at": "2026-09-06 13:38:30.313460+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "KXALBUMEQUIV corroboration of the ladder reading; cap=3 may be too loose",
+      "payload": {
+        "link_id": 20,
+        "link_type": "PR",
+        "reference": "https://github.com/50thycal/kalshi_bot/pull/349"
+      }
     }
-   ]
-  },
-  "source_coverage:live": {
-   "checked_at": "2026-10-30T13:55:21.098645+00:00",
-   "definition": "sorted-source-ids-sha256-v1",
-   "ids_match": true,
-   "local_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
-   "local_records": 3294,
-   "payload_parity_verified": false,
-   "source_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
-   "source_records": 3294,
-   "through_source_id": 4964
-  },
-  "source_coverage:paper": {
-   "checked_at": "2026-10-30T13:51:49.048806+00:00",
-   "definition": "sorted-source-ids-sha256-v1",
-   "ids_match": true,
-   "local_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
-   "local_records": 168418,
-   "payload_parity_verified": false,
-   "source_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
-   "source_records": 168418,
-   "through_source_id": 183216
-  },
-  "source_permissions": {
-   "accepted": true,
-   "checked_at": "2026-10-30T13:56:27.448497+00:00",
-   "elevated_flags": [],
-   "public_table_write_privileges": false,
-   "role_found": true
-  },
-  "storage:compression": {
-   "after": 0,
-   "complete": true,
-   "document_bytes_saved": 439029777,
-   "documents_compressed": 309719,
-   "last_success_at": "2026-10-05T22:05:26.363170+00:00",
-   "table_index": 5
-  },
-  "storage:detail": {
-   "allocated_bytes": 28468662272,
-   "captured_at": "2026-10-30T10:18:21.639938+00:00",
-   "file_bytes": {
-    "-shm": 13565952,
-    "-wal": 6973462592,
-    "database": 28468662272
-   },
-   "objects_bytes": {
-    "assessments": 245739520,
-    "contract_blobs": 653479936,
-    "contract_observations": 43311104,
-    "contract_observations_url": 5025792,
-    "contract_targets": 1359872,
-    "contract_targets_due": 581632,
-    "current_assessments": 30576640,
-    "current_live_economics": 352256,
-    "current_review_migrations": 24576,
-    "evidence": 102260736,
-    "evidence_markets": 8531968,
-    "evidence_markets_market": 7794688,
-    "evidence_series": 3973120,
-    "hydration_due": 4096,
-    "hydration_targets": 4096,
-    "live_economics": 22417408,
-    "objects": 8499654656,
-    "objects_series": 233152512,
-    "review_migrations": 102400,
-    "reviews": 323584,
-    "reviews_lookup": 16384,
-    "revisions": 12559892480,
-    "selection_active": 2961408,
-    "selection_events": 37457920,
-    "selection_events_lookup": 5013504,
-    "selection_members": 32477184,
-    "sqlite_autoindex_assessments_1": 23752704,
-    "sqlite_autoindex_contract_blobs_1": 450560,
-    "sqlite_autoindex_contract_observations_1": 3497984,
-    "sqlite_autoindex_contract_targets_1": 528384,
-    "sqlite_autoindex_current_assessments_1": 14876672,
-    "sqlite_autoindex_current_live_economics_1": 139264,
-    "sqlite_autoindex_current_review_migrations_1": 4096,
-    "sqlite_autoindex_evidence_1": 3473408,
-    "sqlite_autoindex_evidence_markets_1": 3461120,
-    "sqlite_autoindex_hydration_targets_1": 4096,
-    "sqlite_autoindex_live_economics_1": 1810432,
-    "sqlite_autoindex_objects_1": 473292800,
-    "sqlite_autoindex_review_migrations_1": 16384,
-    "sqlite_autoindex_reviews_1": 12288,
-    "sqlite_autoindex_revisions_1": 1397108736,
-    "sqlite_autoindex_selection_events_1": 4558848,
-    "sqlite_autoindex_selection_members_1": 4382720,
-    "sqlite_autoindex_state_1": 18751488,
-    "sqlite_schema": 12288,
-    "state": 35991552
-   },
-   "reusable_bytes": 3935916032,
-   "tables": {
-    "assessments": {
-     "compressed": 179917,
-     "document_bytes": 155856789,
-     "rows": 179917
+  ],
+  "evidence": [
+    {
+      "evidence_type": "DATABASE_QUERY",
+      "summary": "Cap sizing by replay of Dmmsell10's own 97 live fills, ranked by entry time within each contest, keeping the first N: cap 4 -> -3.22 USD, cap 3 -> -0.49, cap 2 -> -0.09, cap 1 -> +0.43, against an actual -3.87. The 4th position on a contest averages -0.68 USD. Concentration detail: NYYLAA 6 markets across 5 series (-1.48), STLLAD 5 across 3 (-2.60), NYMTB 5 across 2 (-1.58) = -5.66 of a -6.78 MLB drawdown; every contest holding 5+ markets lost; 33 settled non-MLB markets lost nothing. FIRST-ORDER ONLY: a blocked entry frees a slot that might have been spent elsewhere, and n is small, so the ORDERING is the finding, not the cents.",
+      "source_ref": "live_orders x positions, strategy=Dmmsell10, 2026-09-02..04",
+      "captured_at": "2026-09-05 12:46:41.439456+00:00",
+      "captured_by": "claude-code",
+      "content_hash": null
     },
-    "evidence": {
-     "compressed": 3288,
-     "document_bytes": 90544623,
-     "rows": 171564
+    {
+      "evidence_type": "RESEARCH_DOCUMENT",
+      "summary": "DECOMPOSED, and the axis this ticket names is the half that does nothing. The merged mechanism (576bcfa) was sized on Dmmsell10's 97 live fills, all from the one 26SEP02 MLB slate. Replayed over mmsell10's 3,296 settled PAPER trades across 35 settlement days (post-cohort >= 2026-08-13T18:09:40Z), keying the contest exactly as regimes.contest_key_of does: capping ONLY the cross-series contest is worth +0.09c/trade (0.649 -> 0.739), does NOT improve the worst day at all (-9.49 -> -9.56 USD), and is WORSE than its own control on daily mean/sd (0.218 -> 0.153). Capping every unit of correlation at 1 is worth +0.61c (-> 1.259), cuts the worst day 76% (-> -2.31 USD), p5 44% (-4.03 -> -2.26) and daily sd 48% (2.803 -> 1.465), at mean/sd 0.326. contest_key_of delivers that second result as a SIDE EFFECT of falling back to the event ticker outside CONTEST_GROUPED_REGIMES, which tightens ladders from the rung cap's 3 to 1. So the merged knob is right and the cross-series grouping it was built for carries almost none of the effect; the fallback treated as a conservative default is where the value is. Whoever tunes this cap should tune the fallback, not the grouping. CAVEAT: post-hoc replay of the same tape that generated the hypothesis, paper fill-everything, and it cannot model the slot a real capped book frees - it fixes the prior, it is not the result. The forward test is experiment mmsell-correlation-cap (Gmmsell0 control vs Gmmsell1 contestcap=1), registered PAPER 2026-09-05, gate paper_keep at n>=60 settlement days.",
+      "source_ref": "docs/MMSELL_CORRELATION_CAP.md",
+      "captured_at": "2026-09-05 14:00:45.741765+00:00",
+      "captured_by": "claude-code",
+      "content_hash": null
     },
-    "objects": {
-     "compressed": 7485300,
-     "document_bytes": 5911141687,
-     "rows": 8023945
+    {
+      "evidence_type": "COMMIT",
+      "summary": "SEPARATE GAP in the merged mechanism, found while building the forward test and NOT fixed there. The contest counter rides open_positions_settlement_summary, which filters open positions to the candidate's own UTC settlement DATE (day_start <= close_time < day_end). A contest's markets do not all share one date: an F5 total closes about an hour into a game and the full-game total about three, so a start around 18:30 ET puts the early legs before UTC midnight and the late ones after. On such a slate the second leg is counted against a different day's budget and the contest cap silently does not fire - precisely on the late-evening games this ticket's own drawdown came from (26SEP02 NYYLAA was a 21:38 start). The failure is invisible: skipped_contest_cap simply does not increment, so the cap looks like it had nothing to refuse. The event RUNG cap has always had the same scoping and the same exposure; it is not new, but the contest cap is the first to span series and so the first for which straddling is the common case rather than the edge. A fix is a date-unscoped read keyed on the contest (the open book is bounded by mmsell_max_open_positions, so reading all of it is cheap). NOT bundled into the forward test: changing the read would change the treatment arm mid-registration.",
+      "source_ref": "576bcfa",
+      "captured_at": "2026-09-05 14:03:30.982689+00:00",
+      "captured_by": "claude-code",
+      "content_hash": null
     },
-    "reviews": {
-     "compressed": 85,
-     "document_bytes": 168685,
-     "rows": 85
+    {
+      "evidence_type": "PR",
+      "summary": "Contest cap did not fire on a contest whose markets close on two UTC dates. As merged (576bcfa) the contest counter came from open_positions_settlement_summary, scoped to the candidate's own UTC close DATE, so one contest's legs counted against two days' budgets. Silent: skipped_contest_cap stayed 0, which is also the pre-registered gate's HOLD condition, so a broken cap and an idle one were indistinguishable. Fixed by giving the contest cap its own non-date-scoped read over the book's whole open book (repository.open_positions_contest_summary). Date, correlated-event and rung caps unchanged and still date-scoped. Proof: a new test (tests/test_mmsell_contest_cap_utc_straddle.py) fails on the pre-fix code (capped arm took both legs of one contest) and passes after; full suite exit 0 over 3510 tests; ruff clean. Scale in production (mmsell_settlement_meta, 30d, series in the contest-grouped regimes): 26 contests carrying 1873 markets close on more than one UTC date, and all 26 are multi-series, versus 25 pct of the 4139 single-date contests -- 4.2 pct of the grouped candidate universe was invisible to the cap. Correction to the diagnosis: Kalshi usually sets ONE close_time per contest across series (26SEP012210STLLAD: 206 markets, 11 series, 1 close_time), so the ticket's F5-vs-full-game timing premise is not the general mechanism; the straddlers are the MLB F5 series, soccer and tennis. Landed while both arms had 0 settled trades, so no epoch is broken.",
+      "source_ref": "https://github.com/50thycal/kalshi_bot/pull/335",
+      "captured_at": "2026-09-05 14:49:02.553210+00:00",
+      "captured_by": "cal",
+      "content_hash": null
     },
-    "revisions": {
-     "compressed": 9695394,
-     "document_bytes": 8992409224,
-     "rows": 10296704
+    {
+      "evidence_type": "DATABASE_QUERY",
+      "summary": "INDEPENDENT CORROBORATION of this ticket's central reading, from a different tape. KXALBUMEQUIV rungs are strike_type=greater ('Above 90K/100K/110K'), a strictly nested one-sided MONOTONE ladder, so one realized number resolves every rung beneath it at once - the most legible instance of the correlation unit this cap bounds. Holding entry price flat to 0.2c in the cheap band, damage rises step by step with rungs held on one album-week: 1 rung +6.28c/trade with ZERO losses in 31; 2 rungs -12.11c (18.6% loss); 3 rungs -6.47c (24.4%); 4 rungs -19.53c (38.9%), against a 6.7% break-even. Across all prices the single-rung cell is 42 book-events, +3.15 USD, no losing trade. This reaches the same place as this ticket's post-hoc mmsell10 counterfactual while not sharing its tape, and adds one number that counterfactual does not carry: CAP=3, the shipped mmsell_event_rung_cap default, does not reach the effect. DECISIVE CAVEAT: rung count is an OUTCOME, not an assignment - four rungs go cheap together exactly when the distribution is wide - so this cannot separate 'one bet at 4x size' from 'wide-uncertainty weeks are worse trades'. Only the randomized Gmmsell0/Gmmsell1 arms can. Corroboration of a prior, not a result; it licenses no change to the cap. n is nine album-weeks; the 3- and 4-rung buckets span two to three of them.",
+      "source_ref": "ops/results/rl-albumequiv-1..4; docs/MMSELL_CORRELATION_CAP.md (PR #349)",
+      "captured_at": "2026-09-06 13:38:30.197281+00:00",
+      "captured_by": "claude-research-lab",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "RESEARCH_DOCUMENT",
+      "summary": "NEGATIVE result recorded so it is not re-investigated: KXALBUMEQUIV is NOT an actionable series cell despite showing the family's worst edge (-25.5pp, -55.06 USD) on the first production run of mmsell_series_pnl. 38 distinct markets across 9 album-weeks; contest-level bootstrap CI [-26.5, +5.0], P(mean>=0)=0.136; median contest +7.17c; five of nine contests positive; three contests carry 108% of the net loss; 71% of the dollars sit above 7c, in the wide band the live regime does not trade. Real money total: 4 fills, 5 contracts, -0.62 USD, on one day. It is explicitly NOT a candidate for the live-series pause shipped in PR #345.",
+      "source_ref": "docs/MMSELL_CORRELATION_CAP.md (PR #349)",
+      "captured_at": "2026-09-06 13:38:30.235756+00:00",
+      "captured_by": "claude-research-lab",
+      "content_hash": null
     }
-   },
-   "tables_captured_at": "2026-10-30T10:18:21.639938+00:00",
-   "volume_free_bytes": 3917418496,
-   "volume_total_bytes": 39390494720
-  },
-  "storage:guard": {
-   "automatic_resume": true,
-   "bulk_headroom_bytes": 14706999296,
-   "bulk_pause_below_bytes": 7878098944,
-   "bulk_paused": false,
-   "bulk_resume_at_bytes": 9847623680,
-   "captured_at": "2026-10-30T13:56:27.758780+00:00",
-   "measurement_error": null,
-   "reusable_bytes": 3802542080,
-   "volume_free_bytes": 10904457216,
-   "volume_total_bytes": 39390494720,
-   "writes_pause_below_bytes": 1073741824,
-   "writes_paused": false,
-   "writes_resume_at_bytes": 1610612736
-  },
-  "storage:metrics": {
-   "allocated_bytes": 28468662272,
-   "captured_at": "2026-10-30T13:55:21.402332+00:00",
-   "file_bytes": {
-    "-shm": 32768,
-    "-wal": 0,
-    "database": 28468662272
-   },
-   "objects_bytes": {
-    "assessments": 245739520,
-    "contract_blobs": 653479936,
-    "contract_observations": 43311104,
-    "contract_observations_url": 5025792,
-    "contract_targets": 1359872,
-    "contract_targets_due": 581632,
-    "current_assessments": 30576640,
-    "current_live_economics": 352256,
-    "current_review_migrations": 24576,
-    "evidence": 102260736,
-    "evidence_markets": 8531968,
-    "evidence_markets_market": 7794688,
-    "evidence_series": 3973120,
-    "hydration_due": 4096,
-    "hydration_targets": 4096,
-    "live_economics": 22417408,
-    "objects": 8499654656,
-    "objects_series": 233152512,
-    "review_migrations": 102400,
-    "reviews": 323584,
-    "reviews_lookup": 16384,
-    "revisions": 12559892480,
-    "selection_active": 2961408,
-    "selection_events": 37457920,
-    "selection_events_lookup": 5013504,
-    "selection_members": 32477184,
-    "sqlite_autoindex_assessments_1": 23752704,
-    "sqlite_autoindex_contract_blobs_1": 450560,
-    "sqlite_autoindex_contract_observations_1": 3497984,
-    "sqlite_autoindex_contract_targets_1": 528384,
-    "sqlite_autoindex_current_assessments_1": 14876672,
-    "sqlite_autoindex_current_live_economics_1": 139264,
-    "sqlite_autoindex_current_review_migrations_1": 4096,
-    "sqlite_autoindex_evidence_1": 3473408,
-    "sqlite_autoindex_evidence_markets_1": 3461120,
-    "sqlite_autoindex_hydration_targets_1": 4096,
-    "sqlite_autoindex_live_economics_1": 1810432,
-    "sqlite_autoindex_objects_1": 473292800,
-    "sqlite_autoindex_review_migrations_1": 16384,
-    "sqlite_autoindex_reviews_1": 12288,
-    "sqlite_autoindex_revisions_1": 1397108736,
-    "sqlite_autoindex_selection_events_1": 4558848,
-    "sqlite_autoindex_selection_members_1": 4382720,
-    "sqlite_autoindex_state_1": 18751488,
-    "sqlite_schema": 12288,
-    "state": 35991552
-   },
-   "reusable_bytes": 3802677248,
-   "tables": {
-    "assessments": {
-     "compressed": 179917,
-     "document_bytes": 155856789,
-     "rows": 179917
-    },
-    "evidence": {
-     "compressed": 3288,
-     "document_bytes": 90544623,
-     "rows": 171564
-    },
-    "objects": {
-     "compressed": 7485300,
-     "document_bytes": 5911141687,
-     "rows": 8023945
-    },
-    "reviews": {
-     "compressed": 85,
-     "document_bytes": 168685,
-     "rows": 85
-    },
-    "revisions": {
-     "compressed": 9695394,
-     "document_bytes": 8992409224,
-     "rows": 10296704
+  ],
+  "links": [
+    {
+      "link_type": "PR",
+      "reference": "https://github.com/50thycal/kalshi_bot/pull/349",
+      "label": "KXALBUMEQUIV corroboration of the ladder reading; cap=3 may be too loose",
+      "created_at": "2026-09-06 13:38:30.310736+00:00"
     }
-   },
-   "tables_captured_at": "2026-10-30T10:18:21.639938+00:00",
-   "volume_free_bytes": 10904424448,
-   "volume_total_bytes": 39390494720
-  }
- },
- "objects": {
-  "event": 941912,
-  "market": 7142782,
-  "series": 15462
- },
- "retention": {
-  "backup_retired": {
-   "at": "2026-10-28T14:38:38.734608+00:00",
-   "bytes": 1269624832
-  },
-  "last_report": {
-   "assessments": {
-    "after": 585836,
-    "current_kept": 177655,
-    "deleted_rows": 6597,
-    "examined": 186183,
-    "recent_kept": 1931,
-    "superseded_bytes": 5665387,
-    "superseded_rows": 6597
-   },
-   "backup": {
-    "bytes": 0,
-    "compression_complete": true,
-    "exists": false
-   },
-   "completed_at": "2026-10-29T20:23:41.348106+00:00",
-   "disk_bytes_freed_estimate": {
-    "final_only": 984729437,
-    "notes": null
-   },
-   "kept": "current objects; open markets; selected markets/events/series; event and series revisions; evidence; reviews; current assessments; contract documents",
-   "mode": "execute",
-   "notes_size_ratio": null,
-   "phase": "done",
-   "revisions": {
-    "bytes_full": 4166793155,
-    "bytes_removed": 621295739,
-    "bytes_written": 0,
-    "final_only_bytes": 621295739,
-    "final_only_markets": 787067,
-    "final_only_rows": 884755,
-    "markets_eligible": 1749477,
-    "markets_examined": 7044345,
-    "open_kept": 270134,
-    "rows_already_compact": 0,
-    "rows_compacted": 0,
-    "rows_deleted": 884755,
-    "rows_full": 4992923,
-    "rules_changed_kept": 962410,
-    "sample_bytes_after": 0,
-    "sample_bytes_before": 0,
-    "sample_rows": 0,
-    "selected_kept": 1923942,
-    "unreadable": 0
-   },
-   "series_eligible": 0,
-   "started_at": "2026-10-29T18:16:59.934204+00:00",
-   "top_series": [],
-   "treatment": "final_only"
-  },
-  "passes": {
-   "dry_run": {
-    "assessments": {
-     "after": 555262,
-     "current_kept": 156628,
-     "deleted_rows": 0,
-     "examined": 555262,
-     "recent_kept": 772,
-     "superseded_bytes": 314031611,
-     "superseded_rows": 397862
-    },
-    "backup": {
-     "bytes": 1269624832,
-     "compression_complete": true,
-     "exists": true
-    },
-    "completed_at": "2026-10-28T03:25:21.587736+00:00",
-    "cursor": "WTI-24OCT23-T76.99",
-    "mode": "dry_run",
-    "phase": "done",
-    "revisions": {
-     "bytes_full": 8409665792,
-     "bytes_removed": 0,
-     "bytes_written": 0,
-     "final_only_bytes": 4983861919,
-     "final_only_markets": 3216450,
-     "final_only_rows": 4643727,
-     "markets_eligible": 4130719,
-     "markets_examined": 6080026,
-     "open_kept": 225487,
-     "rows_already_compact": 0,
-     "rows_compacted": 0,
-     "rows_deleted": 0,
-     "rows_full": 8599873,
-     "rules_changed_kept": 914269,
-     "sample_bytes_after": 246011486,
-     "sample_bytes_before": 336278224,
-     "sample_rows": 343863,
-     "selected_kept": 1723820,
-     "unreadable": 0
-    },
-    "started_at": "2026-10-27T03:01:45.341997+00:00",
-    "treatment": null
-   },
-   "execute": {
-    "assessments": {
-     "after": 585836,
-     "current_kept": 177655,
-     "deleted_rows": 6597,
-     "examined": 186183,
-     "recent_kept": 1931,
-     "superseded_bytes": 5665387,
-     "superseded_rows": 6597
-    },
-    "backup": {
-     "bytes": 0,
-     "compression_complete": true,
-     "exists": false
-    },
-    "completed_at": "2026-10-29T20:23:41.348106+00:00",
-    "cursor": "WTI-24OCT23-T76.99",
-    "mode": "execute",
-    "phase": "done",
-    "revisions": {
-     "bytes_full": 4166793155,
-     "bytes_removed": 621295739,
-     "bytes_written": 0,
-     "final_only_bytes": 621295739,
-     "final_only_markets": 787067,
-     "final_only_rows": 884755,
-     "markets_eligible": 1749477,
-     "markets_examined": 7044345,
-     "open_kept": 270134,
-     "rows_already_compact": 0,
-     "rows_compacted": 0,
-     "rows_deleted": 884755,
-     "rows_full": 4992923,
-     "rules_changed_kept": 962410,
-     "sample_bytes_after": 0,
-     "sample_bytes_before": 0,
-     "sample_rows": 0,
-     "selected_kept": 1923942,
-     "unreadable": 0
-    },
-    "started_at": "2026-10-29T18:16:59.934204+00:00",
-    "treatment": "final_only"
-   }
-  }
- },
- "series_reviews": {
-  "needs_review": 15462,
-  "reviewed": 0
- }
+  ]
 }
