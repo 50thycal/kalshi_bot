@@ -1,0 +1,27 @@
+# ops request [READ]
+# type=script  id=rl-s3-run1-20261030
+# code ef0ef89a6b96535653611b31442b32b978104ab6 · started 2026-10-30T14:48:02Z
+LIMM programme outcomes — reward per market-day vs cheap-side settlement (pre-registered docs/LIMM_PROGRAMME_OUTCOMES.md)
+
+hourly snapshots since 2026-09-17T00:00:00+00:00: 90088
+qualifying cheap-side hours: 42726; markets: 811
+settled markets scored: 95; excluded {'unsettled/void': 716}
+
+== series (reward window from 2026-10-16; settlement since 2026-09-17)
+  series                     live mkt-days    $/md  thin% settled  evts  G c/ct   ±se  label
+  KXTRUMPMENTIONB             yes       26   $0.87      0       8     2  +18.54  5.46  REWARD-ONLY
+  KXTRUMPMENTION              yes       67   $0.42      0      32    11  +12.79  6.87  NO-CALL
+  KXYTVIEWSHIGH               yes       42   $0.29      0       0     0     n/a   n/a  NO-CALL
+  ... 23 series below every floor not printed
+
+== live universe pooled
+  reward $0.45/market-day over 146 market-days; settlement G +13.94c ± 5.57 (40 markets, 13 events)
+
+== VERDICT (descriptive; authorizes nothing)
+  S1 universe is not the bottleneck: PASS (none)
+  S2 live-universe cheap side: not shown overpriced
+  ADD-CANDIDATE    0  
+  COSTLY-REWARD    0  
+  REWARD-ONLY      1  KXTRUMPMENTIONB*
+  AVOID            0  
+  (* = in the live universe)
