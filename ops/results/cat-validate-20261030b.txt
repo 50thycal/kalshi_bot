@@ -1,0 +1,751 @@
+# ops request [READ]
+# type=catalog  id=cat-validate-20261030b
+# code 7cd07ca2a9e1ead71de7e0be45c49444ab1ea551 · started 2026-10-30T13:57:29Z
+{
+ "assessment_contexts": 176513,
+ "backfill": {
+  "live": {
+   "coverage": {
+    "checked_at": "2026-10-30T13:55:21.098645+00:00",
+    "definition": "sorted-source-ids-sha256-v1",
+    "ids_match": true,
+    "local_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
+    "local_records": 3294,
+    "payload_parity_verified": false,
+    "source_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
+    "source_records": 3294,
+    "through_source_id": 4964
+   },
+   "initial_complete": true,
+   "local_records": 3294,
+   "reconciliation_complete": true
+  },
+  "paper": {
+   "coverage": {
+    "checked_at": "2026-10-30T13:51:49.048806+00:00",
+    "definition": "sorted-source-ids-sha256-v1",
+    "ids_match": true,
+    "local_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
+    "local_records": 168418,
+    "payload_parity_verified": false,
+    "source_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
+    "source_records": 168418,
+    "through_source_id": 183216
+   },
+   "initial_complete": true,
+   "local_records": 168418,
+   "reconciliation_complete": true
+  }
+ },
+ "captured_at": "2026-10-30T13:58:08.088494+00:00",
+ "confidence_calibrated": false,
+ "consumer_cutover": false,
+ "contract_archive": {
+  "blobs": 5362,
+  "bytes": 648503467,
+  "historical_versions_verified": false,
+  "observations": 42449,
+  "targets_by_status": {
+   "captured": 6124,
+   "refresh_failed": 47
+  }
+ },
+ "evidence": {
+  "live": 3294,
+  "paper": 168418
+ },
+ "history_policy": {
+  "active_by_reason": {
+   "legacy_registry": 142,
+   "live_evidence": 3174,
+   "paper_evidence": 51430,
+   "review_draft": 3,
+   "series_review": 13
+  },
+  "bootstrap": {
+   "added": 45130,
+   "complete": true,
+   "completed_at": "2026-10-12T03:25:29.178151+00:00",
+   "examined": 141697,
+   "last_page_at": "2026-10-12T03:25:29.927435+00:00",
+   "phase": 4,
+   "started_at": "2026-10-12T02:03:53.202740+00:00",
+   "version": "selection-membership-v1"
+  },
+  "bootstrap_phase_name": null,
+  "compact_revisions_satisfy_payload_proof": false,
+  "first_selective_at": null,
+  "hydration": {
+   "by_status": {},
+   "oldest_pending_enqueued_at": null
+  },
+  "membership_ready": true,
+  "membership_version": "selection-membership-v1",
+  "policy_configured": "broad_full",
+  "policy_effective": false,
+  "policy_history": [
+   {
+    "at": "2026-10-12T02:03:53.214994+00:00",
+    "configured": "broad_full",
+    "effective": false
+   }
+  ],
+  "revision_writes": {
+   "compact": 0,
+   "full": 8500753,
+   "since": "2026-10-12T02:04:49.906173+00:00"
+  },
+  "selected_by_scope": {
+   "market": 51430,
+   "series": 142
+  },
+  "selected_sample_is_unbiased_control": false,
+  "selection_is_qualification": false
+ },
+ "jobs": {
+  "cursor:live": {
+   "after": 4964,
+   "caught_up_at": "2026-10-30T13:56:27.463715+00:00",
+   "initial_complete": true,
+   "initial_coverage_verified": true,
+   "last_complete_at": "2026-10-30T13:55:21.098645+00:00",
+   "last_coverage_check_at": "2026-10-30T13:55:21.098645+00:00",
+   "last_success_at": "2026-10-30T13:56:27.463694+00:00",
+   "pass_started_at": "2026-10-29T14:39:00.323141+00:00",
+   "reconciliation_complete": true
+  },
+  "cursor:paper": {
+   "after": 183216,
+   "caught_up_at": "2026-10-30T13:56:27.359374+00:00",
+   "initial_complete": true,
+   "initial_coverage_verified": true,
+   "last_complete_at": "2026-10-30T13:51:49.048806+00:00",
+   "last_coverage_check_at": "2026-10-30T13:51:49.048806+00:00",
+   "last_success_at": "2026-10-30T13:56:27.359346+00:00",
+   "pass_started_at": "2026-10-29T14:39:00.304184+00:00",
+   "reconciliation_complete": true
+  },
+  "discovery:backoff": {
+   "failures": 0,
+   "not_before_unix": 0
+  },
+  "discovery:events": {
+   "complete": false,
+   "completed_at": null,
+   "cursor": "CgYI1Ju11gYSFEtYV1RJMTVNLTI2T0NUMTIxMTMw",
+   "last_success_at": "2026-10-30T13:56:25.725898+00:00",
+   "previous_sweep": {
+    "completed_at": "2026-10-30T02:05:21.764738+00:00",
+    "sweep_pages": 4364,
+    "sweep_records": 872730,
+    "sweep_started_at": "2026-10-19T01:00:20.025575+00:00"
+   },
+   "sweep_pages": 614,
+   "sweep_records": 122800,
+   "sweep_started_at": "2026-10-30T02:06:00.072982+00:00"
+  },
+  "discovery:live_outcomes": {
+   "after": "KXRAIN-26OCT14-DET",
+   "last_not_found": null,
+   "last_success_at": "2026-10-30T13:56:27.746023+00:00"
+  },
+  "discovery:series": {
+   "complete": true,
+   "completed_at": "2026-10-29T14:42:04.221187+00:00",
+   "cursor": null,
+   "last_success_at": "2026-10-29T14:42:04.221163+00:00",
+   "previous_sweep": {
+    "completed_at": "2026-10-28T14:43:03.105527+00:00",
+    "sweep_pages": 1,
+    "sweep_records": 15441,
+    "sweep_started_at": "2026-10-28T14:38:51.831808+00:00"
+   },
+   "sweep_pages": 1,
+   "sweep_records": 15462,
+   "sweep_started_at": "2026-10-29T14:39:01.142004+00:00"
+  },
+  "discovery:updates": {
+   "cursor": "",
+   "last_success_at": "2026-10-30T13:56:27.111691+00:00",
+   "scan_started_at": 1793368585,
+   "since": 1793368525
+  },
+  "documents:backoff": 1791838231.5613632,
+  "documents:priority_after": "KXXRPMAXMON",
+  "documents:scan": {
+   "after": "",
+   "restart_at": 1793398134.6759467
+  },
+  "evaluation": {
+   "calibration": "pending",
+   "contexts": 176513,
+   "last_success_at": "2026-10-30T13:57:36.615421+00:00",
+   "qualified": 0
+  },
+  "evaluation_requested": null,
+  "evidence:changes": 74040,
+  "history:writes": {
+   "compact": 0,
+   "full": 8500743,
+   "since": "2026-10-12T02:04:49.906173+00:00"
+  },
+  "job:discovery:events": {
+   "error": null,
+   "http_status": null,
+   "last_deferred_at": "2026-10-30T10:17:38.275292+00:00",
+   "last_error_at": "2026-10-18T17:46:24.511893+00:00",
+   "last_success_at": "2026-10-30T13:56:25.753425+00:00",
+   "records": 200,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:discovery:live_outcomes": {
+   "error": null,
+   "http_status": null,
+   "last_error_at": "2026-10-22T07:56:59.617370+00:00",
+   "last_success_at": "2026-10-30T13:56:27.751200+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:discovery:series": {
+   "error": null,
+   "http_status": null,
+   "last_deferred_at": "2026-10-30T10:17:38.270002+00:00",
+   "last_success_at": "2026-10-30T13:55:51.443447+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:discovery:updates": {
+   "error": null,
+   "http_status": null,
+   "last_deferred_at": "2026-10-30T10:17:38.281335+00:00",
+   "last_error_at": "2026-10-16T10:37:28.385971+00:00",
+   "last_success_at": "2026-10-30T13:56:27.117259+00:00",
+   "records": 102,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:documents:capture": {
+   "error": null,
+   "http_status": null,
+   "last_error_at": "2026-10-30T00:46:09.373219+00:00",
+   "last_success_at": "2026-10-30T13:56:27.296743+00:00",
+   "records": 1,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:evaluation": {
+   "error": null,
+   "http_status": null,
+   "last_success_at": "2026-10-30T13:57:36.633344+00:00",
+   "records": 176513,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:import:live": {
+   "error": null,
+   "http_status": null,
+   "last_error_at": "2026-10-07T02:33:37.780265+00:00",
+   "last_success_at": "2026-10-30T13:56:27.475147+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:import:paper": {
+   "error": null,
+   "http_status": null,
+   "last_error_at": "2026-10-07T02:33:37.774509+00:00",
+   "last_success_at": "2026-10-30T13:56:27.367880+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:selection:bootstrap": {
+   "error": null,
+   "http_status": null,
+   "last_success_at": "2026-10-30T13:55:51.429422+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:selection:hydration": {
+   "error": null,
+   "http_status": null,
+   "last_success_at": "2026-10-30T13:56:27.129199+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "job:storage:compression": {
+   "error": null,
+   "http_status": null,
+   "last_success_at": "2026-10-05T22:05:26.371636+00:00",
+   "records": 0,
+   "retry_at_unix": null
+  },
+  "job:storage:metrics": {
+   "error": null,
+   "http_status": null,
+   "last_success_at": "2026-10-30T13:55:21.408563+00:00",
+   "records": 0,
+   "retry_at_unix": null,
+   "storage_deferral": null
+  },
+  "last_reconciliation": 1793284740.162741,
+  "live_economics_summary": {
+   "attributed": 3074,
+   "blocked": 100,
+   "blocked_reason_counts": {
+    "final_settlement_missing": 9,
+    "ownership_ambiguous_or_unverified": 88,
+    "settlement_time_missing_or_future": 9,
+    "unsupported_or_conflicting_settlement": 16
+   },
+   "exchange_fill_coverage_verified": false,
+   "markets": 3174,
+   "source_execution_time_restored_fills": 3294,
+   "source_quantity_rounding_restored_fills": 113
+  },
+  "live_projection_version": "canonical-direction-v2",
+  "manual_import:live": {
+   "last_success_at": "2026-10-05T19:16:59.645300+00:00",
+   "provenance": "ops SELECT-only bounded latest-200 export catalog-live-export-20261005-1; partial source coverage",
+   "records": 200
+  },
+  "manual_import:paper": {
+   "last_success_at": "2026-10-05T19:16:59.504256+00:00",
+   "provenance": "ops SELECT-only bounded latest-200 export catalog-paper-export-20261005-1; partial source coverage",
+   "records": 200
+  },
+  "registry_seed": {
+   "historical_signatures": 40,
+   "last_success_at": "2026-10-30T03:36:49.898215+00:00",
+   "series": 142
+  },
+  "selection:bootstrap": {
+   "added": 45130,
+   "after": null,
+   "complete": true,
+   "completed_at": "2026-10-12T03:25:29.178151+00:00",
+   "covered": {
+    "evidence": 141554,
+    "evidence_markets": 141554,
+    "reviews": 0
+   },
+   "examined": 141697,
+   "last_page_at": "2026-10-12T03:25:29.927435+00:00",
+   "phase": 4,
+   "started_at": "2026-10-12T02:03:53.202740+00:00",
+   "version": "selection-membership-v1"
+  },
+  "selection:counts": {
+   "active_by_reason": {
+    "legacy_registry": 142,
+    "live_evidence": 3174,
+    "paper_evidence": 51430,
+    "review_draft": 3,
+    "series_review": 13
+   },
+   "selected_by_scope": {
+    "market": 51430,
+    "series": 142
+   }
+  },
+  "selection:policy": {
+   "configured": "broad_full",
+   "effective": false,
+   "first_selective_at": null,
+   "since": "2026-10-12T02:03:53.214994+00:00",
+   "transitions": [
+    {
+     "at": "2026-10-12T02:03:53.214994+00:00",
+     "configured": "broad_full",
+     "effective": false
+    }
+   ]
+  },
+  "source_coverage:live": {
+   "checked_at": "2026-10-30T13:55:21.098645+00:00",
+   "definition": "sorted-source-ids-sha256-v1",
+   "ids_match": true,
+   "local_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
+   "local_records": 3294,
+   "payload_parity_verified": false,
+   "source_ids_fingerprint": "ec03ccc5f75601247ab884821d0bf970c0fdf5ee74b00db0f8c9d6018a68dd66",
+   "source_records": 3294,
+   "through_source_id": 4964
+  },
+  "source_coverage:paper": {
+   "checked_at": "2026-10-30T13:51:49.048806+00:00",
+   "definition": "sorted-source-ids-sha256-v1",
+   "ids_match": true,
+   "local_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
+   "local_records": 168418,
+   "payload_parity_verified": false,
+   "source_ids_fingerprint": "fb55e53eee7cb0c348599de8b394612c7f4f27ce355c9efe11c92751e80dc7af",
+   "source_records": 168418,
+   "through_source_id": 183216
+  },
+  "source_permissions": {
+   "accepted": true,
+   "checked_at": "2026-10-30T13:56:27.448497+00:00",
+   "elevated_flags": [],
+   "public_table_write_privileges": false,
+   "role_found": true
+  },
+  "storage:compression": {
+   "after": 0,
+   "complete": true,
+   "document_bytes_saved": 439029777,
+   "documents_compressed": 309719,
+   "last_success_at": "2026-10-05T22:05:26.363170+00:00",
+   "table_index": 5
+  },
+  "storage:detail": {
+   "allocated_bytes": 28468662272,
+   "captured_at": "2026-10-30T10:18:21.639938+00:00",
+   "file_bytes": {
+    "-shm": 13565952,
+    "-wal": 6973462592,
+    "database": 28468662272
+   },
+   "objects_bytes": {
+    "assessments": 245739520,
+    "contract_blobs": 653479936,
+    "contract_observations": 43311104,
+    "contract_observations_url": 5025792,
+    "contract_targets": 1359872,
+    "contract_targets_due": 581632,
+    "current_assessments": 30576640,
+    "current_live_economics": 352256,
+    "current_review_migrations": 24576,
+    "evidence": 102260736,
+    "evidence_markets": 8531968,
+    "evidence_markets_market": 7794688,
+    "evidence_series": 3973120,
+    "hydration_due": 4096,
+    "hydration_targets": 4096,
+    "live_economics": 22417408,
+    "objects": 8499654656,
+    "objects_series": 233152512,
+    "review_migrations": 102400,
+    "reviews": 323584,
+    "reviews_lookup": 16384,
+    "revisions": 12559892480,
+    "selection_active": 2961408,
+    "selection_events": 37457920,
+    "selection_events_lookup": 5013504,
+    "selection_members": 32477184,
+    "sqlite_autoindex_assessments_1": 23752704,
+    "sqlite_autoindex_contract_blobs_1": 450560,
+    "sqlite_autoindex_contract_observations_1": 3497984,
+    "sqlite_autoindex_contract_targets_1": 528384,
+    "sqlite_autoindex_current_assessments_1": 14876672,
+    "sqlite_autoindex_current_live_economics_1": 139264,
+    "sqlite_autoindex_current_review_migrations_1": 4096,
+    "sqlite_autoindex_evidence_1": 3473408,
+    "sqlite_autoindex_evidence_markets_1": 3461120,
+    "sqlite_autoindex_hydration_targets_1": 4096,
+    "sqlite_autoindex_live_economics_1": 1810432,
+    "sqlite_autoindex_objects_1": 473292800,
+    "sqlite_autoindex_review_migrations_1": 16384,
+    "sqlite_autoindex_reviews_1": 12288,
+    "sqlite_autoindex_revisions_1": 1397108736,
+    "sqlite_autoindex_selection_events_1": 4558848,
+    "sqlite_autoindex_selection_members_1": 4382720,
+    "sqlite_autoindex_state_1": 18751488,
+    "sqlite_schema": 12288,
+    "state": 35991552
+   },
+   "reusable_bytes": 3935916032,
+   "tables": {
+    "assessments": {
+     "compressed": 179917,
+     "document_bytes": 155856789,
+     "rows": 179917
+    },
+    "evidence": {
+     "compressed": 3288,
+     "document_bytes": 90544623,
+     "rows": 171564
+    },
+    "objects": {
+     "compressed": 7485300,
+     "document_bytes": 5911141687,
+     "rows": 8023945
+    },
+    "reviews": {
+     "compressed": 85,
+     "document_bytes": 168685,
+     "rows": 85
+    },
+    "revisions": {
+     "compressed": 9695394,
+     "document_bytes": 8992409224,
+     "rows": 10296704
+    }
+   },
+   "tables_captured_at": "2026-10-30T10:18:21.639938+00:00",
+   "volume_free_bytes": 3917418496,
+   "volume_total_bytes": 39390494720
+  },
+  "storage:guard": {
+   "automatic_resume": true,
+   "bulk_headroom_bytes": 14706999296,
+   "bulk_pause_below_bytes": 7878098944,
+   "bulk_paused": false,
+   "bulk_resume_at_bytes": 9847623680,
+   "captured_at": "2026-10-30T13:56:27.758780+00:00",
+   "measurement_error": null,
+   "reusable_bytes": 3802542080,
+   "volume_free_bytes": 10904457216,
+   "volume_total_bytes": 39390494720,
+   "writes_pause_below_bytes": 1073741824,
+   "writes_paused": false,
+   "writes_resume_at_bytes": 1610612736
+  },
+  "storage:metrics": {
+   "allocated_bytes": 28468662272,
+   "captured_at": "2026-10-30T13:55:21.402332+00:00",
+   "file_bytes": {
+    "-shm": 32768,
+    "-wal": 0,
+    "database": 28468662272
+   },
+   "objects_bytes": {
+    "assessments": 245739520,
+    "contract_blobs": 653479936,
+    "contract_observations": 43311104,
+    "contract_observations_url": 5025792,
+    "contract_targets": 1359872,
+    "contract_targets_due": 581632,
+    "current_assessments": 30576640,
+    "current_live_economics": 352256,
+    "current_review_migrations": 24576,
+    "evidence": 102260736,
+    "evidence_markets": 8531968,
+    "evidence_markets_market": 7794688,
+    "evidence_series": 3973120,
+    "hydration_due": 4096,
+    "hydration_targets": 4096,
+    "live_economics": 22417408,
+    "objects": 8499654656,
+    "objects_series": 233152512,
+    "review_migrations": 102400,
+    "reviews": 323584,
+    "reviews_lookup": 16384,
+    "revisions": 12559892480,
+    "selection_active": 2961408,
+    "selection_events": 37457920,
+    "selection_events_lookup": 5013504,
+    "selection_members": 32477184,
+    "sqlite_autoindex_assessments_1": 23752704,
+    "sqlite_autoindex_contract_blobs_1": 450560,
+    "sqlite_autoindex_contract_observations_1": 3497984,
+    "sqlite_autoindex_contract_targets_1": 528384,
+    "sqlite_autoindex_current_assessments_1": 14876672,
+    "sqlite_autoindex_current_live_economics_1": 139264,
+    "sqlite_autoindex_current_review_migrations_1": 4096,
+    "sqlite_autoindex_evidence_1": 3473408,
+    "sqlite_autoindex_evidence_markets_1": 3461120,
+    "sqlite_autoindex_hydration_targets_1": 4096,
+    "sqlite_autoindex_live_economics_1": 1810432,
+    "sqlite_autoindex_objects_1": 473292800,
+    "sqlite_autoindex_review_migrations_1": 16384,
+    "sqlite_autoindex_reviews_1": 12288,
+    "sqlite_autoindex_revisions_1": 1397108736,
+    "sqlite_autoindex_selection_events_1": 4558848,
+    "sqlite_autoindex_selection_members_1": 4382720,
+    "sqlite_autoindex_state_1": 18751488,
+    "sqlite_schema": 12288,
+    "state": 35991552
+   },
+   "reusable_bytes": 3802677248,
+   "tables": {
+    "assessments": {
+     "compressed": 179917,
+     "document_bytes": 155856789,
+     "rows": 179917
+    },
+    "evidence": {
+     "compressed": 3288,
+     "document_bytes": 90544623,
+     "rows": 171564
+    },
+    "objects": {
+     "compressed": 7485300,
+     "document_bytes": 5911141687,
+     "rows": 8023945
+    },
+    "reviews": {
+     "compressed": 85,
+     "document_bytes": 168685,
+     "rows": 85
+    },
+    "revisions": {
+     "compressed": 9695394,
+     "document_bytes": 8992409224,
+     "rows": 10296704
+    }
+   },
+   "tables_captured_at": "2026-10-30T10:18:21.639938+00:00",
+   "volume_free_bytes": 10904424448,
+   "volume_total_bytes": 39390494720
+  }
+ },
+ "objects": {
+  "event": 941912,
+  "market": 7142782,
+  "series": 15462
+ },
+ "retention": {
+  "backup_retired": {
+   "at": "2026-10-28T14:38:38.734608+00:00",
+   "bytes": 1269624832
+  },
+  "last_report": {
+   "assessments": {
+    "after": 585836,
+    "current_kept": 177655,
+    "deleted_rows": 6597,
+    "examined": 186183,
+    "recent_kept": 1931,
+    "superseded_bytes": 5665387,
+    "superseded_rows": 6597
+   },
+   "backup": {
+    "bytes": 0,
+    "compression_complete": true,
+    "exists": false
+   },
+   "completed_at": "2026-10-29T20:23:41.348106+00:00",
+   "disk_bytes_freed_estimate": {
+    "final_only": 984729437,
+    "notes": null
+   },
+   "kept": "current objects; open markets; selected markets/events/series; event and series revisions; evidence; reviews; current assessments; contract documents",
+   "mode": "execute",
+   "notes_size_ratio": null,
+   "phase": "done",
+   "revisions": {
+    "bytes_full": 4166793155,
+    "bytes_removed": 621295739,
+    "bytes_written": 0,
+    "final_only_bytes": 621295739,
+    "final_only_markets": 787067,
+    "final_only_rows": 884755,
+    "markets_eligible": 1749477,
+    "markets_examined": 7044345,
+    "open_kept": 270134,
+    "rows_already_compact": 0,
+    "rows_compacted": 0,
+    "rows_deleted": 884755,
+    "rows_full": 4992923,
+    "rules_changed_kept": 962410,
+    "sample_bytes_after": 0,
+    "sample_bytes_before": 0,
+    "sample_rows": 0,
+    "selected_kept": 1923942,
+    "unreadable": 0
+   },
+   "series_eligible": 0,
+   "started_at": "2026-10-29T18:16:59.934204+00:00",
+   "top_series": [],
+   "treatment": "final_only"
+  },
+  "passes": {
+   "dry_run": {
+    "assessments": {
+     "after": 555262,
+     "current_kept": 156628,
+     "deleted_rows": 0,
+     "examined": 555262,
+     "recent_kept": 772,
+     "superseded_bytes": 314031611,
+     "superseded_rows": 397862
+    },
+    "backup": {
+     "bytes": 1269624832,
+     "compression_complete": true,
+     "exists": true
+    },
+    "completed_at": "2026-10-28T03:25:21.587736+00:00",
+    "cursor": "WTI-24OCT23-T76.99",
+    "mode": "dry_run",
+    "phase": "done",
+    "revisions": {
+     "bytes_full": 8409665792,
+     "bytes_removed": 0,
+     "bytes_written": 0,
+     "final_only_bytes": 4983861919,
+     "final_only_markets": 3216450,
+     "final_only_rows": 4643727,
+     "markets_eligible": 4130719,
+     "markets_examined": 6080026,
+     "open_kept": 225487,
+     "rows_already_compact": 0,
+     "rows_compacted": 0,
+     "rows_deleted": 0,
+     "rows_full": 8599873,
+     "rules_changed_kept": 914269,
+     "sample_bytes_after": 246011486,
+     "sample_bytes_before": 336278224,
+     "sample_rows": 343863,
+     "selected_kept": 1723820,
+     "unreadable": 0
+    },
+    "started_at": "2026-10-27T03:01:45.341997+00:00",
+    "treatment": null
+   },
+   "execute": {
+    "assessments": {
+     "after": 585836,
+     "current_kept": 177655,
+     "deleted_rows": 6597,
+     "examined": 186183,
+     "recent_kept": 1931,
+     "superseded_bytes": 5665387,
+     "superseded_rows": 6597
+    },
+    "backup": {
+     "bytes": 0,
+     "compression_complete": true,
+     "exists": false
+    },
+    "completed_at": "2026-10-29T20:23:41.348106+00:00",
+    "cursor": "WTI-24OCT23-T76.99",
+    "mode": "execute",
+    "phase": "done",
+    "revisions": {
+     "bytes_full": 4166793155,
+     "bytes_removed": 621295739,
+     "bytes_written": 0,
+     "final_only_bytes": 621295739,
+     "final_only_markets": 787067,
+     "final_only_rows": 884755,
+     "markets_eligible": 1749477,
+     "markets_examined": 7044345,
+     "open_kept": 270134,
+     "rows_already_compact": 0,
+     "rows_compacted": 0,
+     "rows_deleted": 884755,
+     "rows_full": 4992923,
+     "rules_changed_kept": 962410,
+     "sample_bytes_after": 0,
+     "sample_bytes_before": 0,
+     "sample_rows": 0,
+     "selected_kept": 1923942,
+     "unreadable": 0
+    },
+    "started_at": "2026-10-29T18:16:59.934204+00:00",
+    "treatment": "final_only"
+   }
+  }
+ },
+ "series_reviews": {
+  "needs_review": 15462,
+  "reviewed": 0
+ }
+}
