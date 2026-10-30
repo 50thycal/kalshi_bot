@@ -1,0 +1,47 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "53ced35979f61bdd187895cdb58e6404513b2d8c",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-30T20:46:52Z",
+  "id": "rl-limm-shadow-on-20261030",
+  "mutation": {
+    "changes": {
+      "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS": {
+        "after": "300",
+        "before": "(unset)",
+        "requested": "300"
+      },
+      "LIQUIDITY_INCENTIVE_SHADOW_ENABLED": {
+        "after": "true",
+        "before": "(unset)",
+        "requested": "true"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 2,
+    "targets": [
+      "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS",
+      "LIQUIDITY_INCENTIVE_SHADOW_ENABLED"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {
+    "purpose": "owner request 2026-10-30: resume incentive programme data collection (study 3)"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-limm-shadow-on-20261030.receipt.json",
+  "result_file": "ops/results/rl-limm-shadow-on-20261030.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41125868686",
+  "service": "main",
+  "started_at": "2026-10-30T20:46:47Z",
+  "targets": [
+    "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS",
+    "LIQUIDITY_INCENTIVE_SHADOW_ENABLED"
+  ],
+  "type": "env"
+}
