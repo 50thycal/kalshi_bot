@@ -1,7 +1,10 @@
 # LIMM programme outcomes — which incentive programmes pay, net of how their cheap side settles
 
 **Status:** PRE-REGISTERED 2026-10-30 (Research Lab), before the probe ran and before any settlement
-of this population was read. Verdict: _pending — §7 after the run._
+of this population was read. **Verdict 2026-10-30 (`rl-s3-run1-20261030`): HOLD (instrument).**
+- **S1** reads PASS only vacuously: no series outside the live universe was collected in the
+  reward window.
+- **S2:** the cheap side is not shown overpriced. It settled above its price, on a thin sample.
 
 Catalog research plan, study 3 (`docs/CATALOG_RESEARCH_PLAN.md`, WS-023). Owner chose study 3 over
 study 2 on 2026-10-30. Probe: `scripts/limm_programme_outcomes.py` (read-only, ops-allowlisted).
@@ -114,4 +117,47 @@ settlement population. No orders, no writes.
 
 ## 7. Results
 
-_Pending._
+Ops run `rl-s3-run1-20261030` (default-branch code `ef0ef89a`); `rl-s3-run1b-20261030` is the
+same run with every series printed.
+
+**Coverage, the binding fact.**
+- **Snapshots:** 90,088 hourly snapshots and 42,726 qualifying cheap-side hours, on **811
+  markets** across **26 series**. Kalshi lists about 171k liquidity-programme markets.
+- **The out-of-universe shadow collector stopped on 2026-10-07.** It ran on the evo service
+  (`liquidity_incentive_shadow_enabled`, top 150 programmes by reward), and that service was
+  deleted. Since then only the live runner snapshots, and only the markets it fetches, which
+  are mostly the mention universe.
+- **So in the reward window (from 10-16) only the four live-universe series have
+  market-days.** The 22 other series appear only before 10-07, each with 1–11 settled markets.
+- **Settlement:** 95 of 811 markets had settled. 716 are still open, mostly weeks-out
+  programmes.
+
+**Live universe (reward window 10-16 → 10-30, thin hours: 0%).**
+
+| series | market-days | reward $/md | settled | events | G ¢/ct (held to settlement) | label |
+|---|---|---|---|---|---|---|
+| KXTRUMPMENTIONB | 26 | $0.87 | 8 | 2 | +18.5 ± 5.5 | REWARD-ONLY |
+| KXTRUMPMENTION | 67 | $0.42 | 32 | 11 | +12.8 ± 6.9 | NO-CALL |
+| KXYTVIEWSHIGH | 42 | $0.29 | 0 | 0 | n/a | NO-CALL |
+| KXMAMDANIMENTION | 11 | $0.21 | 0 | 0 | n/a | THIN |
+| **pooled** | **146** | **$0.45** | **40** | **13** | **+13.9 ± 5.6** | |
+
+- **The estimator agrees with realised payouts.** $0.45–0.87 per market-day is consistent with the
+  book's realised ~$4–5.5 a day over 4–10 quoted markets (§9.69). No thin-book hours occurred
+  in the live universe, so the regime that broke the placement model's L0 does not arise here.
+- **S1 — PASS, vacuous.** No out-of-universe series reached the 20-market-day floor, because none
+  was collected after 10-07. This is not evidence that the universe is right.
+- **S2 — the cheap side is not overpriced; it settled above its price.** +13.9¢ per contract over 40
+  markets in 13 events: mention long shots won more often than priced. That is thin (13 events)
+  and descriptive. It runs against the book's stop at half price, which sells exactly these
+  contracts, but it does not test that stop.
+
+**Reading.**
+- Study 3 cannot rank the opportunity population from current data. The pre-registered answer
+  is **HOLD (instrument)**.
+- **What would answer it** (an owner decision, not taken here):
+  - (a) Turn the shadow collector back on for one worker (`LIQUIDITY_INCENTIVE_SHADOW_ENABLED`,
+    paper only, book-event tape still off). It costs Postgres growth from snapshots of about
+    150 markets.
+  - (b) Pre-register a v2 on the 2026-09-17 → 10-07 shadow window. Its reward side is unread; its
+    settlement side was partly printed here, so it would be read as reward-only.

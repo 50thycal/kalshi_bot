@@ -1,5 +1,20 @@
 # Weather-markets research journal
 
+## LIMM programme outcomes 2026-10-30 — HOLD (instrument); out-of-universe collection stopped 10-07
+
+Research Lab, catalog study 3 ([doc](LIMM_PROGRAMME_OUTCOMES.md),
+`scripts/limm_programme_outcomes.py`, ops `rl-s3-run1-20261030`).
+- **Population:** 811 snapshotted markets in 26 series. The shadow collector that watched the
+  top 150 programmes ran on the evo service, which was deleted on 10-07. Since then only the
+  live runner's mention markets are recorded.
+- **Live universe:** $0.45 per market-day pooled, best KXTRUMPMENTIONB at $0.87. This matches
+  realised payouts.
+- **Cheap side settled above its price:** +13.9¢ per contract over 40 markets in 13 events.
+  Thin; descriptive only.
+- **S1 (universe is not the bottleneck)** passes only vacuously.
+- **To answer it:** re-enable the shadow collector (an owner decision, Postgres cost), or run a
+  reward-only v2 on the 09-17 → 10-07 window.
+
 ## MMSELL fill forward read 2026-10-29 — P-SLOW NO PASS at floor; P-SPREAD HOLD
 
 Research Lab ([doc](MMSELL_FILL_FORWARD_READ.md), `scripts/mmsell_fill_forward_read.py`, ops
