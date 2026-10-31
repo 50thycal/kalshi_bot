@@ -203,4 +203,11 @@ They arm after about a day of paper. Plan and sequence: `docs/MMSELL_WIN_SET_CAN
 - Kmmsell10's last manual stop read: +$6.60 on 310 settled. Its manual routine is deleted, since
   the new book's keep gate evaluates. The scorecard now lists the new books first.
 
-Open: the 24h silent-arm check (scheduled 2026-10-31 14:00Z).
+**2026-10-31 14:00Z — 24h silent-arm check: PASS** (`rs24-1031`).
+- **Live orders since the 13:43Z swap:**
+  - `Xmmsell10`: 14 orders on 12 markets, 4 of them KXTRUMPMENTION.
+  - `Ymmsell10`: 12 orders on 10 markets, 4 KXTRUMPMENTION.
+  - `Kmmsell10` / `Vmmsell10`: none.
+- **Paper side:** the twin rows `Xmmsell10_pt4` / `Ymmsell10_pt4` are open and trading (14 and 12). `Smmsell10` / `Zmmsell10` paper have 9 each.
+- **Pair:** `gate:dedup` worked on both tags. `gate:held` fired 2 each, all on 2026-10-30 by 15:40Z, on markets the draining books held, and none since.
+- **Integrity:** no integrity events since the swap.
