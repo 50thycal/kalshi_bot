@@ -1,4 +1,80 @@
 # ops request [READ]
-# type=noop
-# code 968c70862abc800c8a95d9c7aa87cccaabc15b9b · started 2026-10-31T02:54:35Z
-(noop — nothing to do)
+# type=script  id=rl-s4-run1-20261031
+# code 443ccc3f25a3df9087b2f470bdc6634a5cf4da08 · started 2026-10-31T03:08:34Z
+Untraded-capacity census (pre-registered docs/UNTRADED_CAPACITY_CENSUS.md)
+
+bot has traded 973 series; the MMSELL scan has seen 878
+settled non-parlay markets, last 60 days: 3000000 in 3000 pages (TRUNCATED at --max-pages) [1052s]
+series with settled markets: 2635; categories known for 2634
+  tier A     :  1740 series,   71 pass the volume/cadence rule
+  tier B     :    90 series,   10 pass the volume/cadence rule
+  tier traded:   805 series,  181 pass the volume/cadence rule
+
+== SHORTLIST TIER A — never traded, never seen by the MMSELL scan (71 pass; top 40)
+  series                       category               freq      settled events dates     vol60d   medvol ladder  yes%  flag
+  KXGOLD15M                    Commodities            fifteen_m    2251   2251    30  896280008   392615      1    48  
+  KXXRP15M                     Crypto                 fifteen_m    3205   3205    35  292821668    84242      1    50  crypto
+  KXWTI15M                     Commodities            fifteen_m    2476   2476    35  244548377    94108      1    52  
+  KXSOL15M                     Crypto                 fifteen_m    3205   3205    35  240278943    67696      1    49  crypto
+  KXDOGE15M                    Crypto                 fifteen_m    3204   3204    35  145326840    40913      1    49  crypto
+  KXSILVER15M                  Commodities            fifteen_m    2251   2251    30  121261938    49162      1    48  
+  KXHYPE15M                    Crypto                 fifteen_m    3204   3204    35   95447700    25734      1    50  crypto
+  KXZEC15M                     Crypto                 fifteen_m    3205   3205    35   86257750    23515      1    48  crypto
+  KXNEAR15M                    Crypto                 fifteen_m    3205   3205    35   78776172    20534      1    49  crypto
+  KXBNB15M                     Crypto                 fifteen_m    3204   3204    35   69841913    18703      1    51  crypto
+  KXNATGAS15M                  Commodities            fifteen_m    2476   2476    35   57479928    18997      1    49  
+  KXCOPPER15M                  Commodities            fifteen_m    2251   2251    30   41348692    15400      1    49  
+  KXPALLADIUM15M               Commodities            fifteen_m    2235   2235    30   18716558     6447      1    46  
+  KXEURUSD15M                  Financials             fifteen_m    2355   2355    30   17968390     5322      1    50  
+  KXPLATINUM15M                Commodities            fifteen_m    2235   2235    30   17842245     6315      1    48  
+  KXGBPUSD15M                  Financials             fifteen_m    2355   2355    30   15654805     4143      1    51  
+  KXUSDJPY15M                  Financials             fifteen_m    2355   2355    30   14951059     4122      1    51  
+  KXEBASKETBALLGAME            Sports                 custom       4218   2109    25    6746512      757      2    50  
+  KXUSDCAD15M                  Financials             fifteen_m    1595   1595    21    5301248     2339      1    48  
+  KXAUDUSD15M                  Financials             fifteen_m    1595   1595    21    4884193     2317      1    54  
+  KXNFLRACE                    Sports                 custom       1125    375    20    4008822     1720      3    33  
+  KXMLBINNINGTOTAL             Sports                 custom        935    495    26    3419876     1023      2    31  
+  KXNFLFIRSTTDTEAM             Sports                 custom        225     75    20    2945986     5716      3    33  
+  KXMLBINNINGWIN               Sports                 custom       1485    495    26    2480161      758      3    33  
+  KXARGPREMDIVBTTS             Sports                 custom         64     64    22    2377312    27569      1    52  
+  KXNHL2PTOTAL                 Sports                 custom       1106    216    33    2274646      771      5    42  
+  KXBRASILEIRO1H               Sports                 custom        153     51    20    1835210     8570      3    33  
+  KXBRASILEIROBSPREAD          Sports                 custom        258     56    20    1573390     2871      4    11  
+  KXNHL1P                      Sports                 custom        648    216    33    1465906     1241      3    33  
+  KXNFLWINS                    Sports                 custom        150     32    20    1327134     4232      5    49  
+  KXBRASILEIROB1H              Sports                 custom        168     56    21    1197516     4939      3    33  
+  KXAAAGASDNY                  Economics              daily         561     33    33    1172529     1100     17    45  
+  KXNHL3PTOTAL                 Sports                 custom       1103    216    32    1149465      519      5    40  
+  KXAAAGASDCT                  Economics              daily         561     33    33    1122637     1260     17    42  
+  KXNCAAWVMATCH                Sports                 custom        690    345    28    1077851      714      2    50  
+  KXAAAGASDMA                  Economics              daily         561     33    33    1025043     1100     17    42  
+  KXAAAGASDWA                  Economics              daily         561     33    33    1022561     1041     17    39  
+  KXAAAGASDTX                  Economics              daily         571     33    33    1011420     1100     17    41  
+  KXNHL3P                      Sports                 custom        648    216    32     941883      698      3    33  
+  KXAHLGAME                    Sports                 custom        298    149    21     940599     2238      2    50  
+
+== SHORTLIST TIER B — seen by the MMSELL scan, never traded (10 pass; top 40)
+  series                       category               freq      settled events dates     vol60d   medvol ladder  yes%  flag
+  KXNHL1PTOTAL                 Sports                 custom       1012    216    33    9097550     2002      5    39  
+  KXNFLTEAMSACK                Sports                 custom        750     75    20    4698655     4340     10    28  
+  KXNBLGAME                    Sports                 custom         72     36    24    3651572    46391      2    50  
+  KXMLBOUTS                    Sports                 custom         93     51    26    2779913    22951      2    44  
+  KXBRASILEIROB1HTOTAL         Sports                 custom        168     56    21    2536627     8993      3    35  
+  KXNFLPASSATT                 Sports                 custom        450     75    20    2161337     1510      6    53  
+  KXDIMAYORBTTS                Sports                 custom         62     62    31    1967332    26361      1    53  
+  KXMLBF7                      Sports                 custom        165     55    26    1682385     7939      3    33  
+  KXAAAGASDNJ                  Economics              daily         571     33    33    1271576     1207     17    42  
+  KXAAAGASDIL                  Economics              daily         641     33    33    1210373     1000     17    44  
+
+== shortlisted series by category (tiers A+B)
+  Commodities                       7 series    1397477746 contracts / 60d
+  Crypto                            7 series    1008750986 contracts / 60d
+  Sports                           47 series      76779081 contracts / 60d
+  Financials                        5 series      58759694 contracts / 60d
+  Economics                        13 series      12599386 contracts / 60d
+  Politics                          1 series        408392 contracts / 60d
+  Entertainment                     1 series        387509 contracts / 60d
+
+== VERDICT
+  C1 capacity exists (81 shortlisted vs bar 10): PASS — hand the shortlist to kalshi-idea-model
+  A census authorizes nothing; volume is not edge.
