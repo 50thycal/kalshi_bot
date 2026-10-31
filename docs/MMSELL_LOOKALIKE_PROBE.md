@@ -565,3 +565,34 @@ first (2026-10-31).
   void as a misconfigured control, not a result. Corrected control:
   `{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--prefixes","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl2-20261031"}`.
   The family run had not been made, and nothing else changes.
+
+## 17. State gas ladders — result: HOLD, promising, short of the floor (2026-10-31)
+
+- **Control:** `rl-gas-ctl2-20261031` (city rain family) reproduced: 78 entries over 53 days,
+  +4.08¢, t 2.06. The run counts.
+- **The family run's own "control not reproduced" line is moot:** it ran `--no-control` by design
+  (§16).
+
+**Family `KXAAAGASD-STATES`** (`rl-gas-fam-20261031`):
+
+| | value |
+|---|---|
+| priced markets | 1,902 (87% quoted ≥ 1 h before close: FEASIBLE) |
+| first entries / family-days | **73 / 31** |
+| implied vs realized YES | 6.47% vs 1.37% (1 loss) |
+| gross ¢/contract | **+5.10** (+12.00 per family-day) |
+| t per family-day | **2.94** |
+| months | 2026-08 +6.7 (6), 09 +3.9 (38), 10 +6.3 (29): both halves positive |
+
+- **Per series:** six of seven states are positive with no losses. NJ is −6.0 (8 entries, the one
+  loss).
+- **Verdict: HOLD.** It fails PROMOTE on entries (73 against 100) and the stricter §7-D t bar
+  (2.94 against 3.0). It is not killed.
+- **Why it is short:** the state series were listed only from 2026-08/09, so the history caps the
+  sample, not the edge.
+- **Against the stated prior:** the national daily gas series lost −2.4¢ on paper (§12), while
+  the state ladders read the other way on the replay. That is gross and fill-assumed (study 1's
+  caveat), so it is a lead to re-read, not a contradiction resolved.
+- **Re-run trigger:** the same commands, unchanged, once the family can reach 100 first entries
+  (at about 30 a month, early December). If it then reads CANDIDATE, a taker-price read comes
+  before any paper-tape nomination (§16).

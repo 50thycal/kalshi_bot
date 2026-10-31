@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## State gas ladders 2026-10-31 — HOLD, promising: +5.1¢, 1 loss in 73, short of the 100-entry floor
+
+[Lookalike §16–17](MMSELL_LOOKALIKE_PROBE.md), the first screen from the census shortlist. Seven
+state AAA gas ladders pooled as one bet per day, mmsell10 cell, rain control reproduced.
+- **Result:** 73 entries over 31 days, 1 loss (implied 6.5% against realized 1.4%), +5.10¢ gross,
+  t 2.94, both months positive.
+- **Verdict: HOLD.** Entries are 73 against the 100 floor and t is 2.94 against 3.0, because the
+  series only date from Aug/Sep.
+- **Next:** re-run unchanged in early December. A CANDIDATE then still needs a taker read before
+  any paper tape.
+
 ## Untraded-capacity census 2026-10-31 — 81 liquid series nothing here has touched (study 4)
 
 Research Lab, catalog study 4 ([doc](UNTRADED_CAPACITY_CENSUS.md),
