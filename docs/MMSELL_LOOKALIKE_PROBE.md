@@ -527,3 +527,35 @@ reach the volume cut. `mmsell10` and its live twins show settled mention trades 
 +4.5–6.5¢ (ops read `mention-paper-20261015a`; Experiment OS holds the standings). Nothing here
 argues for stopping that, and nothing argues for a dedicated mentions book. The recent months are
 strong, but the earlier months are not, and the gate was set to catch exactly that.
+
+## 16. State gas ladders — pre-registration (2026-10-31, before the run)
+
+**Origin:** the untraded-capacity census (`docs/UNTRADED_CAPACITY_CENSUS.md` §6) shortlisted the
+daily state AAA gas ladders as the rain-shaped group. The owner asked for them to be screened
+first (2026-10-31).
+
+- **Series, pooled as one family `KXAAAGASD-STATES`** (one bet per day; every state follows the
+  same gasoline market): KXAAAGASDNY, KXAAAGASDCT, KXAAAGASDMA, KXAAAGASDWA, KXAAAGASDTX,
+  KXAAAGASDNJ, KXAAAGASDIL.
+- **Construction:** the shipped mmsell10 cell (5 ≤ mid ≤ 10, YES ask ≤ 7), first in-cell entry at
+  the replay's hours, NO at the no bid, held to settlement, gross, one contract.
+  `--per-series 300 --stratify day`.
+- **Control:** KXRAIN in a separate run (`--family` pools every series in a run, the control
+  included). The control must reproduce (≥ +2.0¢, t ≥ 2) or the family run is void.
+- **Gate (§3 plus the stricter §7-D reading, unchanged):** CANDIDATE requires all of:
+  - PROMOTE under §3 (≥ 100 first entries, ≥ 30 family-days, ≥ +2.0¢, positive in ≥ 2/3 of
+    months);
+  - per-day t ≥ 3.0;
+  - both calendar halves positive.
+
+  KILL is ≥ 100 entries and ≤ 0¢. Otherwise HOLD.
+- **Stated prior, against:** the national daily gas series was already traded by paper at −2.4¢
+  (§12), and study 1 read KXAAAGASD as NO-CALL (maker +0.51¢ ± 4.53).
+- **Consequence of a CANDIDATE:**
+  - a taker-price read comes first (study 1: a fill-assumed maker replay overstates realized
+    fills);
+  - only then may a paper tape be nominated through Experiment OS;
+  - nothing is authorized here.
+- **Commands:**
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXAAAGASDNY,KXAAAGASDCT,KXAAAGASDMA,KXAAAGASDWA,KXAAAGASDTX,KXAAAGASDNJ,KXAAAGASDIL","--no-control","--family","KXAAAGASD-STATES","--per-series","300","--stratify","day"],"id":"rl-gas-fam-20261031"}`
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl-20261031"}`
