@@ -527,3 +527,72 @@ reach the volume cut. `mmsell10` and its live twins show settled mention trades 
 +4.5–6.5¢ (ops read `mention-paper-20261015a`; Experiment OS holds the standings). Nothing here
 argues for stopping that, and nothing argues for a dedicated mentions book. The recent months are
 strong, but the earlier months are not, and the gate was set to catch exactly that.
+
+## 16. State gas ladders — pre-registration (2026-10-31, before the run)
+
+**Origin:** the untraded-capacity census (`docs/UNTRADED_CAPACITY_CENSUS.md` §6) shortlisted the
+daily state AAA gas ladders as the rain-shaped group. The owner asked for them to be screened
+first (2026-10-31).
+
+- **Series, pooled as one family `KXAAAGASD-STATES`** (one bet per day; every state follows the
+  same gasoline market): KXAAAGASDNY, KXAAAGASDCT, KXAAAGASDMA, KXAAAGASDWA, KXAAAGASDTX,
+  KXAAAGASDNJ, KXAAAGASDIL.
+- **Construction:** the shipped mmsell10 cell (5 ≤ mid ≤ 10, YES ask ≤ 7), first in-cell entry at
+  the replay's hours, NO at the no bid, held to settlement, gross, one contract.
+  `--per-series 300 --stratify day`.
+- **Control:** KXRAIN in a separate run (`--family` pools every series in a run, the control
+  included). The control must reproduce (≥ +2.0¢, t ≥ 2) or the family run is void.
+- **Gate (§3 plus the stricter §7-D reading, unchanged):** CANDIDATE requires all of:
+  - PROMOTE under §3 (≥ 100 first entries, ≥ 30 family-days, ≥ +2.0¢, positive in ≥ 2/3 of
+    months);
+  - per-day t ≥ 3.0;
+  - both calendar halves positive.
+
+  KILL is ≥ 100 entries and ≤ 0¢. Otherwise HOLD.
+- **Stated prior, against:** the national daily gas series was already traded by paper at −2.4¢
+  (§12), and study 1 read KXAAAGASD as NO-CALL (maker +0.51¢ ± 4.53).
+- **Consequence of a CANDIDATE:**
+  - a taker-price read comes first (study 1: a fill-assumed maker replay overstates realized
+    fills);
+  - only then may a paper tape be nominated through Experiment OS;
+  - nothing is authorized here.
+- **Commands:**
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXAAAGASDNY,KXAAAGASDCT,KXAAAGASDMA,KXAAAGASDWA,KXAAAGASDTX,KXAAAGASDNJ,KXAAAGASDIL","--no-control","--family","KXAAAGASD-STATES","--per-series","300","--stratify","day"],"id":"rl-gas-fam-20261031"}`
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl-20261031"}`
+- **Correction, before the family run (2026-10-31).** The first control run
+  (`rl-gas-ctl-20261031`: 29 entries, NOT REPRODUCED) used `--series KXRAIN`. That is the single
+  `KXRAIN` series, not the city rain family §3's control pools via category discovery, so it is
+  void as a misconfigured control, not a result. Corrected control:
+  `{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--prefixes","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl2-20261031"}`.
+  The family run had not been made, and nothing else changes.
+
+## 17. State gas ladders — result: HOLD, promising, short of the floor (2026-10-31)
+
+- **Control:** `rl-gas-ctl2-20261031` (city rain family) reproduced: 78 entries over 53 days,
+  +4.08¢, t 2.06. The run counts.
+- **The family run's own "control not reproduced" line is moot:** it ran `--no-control` by design
+  (§16).
+
+**Family `KXAAAGASD-STATES`** (`rl-gas-fam-20261031`):
+
+| | value |
+|---|---|
+| priced markets | 1,902 (87% quoted ≥ 1 h before close: FEASIBLE) |
+| first entries / family-days | **73 / 31** |
+| implied vs realized YES | 6.47% vs 1.37% (1 loss) |
+| gross ¢/contract | **+5.10** (+12.00 per family-day) |
+| t per family-day | **2.94** |
+| months | 2026-08 +6.7 (6), 09 +3.9 (38), 10 +6.3 (29): both halves positive |
+
+- **Per series:** six of seven states are positive with no losses. NJ is −6.0 (8 entries, the one
+  loss).
+- **Verdict: HOLD.** It fails PROMOTE on entries (73 against 100) and the stricter §7-D t bar
+  (2.94 against 3.0). It is not killed.
+- **Why it is short:** the state series were listed only from 2026-08/09, so the history caps the
+  sample, not the edge.
+- **Against the stated prior:** the national daily gas series lost −2.4¢ on paper (§12), while
+  the state ladders read the other way on the replay. That is gross and fill-assumed (study 1's
+  caveat), so it is a lead to re-read, not a contradiction resolved.
+- **Re-run trigger:** the same commands, unchanged, once the family can reach 100 first entries
+  (at about 30 a month, early December). If it then reads CANDIDATE, a taker-price read comes
+  before any paper-tape nomination (§16).
