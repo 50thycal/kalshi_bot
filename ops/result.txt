@@ -1,23 +1,4 @@
 # ops request [READ]
-# type=db  id=rs24-1031
-# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T14:01:16Z
-src                   tag            n   mkts  trump  last                                    
---------------------  -------------  --  ----  -----  ----------------------------------------
-live                  Xmmsell10      14  12    4      2026-10-31 10:32:57.734175+00           
-live                  Ymmsell10      12  10    4      2026-10-31 10:32:59.239704+00           
-paper                 Smmsell10      9   9     3      2026-10-31 10:32:50.267703+00           
-paper                 Xmmsell10_pt4  14  14    3      2026-10-31 10:32:59.499525+00           
-paper                 Ymmsell10_pt4  12  12    3      2026-10-31 10:32:59.525625+00           
-paper                 Zmmsell10      9   9     3      2026-10-31 10:32:50.339713+00           
-parity:gate:dedup     Xmmsell10      40  6            2026-10-31 11:37:25.819435+00           
-parity:gate:dedup     Ymmsell10      37  5            2026-10-31 11:37:25.81956+00            
-parity:gate:held      Xmmsell10      2   2            2026-10-30 15:40:19.060847+00           
-parity:gate:held      Ymmsell10      2   2            2026-10-30 15:40:19.060923+00           
-parity:not_attempted  Xmmsell10      46  21           2026-10-31 10:33:33.127423+00           
-parity:not_attempted  Ymmsell10      27  19           2026-10-31 10:33:33.127619+00           
-parity:placed         Xmmsell10      14  12           2026-10-31 10:32:59.537715+00           
-parity:placed         Ymmsell10      12  10           2026-10-31 10:32:59.537782+00           
-twin_row              Xmmsell10_pt4  1                open since 2026-10-30 13:45:21.923618+00
-twin_row              Ymmsell10_pt4  1                open since 2026-10-30 13:45:21.933658+00
-
-(16 rows)
+# type=noop  id=noop-1031
+# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T14:01:37Z
+(noop — nothing to do)
