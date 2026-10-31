@@ -1,25 +1,23 @@
 # ops request [READ]
-# type=script  id=rl-gas-ctl-20261031
-# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T13:59:29Z
-=== MMSELL look-alike probe — 1 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+# type=db  id=rs24-1031
+# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T14:01:16Z
+src                   tag            n   mkts  trump  last                                    
+--------------------  -------------  --  ----  -----  ----------------------------------------
+live                  Xmmsell10      14  12    4      2026-10-31 10:32:57.734175+00           
+live                  Ymmsell10      12  10    4      2026-10-31 10:32:59.239704+00           
+paper                 Smmsell10      9   9     3      2026-10-31 10:32:50.267703+00           
+paper                 Xmmsell10_pt4  14  14    3      2026-10-31 10:32:59.499525+00           
+paper                 Ymmsell10_pt4  12  12    3      2026-10-31 10:32:59.525625+00           
+paper                 Zmmsell10      9   9     3      2026-10-31 10:32:50.339713+00           
+parity:gate:dedup     Xmmsell10      40  6            2026-10-31 11:37:25.819435+00           
+parity:gate:dedup     Ymmsell10      37  5            2026-10-31 11:37:25.81956+00            
+parity:gate:held      Xmmsell10      2   2            2026-10-30 15:40:19.060847+00           
+parity:gate:held      Ymmsell10      2   2            2026-10-30 15:40:19.060923+00           
+parity:not_attempted  Xmmsell10      46  21           2026-10-31 10:33:33.127423+00           
+parity:not_attempted  Ymmsell10      27  19           2026-10-31 10:33:33.127619+00           
+parity:placed         Xmmsell10      14  12           2026-10-31 10:32:59.537715+00           
+parity:placed         Ymmsell10      12  10           2026-10-31 10:32:59.537782+00           
+twin_row              Xmmsell10_pt4  1                open since 2026-10-30 13:45:21.923618+00
+twin_row              Ymmsell10_pt4  1                open since 2026-10-30 13:45:21.933658+00
 
-  series                 listed settled              span priced   >=1h
-  KXRAIN                   2672    2595  2026-07..2026-10    206    97%
-
-  A. PER SERIES (first in-cell entry)
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXRAIN                    29    26    6.62    3.45     1   +3.17    +3.54   0.91 0/0   HOLD
-
-  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
-                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXRAIN                    29    26    6.62    3.45     1   +3.17    +3.54   0.91 0/0   HOLD
-
-  C. PER FAMILY BY MONTH (n, c/ct)
-  KXRAIN                 2026-07: 5 @ +6.4, 2026-08: 8 @ +6.5, 2026-09: 9 @ +6.7, 2026-10: 7 @ -7.4
-
-  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXRAIN                   199/206      97% FEASIBLE
-
-  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
-
-  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+(16 rows)
