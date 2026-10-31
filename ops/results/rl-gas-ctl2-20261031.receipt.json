@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a4a46cad33cb783c0816f03fce6014e04a48d942",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-10-31T14:10:49Z",
+  "id": "rl-gas-ctl2-20261031",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-gas-ctl2-20261031.receipt.json",
+  "result_file": "ops/results/rl-gas-ctl2-20261031.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41208174048",
+  "service": null,
+  "started_at": "2026-10-31T14:01:21Z",
+  "targets": [],
+  "type": "script"
+}
