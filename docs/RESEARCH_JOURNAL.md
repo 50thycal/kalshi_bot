@@ -1,5 +1,21 @@
 # Weather-markets research journal
 
+## Untraded-capacity census 2026-10-31 — 81 liquid series nothing here has touched (study 4)
+
+Research Lab, catalog study 4 ([doc](UNTRADED_CAPACITY_CENSUS.md),
+`scripts/untraded_capacity_census.py`, ops `rl-s4-run1-20261031`). Kalshi markets settled in the
+last 60 days, parlays excluded. The pull stopped at its 3M-market bound, so these are lower bounds.
+
+**C1 PASS:** 81 series settle regularly with real volume and were never traded (71 never even
+scanned). They fall into three groups:
+- **15-minute up/down markets on commodities and FX:** gold alone traded 896M contracts in 60
+  days. A new venue, but a 50/50 mechanic, not cheap tails.
+- **Daily state gas-price ladders:** the same shape as rain, the one cell that held at the
+  taker price.
+- **Untouched sports structures:** NHL periods, NFL team props, MLB innings.
+
+The shortlist goes to `kalshi-idea-model`, state gas ladders first.
+
 ## LIMM study 3 v2 + exits vs holding 2026-10-30 — NFL ladders pay ~2x; the stop has saved money so far
 
 [Doc §8–11](LIMM_PROGRAMME_OUTCOMES.md).

@@ -1,6 +1,8 @@
 # Untraded-capacity census — where could a new book live?
 
-**Status:** PRE-REGISTERED 2026-10-31 (Research Lab), before the census ran. Result: _pending — §6._
+**Status:** PRE-REGISTERED 2026-10-31 (Research Lab), before the census ran. **Result 2026-10-31
+(`rl-s4-run1-20261031`): C1 PASS — 81 series shortlisted (71 tier A, 10 tier B), a lower bound
+because the market pull was truncated (§6).**
 
 Catalog research plan, study 4 (`docs/CATALOG_RESEARCH_PLAN.md`, WS-023). Owner asked for it on
 2026-10-31. Probe: `scripts/untraded_capacity_census.py` (read-only, ops-allowlisted). This is a
@@ -70,4 +72,60 @@ Ranked by total 60-day volume. The top 40 per tier are printed.
 
 ## 6. Result
 
-_Pending._
+**Coverage.**
+- The bot has traded 973 series, and the MMSELL scan has seen 878.
+- The settled pull **hit the 3,000-page bound: 3.0M markets, not complete.** Counts are therefore
+  lower bounds for any series paged late.
+- C1 can only gain from a complete pull, so the PASS stands.
+- 2,635 series had settled markets.
+
+| tier | series | pass the rule |
+|---|---|---|
+| A — never traded, never scanned | 1,740 | **71** |
+| B — scanned, never traded | 90 | **10** |
+| traded (reported only) | 805 | 181 |
+
+**Shortlisted volume by category (A+B, 60 days):**
+
+| category | series | volume |
+|---|---|---|
+| Commodities | 7 | 1.40B |
+| Crypto | 7 | 1.01B |
+| Sports | 47 | 77M |
+| Financials | 5 | 59M |
+| Economics | 13 | 12.6M |
+| Politics | 1 | 0.4M |
+| Entertainment | 1 | 0.4M |
+
+**What the shortlist is made of.**
+
+1. **15-minute up/down markets on commodities and FX (tier A).**
+   - Series: KXGOLD15M (896M contracts in 60 days, the largest series on the shortlist),
+     KXWTI15M, KXSILVER15M, KXNATGAS15M, KXCOPPER15M, KXPALLADIUM15M, KXPLATINUM15M; and on FX
+     KXEURUSD15M, KXGBPUSD15M, KXUSDJPY15M, KXUSDCAD15M, KXAUDUSD15M.
+   - Shape: one market per event, about a 50% YES rate, about 2,300 settlements each.
+   - These are **not** cheap-tail markets, so an MMSELL cell does not apply. Their mechanic is
+     the 15-minute settlement-average pin already studied on crypto (`PIN15_THESIS.md`). The
+     crypto 15M series appear here too, flagged `crypto`.
+   - Commodities and FX are a venue the bot has never touched.
+2. **Daily state gas-price ladders (Economics, tier A/B).**
+   - Series: KXAAAGASD for NY, CT, MA, WA, TX, NJ and IL.
+   - Shape: 33 daily close dates, 17-rung ladders, about 1,000–1,300 contracts per market.
+   - This is the **same contract shape as KXRAIN** (a measured quantity on a daily threshold
+     ladder), the one cell that held at the taker price in study 1.
+   - The national KXAAAGASD and KXAAAGASW are traded and were NO-CALL in study 1.
+3. **Untouched sports structures.**
+   - Tier B: NHL period totals and winners (KXNHL1PTOTAL 9.1M), NFL team sacks, NFL passing
+     attempts, MLB first-seven innings and outs, NBL games, Brazilian Serie B halves.
+   - Tier A: MLB inning totals and winners, NFL race and first-TD team, NHL 2nd/3rd period
+     totals, AHL, NCAA women's volleyball, eBasketball.
+
+**Reading.**
+- **C1 PASS:** capacity exists outside everything the bot has touched.
+- **By §4, the shortlist goes to `kalshi-idea-model` screening.**
+- **Recommended screening order,** by fit with what the evidence says works:
+  1. the state gas ladders (rain-shaped; cheapest to replay with `mmsell_lookalike_probe`);
+  2. NHL period totals and the NFL team-prop ladders (wide ladders, tier B);
+  3. commodity/FX 15-minute markets, as a new mechanic, not an MMSELL cell.
+- **Weather is not on the shortlist,** because the bot already trades it, so the
+  graveyard-weather flag never fired.
