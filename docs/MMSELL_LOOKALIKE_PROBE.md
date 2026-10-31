@@ -559,3 +559,9 @@ first (2026-10-31).
 - **Commands:**
   - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXAAAGASDNY,KXAAAGASDCT,KXAAAGASDMA,KXAAAGASDWA,KXAAAGASDTX,KXAAAGASDNJ,KXAAAGASDIL","--no-control","--family","KXAAAGASD-STATES","--per-series","300","--stratify","day"],"id":"rl-gas-fam-20261031"}`
   - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl-20261031"}`
+- **Correction, before the family run (2026-10-31).** The first control run
+  (`rl-gas-ctl-20261031`: 29 entries, NOT REPRODUCED) used `--series KXRAIN`. That is the single
+  `KXRAIN` series, not the city rain family §3's control pools via category discovery, so it is
+  void as a misconfigured control, not a result. Corrected control:
+  `{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--prefixes","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-gas-ctl2-20261031"}`.
+  The family run had not been made, and nothing else changes.
