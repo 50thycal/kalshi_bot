@@ -1,143 +1,37 @@
 # ops request [READ]
-# type=script  id=rl-gas-ctl2-20261031
-# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T14:01:21Z
-=== MMSELL look-alike probe — 60 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+# type=script  id=rl-gas-fam-20261031
+# code a4a46cad33cb783c0816f03fce6014e04a48d942 · started 2026-10-31T14:11:22Z
+=== MMSELL look-alike probe — 7 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
 
   series                 listed settled              span priced   >=1h
-  KXRAIN                   2672    2598  2026-07..2026-10    206    97%
-  KXRAINABQM                  7       0                 -      0      -
-  KXRAINATLM                  7       0                 -      0      -
-  KXRAINAUSM                 88      76  2025-12..2026-10     76    33%
-  KXRAINBOSM                  7       0                 -      0      -
-  KXRAINCHIM                 98      86  2025-07..2026-10     85    35%
-  KXRAINCLLM                 14       3  2026-10..2026-10      3   100%
-  KXRAINCMHM                 14       1  2026-10..2026-10      0      -
-  KXRAIND                     0       0                 -      0      -
-  KXRAINDALM                 95      81  2025-12..2026-10     79    42%
-  KXRAINDAUS                  1       0                 -      0      -
-  KXRAINDBOS                  1       0                 -      0      -
-  KXRAINDC                    0       0                 -      0      -
-  KXRAINDCHI                  2       0                 -      0      -
-  KXRAINDCLL                  1       0                 -      0      -
-  KXRAINDCM                   7       0                 -      0      -
-  KXRAINDDAL                  1       0                 -      0      -
-  KXRAINDDC                   1       0                 -      0      -
-  KXRAINDDET                  1       0                 -      0      -
-  KXRAINDENM                 91      77  2025-12..2026-10     74    43%
-  KXRAINDHOU                  1       0                 -      0      -
-  KXRAINDIND                  1       0                 -      0      -
-  KXRAINDLAX                  0       0                 -      0      -
-  KXRAINDLV                   1       0                 -      0      -
-  KXRAINDMIA                  1       0                 -      0      -
-  KXRAINDMKE                  1       0                 -      0      -
-  KXRAINDNOLA                 1       0                 -      0      -
-  KXRAINDNYC                  5       1  2026-09..2026-09      1   100%
-  KXRAINDPARIS                1       0                 -      0      -
-  KXRAINDPHIL                 1       0                 -      0      -
-  KXRAINDPIT                  1       0                 -      0      -
-  KXRAINDSAN                  2       0                 -      0      -
-  KXRAINDSATX                 1       0                 -      0      -
-  KXRAINDSEA                  1       0                 -      0      -
-  KXRAINDSFO                  1       0                 -      0      -
-  KXRAINDTPA                  1       0                 -      0      -
-  KXRAINDTWM                  7       0                 -      0      -
-  KXRAINELECTION             49       0                 -      0      -
-  KXRAINEWRM                  7       0                 -      0      -
-  KXRAINHOLIDAY              20      20  2026-07..2026-07     20    90%
-  KXRAINHOUM                 88      75  2025-12..2026-10     75    43%
-  KXRAININDM                  7       0                 -      0      -
-  KXRAINLAXM                 92      78  2025-12..2026-10     75    31%
-  KXRAINLEXM                 14       1  2026-10..2026-10      1   100%
-  KXRAINLVM                   7       0                 -      0      -
-  KXRAINMIAM                100      90  2025-12..2026-10     88    53%
-  KXRAINMINM                  7       0                 -      0      -
-  KXRAINMKEM                 14       1  2026-10..2026-10      1   100%
-  KXRAINNAPAM                24       0                 -      0      -
-  KXRAINNOLAM                 7       0                 -      0      -
-  KXRAINNYC                 551     551  2025-01..2026-07    300    83%
-  KXRAINNYCM                139     123  2024-12..2026-10    116    32%
-  KXRAINNYCW                  4       4  2026-10..2026-10      4    75%
-  KXRAINOKCM                  7       0                 -      0      -
-  KXRAINONT                   1       0                 -      0      -
-  KXRAINPHILM                 7       0                 -      0      -
-  KXRAINPHXM                  7       0                 -      0      -
-  KXRAINPITM                  7       0                 -      0      -
-  KXRAINPVDM                 14       2  2026-10..2026-10      2   100%
-  KXRAINSATXM                 7       0                 -      0      -
+  KXAAAGASDNY              1156    1139  2026-08..2026-10    268    79%
+  KXAAAGASDCT               663     646  2026-09..2026-10    266    89%
+  KXAAAGASDMA               921     904  2026-09..2026-10    260    89%
+  KXAAAGASDWA              1041    1024  2026-09..2026-10    300    90%
+  KXAAAGASDTX              1280    1263  2026-08..2026-10    276    91%
+  KXAAAGASDNJ              1203    1186  2026-08..2026-10    264    84%
+  KXAAAGASDIL              1336    1319  2026-08..2026-10    268    87%
 
   A. PER SERIES (first in-cell entry)
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXRAIN                    29    26    6.62    3.45     1   +3.17    +3.54   0.91 0/0   HOLD
-  KXRAINABQM                 0
-  KXRAINATLM                 0
-  KXRAINAUSM                 3     2    6.67    0.00     0   +6.67   +10.00   3.33 0/0   HOLD
-  KXRAINBOSM                 0
-  KXRAINCHIM                 5     5    6.80    0.00     0   +6.80    +6.80  34.00 0/0   HOLD
-  KXRAINCLLM                 0
-  KXRAINCMHM                 0
-  KXRAIND                    0
-  KXRAINDALM                 3     3    6.50    0.00     0   +6.50    +6.50  22.52 0/0   HOLD
-  KXRAINDAUS                 0
-  KXRAINDBOS                 0
-  KXRAINDC                   0
-  KXRAINDCHI                 0
-  KXRAINDCLL                 0
-  KXRAINDCM                  0
-  KXRAINDDAL                 0
-  KXRAINDDC                  0
-  KXRAINDDET                 0
-  KXRAINDENM                 5     4    6.80    0.00     0   +6.80    +8.50   5.67 0/0   HOLD
-  KXRAINDHOU                 0
-  KXRAINDIND                 0
-  KXRAINDLAX                 0
-  KXRAINDLV                  0
-  KXRAINDMIA                 0
-  KXRAINDMKE                 0
-  KXRAINDNOLA                0
-  KXRAINDNYC                 1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXRAINDPARIS               0
-  KXRAINDPHIL                0
-  KXRAINDPIT                 0
-  KXRAINDSAN                 0
-  KXRAINDSATX                0
-  KXRAINDSEA                 0
-  KXRAINDSFO                 0
-  KXRAINDTPA                 0
-  KXRAINDTWM                 0
-  KXRAINELECTION             0
-  KXRAINEWRM                 0
-  KXRAINHOLIDAY              3     1    6.67    0.00     0   +6.67   +20.00    nan 0/0   HOLD
-  KXRAINHOUM                 5     5    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
-  KXRAININDM                 0
-  KXRAINLAXM                 3     2    6.67    0.00     0   +6.67   +10.00   3.33 0/0   HOLD
-  KXRAINLEXM                 0
-  KXRAINLVM                  0
-  KXRAINMIAM                 4     4    6.25    0.00     0   +6.25    +6.25  25.00 0/0   HOLD
-  KXRAINMINM                 0
-  KXRAINMKEM                 0
-  KXRAINNAPAM                0
-  KXRAINNOLAM                0
-  KXRAINNYC                 16    16    6.62    6.25     1   +0.38    +0.38   0.06 0/0   HOLD
-  KXRAINNYCM                 1     1    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
-  KXRAINNYCW                 0
-  KXRAINOKCM                 0
-  KXRAINONT                  0
-  KXRAINPHILM                0
-  KXRAINPHXM                 0
-  KXRAINPITM                 0
-  KXRAINPVDM                 0
-  KXRAINSATXM                0
+  KXAAAGASDNY                7     7    6.29    0.00     0   +6.29    +6.29  34.08 0/0   HOLD
+  KXAAAGASDCT                6     3    6.33    0.00     0   +6.33   +12.67   2.24 0/0   HOLD
+  KXAAAGASDMA                2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXAAAGASDWA               16     9    6.50    0.00     0   +6.50   +11.56   5.57 1/1   HOLD
+  KXAAAGASDTX               20    13    6.35    0.00     0   +6.35    +9.77   5.53 1/1   HOLD
+  KXAAAGASDNJ                8     7    6.50   12.50     1   -6.00    -6.86  -0.47 0/0   HOLD
+  KXAAAGASDIL               14     9    6.64    0.00     0   +6.64   +10.33   5.30 0/0   HOLD
 
   B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
                              n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
-  KXRAIN                    78    53    6.65    2.56     2   +4.08    +6.01   2.06 1/2   HOLD
+  KXAAAGASD-STATES          73    31    6.47    1.37     1   +5.10   +12.00   2.94 2/2   HOLD
 
   C. PER FAMILY BY MONTH (n, c/ct)
-  KXRAIN                 2025-10: 1 @ +7.0, 2025-12: 3 @ +6.7, 2026-01: 9 @ +6.9, 2026-02: 6 @ -10.2, 2026-03: 4 @ +6.2, 2026-04: 3 @ +6.5, 2026-05: 8 @ +6.6, 2026-06: 3 @ +6.7, 2026-07: 9 @ +6.4, 2026-08: 9 @ +6.6, 2026-09: 13 @ +6.7, 2026-10: 10 @ -3.1
+  KXAAAGASD-STATES       2026-08: 6 @ +6.7, 2026-09: 38 @ +3.9, 2026-10: 29 @ +6.3
 
   D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
-  KXRAIN                   736/1206     61% FEASIBLE
+  KXAAAGASD-STATES        1654/1902     87% FEASIBLE
 
-  CONTROL KXRAIN: REPRODUCED (needs >= +2 c/ct and t >= 2). Gate readings stand.
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
 
   Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
