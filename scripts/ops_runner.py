@@ -225,6 +225,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_fill_forward_read",
     "limm_programme_outcomes",
     "limm_exit_vs_hold",
+    "untraded_capacity_census",
     "execution_telemetry",
     "liquidity_incentive_report",
     "incentive_reward_ledger_report",
