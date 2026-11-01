@@ -1,14 +1,8 @@
 # ops request [READ]
-# type=db  id=rl-limm-st8-20261101
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:49:29Z
-series                progs  first_seen  last_seen                       
---------------------  -----  ----------  --------------------------------
-KXNFLESCALATORREC     486    2026-09-24  2026-10-20 13:51:43.463586+00:00
-KXNFLESCALATORRECYDS  486    2026-09-24  2026-10-20 13:51:43.463586+00:00
-KXNFLESCALATORRSHYDS  252    2026-09-24  2026-10-20 13:51:43.463586+00:00
-KXNFLFFPTSLADDER      570    2026-09-23  2026-10-20 13:51:43.463586+00:00
-KXNFLLADDERREC        486    2026-09-23  2026-10-20 13:51:43.463586+00:00
-KXNFLLADDERRECYDS     486    2026-09-23  2026-10-20 13:51:43.463586+00:00
-KXNFLLADDERRSHYDS     252    2026-09-23  2026-10-20 13:51:43.463586+00:00
+# type=db  id=rl-rc-q1-20261101
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T20:01:11Z
+filled_orders_all_cells  markets  last_order                      
+-----------------------  -------  --------------------------------
+4                        4        2026-10-30 13:32:14.435800+00:00
 
-(7 rows)
+(1 row)
