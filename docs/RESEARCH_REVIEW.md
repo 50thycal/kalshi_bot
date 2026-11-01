@@ -5,32 +5,45 @@ owner on 2026-11-01. The 4-hour check-in (`docs/handoffs/HANDOFF-research-checki
 whether the research is still collecting data. This review asks what the research should do
 **next**. It authorizes nothing outside research scope. Experiment OS stays canonical.
 
-**Goal (owner, 2026-11-01):** improve the liquidity-incentive programme (`Alimm1`) by any of:
-- **better markets:** more reward net of fills per market-day;
-- **avoiding or handling fills better:** fewer fills, cheaper fills, better exits;
-- **anything else that raises its net,** including new features and new data sources.
+**Scope (owner, 2026-11-01):** the checker for **every** experiment, in both lines:
+- the **incentive programme** (`Alimm1`, liquidity rewards);
+- the **MMSELL strategy** (the `mmsell` books).
 
-The scoreboard is the north star (`DEC-039`): realized profit after fees, plus confirmed rewards.
+**Goal:** raise realized net profit (`DEC-039`).
+- **Incentive programme:** better markets (more reward net of fills per market-day), fewer or
+  cheaper fills and better exits, plus new features and data sources.
+- **MMSELL:** a better edge or universe, fill protection, and profit per contract.
 
-## The cap: at most 5 research experiments running
+## The caps: at most 5 running per line (owner, 2026-11-01)
 
-- **Counts:** every pre-registered research read that is accruing or waiting on its date, in
-  any book. These are the `scheduled` rows in `docs/RESEARCH_CALENDAR.md` plus the forward
-  reads listed under "Other standing routines".
-- **Does not count:** the live and paper books themselves (`Alimm1`, the `mmsell10` canaries),
-  instrumentation such as the shadow collector, and the scorecard and check-in routines.
-- **At the cap:** a new idea goes on the candidate list below and waits. Nothing is started.
-- **Below the cap:** start at most **one** new experiment per review, and only one that
-  passes the screen in step 3.
+There are two separate caps: **5 for the incentive programme** and **5 for MMSELL**. Slots do
+not have to be used.
+
+- **Counts in its line:**
+  - every pre-registered research read that is accruing or waiting on its date (the
+    `scheduled` rows in `docs/RESEARCH_CALENDAR.md`, plus the forward reads under "Other
+    standing routines");
+  - every open Experiment OS experiment that is actually running a book: a `PROBE`, `PAPER`
+    or `LIVE_CANARY` experiment with a tag that traded in the last 7 days.
+- **Does not count:**
+  - instrumentation such as the shadow collector;
+  - the scorecard and check-in routines;
+  - an experiment that is stood down and on its way to being closed.
+- **At or over the cap in a line:** no new experiment starts in that line. If it is over, the
+  review recommends what to close. Ideas wait on the candidate list.
+- **Below the cap:** start at most **one** new experiment per line per review, and only one
+  that passes the screen in step 5.
 
 ## Procedure (each run)
 
 1. **Re-arm first:** `update_trigger` with `run_once_at` = now + 72 h and `enabled: true`.
 2. **Inventory (read-only, through the ops channel, unique ids):**
    - `xos control-tower`;
-   - `xos show liquidity-incentive-mm`;
+   - `xos show liquidity-incentive-mm`, and `xos show` for any experiment whose state is unclear;
+   - a `db` read of `paper_trades` and `live_orders` per tag over the last 7 days (which books are
+     really running);
    - `docs/RESEARCH_CALENDAR.md`;
-   - the newest file in `docs/liquidity_incentive/scorecards/`;
+   - the newest file in `docs/liquidity_incentive/scorecards/` and in `docs/mmsell/scorecards/`;
    - the top of `docs/RESEARCH_JOURNAL.md`;
    - the last review file in `docs/research_reviews/`.
 3. **Each running experiment** (counts only, never an early read):
@@ -43,10 +56,12 @@ The scoreboard is the north star (`DEC-039`): realized profit after fees, plus c
    for example stood down but still `LIVE_CANARY`. A close-out or stand-down is a lifecycle
    move, so it is **recommended**, never done here. Live ones belong to Live Ops with the
    operator's approval.
-5. **New experiment?** Only below the cap. Screen the candidate list, plus any new idea from the
-   `kalshi-idea-model` skill aimed at the goal above, on these tests:
+5. **New experiment?** Only in a line below its cap. Screen that line's candidate list, plus any
+   new idea from the `kalshi-idea-model` skill aimed at that line's goal above, on these tests:
    - **novel** against what was tried (`LIMM_PROGRAMME_OUTCOMES.md` §2, the placement runs,
-     `LIMM_FILL_HAZARD.md`, the thesis §9 log);
+     `LIMM_FILL_HAZARD.md`, the thesis §9 log; for MMSELL, `docs/RESEARCH_JOURNAL.md`,
+     `docs/BOOK_REGISTRY.md` and the graveyard verdicts; never revive a killed family without
+     a new premise);
    - **read-only and cheap,** on data that exists or a collector already running;
    - **falsifiable,** with bars fixed before any read;
    - **able to change a decision** the owner would actually make.
@@ -67,6 +82,8 @@ pre-registered is read before its date. No model identifiers in anything pushed.
 
 Ordered by expected value to the goal. A candidate is not work until a review starts it.
 
+### Incentive programme
+
 - **Fill early-warning:** do snapshot features before a fill predict it, such as
   `trades_last_5m`, `price_range_5m_cents` or depth at best thinning? If so, a "pull the bid"
   rule. It needs study 5's fills first.
@@ -79,3 +96,9 @@ Ordered by expected value to the goal. A candidate is not work until a review st
 - **Per-channel YouTube risk:** YouTube views became the loss source (scorecard 2026-10-31).
   Study 5 scores `KXYTVIEWSHIGH` as a series. If it reads `FILL-TRAP`, a per-channel split is
   the follow-up.
+
+### MMSELL
+
+- **Untraded-capacity shortlist** (`UNTRADED_CAPACITY_CENSUS.md`): after the state gas ladders,
+  the remaining structures are NHL periods, NFL team props and MLB innings. Each goes through
+  `kalshi-idea-model` first.
