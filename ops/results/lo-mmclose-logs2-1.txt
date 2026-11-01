@@ -1,0 +1,6 @@
+# latest deployment eebc0562-976c-4bd9-bd45-c7663825692f (status=BUILDING, created=2026-11-01T22:59:20.227Z)
+# ops request [READ]
+# type=logs  service=main  id=lo-mmclose-logs2-1
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T22:59:47Z
+# target service: main
+(no log lines returned)

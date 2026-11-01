@@ -1,17 +1,6 @@
+# latest deployment eebc0562-976c-4bd9-bd45-c7663825692f (status=BUILDING, created=2026-11-01T22:59:20.227Z)
 # ops request [READ]
-# type=xos  id=lo-mmclose-rc2
-# code 9c592062a3ca602678b80baf283e8e14d82f4a3c · started 2026-11-01T22:41:58Z
-{
-  "command_id": "lo-mmclose-repair-1",
-  "action": "REPAIR_LINEAGE",
-  "actor": "claude-code",
-  "actor_role": "LIVE_OPS",
-  "status": "REJECTED",
-  "payload_hash": "9385ef565d7aaaeb0bc6f209da13d7575394f5e54d24b884dd895da9bfe95a46",
-  "completed_at": "2026-11-01 22:41:19.334431+00:00",
-  "result": null,
-  "error": "ExperimentCommandRejected: REPAIR_LINEAGE would leave ['Cmmsell10', 'Dmmsell10', 'Fmmsell10', 'Jmmsell10', 'Kmmsell10', 'Nmmsell10', 'Vmmsell10'] with lineage and no active deployment arm: each had an open deployment on an open epoch before this command and has none after it. Under NEW_ONLY every entry they attempt would be refused at the write path and nothing would say why (XOS-000033). Rolled b",
-  "replayed": false,
-  "collision": false,
-  "executed": true
-}
+# type=logs  service=main  id=lo-mmclose-logs2-1
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T22:59:47Z
+# target service: main
+(no log lines returned)
