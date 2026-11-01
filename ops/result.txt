@@ -1,16 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1101c1516
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T15:14:43Z
-k  t                              d                                                       
--  -----------------------------  --------------------------------------------------------
-F  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10c x200 fee 0.0000 @2026-11-01T15:10:47.218807Z
-F  KXMAMDANIMENTION-26NOV18-BILL  no/sell 99c x1 fee 0.0007 @2026-11-01T15:11:52.499322Z  
-F  KXMAMDANIMENTION-26NOV18-BILL  no/sell 98c x22 fee 0.0302 @2026-11-01T15:11:52.499322Z 
-F  KXMAMDANIMENTION-26NOV18-BILL  no/sell 99c x22 fee 0.0153 @2026-11-01T15:11:52.499322Z 
-F  KXMAMDANIMENTION-26NOV18-BILL  no/sell 99c x100 fee 0.0693 @2026-11-01T15:11:52.499322Z
-O  KXMAMDANIMENTION-26NOV18-BILL  canceled - yes/sell 1c x200 11-01 15:11                 
-O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/sell 6c x28 11-01 15:14                   
-O  KXMAMDANIMENTION-26NOV18-BILL  pending - yes/sell 10c x27 11-01 15:14                  
-P  KXMAMDANIMENTION-26NOV18-BILL  15:13 55.0000                                           
-
-(9 rows)
+# type=noop
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T15:15:15Z
+(noop — nothing to do)
