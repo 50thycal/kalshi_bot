@@ -1,0 +1,29 @@
+# ops request [READ]
+# type=xos  id=lo-mmclose-sd-contest-cap-rc2
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:27:18Z
+{
+  "command_id": "lo-mmclose-sd-contest-cap",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "6ba15818409c6498f22ebc067f037b38b2342962fe669d353ee707632fb0aeb7",
+  "completed_at": "2026-11-01 23:26:57.620133+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "mmsell-price-ceiling-contest-cap",
+    "from_state": "LIVE_CANARY",
+    "closed_epoch": 3,
+    "ended_deployments": [
+      "mmsell-contestcap-live-2",
+      "mmsell-contestcap-paper-1-e2-e3",
+      "mmsell-contestcap-twin-2"
+    ]
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
