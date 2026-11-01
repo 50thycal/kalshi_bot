@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command","args":["show","lo-mmclose-repair-1"],"id":"lo-mmclose-rc1"}
+{"type":"xos","command":"experiment-command-show","args":["lo-mmclose-repair-1"],"id":"lo-mmclose-rc2"}
