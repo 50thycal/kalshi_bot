@@ -1,13 +1,6 @@
 # ops request [READ]
-# type=db  id=rc-f7-1101-2010
-# code 7e2cd4739ea3d95b349f5d5e3d7d63e2abd2ddf2 · started 2026-11-01T20:12:13Z
-strategy   orders_7d  last_order                      
----------  ---------  --------------------------------
-Alimm1     206        2026-11-01 19:50:08.972218+00:00
-Ymmsell10  20         2026-11-01 15:24:52.612524+00:00
-Xmmsell10  24         2026-11-01 15:24:51.242275+00:00
-Vmmsell10  22         2026-10-30 13:32:15.884167+00:00
-Kmmsell10  130        2026-10-30 13:32:14.435800+00:00
-Nmmsell10  15         2026-10-27 07:34:58.662447+00:00
-
-(6 rows)
+# type=xos  id=rc-tagN-1101-2025
+# code 7e2cd4739ea3d95b349f5d5e3d7d63e2abd2ddf2 · started 2026-11-01T20:13:09Z
+experiment      state        ver  arm     role       epoch  deployment            stage        kind
+--------------  -----------  ---  ------  ---------  -----  --------------------  -----------  ----
+mmsell-win-set  LIVE_CANARY  2    winset  treatment  2      mmsell-winset-live-1  LIVE_CANARY  live

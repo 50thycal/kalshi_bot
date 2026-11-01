@@ -1,0 +1,6 @@
+# ops request [READ]
+# type=xos  id=rc-tagN-1101-2025
+# code 7e2cd4739ea3d95b349f5d5e3d7d63e2abd2ddf2 · started 2026-11-01T20:13:09Z
+experiment      state        ver  arm     role       epoch  deployment            stage        kind
+--------------  -----------  ---  ------  ---------  -----  --------------------  -----------  ----
+mmsell-win-set  LIVE_CANARY  2    winset  treatment  2      mmsell-winset-live-1  LIVE_CANARY  live
