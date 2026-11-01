@@ -1,4 +1,17 @@
-No deployments found for that project/environment/service.
+# latest deployment 85737c5b-3e7a-4996-8126-86508a5cdb99 (status=SUCCESS, created=2026-11-01T22:38:32.019Z)
 # ops request [READ]
-# type=doctor  id=lo-mmclose-doc1
-# code 9c592062a3ca602678b80baf283e8e14d82f4a3c · started 2026-11-01T22:39:11Z
+# type=logs  service=main  id=lo-mmclose-logs1
+# code 9c592062a3ca602678b80baf283e8e14d82f4a3c · started 2026-11-01T22:39:49Z
+# target service: main
+2026-11-01T22:39:15.555377162Z ERROR  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+2026-11-01T22:39:15.555380112Z ERROR  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+2026-11-01T22:39:15.814617889Z INFO  Starting Container
+2026-11-01T22:39:16.457885783Z INFO  starting kalshi bot
+2026-11-01T22:39:16.647386067Z INFO  experiment OS platform command
+2026-11-01T22:39:16.671611215Z INFO  experiment OS experiment command
+2026-11-01T22:39:16.729114714Z INFO  experiment OS enforcement
+2026-11-01T22:39:16.960214487Z INFO  api limits probe: {"grants": [{"exchange_instance": "event_contract", "level": "advanced", "source": "manual"}], "read": {"bucket_capacity": 900, "refill_rate": 300}, "usage_tier": "advanced", "write": {"bucket_capacity": 900, "refill_rate": 300}}
+2026-11-01T22:39:16.980542576Z INFO  kalshi api tier upgrade skipped
+2026-11-01T22:39:17.195615475Z INFO  live/paper twins configured
+2026-11-01T22:39:17.195622145Z WARN  twin suffix is being ignored for this book
+2026-11-01T22:39:17.265733369Z INFO  live recover: reconciling in-flight orders
