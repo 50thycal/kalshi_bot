@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## LIMM fill hazard 2026-11-01 — pre-registered; first 72-hour research review
+
+- **New standing review:** every 72 hours the Research Lab checks what is done, what needs
+  action, and whether to start one new experiment, with at most 5 running
+  ([procedure](RESEARCH_REVIEW.md), [first review](research_reviews/2026-11-01.md)).
+- **Its first call: study 5** ([doc](LIMM_FILL_HAZARD.md), `scripts/limm_fill_hazard.py`). It
+  replays a cheap-side bid against the public trade tape since the collector restarted, and
+  nets each series' reward against what its fills cost 6 h later. Read once on 2026-11-13.
+- **Close-out candidates:** seven stood-down MMSELL live experiments are still open in
+  Experiment OS (a Live Ops close-out, with the operator's approval).
+
 ## P-SLOW v2 sample 2026-11-01 — the restarted books count (DEC-040)
 
 - **What happened:** `Kmmsell10` stopped placing orders on 10-30, when it restarted as
