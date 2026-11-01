@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-limm-st5-20261101
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:47:17Z
-programs  mkts  events  pool_usd  med_pool
---------  ----  ------  --------  --------
-4682      4682  614     484745    100     
-
-(1 row)
