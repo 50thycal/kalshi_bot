@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT count(*) AS snaps_4h, count(DISTINCT market_ticker) AS mkts_4h, max(at) AS last_snap, now() AS db_now FROM incentive_market_snapshots WHERE at >= now() - interval '4 hours'", "id": "rc-a1-1101-2010"}
