@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=db  id=ci1101b1514
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T15:13:42Z
+k  t                              d                                                                    
+-  -----------------------------  ---------------------------------------------------------------------
+F  KXMAMDANIMENTION-26NOV18-BILL  yes/buy 10c x200 fee 0.0000 @2026-11-01T15:10:47.218807Z ing 15:11:08
+O  KXMAMDANIMENTION-26NOV18-AFFO  canceled repriced no/buy 9c x111 8dd25fb2-8976- 10-21 00:20          
+O  KXMAMDANIMENTION-26NOV18-AFFO  canceled out_of_band no/buy 9c x111 55fc2836-7949- 10-20 00:28       
+O  KXMAMDANIMENTION-26NOV18-AFFO  canceled out_of_band no/buy 10c x100 fd35db7e-afeb- 10-21 01:57      
+O  KXMAMDANIMENTION-26NOV18-BILL  submitted - yes/sell 1c x200 limmexit:stop_ 11-01 15:11              
+O  KXMAMDANIMENTION-26NOV18-BILL  filled - yes/buy 10c x200 472f6c1b-f59e- 10-27 04:29                 
+O  KXMAMDANIMENTION-26NOV18-BILL  canceled repriced yes/buy 7c x285 90502fd5-858b- 10-26 15:39         
+O  KXMAMDANIMENTION-26NOV18-BILL  canceled repriced yes/buy 2c x500 50d0eeb9-5873- 10-26 14:38         
+O  KXMAMDANIMENTION-26NOV18-FREE  canceled out_of_band yes/buy 7c x142 5bbacf61-a517- 10-20 16:38      
+O  KXMAMDANIMENTION-26NOV18-FREE  canceled out_of_band yes/buy 8c x125 00a30d4c-175f- 10-20 00:28      
+O  KXMAMDANIMENTION-26NOV18-FREE  canceled out_of_band yes/buy 10c x100 b8836581-e5f6- 10-20 02:32     
+O  KXMAMDANIMENTION-26NOV18-FREE  canceled out_of_band yes/buy 7c x142 0e0c8029-825e- 10-20 18:01      
+O  KXMAMDANIMENTION-26NOV18-NQE   canceled repriced yes/buy 1c x500 7ab578e6-119e- 10-19 09:30         
+O  KXMAMDANIMENTION-26NOV18-NQE   canceled fill_contagion yes/buy 2c x500 12c41717-e137- 10-20 13:14   
+O  KXMAMDANIMENTION-26NOV18-NQE   canceled repriced yes/buy 2c x500 379993bb-31dd- 10-23 04:08         
+O  KXMAMDANIMENTION-26NOV18-NQE   canceled fill_contagion yes/buy 3c x333 8d074f44-4be0- 10-24 01:19   
+O  KXMAMDANIMENTION-26NOV18-TRUM  canceled repriced no/buy 7c x142 87b7cb7a-463d- 10-19 05:23          
+O  KXMAMDANIMENTION-26NOV18-TRUM  canceled out_of_band no/buy 9c x111 065d3473-a489- 10-19 06:25       
+P  KXMAMDANIMENTION-26NOV18-BILL  15:11 200.0000                                                       
+S  KXMAMDANIMENTION-26NOV18-BILL  15:11 yb 2 nb 95                                                     
+S  KXMAMDANIMENTION-26NOV18-NQE   15:11 yb 3 nb 95                                                     
+
+(21 rows)
