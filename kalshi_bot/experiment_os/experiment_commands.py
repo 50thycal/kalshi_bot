@@ -458,6 +458,7 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_mmsell_standdown_live_rows.repair,
+            retires_tags=repair_mmsell_standdown_live_rows.RETIRES_TAGS,
         ),
         "live-material-baseline-repair": ExperimentPackage(
             name="live-material-baseline-repair",

@@ -52,10 +52,11 @@ Side effects, stated so nobody has to rediscover them:
   * **No evidence is removed.** Metric scopes read every deployment in an epoch,
     ended or not, and P-SLOW v2 (DEC-040) reads `live_orders`/`fills` for
     `Kmmsell10` and `Vmmsell10` directly — those rows are untouched.
-  * **The drift check stops judging these books.** `runtime_config_check` reads
-    OPEN live deployments only, so once a row is ended its `MMSELL_VARIANTS` entry
-    can be removed without recreating drift #28 (WS-027). Removing it is a separate
-    Live Ops `env` act.
+  * **The entries leave `MMSELL_VARIANTS` in the same boot.** The XOS-000033
+    guard refuses a tag left with no arm while the worker still constructs it, so
+    the envelope rides one env request that also removes the seven books. The boot
+    hook runs the command before `runtime_config_check`, which reads OPEN live
+    deployments only, so the removal is never judged as drift #28 (WS-027).
   * **The paper twins (`*_pt3`/`*_pt4`) stay open** — they are `paper_twin` rows,
     not `live` ones, and RETIRED's epoch close ends them with everything else.
 
@@ -111,6 +112,14 @@ TARGETS: tuple[tuple[str, str, str, datetime], ...] = (
     ("mmsell-win-set-2", "mmsell-winset2-live-1", "Vmmsell10",
      datetime(2026, 10, 30, 13, 32, 16, tzinfo=UTC)),
 )
+
+#: The live tags this repair takes out of the active set, declared so the XOS-000033
+#: transport guard (`_assert_no_tag_stranded`) can tell a deliberate retirement from an
+#: accident. The guard still refuses any of them the running worker CONSTRUCTS, so the
+#: repair envelope must ride the SAME env request that removes these books from
+#: `MMSELL_VARIANTS`: the boot hook runs the command before `runtime_config_check`, so the
+#: rows are ended before the drift check could read the missing entries as drift #28.
+RETIRES_TAGS: tuple[str, ...] = tuple(t for _, _, t, _ in TARGETS)
 
 #: Books this package must never reach — the running successors and their partners.
 #: Asserted against TARGETS at import so an edit cannot quietly add one.

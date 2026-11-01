@@ -207,3 +207,60 @@ def test_refuses_a_deployment_that_is_not_kind_live(xos_session, xos_platform):
     with pytest.raises(svc.ExperimentOsError, match="not 'live'"):
         repair.repair(s, actor="tester")
     assert dep.ended_at is None
+
+
+# --- the XOS-000033 transport guard ---------------------------------------------
+
+
+class _Runtime:
+    def __init__(self, *, books=(), live=()):
+        self.mmsell_variant_list = [{"tag": t} for t in books]
+        self.live_paper_twin_pairs = []
+        self.live_strategy_list = list(live)
+
+
+def _envelope(cid):
+    return {"command_id": cid, "action": "REPAIR_LINEAGE", "actor": "tester",
+            "actor_role": "LIVE_OPS", "schema_version": 1,
+            "payload": {"package": "mmsell-standdown-live-repair", "reason": "test"}}
+
+
+def test_declares_exactly_the_seven_live_tags():
+    pkg = cmds._packages()["mmsell-standdown-live-repair"]
+    assert pkg.retires_tags == repair.RETIRES_TAGS == (
+        "Cmmsell10", "Dmmsell10", "Fmmsell10", "Jmmsell10", "Kmmsell10",
+        "Nmmsell10", "Vmmsell10")
+
+
+def test_transport_succeeds_once_the_books_left_MMSELL_VARIANTS(
+    xos_session, xos_platform, monkeypatch
+):
+    s = xos_session
+    books = _all_targets(s)
+    monkeypatch.setattr("kalshi_bot.config.get_settings", lambda: _Runtime(
+        books=("mmsell9", "mmsell10", "Xmmsell10", "Ymmsell10"),
+        live=("Xmmsell10", "Alimm1", "Ymmsell10")))
+
+    out = cmds.execute_envelope(s, _envelope("mm-close-ok"))
+    s.commit()
+
+    assert out["status"] == "SUCCEEDED", out
+    assert all(b[3].ended_at is not None for b in books.values())
+
+
+def test_transport_rejects_while_a_book_is_still_constructed(
+    xos_session, xos_platform, monkeypatch
+):
+    """Production on 2026-11-01: the entries were still in MMSELL_VARIANTS."""
+    s = xos_session
+    books = _all_targets(s)
+    monkeypatch.setattr("kalshi_bot.config.get_settings", lambda: _Runtime(
+        books=("Kmmsell10",), live=("Xmmsell10",)))
+
+    out = cmds.execute_envelope(s, _envelope("mm-close-no"))
+    s.commit()
+
+    assert out["status"] == "REJECTED", out
+    assert "Kmmsell10" in out["error"]
+    s.expire_all()
+    assert all(b[3].ended_at is None for b in books.values())
