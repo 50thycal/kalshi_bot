@@ -1,8 +1,32 @@
 # ops request [READ]
-# type=db  id=rl-limm-st5-20261101
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:47:17Z
-programs  mkts  events  pool_usd  med_pool
---------  ----  ------  --------  --------
-4682      4682  614     484745    100     
+# type=db  id=rl-limm-st6-20261101
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:48:07Z
+series               mkts  snaps
+-------------------  ----  -----
+KXAAAGASM            26    7462 
+KXWAAEROEMP          13    2721 
+KXWATECHEMP          10    2149 
+KXNYNJPORTTEU        9     1936 
+KXNYCASKRENT         8     1997 
+KXBWAYATTENDANCE     8     880  
+KXILNUCLEAR          7     1681 
+KXWALLSTBONUS        7     1783 
+KXTXERCOTPEAK        7     1657 
+KXPAPER              7     707  
+KXFLVISITORCOUNT     7     1635 
+KXCABUILDPERMITS     6     1485 
+KXPAMFGEMP           6     1498 
+KXNYCSUBWAY          5     550  
+KXASPENMTNOPEN       5     1435 
+KXYTVIEWSHIGH        5     1890 
+KXBIGSKYOPEN         5     1435 
+KXTRUMPNOMNUM        4     520  
+KXONIONACT           4     1144 
+KXTXOIL              4     1144 
+KXWEEKSNUM1          4     368  
+KXPJMEMERGENCY       4     875  
+KXCITYCHAMPS         3     55   
+KXBRRATECUT          3     861  
+KXGONZALEZVENEZUELA  2     196  
 
-(1 row)
+(25 rows)
