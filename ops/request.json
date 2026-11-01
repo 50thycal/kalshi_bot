@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_scorecard","args":["--days","3"],"id":"msc-261101-1431"}
+{"type":"script","name":"mmsell_scorecard","args":["--json","--days","7"],"id":"msc-261101-json"}
