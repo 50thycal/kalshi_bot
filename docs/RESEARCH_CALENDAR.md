@@ -20,6 +20,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 | date (UTC) | check | what it decides | pre-registration | routine | status |
 |---|---|---|---|---|---|
 | 2026-11-13 15:17 | LIMM exits vs holding, run 3 | Do the liquidity book's stop/take exits beat holding to settlement? Needs ≥ 30 settled markets and ≥ 15 events, else HOLD. A FAIL makes a looser stop an owner decision. Also checks the shadow collector is still writing. | `LIMM_PROGRAMME_OUTCOMES.md` §9 (results §11) | `trig_01MtzLc4H1BoASXHY2AeePSJ` | scheduled |
+| 2026-11-13 15:47 | LIMM fill hazard, study 5 (read once) | Which incentive series pay net of the fills a resting bid takes? Nominates series to add (net above the live universe) or remove (reward eaten by fills). Needs ≥ 3 series with ≥ 20 market-days and ≥ 5 events, else HOLD and one re-read on 2026-11-27. Nominations are owner decisions. | `LIMM_FILL_HAZARD.md` §4 | `trig_015Lh4zakJj9qZQ23Hbk45mM` | scheduled |
 | 2026-12-04 15:07 | P-SLOW v2 fill read (read once) | Do slow-information MMSELL markets still earn ≥ +2¢ on real fills? Needs ≥ 100 fills. A PASS makes sizing above 3 contracts an owner decision. | `MMSELL_FILL_FORWARD_READ.md` §6 | `trig_018N8ZxREHNrgABVh2C2HCxm` | scheduled |
 | 2026-12-07 15:23 | State gas ladder screen, re-run | Does the 7-state gas ladder family reach CANDIDATE (≥ 100 entries, t ≥ 3.0, both halves positive)? A CANDIDATE leads to a taker-price read, not a paper book. | `MMSELL_LOOKALIKE_PROBE.md` §16 (first result §17) | `trig_01N3tddvLTSEY2jebghEz9UA` | scheduled |
 
@@ -29,6 +30,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 |---|---|---|
 | 2027-01-08 | P-SLOW v2 extension, read once, same bars | the 2026-12-04 read has fewer than 100 cell fills |
 | +2 weeks after each LIMM read | LIMM exits vs holding, next run | the read is still under the 30-market / 15-event floor |
+| 2026-11-27 16:07 | LIMM fill hazard, re-read once, same bars | the 2026-11-13 read is HOLD under V0 (fewer than 3 series at the floor) |
 
 ## Other standing routines (operations, not this research)
 
@@ -38,6 +40,7 @@ own prompts and docs are canonical.
 | cadence | routine | owner doc |
 |---|---|---|
 | every 2 h | LIMM check-in (Alimm1 positions, fills, rewards) | `docs/liquidity_incentive/` |
+| every 72 h (from 2026-11-01) | Research review (72h): which experiments are done or need action, close-out candidates, and whether to start one new experiment (cap: 5 running). Aimed at improving the incentive programme. Routine `trig_011bcVM8wWmtqMgLUoWGhLPg` | `docs/RESEARCH_REVIEW.md` |
 | every 4 h (01:13, 05:13, 09:13, 13:13, 17:13, 21:13 Central) | Research check-in (4h): read-only progress and health on the checks above (collector, LIMM and P-SLOW accrual counts, live tags, these routines). Counts only, never an early read. Routine `trig_013hWGXAquPc28pjj8AFu1jX` | `docs/handoffs/HANDOFF-research-checkin.md` |
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
