@@ -1,8 +1,11 @@
 # ops request [READ]
-# type=db  id=rc-b-1101-2313
-# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:14:51Z
-settled_markets  settled_events
----------------  --------------
-17               15            
+# type=db  id=rc-c-1101-2313
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:15:28Z
+strategy   filled_orders  markets
+---------  -------------  -------
+Kmmsell10  4              4      
+Vmmsell10  3              3      
+Xmmsell10  14             14     
+Ymmsell10  11             11     
 
-(1 row)
+(4 rows)
