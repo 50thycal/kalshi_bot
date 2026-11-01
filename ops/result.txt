@@ -1,4 +1,29 @@
-no experiment command 'lo-mmclose-sd-mmsell-win-set'
 # ops request [READ]
-# type=xos  id=lo-mmclose-sd-mmsell-win-set-rc2
-# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:30:34Z
+# type=xos  id=lo-mmclose-sd-mmsell-win-set-rc3
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:31:10Z
+{
+  "command_id": "lo-mmclose-sd-mmsell-win-set",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "d9d34efa6603de0ed68e8c72766d1228fd8ebcaf5b0e780ceb36b97ad7091cb8",
+  "completed_at": "2026-11-01 23:31:06.755013+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "mmsell-win-set",
+    "from_state": "LIVE_CANARY",
+    "closed_epoch": 2,
+    "ended_deployments": [
+      "mmsell-winset-live-1",
+      "mmsell-winset-paper-1-e1-e2",
+      "mmsell-winset-twin-1"
+    ]
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
