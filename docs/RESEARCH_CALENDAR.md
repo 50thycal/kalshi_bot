@@ -38,6 +38,7 @@ own prompts and docs are canonical.
 | cadence | routine | owner doc |
 |---|---|---|
 | every 2 h | LIMM check-in (Alimm1 positions, fills, rewards) | `docs/liquidity_incentive/` |
+| every 4 h (01:13, 05:13, 09:13, 13:13, 17:13, 21:13 Central) | Research check-in (4h): read-only progress and health on the checks above (collector, LIMM and P-SLOW accrual counts, live tags, these routines). Counts only, never an early read. Routine `trig_013hWGXAquPc28pjj8AFu1jX` | `docs/handoffs/HANDOFF-research-checkin.md` |
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
 | daily 08:57 Central | Railway usage check (read-only) | WS-024 |
