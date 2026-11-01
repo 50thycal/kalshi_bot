@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=rc-a3-1101-2010
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T20:10:27Z
+series            mkts_24h
+----------------  --------
+KXAAAGASM         26      
+KXWAAEROEMP       13      
+KXWATECHEMP       10      
+KXNYNJPORTTEU     9       
+KXBWAYATTENDANCE  8       
+KXNYCASKRENT      8       
+KXFLVISITORCOUNT  7       
+KXPAPER           7       
+KXWALLSTBONUS     7       
+KXILNUCLEAR       7       
+KXTXERCOTPEAK     7       
+KXCABUILDPERMITS  6       
+KXPAMFGEMP        6       
+KXYTVIEWSHIGH     6       
+KXASPENMTNOPEN    5       
+
+(15 rows)
