@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT count(*) AS snaps_6h, count(DISTINCT market_ticker) AS mkts_6h, max(at) AS last_snap FROM incentive_market_snapshots WHERE at >= now() - interval '6 hours'", "id": "rl-limm-st1-20261101"}
+{"type": "db", "sql": "SELECT count(*) AS trades_6h, count(DISTINCT market_ticker) AS trade_mkts_6h, max(received_at) AS last_trade FROM incentive_trade_events WHERE received_at >= now() - interval '6 hours'", "id": "rl-limm-st2-20261101"}
