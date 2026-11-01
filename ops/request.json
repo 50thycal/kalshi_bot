@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1101d1320", "sql": "SELECT count(*) n, round(sum(period_reward_usd)::numeric,0) usd FROM incentive_programs WHERE end_date > now() AND start_date <= now()"}
+{"type":"noop"}
