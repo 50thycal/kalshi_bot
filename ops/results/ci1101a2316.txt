@@ -1,0 +1,15 @@
+# ops request [READ]
+# type=db  id=ci1101a2316
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:16:45Z
+k  t                              d                                     
+-  -----------------------------  --------------------------------------
+O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/sell 6c x28 11-01 15:14 
+O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/sell 10c x27 11-01 15:14
+O  KXYTVIEWSHIGH-DRA26DEC-12.0M   resting - no/buy 6c x333 10-30 14:33  
+O  KXYTVIEWSHIGH-FUT26DEC-7.0M    resting - no/buy 7c x285 11-01 21:44  
+O  KXYTVIEWSHIGH-JUS26DEC-15.0M   resting - no/buy 1c x500 11-01 05:49  
+O  KXYTVIEWSHIGH-OLI26DEC-7.5M    resting - no/buy 10c x200 10-27 07:31 
+O  KXYTVIEWSHIGH-TAY26DEC-13.2M   resting - no/buy 1c x500 11-01 20:15  
+O  KXYTVIEWSHIGH-TAY26DEC-13.3M   resting - no/buy 1c x500 11-01 19:50  
+
+(8 rows)
