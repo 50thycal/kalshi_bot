@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1101b0505
-# code 2860fbca9682f24f741c1733e5086d8183d9029a · started 2026-11-01T05:04:40Z
-status    r                       d                client_order_id                                  c          
---------  ----------------------  ---------------  -----------------------------------------------  -----------
-canceled  resting_sell:pre_event  no/sell 1c x243  limmsell:b:21b0df8d-83b2-4c1a-9fe9-ff0c27258966  10-30 20:43
-canceled  resting_sell:pre_event  no/sell 1c x244  limmsell:a:fcf899d1-5d4b-43e2-bc01-afc8beabf278  10-30 20:43
-canceled  resting_sell:repriced   no/sell 2c x243  limmsell:b:93db75f3-8d13-4599-a18e-fe91759bcfb9  10-27 13:59
-canceled  resting_sell:repriced   no/sell 2c x244  limmsell:a:fcd6dbe7-4cbe-4a82-8524-47b707741361  10-27 13:59
-canceled  partial_fill            no/buy 1c x500   5eecbca3-69e1-4433-aaed-b0bd3f8d74b6             10-24 17:37
-
-(5 rows)
+# type=noop
+# code 2860fbca9682f24f741c1733e5086d8183d9029a · started 2026-11-01T05:05:00Z
+(noop — nothing to do)
