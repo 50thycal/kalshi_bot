@@ -1,0 +1,4 @@
+xos command 'experiment-command' is not allowlisted (allowed: ['attribution-impact', 'control-tower', 'enforcement', 'evaluate-gates', 'experiment-command-list', 'experiment-command-show', 'issue-candidates', 'issue-command-list', 'issue-command-show', 'issue-findings-plan', 'issue-list', 'issue-show', 'list', 'metric', 'monitor-snapshot', 'package-preflight', 'platform', 'readiness', 'scoreboard', 'show', 'tag', 'transitions'])
+# ops request [READ]
+# type=xos  id=lo-mmclose-rc1
+# code 9c592062a3ca602678b80baf283e8e14d82f4a3c · started 2026-11-01T22:41:19Z
