@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "dcd8bdb9ec1bbe7072e149b9821326caeb7b2332",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-01T23:28:04Z",
+  "id": "lo-mmclose-sd-size-split",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 415 bytes, sha256:e41001c44db09796>",
+        "before": "<redacted 417 bytes, sha256:6fa4e0e59e6c223d>",
+        "requested": "<redacted 415 bytes, sha256:e41001c44db09796>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "claude-code",
+    "purpose": "MMSELL close-out: STAND_DOWN mmsell-price-ceiling-size-split -> RETIRED (owner Calvin)"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-mmclose-sd-size-split.receipt.json",
+  "result_file": "ops/results/lo-mmclose-sd-size-split.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41362202997",
+  "service": "main",
+  "started_at": "2026-11-01T23:27:52Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
