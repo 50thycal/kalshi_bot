@@ -59,3 +59,66 @@ none of the tags is in `LIVE_STRATEGIES`.
 
 One transport envelope array at a time (single slot), each receipt read before the next. Close
 with the brief.
+
+## Outcome (Live Ops, 2026-11-01 23:35Z)
+
+**Five retired. Two held for an owner decision.**
+
+| experiment | result | receipt |
+|---|---|---|
+| `mmsell-price-ceiling-capacity` (D) | RETIRED, e2 closed (verified first, alone) | `lo-mmclose-sd-capacity` |
+| `mmsell-price-ceiling-contest-cap` (F) | RETIRED, e3 closed | `lo-mmclose-sd-contest-cap` |
+| `mmsell-price-ceiling-size-split` (J) | RETIRED, e3 closed | `lo-mmclose-sd-size-split` |
+| `mmsell-win-set` (N) | RETIRED, e2 closed | `lo-mmclose-sd-mmsell-win-set` |
+| `mmsell-win-set-2` (V) | RETIRED, e2 closed | `lo-mmclose-sd-mmsell-win-set-2` |
+| `mmsell-price-ceiling` (C) | **held**: live row ended, still LIVE_CANARY | — |
+| `mmsell-price-ceiling-cell-size` (K) | **held**: live row ended, still LIVE_CANARY | — |
+
+**What was done, in order:**
+
+1. **Repair package.** `mmsell-standdown-live-repair` was added in #715 and #716 (precedent `repair_dark_live_canaries`):
+   - targets are literals;
+   - it refuses on the allowlist, by prefix;
+   - it refuses if a tag has a live order after its own measured last order;
+   - it is all-or-nothing and idempotent.
+
+   The first run (`lo-mmclose-repair-1`) was REJECTED with `TAG_STRANDED` by the XOS-000033 transport guard, and rolled back. That guard refuses to end a tag's arm while the worker still constructs it.
+2. **The fix for drift #28.** #716 declares the seven tags as `retires_tags`. One env act (`lo-mmclose-repair-2`) then set two things together:
+   - `MMSELL_VARIANTS` minus the seven live-tag books, composed from the live value;
+   - the repair envelope.
+
+   The boot hook runs the command (`main.py:290`) before `runtime_config_check` (`main.py:360`). So the live rows ended before the drift check ran, and the check reads OPEN live rows only. No drift event was recorded.
+3. **`STAND_DOWN` → RETIRED**, capacity first. The check that followed found no new integrity event, and base paper books resumed at 23:24Z. Then the other four followed. Pending platform impacts did not block `STAND_DOWN`, which does not check them.
+4. **Env act `lo-mmclose-env-pq`.** It removed `Pmmsell10` and `Qmmsell10`, the win-set paper arms, which had no arm after retirement. It also cleared the command slot.
+
+**Untouched:**
+- `LIVE_STRATEGIES` (`Xmmsell10,Alimm1,Ymmsell10`);
+- `MMSELL_LIVE_SHARED_MARKET_PAIRS`;
+- X/Y/S/Z and their twins;
+- `mmsell9` and `mmsell10`;
+- no `live_orders` or `fills` row was deleted.
+
+**Readback** (`lo-mmclose-q9`): no integrity event since 22:15Z. No paper write from C/D/F/J/K/N/V/P/Q since 23:02Z.
+
+### DECISION (owner): the two held experiments
+
+Retiring either one also stops a paper book that is not on the approved list:
+
+- `mmsell-price-ceiling` holds `mmsell9` (about 560 paper trades in 7 days). It sits on v1 epoch 2, which `STAND_DOWN` does not close, so retiring would also leave a dangling open deployment.
+- `mmsell-price-ceiling-cell-size` holds base `mmsell10` (about 1,000 in 7 days), its only open arm.
+
+Options:
+- (a) retire anyway, which stops `mmsell9` and `mmsell10`;
+- (b) re-home `mmsell9` and `mmsell10` to an experiment of their own first, then retire;
+- (c) leave both as they are.
+
+The live rows are already ended either way, so nothing here touches real money.
+
+### Still open
+- The 24-hour readback: no paper writes from the retired tags, and X/Y still trading.
+- Ten open XOS issues are linked to these experiments:
+  - XOS-000013, -014, -016, -020, -022, -024, -038, -039, -040, -041.
+  - Most are owned by Research Lab.
+  - Several describe mechanisms the X/Y successors inherit (contest cap, live-mirror cap, cutover stacking).
+  - Each owner should re-point or close them. Nothing was closed here.
+- The accepted platform impacts (`I2/NEW_EPOCH`) on the retired experiments are Platform Change Review's to resolve.
