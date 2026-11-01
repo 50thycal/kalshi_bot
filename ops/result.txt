@@ -1,9 +1,4 @@
 # ops request [READ]
-# type=db  id=q1101a1320
-# code 2860fbca9682f24f741c1733e5086d8183d9029a · started 2026-11-01T14:18:02Z
-table_name                  string_agg                                                                                                                                                                                              
---------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-incentive_market_snapshots  id,program_row_id,market_ticker,at,book_valid,best_yes_bid,best_no_bid,spread_cents,yes_depth_at_best,no_depth_at_best,yes_depth_total,no_depth_total,yes_levels_json,no_levels_json,trades_last_5m,vol…
-incentive_programs          id,program_id,market_id,market_ticker,event_ticker,series_ticker,incentive_type,incentive_description,start_date,end_date,period_reward_raw,period_reward_unit,period_reward_usd,target_size,discount_f…
-
-(2 rows)
+# type=noop
+# code 2860fbca9682f24f741c1733e5086d8183d9029a · started 2026-11-01T14:18:23Z
+(noop — nothing to do)
