@@ -122,7 +122,7 @@ sample: no fill read in §5 is reused. The bars are identical to P-SLOW.
   decided from **2026-10-30T00:00Z**.
   - **Successor declared (DEC-040, 2026-11-01, blind):** every live `mmsell` tag from 10-30:
     `Kmmsell10`, `Vmmsell10`, `Xmmsell10` and `Ymmsell10`, exactly what the command reads.
-  - The read also lists P-SLOW per tag, descriptively. Filled, settled yes/no, one contract, settlement from
+  - Per-tag lines, where the output gives them, are descriptive only. Filled, settled yes/no, one contract, settlement from
   Kalshi, settlement-date bootstrap with 5,000 resamples and seed 20261003 (all as in §2).
 - **Read once, on a fixed date: 2026-12-04.**
   - **PASS:** ≥ 100 cell fills, cell mean ≥ +2.0¢, separation > 0 and bootstrap 5th percentile > 0.

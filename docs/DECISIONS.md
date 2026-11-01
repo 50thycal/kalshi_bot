@@ -1656,8 +1656,8 @@ the new books".
   filled-order counts per tag (4 / 3 / 14 / 11).
 - **Known cost:** `Ymmsell10` selects markets differently (seven WIN-set series), and the
   `Xmmsell10+Ymmsell10` pair can both hold a market. The settlement-date bootstrap clusters
-  those together. The read must also print the P-SLOW block per tag, descriptively, so a
-  difference between the books is visible. It never decides.
+  those together. The reader reports per-tag lines where the output gives them, descriptively,
+  so a difference between the books is visible. They never decide.
 
 **Revisit if** a further restart renames the books before 2027-01-08. Name the successor here
 before the read.
