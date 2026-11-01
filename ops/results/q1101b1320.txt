@@ -1,0 +1,47 @@
+# ops request [READ]
+# type=db  id=q1101b1320
+# code 2860fbca9682f24f741c1733e5086d8183d9029a · started 2026-11-01T14:18:31Z
+market_ticker                  incentive_type  e      usd   target_size  q
+-----------------------------  --------------  -----  ----  -----------  -
+KXMARATHONUSAWIN-NYC26-Y       liquidity       11-02  1040  1000.00      0
+KXRAINDPARIS-03SEP27-T0        liquidity       11-07  1000  1000.00      0
+KXONIONACT-30JAN01-30JAN01     liquidity       11-07  860   1000.00      0
+KXONIONACT-30JAN01-27JAN01     liquidity       11-07  860   1000.00      0
+KXONIONACT-30JAN01-28JAN01     liquidity       11-07  860   1000.00      0
+KXONIONACT-30JAN01-29JAN01     liquidity       11-07  860   1000.00      0
+KXMARATHONUSAWIN-NYCWOMEN26-Y  liquidity       11-02  520   1000.00      0
+KXBAA-28JANDELIV-650           liquidity       11-10  500   1000.00      0
+KXBAA-28JANDELIV-630           liquidity       11-10  500   1000.00      0
+KXBIGSKYOPEN-27-15NOV26        liquidity       11-04  365   1000.00      0
+KXBIGSKYOPEN-27-13DEC26        liquidity       11-04  365   1000.00      0
+KXASPENMTNOPEN-27-06DEC26      liquidity       11-04  365   1000.00      0
+KXASPENMTNOPEN-27-29NOV26      liquidity       11-04  365   1000.00      0
+KXASPENMTNOPEN-27-15NOV26      liquidity       11-04  365   1000.00      0
+KXBIGSKYOPEN-27-06DEC26        liquidity       11-04  365   1000.00      0
+KXASPENMTNOPEN-27-22NOV26      liquidity       11-04  365   1000.00      0
+KXASPENMTNOPEN-27-13DEC26      liquidity       11-04  365   1000.00      0
+KXBIGSKYOPEN-27-29NOV26        liquidity       11-04  365   1000.00      0
+KXBIGSKYOPEN-27-22NOV26        liquidity       11-04  365   1000.00      0
+KXRETIREMM-26                  liquidity       11-03  305   1000.00      0
+KXBRRATECUT-27JAN01-E5         liquidity       11-05  300   1000.00      0
+KXBRRATECUT-27JAN01-T7         liquidity       11-05  300   1000.00      0
+KXBRRATECUT-27JAN01-E6         liquidity       11-05  300   1000.00      0
+KXAAAGASM-26NOV30-2.80         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-2.50         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-2.70         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-3.10         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-3.00         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-2.90         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-2.60         liquidity       11-07  300   1000.00      0
+KXAAAGASM-26NOV30-3.30         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-4.10         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-4.70         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-3.40         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-3.50         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-4.90         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-4.50         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-3.70         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-4.00         liquidity       11-07  285   1000.00      0
+KXAAAGASM-26NOV30-5.00         liquidity       11-07  285   1000.00      0
+
+(40 rows)
