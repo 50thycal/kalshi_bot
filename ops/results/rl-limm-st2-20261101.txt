@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rl-limm-st2-20261101
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:45:41Z
+trades_6h  trade_mkts_6h  last_trade                      
+---------  -------------  --------------------------------
+222        34             2026-11-01 19:39:48.692266+00:00
+
+(1 row)
