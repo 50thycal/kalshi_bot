@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=rl-limm-st3-20261101
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:45:56Z
+incentive_type  live_programs  events  pool_usd
+--------------  -------------  ------  --------
+liquidity       34680          8787    2341585 
+volume          2              2       2000    
+
+(2 rows)
