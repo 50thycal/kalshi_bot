@@ -1,78 +1,28 @@
 # ops request [READ]
-# type=env  service=main  id=lo-mmclose-env1
-# code c31dbab4ef26829b08fe197e83ec5e7e3434bdd7 · started 2026-11-01T22:20:37Z
-# target service: main
-# current allowlisted env vars (secrets hidden):
-  BOT_MODE=live
-  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
-  EVO_WEEKLY_LLM_CEILING_USD=8
-  EVO_WEEKLY_TOKEN_BUDGET=6000000
-  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
-  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
-  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
-  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
-  EXPERIMENT_OS_EVALUATE_GATES=true
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 194 bytes, sha256:25564ea83d29a2ef>
-  EXPERIMENT_OS_IMPORT_ON_BOOT=false
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 343 bytes, sha256:cc937c11c691d03e>
-  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
-  KALSHI_UPGRADE_API_TIER=true
-  KILL_SWITCH=false
-  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
-  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
-  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
-  LIQUIDITY_INCENTIVE_REQUOTE_SECONDS=300
-  LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true
-  LIVE_CELLS=
-  LIVE_CITIES=
-  LIVE_ENABLED=true
-  LIVE_ENTRY_GRACE_HOURS=2
-  LIVE_ENTRY_STYLE=marketable
-  LIVE_EXIT_MAX_ATTEMPTS=3
-  LIVE_EXIT_MODE=tp_sl
-  LIVE_EXIT_SLIPPAGE_CENTS=1
-  LIVE_EXIT_USE_MARKET_FALLBACK=false
-  LIVE_FRACTIONAL=true
-  LIVE_KILL_ON_DAILY_LOSS=true
-  LIVE_MAX_ORDER_DOLLARS=3.0
-  LIVE_ONE_POSITION_PER_EVENT=true
-  LIVE_ORDER_TIMEOUT_SECONDS=14400
-  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
-  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
-  LIVE_PAPER_TWIN_SUFFIX=_pt4
-  LIVE_PROBE=
-  LIVE_QUEUE_CANCEL_MODE=off
-  LIVE_SHAPE_PROBE=false
-  LIVE_STOP_LOSS_CENTS=
-  LIVE_STRATEGIES=Xmmsell10,Alimm1,Ymmsell10
-  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
-  LIVE_TAKE_PROFIT_CENTS=1
-  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
-  LIVE_WINDOWS=
-  LOG_LEVEL=INFO
-  MAX_DAILY_LOSS=50.0
-  MAX_MARKET_EXPOSURE=25.0
-  MAX_ORDER_SIZE=2
-  MAX_SPREAD_CENTS=30
-  MAX_TOTAL_EXPOSURE=125
-  MIN_HOURS_TO_CLOSE=1
-  MIN_OPEN_INTEREST=10
-  MIN_VOLUME=25
-  MMSELL_EVENT_RUNG_CAP=3
-  MMSELL_EVENT_RUNG_CAP_ENABLED=true
-  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
-  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
-  MMSELL_LIVE_OFFSET_AB_ARMS=
-  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
-  MMSELL_LIVE_SHARED_MARKET_PAIRS=Xmmsell10+Ymmsell10:6:6.00
-  MMSELL_PREFILTER_ENABLED=false
-  MMSELL_SETTLEMENT_CAP_ENABLED=true
-  MMSELL_SETTLEMENT_CAP_PCT=0.25
-  MMSELL_SETTLEMENT_EVENT_CAP=5
-  MMSELL_TWIN_APPLIES_LIVE_BARS=true
-  MMSELL_VARIANTS=mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1;Jmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,sizes=1+3;Kmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Pmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION;Vmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY+KXWCMENTION;Qmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY+KXWCMENTION;Nmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPSAY+KXWCMENTION;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY
-  PERPS_COLLECTOR_ENABLED=false
-  RUN_ONCE=false
-  SCAN_INTERVAL_SECONDS=60
-  WEATHER_ENTRY_HOURS=20,14,8,17
+# type=db  id=lo-mmclose-q3
+# code c31dbab4ef26829b08fe197e83ec5e7e3434bdd7 · started 2026-11-01T22:21:31Z
+strategy   status     n    last_at                           on_unsettled_mkts  unsettled                                                                                                                                                                                               
+---------  ---------  ---  --------------------------------  -----------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Cmmsell10  canceled   97   2026-08-31 11:31:48.886143+00:00  97                 KXBRASILEIROGAME-26AUG30CAPFLU-CAP(?) KXBRASILEIROGAME-26AUG30CAPFLU-FLU(?) KXBRENTMON-26AUG3117-T90.99(?) KXBRENTMON-26AUG3117-T92.99(?) KXBUNDESLIGAGAME-26AUG29RBLBMG-BMG(?) KXCPLMATCH-26AUG282000B…
+Cmmsell10  filled     93   2026-08-31 13:31:52.128546+00:00  93                 KXAAAGASW-26AUG31-4.080(?) KXAPFDDHGAME-26AUG28SSLNAC-SSL(?) KXBRENTMON-26AUG3117-T92.99(?) KXBTCD-26AUG2817-T80999.99(?) KXBTCMAXMON-BTC-26AUG31-8500000(?) KXBUNDESLIGATOTAL-26AUG29SVELEV-7(?) KXBUN…
+Cmmsell10  rejected   98   2026-08-30 18:23:26.081140+00:00  98                 KXATPEXACTMATCH-26AUG30LEHCAR-LEH32(?) KXBTCD-26AUG2917-T78499.99(?) KXBTCD-26AUG3017-T78749.99(?) KXBTCD-26AUG3017-T78999.99(?) KXBTCD-26SEP0417-T82999.99(?) KXBTCD-26SEP0417-T83499.99(?) KXITFMATCH…
+Dmmsell10  canceled   99   2026-09-04 06:20:58.237530+00:00  99                 KXAAAGASD-26SEP04-4.1600(?) KXAAAGASW-26SEP07-4.200(?) KXATPMATCH-26SEP02VACMAJ-MAJ(?) KXBRENTD-26SEP0217-T97.50(?) KXCPIYOY-26AUG-T3.5(?) KXCPLMATCH-26SEP021900ANTTKR-TKR(?) KXEFLCHAMPIONSHIPGAME-26…
+Dmmsell10  filled     97   2026-09-04 06:20:24.752186+00:00  97                 KXALBUMEQUIV-DON26SEP03-120K(?) KXAPRPOTUS-26SEP04-38.7(?) KXATPCHALLENGERMATCH-26SEP04TSESUN-SUN(?) KXATPMATCH-26AUG30BERTAB-TAB(?) KXATPMATCH-26AUG30GUEDE-GUE(?) KXATPMATCH-26SEP02LEHSAM-SAM(?) KXA…
+Fmmsell10  canceled   343  2026-10-04 00:13:38.317226+00:00  343                KXAAAGASD-26SEP21-4.4900(?) KXAAAGASD-26SEP22-4.4900(?) KXAAAGASW-26SEP21-4.5200(?) KXALBUMEQUIV-BAS26SEP24-125K(?) KXALBUMEQUIV-TSLOASG26OCT01-250K(?) KXARGPREMDIVTOTAL-26SEP11NOBVEL-5(?) KXARGPREMD…
+Fmmsell10  filled     791  2026-10-04 02:15:04.867204+00:00  791                KXAAAGASD-26OCT01-4.4250(?) KXAAAGASD-26OCT02-4.4000(?) KXAAAGASD-26SEP07-4.1550(?) KXAAAGASD-26SEP08-4.1650(?) KXAAAGASD-26SEP09-4.1850(?) KXAAAGASD-26SEP10-4.3150(?) KXAAAGASD-26SEP11-4.3100(?) KXA…
+Fmmsell10  rejected   15   2026-10-03 08:47:12.567338+00:00  15                 KXATPCHALLENGERMATCH-26OCT01SCHMIG-SCH(?) KXATPCHALLENGERMATCH-26SEP21SMIWIN-WIN(?) KXATPCHALLENGERMATCH-26SEP30FERMID-FER(?) KXATPCHALLENGERMATCH-26SEP30ZHULIU-LIU(?) KXATPSETWINNER-26SEP28LEHBER-2-…
+Fmmsell10  submitted  4    2026-10-01 07:43:34.223616+00:00  4                  KXBTCD-26SEP2417-T86749.99(?) KXRT-DIG-75(?) KXRT-OTH-85(?) KXTRUTHSOCIAL-26OCT03-B230(?)                                                                                                               
+Jmmsell10  canceled   104  2026-10-11 13:32:29.891824+00:00  104                KXAAAGASDFL-26OCT07-4.2250(?) KXAPFDDHTOTAL-26OCT06OLINAC-6(?) KXARGPREMDIVTOTAL-26OCT09GLPTUC-5(?) KXATPCHALLENGERMATCH-26OCT05AGUROD-ROD(?) KXATPCHALLENGERMATCH-26OCT05SEGZHU-ZHU(?) KXATPCHALLENGER…
+Jmmsell10  filled     221  2026-10-11 15:08:01.997370+00:00  221                KXAAAGASD-26OCT05-4.3700(?) KXAAAGASD-26OCT06-4.3650(?) KXAAAGASD-26OCT07-4.3750(?) KXAAAGASD-26OCT08-4.3650(?) KXAAAGASD-26OCT09-4.3750(?) KXAAAGASD-26OCT10-4.3750(?) KXAAAGASW-26OCT12-4.4000(?) KXA…
+Jmmsell10  rejected   1    2026-10-08 16:57:53.359518+00:00  1                  KXITFWMATCH-26OCT08RUSRAP-RAP(?)                                                                                                                                                                        
+Jmmsell10  submitted  1    2026-10-08 08:37:32.068504+00:00  1                  KXTRUTHSOCIAL-26OCT10-B230(?)                                                                                                                                                                           
+Kmmsell10  canceled   257  2026-10-30 10:52:44.708416+00:00  257                KXAAAGASD-26OCT12-4.3600(?) KXAAAGASD-26OCT14-4.3450(?) KXAAAGASD-26OCT17-4.3200(?) KXAAAGASW-26NOV02-4.3600(?) KXAAAGASW-26OCT19-4.3800(?) KXAPFDDHTOTAL-26OCT12NACREC-4(?) KXARGPREMDIVGAME-26OCT23GL…
+Kmmsell10  filled     317  2026-10-30 13:32:14.435800+00:00  317                KXAAAGASD-26OCT13-4.3550(?) KXAAAGASD-26OCT15-4.3400(?) KXAAAGASD-26OCT16-4.3350(?) KXAAAGASD-26OCT18-4.3000(?) KXAAAGASD-26OCT19-4.3000(?) KXAAAGASD-26OCT20-4.2850(?) KXAAAGASD-26OCT22-4.2750(?) KXA…
+Kmmsell10  submitted  3    2026-10-29 07:33:50.546347+00:00  3                  KXRAIN-26OCT29-ABQ(?) KXRAIN-26OCT29-TPA(?) KXRT-CAT-90(?)                                                                                                                                              
+Nmmsell10  canceled   37   2026-10-27 07:34:58.662447+00:00  37                 KXFEDMENTION-26OCT-GOOD(?) KXFEDMENTION-26OCT-STAG(?) KXFEDMENTION-26OCT-TRUM(?) KXINXU-26OCT22H1600-T7709.9999(?) KXNASDAQ100U-26OCT20H1600-T29699.99(?) KXNASDAQ100U-26OCT22H1600-T29489.99(?) KXRAIN…
+Nmmsell10  filled     32   2026-10-27 04:57:09.331320+00:00  32                 KXINXU-26OCT16H1600-T7714.9999(?) KXINXU-26OCT20H1600-T7754.9999(?) KXRAIN-26OCT16-ATL(?) KXRAIN-26OCT16-AUS(?) KXRAIN-26OCT17-ATL(?) KXRAIN-26OCT17-EWR(?) KXRAIN-26OCT17-LAX(?) KXRAIN-26OCT18-LV(?) …
+Vmmsell10  canceled   4    2026-10-29 11:55:15.088056+00:00  4                  KXFEDMENTION-26OCT-GOOD(?) KXFEDMENTION-26OCT-TRUM(?) KXINXU-26OCT29H1600-T7794.9999(?) KXRAIN-26OCT27-AUS(?)                                                                                           
+Vmmsell10  filled     16   2026-10-30 13:32:15.884167+00:00  16                 KXFEDMENTION-26OCT-TAX(?) KXRAIN-26OCT27-AUS(?) KXRAIN-26OCT27-OKC(?) KXRAIN-26OCT28-HOU(?) KXRAIN-26OCT28-MKE(?) KXRAIN-26OCT28-TPA(?) KXRAIN-26OCT29-HOU(?) KXRAIN-26OCT30-BOS(?) KXRAIN-26OCT30-MKE(…
+Vmmsell10  submitted  2    2026-10-29 07:02:34.582593+00:00  2                  KXRAIN-26OCT29-ABQ(?) KXRAIN-26OCT29-TPA(?)                                                                                                                                                             
+
+(21 rows)
