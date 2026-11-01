@@ -1,16 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1101a1914
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:15:01Z
-k  t                              d                                     
--  -----------------------------  --------------------------------------
-O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/sell 6c x28 11-01 15:14 
-O  KXMAMDANIMENTION-26NOV18-BILL  resting - yes/sell 10c x27 11-01 15:14
-O  KXYTVIEWSHIGH-DRA26DEC-12.0M   resting - no/buy 6c x333 10-30 14:33  
-O  KXYTVIEWSHIGH-FUT26DEC-7.0M    resting - no/buy 6c x333 10-31 01:28  
-O  KXYTVIEWSHIGH-JUS26DEC-15.0M   resting - no/buy 1c x500 11-01 05:49  
-O  KXYTVIEWSHIGH-OLI26DEC-7.5M    resting - no/buy 10c x200 10-27 07:31 
-P  KXMAMDANIMENTION-26NOV18-BILL  55.0000                               
-P  KXYTVIEWSHIGH-OLI26NOV-12.0M   -487.9700                             
-S  KXMAMDANIMENTION-26NOV18-BILL  19:13 yb - nb 97                      
-
-(9 rows)
+# type=noop
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:15:22Z
+(noop — nothing to do)
