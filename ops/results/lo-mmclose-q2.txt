@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=lo-mmclose-q2
+# code c31dbab4ef26829b08fe197e83ec5e7e3434bdd7 · started 2026-11-01T22:19:55Z
+strategy_tag  key                               state        deployment_key                  kind   version  epoch_number  ep_open  ended_at  paper_7d
+------------  --------------------------------  -----------  ------------------------------  -----  -------  ------------  -------  --------  --------
+Cmmsell10     mmsell-price-ceiling              LIVE_CANARY  mmsell-ceiling-live-1           live   2        2             True               1008    
+Dmmsell10     mmsell-price-ceiling-capacity     LIVE_CANARY  mmsell-capacity-live-1          live   3        2             True               1008    
+Fmmsell10     mmsell-price-ceiling-contest-cap  LIVE_CANARY  mmsell-contestcap-live-2        live   1        3             True               424     
+Jmmsell10     mmsell-price-ceiling-size-split   LIVE_CANARY  mmsell-sizesplit-live-2         live   1        3             True               450     
+Kmmsell10     mmsell-price-ceiling-cell-size    LIVE_CANARY  mmsell-cellsize-live-1          live   1        2             True               452     
+mmsell10      mmsell-price-ceiling-cell-size    LIVE_CANARY  mmsell-cellsize-paper-1-e2      paper  1        2             True               1008    
+mmsell9       mmsell-price-ceiling              LIVE_CANARY  mmsell-ceiling-paper-mmsell9-2  paper  1        2             True               561     
+Nmmsell10     mmsell-win-set                    LIVE_CANARY  mmsell-winset-live-1            live   2        2             True               30      
+Pmmsell10     mmsell-win-set                    LIVE_CANARY  mmsell-winset-paper-1-e1-e2     paper  2        2             True               30      
+Qmmsell10     mmsell-win-set-2                  LIVE_CANARY  mmsell-winset2-paper-1-e2       paper  1        2             True               38      
+Smmsell10     mmsell-price-ceiling-cell-size-2  LIVE_CANARY  mmsell-cellsize2-paper-1-e2     paper  1        2             True               28      
+Vmmsell10     mmsell-win-set-2                  LIVE_CANARY  mmsell-winset2-live-1           live   1        2             True               38      
+Xmmsell10     mmsell-price-ceiling-cell-size-2  LIVE_CANARY  mmsell-cellsize2-live-1         live   1        2             True               22      
+Ymmsell10     mmsell-win-set-3                  LIVE_CANARY  mmsell-winset3-live-1           live   1        2             True               19      
+Zmmsell10     mmsell-win-set-3                  LIVE_CANARY  mmsell-winset3-paper-1-e2       paper  1        2             True               25      
+
+(15 rows)
