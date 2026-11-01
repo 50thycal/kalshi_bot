@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT o.strategy, count(DISTINCT o.kalshi_order_id) AS filled_orders, count(DISTINCT o.market_ticker) AS markets FROM live_orders o JOIN fills f ON f.kalshi_order_id = o.kalshi_order_id WHERE o.strategy LIKE '%mmsell10' AND o.action = 'buy' AND o.side = 'no' AND o.created_at >= '2026-10-30 00:00+00' GROUP BY 1", "id": "rc-c-1101-2010"}
+{"type": "db", "sql": "SELECT strategy, count(*) AS orders, max(created_at) AS last_order FROM live_orders WHERE created_at >= now() - interval '4 hours' GROUP BY 1 ORDER BY 3 DESC", "id": "rc-f-1101-2010"}
