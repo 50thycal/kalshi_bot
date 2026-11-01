@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1101c1320", "sql": "SELECT market_ticker, to_char(end_date,'MM-DD') e, round(period_reward_usd::numeric,0) usd, (SELECT count(*) FROM live_orders o WHERE o.strategy='Alimm1' AND o.market_ticker=p.market_ticker AND o.status IN ('resting','partial')) q FROM incentive_programs p WHERE end_date > now() AND start_date <= now() AND (series_ticker LIKE 'KXYTVIEWS%' OR series_ticker LIKE '%MENTION%' OR series_ticker LIKE 'KXTRUMPSAY%') ORDER BY period_reward_usd DESC NULLS LAST LIMIT 40"}
+{"type":"noop"}
