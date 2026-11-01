@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT count(*) AS trades_4h, count(DISTINCT market_ticker) AS trade_mkts_4h, max(received_at) AS last_trade FROM incentive_trade_events WHERE received_at >= now() - interval '4 hours'", "id": "rc-a2-1101-2010"}
+{"type": "db", "sql": "SELECT split_part(market_ticker,'-',1) AS series, count(DISTINCT market_ticker) AS mkts_24h FROM incentive_market_snapshots WHERE at >= now() - interval '24 hours' GROUP BY 1 ORDER BY 2 DESC LIMIT 15", "id": "rc-a3-1101-2010"}
