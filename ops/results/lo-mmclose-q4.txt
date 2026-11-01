@@ -1,0 +1,16 @@
+# ops request [READ]
+# type=db  id=lo-mmclose-q4
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:03:14Z
+k    a                         b     c                            
+---  ------------------------  ----  -----------------------------
+dep  mmsell-ceiling-live-1     live  2026-11-01 23:02:09.314611+00
+dep  mmsell-winset-live-1      live  2026-11-01 23:02:09.314611+00
+dep  mmsell-capacity-live-1    live  2026-11-01 23:02:09.314611+00
+dep  mmsell-sizesplit-live-2   live  2026-11-01 23:02:09.314611+00
+dep  mmsell-cellsize-live-1    live  2026-11-01 23:02:09.314611+00
+dep  mmsell-cellsize2-live-1   live  OPEN                         
+dep  mmsell-winset3-live-1     live  OPEN                         
+dep  mmsell-contestcap-live-2  live  2026-11-01 23:02:09.314611+00
+dep  mmsell-winset2-live-1     live  2026-11-01 23:02:09.314611+00
+
+(9 rows)
