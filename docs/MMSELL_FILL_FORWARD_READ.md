@@ -119,7 +119,10 @@ Opened at the owner's request (2026-10-30), before any fill in this window exist
 sample: no fill read in §5 is reused. The bars are identical to P-SLOW.
 
 - **Sample:** live buy-NO orders on `Kmmsell10` (or a successor declared in `docs/DECISIONS.md`)
-  decided from **2026-10-30T00:00Z**. Filled, settled yes/no, one contract, settlement from
+  decided from **2026-10-30T00:00Z**.
+  - **Successor declared (DEC-040, 2026-11-01, blind):** every live `mmsell` tag from 10-30:
+    `Kmmsell10`, `Vmmsell10`, `Xmmsell10` and `Ymmsell10`, exactly what the command reads.
+  - The read also lists P-SLOW per tag, descriptively. Filled, settled yes/no, one contract, settlement from
   Kalshi, settlement-date bootstrap with 5,000 resamples and seed 20261003 (all as in §2).
 - **Read once, on a fixed date: 2026-12-04.**
   - **PASS:** ≥ 100 cell fills, cell mean ≥ +2.0¢, separation > 0 and bootstrap 5th percentile > 0.
@@ -127,6 +130,6 @@ sample: no fill read in §5 is reused. The bars are identical to P-SLOW.
   - Otherwise **NO PASS**.
   - A fixed date, not "when it looks good", so the stopping point cannot choose the answer.
 - **Command:** `{"type":"script","name":"mmsell_fill_forward_read","args":["--since","2026-10-30T00:00:00+00:00"],"id":"rl-ffr-v2-20261204"}`.
-  Read only its P-SLOW block. The lineage tags other than `Kmmsell10` place no orders in this window.
+  Read only its P-SLOW block. Since 10-30, `Xmmsell10` and `Ymmsell10` carry the sample (DEC-040).
 - **A PASS** makes more than 3 contracts on the cell an owner decision through a successor
   package (a hard stop). It is never automatic.

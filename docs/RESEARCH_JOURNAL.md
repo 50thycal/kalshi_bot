@@ -1,5 +1,15 @@
 # Weather-markets research journal
 
+## P-SLOW v2 sample 2026-11-01 — the restarted books count (DEC-040)
+
+- **What happened:** `Kmmsell10` stopped placing orders on 10-30, when it restarted as
+  `Xmmsell10` beside `Ymmsell10`. That left the Dec 4 read at 4 fills.
+- **Owner decision, taken blind (counts only):** every live `mmsell` tag from 10-30 counts. That
+  is what the command already reads, so the bars and dates are unchanged.
+- **Accrual at decision:** 32 filled orders across all cells, so the sample is growing again.
+- **Also new:** a 4-hour read-only research check-in loop
+  ([handoff](handoffs/HANDOFF-research-checkin.md)).
+
 ## State gas ladders 2026-10-31 — HOLD, promising: +5.1¢, 1 loss in 73, short of the 100-entry floor
 
 [Lookalike §16–17](MMSELL_LOOKALIKE_PROBE.md), the first screen from the census shortlist. Seven

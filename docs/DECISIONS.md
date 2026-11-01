@@ -1635,3 +1635,29 @@ goal".
 **Revisit if** Kalshi starts reporting reward credits per market (attribute them from the API
 rather than the balance ledger), or a second book quotes for rewards (the ledger can no longer
 assign a payout to one book).
+
+
+## DEC-040 — P-SLOW v2 counts the restarted MMSELL books
+
+**Date:** 2026-11-01 UTC. **Workstream:** WS-023 (catalog research). **Owner direction:** "count
+the new books".
+
+- **Why:** P-SLOW v2 (`MMSELL_FILL_FORWARD_READ.md` §6) named `Kmmsell10` "or a successor
+  declared here". On 2026-10-30, `Kmmsell10` was restarted as `Xmmsell10`, beside the WIN-set
+  book `Ymmsell10` (`MMSELL_WIN_SET_CANARY.md` §10). After 10-30 13:32Z, `Kmmsell10` placed no
+  orders, leaving 4 fills, so the sample had stopped growing.
+- **Decision:** the sample is every live `mmsell` buy-NO order decided from 2026-10-30T00:00Z:
+  `Kmmsell10`, `Vmmsell10`, `Xmmsell10` and `Ymmsell10`.
+  - This is exactly what the pre-registered command already reads (`strategy ILIKE '%mmsell%'`),
+    so no code changes.
+  - The bars, the read date (2026-12-04), the extension (2027-01-08) and one-contract scoring
+    are unchanged.
+- **Taken blind:** decided before any outcome in the window was read. The only things seen were
+  filled-order counts per tag (4 / 3 / 14 / 11).
+- **Known cost:** `Ymmsell10` selects markets differently (seven WIN-set series), and the
+  `Xmmsell10+Ymmsell10` pair can both hold a market. The settlement-date bootstrap clusters
+  those together. The read must also print the P-SLOW block per tag, descriptively, so a
+  difference between the books is visible. It never decides.
+
+**Revisit if** a further restart renames the books before 2027-01-08. Name the successor here
+before the read.

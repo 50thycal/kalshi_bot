@@ -116,16 +116,11 @@ The trend is what matters: say "LIMM 17 → 19 since yesterday", not just the nu
 > check in this chat, and post the 8-line status (ALL GREEN or NEEDS ATTENTION first). Reset
 > ops/request.json to noop. Change nothing in the bot.
 
-## Open item at handoff (owner decision, before 2026-12-04)
+## Decided at handoff
 
-- **P-SLOW v2's sample stopped growing.** Under §6, the sample is `Kmmsell10`, or a successor
-  declared in `docs/DECISIONS.md`. On 2026-10-30, `Kmmsell10` was restarted as `Xmmsell10`
-  (`MMSELL_WIN_SET_CANARY.md` §10): no sports or other categories, and the same slow-cell sizing.
-- **No successor has been declared,** so the Dec 4 read will see about 4 fills, extend to Jan 8,
-  and likely lapse.
-- **The script's `%mmsell%` pattern would also count `Ymmsell10`,** a different book with
-  WIN-set selection.
-- **This needs deciding now, while no outcome has been read:**
-  - (a) declare `Xmmsell10` the successor and exclude `Ymmsell10`; or
-  - (b) let P-SLOW v2 lapse.
-- The loop reports C by tag in either case.
+- **P-SLOW v2 sample (DEC-040, 2026-11-01):** the owner chose to count the restarted books.
+  - The sample is every live `mmsell` buy-NO order from 2026-10-30: `Kmmsell10`, `Vmmsell10`,
+    `Xmmsell10` and `Ymmsell10`.
+  - Check C's total across those tags is the P-SLOW accrual (an upper bound on cell fills).
+  - If a further restart renames the books, flag it. A successor must be named in
+    `docs/DECISIONS.md` before the read.
