@@ -266,6 +266,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         recut_mmsell10_size_split,
         repair_dark_live_canaries,
         repair_live_material_baseline,
+        repair_mmsell_standdown_live_rows,
         repair_tmmsell_epoch,
         restore_mmsell9_epoch,
         reviewed_universe,
@@ -437,6 +438,26 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_dark_live_canaries.repair,
+        ),
+        "mmsell-standdown-live-repair": ExperimentPackage(
+            name="mmsell-standdown-live-repair",
+            # Metadata only: the repair names all seven deployments as literals in
+            # TARGETS and reaches nothing else.
+            experiment_key=repair_mmsell_standdown_live_rows.TARGETS[0][0],
+            description=(
+                "MMSELL close-out (owner decision 2026-11-01): end the seven OPEN "
+                "live deployment rows of the stood-down mmsell canaries (Cmmsell10, "
+                "Dmmsell10, Fmmsell10, Jmmsell10, Kmmsell10, Nmmsell10, Vmmsell10), "
+                "none of which is in LIVE_STRATEGIES. Authorises nothing and stops "
+                "nothing the allowlist had not already stopped; it makes the record "
+                "agree so STAND_DOWN -> RETIRED becomes reachable. Refuses if any "
+                "tag is armed in LIVE_STRATEGIES or has a live order after its own "
+                "measured last one. Moves no lifecycle state, closes no epoch, "
+                "touches no gate, and never reaches Xmmsell10/Ymmsell10/Smmsell10/"
+                "Zmmsell10."
+            ),
+            register=_no_contract,
+            repair=repair_mmsell_standdown_live_rows.repair,
         ),
         "live-material-baseline-repair": ExperimentPackage(
             name="live-material-baseline-repair",
