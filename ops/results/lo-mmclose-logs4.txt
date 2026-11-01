@@ -1,6 +1,0 @@
-# latest deployment 2c87a76d-4221-4668-b53e-6f01391eda23 (status=SUCCESS, created=2026-11-01T23:04:04.668Z)
-# ops request [READ]
-# type=logs  service=main  id=lo-mmclose-logs4
-# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:22:00Z
-# target service: main
-(no log lines returned)
