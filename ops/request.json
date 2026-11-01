@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT count(*) AS trades_6h, count(DISTINCT market_ticker) AS trade_mkts_6h, max(received_at) AS last_trade FROM incentive_trade_events WHERE received_at >= now() - interval '6 hours'", "id": "rl-limm-st2-20261101"}
+{"type": "db", "sql": "SELECT incentive_type, count(*) AS live_programs, count(DISTINCT event_ticker) AS events, round(sum(period_reward_usd)::numeric,0) AS pool_usd FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL GROUP BY 1", "id": "rl-limm-st3-20261101"}
