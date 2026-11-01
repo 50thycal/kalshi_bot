@@ -1,0 +1,144 @@
+# ops request [READ]
+# type=xos  id=rv-sb-1101-2100
+# code c31dbab4ef26829b08fe197e83ec5e7e3434bdd7 · started 2026-11-01T22:14:30Z
+liquidity-incentive-mm  [LIVE_CANARY]  v1 epoch 2  snapshot 4f9adf15daa64035…  window 2026-09-17 15:52:12.737385+00:00 →
+arm        role       tags  settled  ¢/trade  win%  open  entries
+---------  ---------  ----  -------  -------  ----  ----  -------
+limm1side  treatment  -     0.0      -        -     0.0   0.0    
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.565161+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+  gate paper_to_live_smoke [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.599212+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+  gate shadow_instrument_ready [promotion PROBE→PAPER]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.630299+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+
+mmsell-correlation-cap  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-09-05 13:57:08.116743+00:00 →
+arm             role       tags      settled  ¢/trade  win%   open   entries
+--------------  ---------  --------  -------  -------  -----  -----  -------
+contest_capped  treatment  Gmmsell1  4026.0   1.3115   94.86  57.0   4091.0 
+uncapped        control    Gmmsell0  9332.0   1.0775   94.61  136.0  9523.0 
+  gate paper_keep [kill]  latest: (never evaluated)
+
+mmsell-price-ceiling  [LIVE_CANARY]  v2 epoch 2  snapshot 4f9adf15daa64035…  window 2026-08-28 14:20:35.572574+00:00 →
+arm       role       tags      settled  ¢/trade  win%  open   entries
+--------  ---------  --------  -------  -------  ----  -----  -------
+mmsell10  treatment  mmsell10  10558.0  1.0722   94.6  136.0  10751.0
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.691664+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.713113+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #11 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+
+mmsell-price-ceiling-capacity  [LIVE_CANARY]  v3 epoch 2  snapshot 4f9adf15daa64035…  window 2026-09-02 11:36:01.622711+00:00 →
+arm       role       tags      settled  ¢/trade  win%   open   entries
+--------  ---------  --------  -------  -------  -----  -----  -------
+mmsell10  treatment  mmsell10  9854.0   1.0096   94.54  136.0  10046.0
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.774741+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.797541+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #12 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+
+mmsell-price-ceiling-cell-size  [LIVE_CANARY]  v1 epoch 2  snapshot 4f9adf15daa64035…  window 2026-10-11 15:29:29.247200+00:00 →
+arm       role       tags      settled  ¢/trade  win%  open   entries
+--------  ---------  --------  -------  -------  ----  -----  -------
+mmsell10  treatment  mmsell10  3390.0   0.8516   94.4  136.0  3549.0 
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.575463+00:00
+    platform boundary blocks interpretation: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evi
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.627107+00:00
+    platform boundary blocks interpretation: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evi
+
+mmsell-price-ceiling-cell-size-2  [LIVE_CANARY]  v1 epoch 2  snapshot 55b51990e0492e4b…  window 2026-10-30 13:39:00.571751+00:00 →
+arm       role       tags       settled  ¢/trade  win%   open  entries
+--------  ---------  ---------  -------  -------  -----  ----  -------
+mmsell10  treatment  Smmsell10  7.0      6.4657   100.0  10.0  17.0   
+  gate live_canary_keep [kill]  latest: HOLD @ 2026-11-01 12:36:49.344712+00:00
+    sample floor not met: mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10 live_settled_contracts=18 vs >= 150
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-10-30 23:32:07.543169+00:00
+    all pass conditions met: mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10 realizable_cents_per_trade=0.92
+
+mmsell-price-ceiling-contest-cap  [LIVE_CANARY]  v1 epoch 3  snapshot 4f9adf15daa64035…  window 2026-09-07 02:01:35.616750+00:00 →
+arm       role       tags      settled  ¢/trade  win%   open   entries
+--------  ---------  --------  -------  -------  -----  -----  -------
+mmsell10  treatment  mmsell10  8954.0   1.1159   94.65  136.0  9144.0 
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:31.694862+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:31.738818+00:00
+    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #13 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
+
+mmsell-price-ceiling-size-split  [LIVE_CANARY]  v1 epoch 3  snapshot 4f9adf15daa64035…  window 2026-10-04 17:52:14.129161+00:00 →
+arm       role       tags      settled  ¢/trade  win%   open   entries
+--------  ---------  --------  -------  -------  -----  -----  -------
+mmsell10  treatment  mmsell10  4696.0   1.0884   94.63  136.0  4872.0 
+  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.794112+00:00
+    platform boundary blocks interpretation: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evi
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.825135+00:00
+    platform boundary blocks interpretation: MARKET_TAXONOMY: revision 'trumpmention_2026_10_27' activated at 2026-10-27 11:23:05.735977+00:00 inside/before the evi
+
+mmsell-rain-season  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-14 03:20:41.640884+00:00 →
+arm            role       tags         settled  ¢/trade  win%   open  entries
+-------------  ---------  -----------  -------  -------  -----  ----  -------
+rain_adjacent  treatment  Rainmmsell2  54.0     10.6667  100.0  3.0   57.0   
+rain_cell      control    Rainmmsell1  55.0     4.5678   98.18  3.0   58.0   
+  gate adjacent_winter_keep [kill]  latest: (never evaluated)
+  gate cell_winter_keep [kill]  latest: (never evaluated)
+
+mmsell-temperature-season  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-15 02:50:08.433875+00:00 →
+arm        role     tags         settled  ¢/trade  win%   open  entries
+---------  -------  -----------  -------  -------  -----  ----  -------
+temp_cell  control  Tempmmsell1  772.0    1.7087   95.21  62.0  834.0  
+  gate temp_cell_winter_keep [kill]  latest: (never evaluated)
+
+mmsell-type-tight  [PAPER]  v1 epoch 3  snapshot 55b51990e0492e4b…  window 2026-10-27 11:23:05.735977+00:00 →
+arm       role       tags      settled  ¢/trade  win%   open  entries
+--------  ---------  --------  -------  -------  -----  ----  -------
+Tmmsell1  secondary  Tmmsell1  43.0     4.127    97.67  3.0   46.0   
+Tmmsell2  secondary  Tmmsell2  19.0     1.21     94.74  6.0   25.0   
+Tmmsell5  secondary  Tmmsell5  62.0     3.2331   96.77  15.0  77.0   
+Tmmsell6  secondary  Tmmsell6  219.0    0.5426   94.06  80.0  301.0  
+  gate paper_keep [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.938685+00:00
+    platform boundary blocks interpretation: MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposit
+
+mmsell-weather-bands  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-15 09:55:18.815540+00:00 →
+arm          role       tags         settled  ¢/trade  win%   open  entries
+-----------  ---------  -----------  -------  -------  -----  ----  -------
+hight_ultra  treatment  Tempmmsell3  812.0    1.7209   98.77  62.0  874.0  
+rain_ultra   treatment  Rainmmsell3  51.0     0.6818   98.04  3.0   54.0   
+temp_upper   control    Tempmmsell2  645.0    1.3797   88.37  41.0  686.0  
+  gate hight_ultra_winter_keep [kill]  latest: (never evaluated)
+  gate rain_ultra_winter_keep [kill]  latest: (never evaluated)
+  gate temp_upper_winter_keep [kill]  latest: (never evaluated)
+
+mmsell-wide-control  [PAPER]  v1 epoch 1  snapshot 5c3720fca2fe36f0…  window 2026-08-16 14:14:43.720928+00:00 →
+arm     role     tags    settled  ¢/trade  win%   open   entries
+------  -------  ------  -------  -------  -----  -----  -------
+mmsell  control  mmsell  18725.0  1.8055   79.25  192.0  19112.0
+
+mmsell-win-set  [LIVE_CANARY]  v2 epoch 2  snapshot 315bffccc104d1cc…  window 2026-10-16 14:11:23.046444+00:00 →
+arm     role       tags       settled  ¢/trade  win%   open  entries
+------  ---------  ---------  -------  -------  -----  ----  -------
+winset  treatment  Pmmsell10  59.0     3.0471   96.61  6.0   65.0   
+  gate live_canary_keep [kill]  latest: HOLD @ 2026-10-27 13:43:38.816628+00:00
+    sample floor not met: mmsell-win-set/v2/e2/winset live_settled_contracts=87.96 vs >= 150
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-10-27 13:43:38.879596+00:00
+    all pass conditions met: mmsell-win-set/v2/e2/winset realized_pnl_usd=0.5188
+
+mmsell-win-set-2  [LIVE_CANARY]  v1 epoch 2  snapshot 55b51990e0492e4b…  window 2026-10-27 11:35:22.712630+00:00 →
+arm     role       tags       settled  ¢/trade  win%   open  entries
+------  ---------  ---------  -------  -------  -----  ----  -------
+winset  treatment  Qmmsell10  29.0     6.4462   100.0  9.0   38.0   
+  gate live_canary_keep [kill]  latest: HOLD @ 2026-10-30 11:44:28.689213+00:00
+    sample floor not met: mmsell-win-set-2/v1/e2/winset live_settled_contracts=36 vs >= 150
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-10-31 12:59:55.595248+00:00
+    all pass conditions met: mmsell-win-set-2/v1/e2/winset realized_pnl_usd=1.6825
+
+mmsell-win-set-3  [LIVE_CANARY]  v1 epoch 2  snapshot 55b51990e0492e4b…  window 2026-10-30 13:40:55.565405+00:00 →
+arm     role       tags       settled  ¢/trade  win%   open  entries
+------  ---------  ---------  -------  -------  -----  ----  -------
+winset  treatment  Zmmsell10  7.0      6.4657   100.0  9.0   16.0   
+  gate live_canary_keep [kill]  latest: HOLD @ 2026-11-01 13:39:27.426368+00:00
+    sample floor not met: mmsell-win-set-3/v1/e2/winset live_settled_contracts=18 vs >= 150
+  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-10-30 13:43:57.847511+00:00
+    all pass conditions met: mmsell-win-set-3/v1/e2/winset realized_pnl_usd=0
+
+theta-tail-sell  [PAUSED]
+  (no version (minimal legacy stub))
+
