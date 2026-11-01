@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT incentive_type, count(*) AS live_programs, count(DISTINCT event_ticker) AS events, round(sum(period_reward_usd)::numeric,0) AS pool_usd FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL GROUP BY 1", "id": "rl-limm-st3-20261101"}
+{"type": "db", "sql": "SELECT date_trunc('day', at)::date AS day, count(*) AS snaps, count(DISTINCT market_ticker) AS mkts FROM incentive_market_snapshots WHERE at >= '2026-10-30 20:47+00' GROUP BY 1 ORDER BY 1", "id": "rl-limm-st4-20261101"}
