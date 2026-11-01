@@ -1,11 +1,4 @@
 # ops request [READ]
-# type=db  id=rl-rc-q4-20261101
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T20:03:49Z
-strategy   filled_orders  markets
----------  -------------  -------
-Kmmsell10  4              4      
-Vmmsell10  3              3      
-Xmmsell10  14             14     
-Ymmsell10  11             11     
-
-(4 rows)
+# type=noop
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T20:04:21Z
+(noop — nothing to do)
