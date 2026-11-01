@@ -1,29 +1,16 @@
 # ops request [READ]
-# type=xos  id=lo-mmclose-sd-capacity-rc2
-# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:05:17Z
-{
-  "command_id": "lo-mmclose-sd-capacity",
-  "action": "STAND_DOWN",
-  "actor": "claude-code",
-  "actor_role": "LIVE_OPS",
-  "status": "SUCCEEDED",
-  "payload_hash": "46bc3b6ca142ef7a0cbca3a0bec82c9a2e69895cf36e439d75fa0265235d7094",
-  "completed_at": "2026-11-01 23:04:52.888854+00:00",
-  "result": {
-    "kind": "stand_down",
-    "package": null,
-    "to_state": "RETIRED",
-    "experiment": "mmsell-price-ceiling-capacity",
-    "from_state": "LIVE_CANARY",
-    "closed_epoch": 2,
-    "ended_deployments": [
-      "mmsell-capacity-live-1",
-      "mmsell-capacity-paper-1-e1-e1-e2",
-      "mmsell-capacity-twin-1"
-    ]
-  },
-  "error": null,
-  "replayed": false,
-  "collision": false,
-  "executed": true
-}
+# type=db  id=lo-mmclose-q5
+# code dcd8bdb9ec1bbe7072e149b9821326caeb7b2332 · started 2026-11-01T23:05:59Z
+k    a                         b     c                            
+---  ------------------------  ----  -----------------------------
+dep  mmsell-ceiling-live-1     live  2026-11-01 23:02:09.314611+00
+dep  mmsell-winset-live-1      live  2026-11-01 23:02:09.314611+00
+dep  mmsell-capacity-live-1    live  2026-11-01 23:02:09.314611+00
+dep  mmsell-sizesplit-live-2   live  2026-11-01 23:02:09.314611+00
+dep  mmsell-cellsize-live-1    live  2026-11-01 23:02:09.314611+00
+dep  mmsell-cellsize2-live-1   live  OPEN                         
+dep  mmsell-winset3-live-1     live  OPEN                         
+dep  mmsell-contestcap-live-2  live  2026-11-01 23:02:09.314611+00
+dep  mmsell-winset2-live-1     live  2026-11-01 23:02:09.314611+00
+
+(9 rows)
