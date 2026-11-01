@@ -1,32 +1,17 @@
 # ops request [READ]
-# type=db  id=rl-limm-st6-20261101
-# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:48:07Z
-series               mkts  snaps
--------------------  ----  -----
-KXAAAGASM            26    7462 
-KXWAAEROEMP          13    2721 
-KXWATECHEMP          10    2149 
-KXNYNJPORTTEU        9     1936 
-KXNYCASKRENT         8     1997 
-KXBWAYATTENDANCE     8     880  
-KXILNUCLEAR          7     1681 
-KXWALLSTBONUS        7     1783 
-KXTXERCOTPEAK        7     1657 
-KXPAPER              7     707  
-KXFLVISITORCOUNT     7     1635 
-KXCABUILDPERMITS     6     1485 
-KXPAMFGEMP           6     1498 
-KXNYCSUBWAY          5     550  
-KXASPENMTNOPEN       5     1435 
-KXYTVIEWSHIGH        5     1890 
-KXBIGSKYOPEN         5     1435 
-KXTRUMPNOMNUM        4     520  
-KXONIONACT           4     1144 
-KXTXOIL              4     1144 
-KXWEEKSNUM1          4     368  
-KXPJMEMERGENCY       4     875  
-KXCITYCHAMPS         3     55   
-KXBRRATECUT          3     861  
-KXGONZALEZVENEZUELA  2     196  
+# type=db  id=rl-limm-st7-20261101
+# code 06cc94d9010192d7b210f7729ec4fef9fabcea29 · started 2026-11-01T19:48:50Z
+series         live_progs  avg_pool  max_pool  first_end 
+-------------  ----------  --------  --------  ----------
+KXNFLTRADE     60          55        55        2026-11-06
+KXAAAGASM      26          289       300       2026-11-07
+KXAAAGASW      24          94        100       2026-11-02
+KXAAAGASMINM   14          95        95        2026-11-08
+KXAAAGASMAXM   12          85        85        2026-11-07
+KXNFLXAPP      9           85        85        2026-11-04
+KXNFLNEXTTEAM  8           92        95        2026-11-08
+KXNFLSTADIUM   2           158       225       2026-11-05
+KXNFLSELLOUT   1           225       225       2026-11-05
+KXNFLPLAYOFFC  1           225       225       2026-11-05
 
-(25 rows)
+(10 rows)
