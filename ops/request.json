@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1102b0119", "sql": "SELECT market_ticker, status||' '||coalesce(cancel_reason,'-')||' '||side||'/'||action||' '||limit_price||'c x'||quantity||' '||to_char(created_at,'MM-DD HH24:MI') d FROM live_orders WHERE strategy='Alimm1' AND market_ticker LIKE 'KXYTVIEWSHIGH-FUT26DEC%' ORDER BY created_at DESC LIMIT 4"}
+{"type":"noop"}
