@@ -62,7 +62,7 @@ with the brief.
 
 ## Outcome (Live Ops, 2026-11-01 23:35Z)
 
-**Five retired. Two held for an owner decision.**
+**Five retired 2026-11-01; the last two retired 2026-11-02 on the owner's decision (below). All seven RETIRED.**
 
 | experiment | result | receipt |
 |---|---|---|
@@ -100,7 +100,7 @@ with the brief.
 
 **Readback** (`lo-mmclose-q9`): no integrity event since 22:15Z. No paper write from C/D/F/J/K/N/V/P/Q since 23:02Z.
 
-### DECISION (owner): the two held experiments
+### DECISION (owner): the two held experiments — resolved 2026-11-02, option (a)
 
 Retiring either one also stops a paper book that is not on the approved list:
 
@@ -122,3 +122,19 @@ The live rows are already ended either way, so nothing here touches real money.
   - Several describe mechanisms the X/Y successors inherit (contest cap, live-mirror cap, cutover stacking).
   - Each owner should re-point or close them. Nothing was closed here.
 - The accepted platform impacts (`I2/NEW_EPOCH`) on the retired experiments are Platform Change Review's to resolve.
+
+## Outcome part 2 (Live Ops, 2026-11-02 14:52Z): the held two retired
+
+**Owner decision (Calvin, 2026-11-02):** "Retire them anyway, mmsell9 and mmsell10 can stop" (option a).
+
+1. **Stale epoch.** `mmsell-price-ceiling` also had a stale open v1/e2 holding `mmsell9`, and `STAND_DOWN` closes only the latest version's epoch. So #719 added `mmsell9-stale-epoch-repair`. It closes v1/e2 and declares `mmsell9` retired. Env act `lo-mmclose-m9-1` removed `mmsell9` from `MMSELL_VARIANTS` and ran the repair in the same boot: SUCCEEDED.
+2. **Retirements.** `STAND_DOWN` → RETIRED for `mmsell-price-ceiling` (`lo-mmclose-sd2-mmsell-price-ceiling`) and `mmsell-price-ceiling-cell-size` (`lo-mmclose-sd2-mmsell-price-ceiling-cell-size`). Each closed e2 and ended its paper and twin rows.
+3. **Cleanup.** Env act `lo-mmclose-env-m10` removed `mmsell10` from `MMSELL_VARIANTS` and cleared the command slot.
+
+**Readback** (`lo-mmclose-q11`):
+- All seven are RETIRED, with no open epoch or deployment left on any of them.
+- No integrity event since 2026-11-01 22:15Z.
+- `Xmmsell10`/`Ymmsell10` placed live orders and wrote paper trades today, and so did `Smmsell10`/`Zmmsell10`.
+- `LIVE_STRATEGIES` and `MMSELL_LIVE_SHARED_MARKET_PAIRS` are unchanged.
+
+The 24-hour readback is scheduled (routine `trig_01G5Kcz5kRqoktWxmMzVDor6`, 2026-11-02 23:40Z).
