@@ -1,21 +1,18 @@
 # ops request [READ]
-# type=db  id=lo-mmclose-q12
-# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T23:42:05Z
-k     a                                 b        c                            
-----  --------------------------------  -------  -----------------------------
-exp   mmsell-price-ceiling              RETIRED  0                            
-exp   mmsell-price-ceiling-capacity     RETIRED  0                            
-exp   mmsell-price-ceiling-contest-cap  RETIRED  0                            
-exp   mmsell-win-set                    RETIRED  0                            
-exp   mmsell-win-set-2                  RETIRED  0                            
-exp   mmsell-price-ceiling-size-split   RETIRED  0                            
-exp   mmsell-price-ceiling-cell-size    RETIRED  0                            
-pt24  Smmsell10                         6        2026-11-02 13:26:42.274402+00
-pt24  Xmmsell10                         6        2026-11-02 13:26:42.308982+00
-pt24  Ymmsell10                         5        2026-11-02 13:26:49.697399+00
-pt24  Zmmsell10                         5        2026-11-02 13:26:42.289886+00
-lo24  Alimm1                            20       2026-11-02 22:38:03.820498+00
-lo24  Xmmsell10                         6        2026-11-02 13:26:49.472614+00
-lo24  Ymmsell10                         5        2026-11-02 13:26:50.575697+00
+# type=db  id=lo-mmclose-q13
+# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T23:42:31Z
+strategy     n    last                            
+-----------  ---  --------------------------------
+Tempmmsell3  29   2026-11-02 23:30:39.292349+00:00
+Tempmmsell2  29   2026-11-02 23:30:38.954824+00:00
+Tempmmsell1  30   2026-11-02 23:30:37.098936+00:00
+Gmmsell1     42   2026-11-02 23:30:29.002433+00:00
+Gmmsell0     79   2026-11-02 23:30:28.974189+00:00
+Tmmsell6     19   2026-11-02 23:30:14.677568+00:00
+Tmmsell5     14   2026-11-02 23:30:14.650605+00:00
+Tmmsell2     3    2026-11-02 23:30:14.627535+00:00
+mmsell       123  2026-11-02 23:29:54.091273+00:00
+Alimm1_pt3   1    2026-11-02 22:38:03.886333+00:00
+Tmmsell1     9    2026-11-02 22:27:23.835817+00:00
 
-(14 rows)
+(11 rows)
