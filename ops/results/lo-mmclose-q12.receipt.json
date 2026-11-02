@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a3faafa1789b42135da459bed335fcdd7395ffef",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-02T23:42:06Z",
+  "id": "lo-mmclose-q12",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-mmclose-q12.receipt.json",
+  "result_file": "ops/results/lo-mmclose-q12.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41547404623",
+  "service": null,
+  "started_at": "2026-11-02T23:42:05Z",
+  "targets": [],
+  "type": "db"
+}
