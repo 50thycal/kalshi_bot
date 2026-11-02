@@ -1,13 +1,4 @@
 # ops request [READ]
-# type=db  id=rc-m10-1102-1630
-# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T16:26:16Z
-strategy   trades_24h  last_trade                      
----------  ----------  --------------------------------
-mmsell10   191         2026-11-02 14:29:36.088265+00:00
-mmsell9    124         2026-11-02 14:29:28.994728+00:00
-Smmsell10  6           2026-11-02 13:26:42.274402+00:00
-Xmmsell10  6           2026-11-02 13:26:42.308982+00:00
-Ymmsell10  5           2026-11-02 13:26:49.697399+00:00
-Zmmsell10  5           2026-11-02 13:26:42.289886+00:00
-
-(6 rows)
+# type=noop
+# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T16:26:55Z
+(noop — nothing to do)
