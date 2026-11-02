@@ -1,14 +1,6 @@
+# latest deployment 8e8fe16d-8c18-4151-8e49-25b6a400eced (status=SUCCESS, created=2026-11-02T14:43:07.454Z)
 # ops request [READ]
-# type=db  id=lo-mmclose-q10
-# code 24c15a4fd3335560ecadc1f1b367fcb55de254e0 · started 2026-11-02T14:28:26Z
-version  epoch_id  epoch_number  ep_end  deployment_key                  kind        ended_at                          strategy_tag 
--------  --------  ------------  ------  ------------------------------  ----------  --------------------------------  -------------
-1        27        2                     mmsell-ceiling-paper-mmsell9-2  paper                                         mmsell9      
-2        12        2                     mmsell-ceiling-live-1           live        2026-11-01 23:02:09.314611+00:00  Cmmsell10    
-2        12        2                     mmsell-ceiling-twin-1           paper_twin                                    Cmmsell10_pt3
-2        12        2                     mmsell-ceiling-paper-2-e2       paper       2026-09-02 00:57:38.273309+00:00  mmsell10     
-1        37        2                     mmsell-cellsize-twin-1          paper_twin                                    Kmmsell10_pt4
-1        37        2                     mmsell-cellsize-paper-1-e2      paper                                         mmsell10     
-1        37        2                     mmsell-cellsize-live-1          live        2026-11-01 23:02:09.314611+00:00  Kmmsell10    
-
-(7 rows)
+# type=logs  service=main  id=lo-mmclose-dep5-1
+# code 118554021abfe13e4bb5e373d2e54920c0402184 · started 2026-11-02T14:44:15Z
+# target service: main
+2026-11-02T14:43:59.457542797Z INFO  starting kalshi bot
