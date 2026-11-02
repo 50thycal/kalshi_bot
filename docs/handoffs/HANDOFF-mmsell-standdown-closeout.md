@@ -138,3 +138,18 @@ The live rows are already ended either way, so nothing here touches real money.
 - `LIVE_STRATEGIES` and `MMSELL_LIVE_SHARED_MARKET_PAIRS` are unchanged.
 
 The 24-hour readback is scheduled (routine `trig_01G5Kcz5kRqoktWxmMzVDor6`, 2026-11-02 23:40Z).
+
+## 24-hour readback (2026-11-02 23:42Z): PASS
+
+Ops results: `lo-mmclose-q12`, `lo-mmclose-q13`.
+
+1. **The closed books stay closed.**
+   - No `paper_trades` since 2026-11-01 23:02Z for C/D/F/J/K/N/V/P/Q`mmsell10`.
+   - None since 2026-11-02 14:50Z for `mmsell9` and `mmsell10`.
+2. **The successors keep trading.** In the last 24 hours, `Xmmsell10` placed 6 live orders and 6 paper trades, and `Ymmsell10` placed 5 and 5. `Smmsell10` and `Zmmsell10` wrote 6 and 5 paper trades. Their last write was at 13:26Z.
+   - Their universe is narrow, about 20 trades a week.
+   - The mmsell loop itself is healthy: the other books (`mmsell`, G/T/Temp) wrote through 23:30Z.
+3. **No new integrity event** since 2026-11-01 22:15Z.
+4. **All seven RETIRED**, with zero open epochs or deployments.
+
+The close-out is complete. The ten linked XOS issues and the accepted platform impacts on the retired experiments remain with their owning roles: Research Lab, Live Ops and Platform Change Review.
