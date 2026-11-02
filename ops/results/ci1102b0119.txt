@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=ci1102b0119
+# code 043c56ba10ba902d1ddc803ac03390869328fe2a · started 2026-11-02T01:18:02Z
+market_ticker                d                                              
+---------------------------  -----------------------------------------------
+KXYTVIEWSHIGH-FUT26DEC-7.0M  canceled out_of_band no/buy 7c x285 11-01 21:44
+KXYTVIEWSHIGH-FUT26DEC-7.0M  canceled repriced no/buy 6c x333 10-31 01:28   
+KXYTVIEWSHIGH-FUT26DEC-7.0M  canceled repriced no/buy 5c x400 10-30 06:00   
+KXYTVIEWSHIGH-FUT26DEC-7.0M  canceled repriced no/buy 4c x500 10-29 14:24   
+
+(4 rows)
