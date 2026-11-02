@@ -249,8 +249,9 @@ def _unrealized(snap: m.Position, mark) -> float | None:
     """Mark-to-bid P&L of one held position, whole account (callers apply the book's share).
 
     A long position is valued at the price it could be SOLD at now — the NO bid for a NO
-    position, the YES bid for a YES one — against its cost basis. None when the tape has no
-    price for the ticker or the snapshot has no cost basis: unmeasured, never zero."""
+    position, the YES bid for a YES one — against its cost basis. An empty held side on a book
+    that still quotes the other side is worth 0. None when nothing prices the ticker or the
+    snapshot has no cost basis: unmeasured, never zero."""
     signed = float(snap.quantity_fp or snap.quantity or 0)
     qty = abs(signed)
     if mark is None or not qty or snap.market_exposure is None:
@@ -258,8 +259,14 @@ def _unrealized(snap: m.Position, mark) -> float | None:
     # Kalshi's feed carries no side; a positive position is YES, a negative one NO.
     side = (snap.side or ("yes" if signed > 0 else "no")).lower()
     bid = mark.yes_bid if side == "yes" else mark.no_bid
+    other = mark.no_bid if side == "yes" else mark.yes_bid
     if bid is None:
-        return None
+        # A quoted book with nobody bidding our side: it cannot be sold right now, so it is
+        # worth 0 — the rule the liquidity book's own card already uses (incentive_book,
+        # TSWIF 2026-10-15). Only a mark with no quote on either side stays unpriced.
+        if other is None:
+            return None
+        bid = 0
     return qty * bid / 100.0 - abs(float(snap.market_exposure))
 
 
