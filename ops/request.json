@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT strategy, count(*) AS orders, max(created_at) AS last_order FROM live_orders WHERE created_at >= now() - interval '4 hours' GROUP BY 1 ORDER BY 3 DESC", "id": "rc-f-1102-0313"}
+{"type": "db", "sql": "SELECT strategy, count(*) AS orders_7d, max(created_at) AS last_order FROM live_orders WHERE created_at >= now() - interval '7 days' GROUP BY 1 ORDER BY 3 DESC", "id": "rc-f7-1102-0313"}
