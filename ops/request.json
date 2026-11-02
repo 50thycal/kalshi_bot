@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["lo-mmclose-sd2-mmsell-price-ceiling-cell-size"],"id":"lo-mmclose-sd2-mmsell-price-ceiling-cell-size-rc2"}
+{"type":"env","action":"get","id":"lo-mmclose-env5"}
