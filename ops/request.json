@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT strategy, count(*) AS trades_24h, max(created_at) AS last_trade FROM paper_trades WHERE created_at >= now() - interval '24 hours' AND strategy IN ('mmsell10','mmsell9','Smmsell10','Zmmsell10','Xmmsell10','Ymmsell10') GROUP BY 1 ORDER BY 1", "id": "rc-m10-1102-1630"}
+{"type":"noop"}
