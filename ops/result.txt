@@ -1,7 +1,8 @@
 # ops request [READ]
-# type=db  id=rc-a4-1102-1513
-# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T16:23:08Z
-series  live_progs
-------  ----------
+# type=db  id=rc-b-1102-1513
+# code a3faafa1789b42135da459bed335fcdd7395ffef · started 2026-11-02T16:23:45Z
+settled_markets  settled_events
+---------------  --------------
+17               15            
 
-(0 rows)
+(1 row)
