@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "118554021abfe13e4bb5e373d2e54920c0402184",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-02T14:47:23Z",
+  "id": "lo-mmclose-sd2-mmsell-price-ceiling",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 479 bytes, sha256:cfc21c2a83fc1e30>",
+        "before": "<redacted 314 bytes, sha256:f8eab27fd2327227>",
+        "requested": "<redacted 479 bytes, sha256:cfc21c2a83fc1e30>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "claude-code",
+    "purpose": "MMSELL close-out: STAND_DOWN mmsell-price-ceiling -> RETIRED (owner Calvin)"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-mmclose-sd2-mmsell-price-ceiling.receipt.json",
+  "result_file": "ops/results/lo-mmclose-sd2-mmsell-price-ceiling.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/41465225015",
+  "service": "main",
+  "started_at": "2026-11-02T14:47:16Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
