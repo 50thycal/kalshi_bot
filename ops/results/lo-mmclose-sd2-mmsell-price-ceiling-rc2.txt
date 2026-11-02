@@ -1,0 +1,29 @@
+# ops request [READ]
+# type=xos  id=lo-mmclose-sd2-mmsell-price-ceiling-rc2
+# code 118554021abfe13e4bb5e373d2e54920c0402184 · started 2026-11-02T14:48:32Z
+{
+  "command_id": "lo-mmclose-sd2-mmsell-price-ceiling",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "2010f6605d9c07a6f1c01ef46e139bd8f1c75226518c5656f43540b39b3696d9",
+  "completed_at": "2026-11-02 14:48:02.330609+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "mmsell-price-ceiling",
+    "from_state": "LIVE_CANARY",
+    "closed_epoch": 2,
+    "ended_deployments": [
+      "mmsell-ceiling-live-1",
+      "mmsell-ceiling-paper-2-e2",
+      "mmsell-ceiling-twin-1"
+    ]
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
