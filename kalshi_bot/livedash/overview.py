@@ -443,6 +443,8 @@ def build_headline(session, books, open_pairs, orders, fills, snaps, held, now, 
                     settled_events.append((at, pnl))
                     settled_month += 1
                     wins += pnl > 0
+            elif incentive_book.ignored(ticker):
+                continue  # a closed 2c leftover the operator chose to drop from the page
             elif snap is not None and abs(float(snap.quantity_fp or snap.quantity or 0)):
                 open_n += 1
                 open_cost += abs(float(snap.market_exposure or 0)) * share

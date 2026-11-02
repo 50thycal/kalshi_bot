@@ -559,3 +559,18 @@ def test_a_held_side_nobody_bids_is_worth_zero_not_unpriced(session):
     b = _book({"headline": h}, "Alimm1")
     assert b["unrealized_usd"] == pytest.approx(-10.38)
     assert b["open_unpriced"] == 0 and h["open_unpriced"] == 0
+
+
+def test_the_earthquake_leftover_is_left_off_the_page(session):
+    _order(session, "KXBIGGESTQUAKE-21SEP26-6.4", book="Alimm1", qty=1, filled=1, price=2)
+    session.add(m.Position(market_ticker="KXBIGGESTQUAKE-21SEP26-6.4",
+                           captured_at=NOW - timedelta(minutes=5), side="yes", quantity=1,
+                           quantity_fp=1, market_exposure=0.02))
+    session.flush()
+    out = ov.build_overview(session, now=NOW)
+    h = out["headline"]
+    b = _book(out, "Alimm1")
+    assert h["open_unpriced"] == 0 and b["open_unpriced"] == 0
+    assert b["open_positions"] == 0
+    inc = b.get("incentive") or {}
+    assert all(not p["market"].startswith("KXBIGGESTQUAKE") for p in inc.get("positions", []))

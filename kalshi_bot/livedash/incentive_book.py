@@ -280,6 +280,17 @@ def _position_row(session, ticker: str, ours: list, snap, prog, now: datetime) -
     }
 
 
+#: Held markets the dashboard leaves out entirely (operator, 2026-11-02). KXBIGGESTQUAKE-21SEP26
+#: is one YES contract at 2c, closed since 2026-09-17 and still awaiting settlement: a data
+#: point, not a position worth a row, a slot or a "+1?" on the headline. Display only — the
+#: runner, the exposure cap and the scorecards are untouched.
+IGNORED_TICKER_PREFIXES = ("KXBIGGESTQUAKE-",)
+
+
+def ignored(ticker: str | None) -> bool:
+    return bool(ticker) and ticker.startswith(IGNORED_TICKER_PREFIXES)
+
+
 def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -> dict:
     """The incentive section for one book. `latest_snapshots(session, tickers)` is the
     overview's own newest-position-per-ticker read, passed in so both agree."""
@@ -312,6 +323,8 @@ def build_incentive_block(session, book: str, now: datetime, latest_snapshots) -
         ours_by_ticker.setdefault(o.market_ticker, []).append(o)
     positions = []
     for t in tickers:
+        if ignored(t):
+            continue
         row = _position_row(session, t, ours_by_ticker.get(t, []), snaps.get(t), by_ticker.get(t),
                             now)
         if row is not None:
