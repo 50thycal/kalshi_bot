@@ -146,3 +146,11 @@ def test_bids_are_read_from_a_market_object():
     # No NO quote: the NO bid is the complement of the YES ask; a zero bid is no bid.
     assert mm.bids_from_market({"yes_bid_dollars": "0.0000", "yes_ask_dollars": "0.0400"}) == (None, 96)
     assert mm.bids_from_market({"yes_bid": 12, "yes_ask": 100}) == (12, None)
+
+
+def test_the_open_earthquake_leftover_is_left_out():
+    fills = {"KXBIGGESTQUAKE-21SEP26-6.4": [("yes", 2, 1, 0.0, "2026-09-16T00:00:00Z")]}
+    s = sc.summarise([], fills, {}, {"KXBIGGESTQUAKE-21SEP26-6.4": 1.0}, {}, now=NOW, days=7,
+                     marks={"KXBIGGESTQUAKE-21SEP26-6.4": (1, 98)})
+    assert s["totals"]["open"] == 0 and s["totals"]["open_cost"] == 0
+    assert "KXBIGGESTQUAKE-21SEP26-6.4" not in s.get("markets", {})

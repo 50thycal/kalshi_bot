@@ -42,6 +42,10 @@ LEDGER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir
 CURRENT_UNIVERSE = frozenset({"mention_event", "youtube_views"})
 #: Orders that only close a held position — never an entry bid.
 CLOSING_PREFIXES = ("limmexit", "limmsell:")
+#: Held markets left out while still open (operator, 2026-11-02): the 1-contract 2c
+#: KXBIGGESTQUAKE leftover, closed since 2026-09-17 and awaiting settlement. Once it settles its
+#: result counts like any other market. Mirrors `livedash.incentive_book.IGNORED_TICKER_PREFIXES`.
+IGNORED_OPEN_PREFIXES = ("KXBIGGESTQUAKE-",)
 _DATED_EVENT = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})$")
 _MONTHS = {m: i for i, m in enumerate(
     ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"), 1)}
@@ -149,6 +153,8 @@ def summarise(payouts, fills_by_market, settled, positions, bids_by_event, *, no
     for tkr, fl in fills_by_market.items():
         status, pnl, cost = market_pnl([(s, p, q, f) for s, p, q, f, _t in fl],
                                        settled.get(tkr), positions.get(tkr))
+        if status == "open" and tkr.startswith(IGNORED_OPEN_PREFIXES):
+            continue
         times = sorted(t for *_x, t in fl if t)
         unreal = marked_pnl([(s, p, q, f) for s, p, q, f, _t in fl], marks.get(tkr)) \
             if status == "open" else None
