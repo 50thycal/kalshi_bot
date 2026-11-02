@@ -1,0 +1,21 @@
+# ops request [READ]
+# type=xos  id=lo-mmclose-m9-rc1
+# code 118554021abfe13e4bb5e373d2e54920c0402184 · started 2026-11-02T14:46:35Z
+{
+  "command_id": "lo-mmclose-m9-1",
+  "action": "REPAIR_LINEAGE",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "7f73af20b2424463298db88e296f0e37e586fc0dae5432e285212b2ba3362532",
+  "completed_at": "2026-11-02 14:46:28.372244+00:00",
+  "result": {
+    "kind": "repair",
+    "package": "mmsell9-stale-epoch-repair"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-price-ceiling"
+}
