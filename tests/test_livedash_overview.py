@@ -540,3 +540,37 @@ def test_a_market_off_the_tape_is_marked_from_the_incentive_book_snapshot(sessio
     b = _book(ov.build_overview(session, now=NOW), "Alimm1")
     assert b["unrealized_usd"] == pytest.approx(-4.0)       # 200 x 3c - $10.00
     assert b["open_unpriced"] == 1
+
+
+def test_a_held_side_nobody_bids_is_worth_zero_not_unpriced(session):
+    # 2026-11-02: BILL (YES held, YES bids empty, NO bid 94) and OLI Nov (NO held, NO bids
+    # empty, YES bid 99) showed as "+2?" in the headline while the book card valued them at 0.
+    _order(session, "KXZ-1", book="Alimm1", qty=55, filled=55, price=10)
+    session.add(m.Position(market_ticker="KXZ-1", captured_at=NOW - timedelta(minutes=5),
+                           side="yes", quantity=55, quantity_fp=55, market_exposure=5.50))
+    session.add(m.IncentiveMarketSnapshot(market_ticker="KXZ-1", at=NOW - timedelta(minutes=10),
+                                          best_yes_bid=None, best_no_bid=94))
+    _order(session, "KXZ-2", book="Alimm1", qty=488, filled=488, price=1)
+    _hold(session, "KXZ-2", 488, 4.88)
+    session.add(m.IncentiveMarketSnapshot(market_ticker="KXZ-2", at=NOW - timedelta(minutes=10),
+                                          best_yes_bid=99, best_no_bid=None))
+    session.flush()
+    h = ov.build_overview(session, now=NOW)["headline"]
+    b = _book({"headline": h}, "Alimm1")
+    assert b["unrealized_usd"] == pytest.approx(-10.38)
+    assert b["open_unpriced"] == 0 and h["open_unpriced"] == 0
+
+
+def test_the_earthquake_leftover_is_left_off_the_page(session):
+    _order(session, "KXBIGGESTQUAKE-21SEP26-6.4", book="Alimm1", qty=1, filled=1, price=2)
+    session.add(m.Position(market_ticker="KXBIGGESTQUAKE-21SEP26-6.4",
+                           captured_at=NOW - timedelta(minutes=5), side="yes", quantity=1,
+                           quantity_fp=1, market_exposure=0.02))
+    session.flush()
+    out = ov.build_overview(session, now=NOW)
+    h = out["headline"]
+    b = _book(out, "Alimm1")
+    assert h["open_unpriced"] == 0 and b["open_unpriced"] == 0
+    assert b["open_positions"] == 0
+    inc = b.get("incentive") or {}
+    assert all(not p["market"].startswith("KXBIGGESTQUAKE") for p in inc.get("positions", []))
