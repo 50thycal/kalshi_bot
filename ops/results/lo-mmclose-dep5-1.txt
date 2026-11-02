@@ -1,6 +1,0 @@
-# latest deployment 8e8fe16d-8c18-4151-8e49-25b6a400eced (status=SUCCESS, created=2026-11-02T14:43:07.454Z)
-# ops request [READ]
-# type=logs  service=main  id=lo-mmclose-dep5-1
-# code 118554021abfe13e4bb5e373d2e54920c0402184 · started 2026-11-02T14:44:15Z
-# target service: main
-2026-11-02T14:43:59.457542797Z INFO  starting kalshi bot
