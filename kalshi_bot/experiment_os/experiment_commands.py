@@ -266,6 +266,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         recut_mmsell10_size_split,
         repair_dark_live_canaries,
         repair_live_material_baseline,
+        repair_mmsell9_stale_epoch,
         repair_mmsell_standdown_live_rows,
         repair_tmmsell_epoch,
         restore_mmsell9_epoch,
@@ -438,6 +439,21 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_dark_live_canaries.repair,
+        ),
+        "mmsell9-stale-epoch-repair": ExperimentPackage(
+            name="mmsell9-stale-epoch-repair",
+            experiment_key=repair_mmsell9_stale_epoch.EXPERIMENT_KEY,
+            description=(
+                "MMSELL close-out part 2 (owner decision 2026-11-02): close "
+                "mmsell-price-ceiling's stale v1/e2, which carries the mmsell9 paper "
+                "deployment, so STAND_DOWN -> RETIRED (which closes only the latest "
+                "version's epoch) leaves nothing open. Declares mmsell9 retired; the "
+                "guard requires mmsell9 out of MMSELL_VARIANTS in the same boot. "
+                "Moves no lifecycle state, touches no gate."
+            ),
+            register=_no_contract,
+            repair=repair_mmsell9_stale_epoch.repair,
+            retires_tags=repair_mmsell9_stale_epoch.RETIRES_TAGS,
         ),
         "mmsell-standdown-live-repair": ExperimentPackage(
             name="mmsell-standdown-live-repair",
