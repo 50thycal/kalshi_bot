@@ -1,0 +1,29 @@
+# ops request [READ]
+# type=xos  id=lo-mmclose-sd2-mmsell-price-ceiling-cell-size-rc2
+# code 118554021abfe13e4bb5e373d2e54920c0402184 · started 2026-11-02T14:50:33Z
+{
+  "command_id": "lo-mmclose-sd2-mmsell-price-ceiling-cell-size",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "33b5d439b0f6ffd785b15a2fc461cdb9240a69e87d0de2a4580426928b658f1f",
+  "completed_at": "2026-11-02 14:49:58.794836+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "mmsell-price-ceiling-cell-size",
+    "from_state": "LIVE_CANARY",
+    "closed_epoch": 2,
+    "ended_deployments": [
+      "mmsell-cellsize-live-1",
+      "mmsell-cellsize-paper-1-e2",
+      "mmsell-cellsize-twin-1"
+    ]
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
