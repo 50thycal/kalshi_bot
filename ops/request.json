@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select strategy, count(*) n, max(created_at) last from paper_trades where created_at > '2026-11-02 14:50' group by strategy order by last desc", "max_rows": 60, "id": "lo-mmclose-q13"}
+{"type":"noop"}
