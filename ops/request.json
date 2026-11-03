@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1103c0230", "sql": "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) FROM information_schema.columns WHERE table_name='incentive_market_snapshots'"}
+{"type":"noop"}
