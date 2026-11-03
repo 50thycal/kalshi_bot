@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1103e0233", "sql": "SELECT to_char(at,'MM-DD HH24:MI') t, best_yes_bid yb, best_no_bid nb, yes_depth_at_best yd, round(yes_depth_total) ydt, no_depth_at_best nd, trades_last_5m tr FROM incentive_market_snapshots WHERE market_ticker='KXMAMDANIMENTION-26NOV18-BILL' AND at BETWEEN '2026-11-01 13:30' AND '2026-11-01 15:20' AND trades_last_5m IS NOT NULL ORDER BY at"}
+{"type":"noop"}
