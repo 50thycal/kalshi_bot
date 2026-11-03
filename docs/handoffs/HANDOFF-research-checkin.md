@@ -71,6 +71,14 @@ SELECT strategy, count(*) AS orders, max(created_at) AS last_order FROM live_ord
 - Flag any live tag in `LIVE_STRATEGIES` with no order for 24 h. One quiet 4-hour window is
   normal for `mmsell`.
 
+**G. Volume-reward watch (09:13 run only; added 2026-11-04, study 7).** Volume programmes come
+in bursts ($17.5k across 09-19 → 10-29; none were active on 11-03).
+```sql
+SELECT incentive_type, count(*) AS active, count(DISTINCT split_part(market_ticker,'-',1)) AS series, round(sum(period_reward_usd)::numeric, 0) AS pool_usd FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL AND coalesce(incentive_type,'') <> 'liquidity' AND end_date > now() AND last_seen_at > now() - interval '1 day' GROUP BY 1
+```
+- Any row at all means a burst is live. Say so (`NEEDS ATTENTION: volume rewards are back`) so
+  the 72-hour review can read what they pay for (`LIMM_VOLUME_CENSUS.md`).
+
 **E. Routines.** `list_triggers`. The three `Kalshi:` routines must be enabled with the dates in
 `docs/RESEARCH_CALENDAR.md`. After a date passes, confirm that its PR merged, that the calendar row
 reads `DONE — <verdict>`, and relay the verdict. If a run failed or left no PR, flag it.

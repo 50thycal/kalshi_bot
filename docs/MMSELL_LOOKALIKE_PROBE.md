@@ -596,3 +596,43 @@ first (2026-10-31).
 - **Re-run trigger:** the same commands, unchanged, once the family can reach 100 first entries
   (at about 30 a month, early December). If it then reads CANDIDATE, a taker-price read comes
   before any paper-tape nomination (§16).
+
+## 18. Sports structures: NHL periods, NFL team props, MLB innings (pre-registration, 2026-11-04, before any run)
+
+**Origin:** the untraded-capacity census shortlist, third group (`UNTRADED_CAPACITY_CENSUS.md`,
+"Untouched sports structures"; series from the census run `rl-s4-run1-20261031`). The owner
+asked for all three on 2026-11-03 ("run all those … and backtest as you can"). They occupy three
+of MMSELL's 20 slots (`RESEARCH_REVIEW.md`).
+
+- **Families,** each pooled as one family (one bet per family-day):
+  - `KXNHL-PERIODS`: KXNHL1PTOTAL, KXNHL2PTOTAL, KXNHL3PTOTAL, KXNHL1P and KXNHL3P;
+  - `KXNFL-TEAMPROPS`: KXNFLTEAMSACK, KXNFLPASSATT, KXNFLRACE, KXNFLFIRSTTDTEAM and KXNFLWINS;
+  - `KXMLB-INNINGS`: KXMLBINNINGTOTAL, KXMLBINNINGWIN, KXMLBOUTS and KXMLBF7.
+- **Construction:** §16's, unchanged: the shipped mmsell10 cell (5 ≤ mid ≤ 10, YES ask ≤ 7),
+  the first in-cell entry at the replay's hours, NO at the no bid, held to settlement, gross,
+  one contract. `--per-series 300 --stratify day`.
+- **Control:** the city rain family in its own run. It must reproduce (≥ +2.0¢, t ≥ 2) or every
+  family run in this round is void:
+  `{"type":"script","name":"mmsell_lookalike_probe","args":["--category","Climate and Weather","--prefixes","KXRAIN","--per-series","300","--stratify","day"],"id":"rl-sports-ctl-20261104"}`.
+- **Gate:** §16's, unchanged and per family.
+  - **CANDIDATE** needs PROMOTE under §3 (≥ 100 first entries, ≥ 30 family-days, ≥ +2.0¢,
+    positive in ≥ 2/3 of months), per-day t ≥ 3.0, and both calendar halves positive.
+  - **KILL** is ≥ 100 entries and ≤ 0¢.
+  - **HOLD** otherwise.
+- **Stated prior, against:**
+  - these are in-play sports markets, where late flow is informed;
+  - MMSELL's live ledger on MLB totals and spreads is negative (XOS-000046);
+  - the owner removed sports from the X book on 2026-10-29.
+  A CANDIDATE here has to overcome all three.
+- **Consequence of a CANDIDATE:** a taker-price read comes first (study 1). Only then may a paper
+  tape be nominated through Experiment OS, and any live use of sports is an owner decision.
+  Nothing is authorized here.
+- **Commands:**
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXNHL1PTOTAL,KXNHL2PTOTAL,KXNHL3PTOTAL,KXNHL1P,KXNHL3P","--no-control","--family","KXNHL-PERIODS","--per-series","300","--stratify","day"],"id":"rl-nhl-fam-20261104"}`
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXNFLTEAMSACK,KXNFLPASSATT,KXNFLRACE,KXNFLFIRSTTDTEAM,KXNFLWINS","--no-control","--family","KXNFL-TEAMPROPS","--per-series","300","--stratify","day"],"id":"rl-nflt-fam-20261104"}`
+  - `{"type":"script","name":"mmsell_lookalike_probe","args":["--series","KXMLBINNINGTOTAL,KXMLBINNINGWIN,KXMLBOUTS,KXMLBF7","--no-control","--family","KXMLB-INNINGS","--per-series","300","--stratify","day"],"id":"rl-mlbi-fam-20261104"}`
+
+## 19. Results: sports structures (2026-11-04)
+
+Not run.
+
