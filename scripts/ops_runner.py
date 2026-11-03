@@ -226,6 +226,8 @@ ALLOWED_SCRIPTS = (
     "limm_programme_outcomes",
     "limm_exit_vs_hold",
     "limm_fill_hazard",
+    "limm_step_aside",
+    "limm_volume_census",
     "untraded_capacity_census",
     "execution_telemetry",
     "liquidity_incentive_report",

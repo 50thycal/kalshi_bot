@@ -21,6 +21,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 |---|---|---|---|---|---|
 | 2026-11-13 15:17 | LIMM exits vs holding, run 3 | Do the liquidity book's stop/take exits beat holding to settlement? Needs ≥ 30 settled markets and ≥ 15 events, else HOLD. A FAIL makes a looser stop an owner decision. Also checks the shadow collector is still writing. | `LIMM_PROGRAMME_OUTCOMES.md` §9 (results §11) | `trig_01MtzLc4H1BoASXHY2AeePSJ` | scheduled |
 | 2026-11-13 15:47 | LIMM fill hazard, study 5 (read once) | Which incentive series pay net of the fills a resting bid takes? Nominates series to add (net above the live universe) or remove (reward eaten by fills). Needs ≥ 3 series with ≥ 20 market-days and ≥ 5 events, else HOLD and one re-read on 2026-11-27. Nominations are owner decisions. | `LIMM_FILL_HAZARD.md` §4 | `trig_015Lh4zakJj9qZQ23Hbk45mM` | scheduled |
+| 2026-11-17 16:17 | LIMM step-aside, study 6, Part B (read once) | In the 48h→24h band before close, does a cheap-side bid earn more reward than its fills cost? NOMINATE 24H (owner decision), KEEP 48H, or HOLD. Needs ≥ 20 live-universe band markets in ≥ 8 events, else one re-read on 2026-12-01. Part A (backtest on the 09-17→10-07 shadow window) runs at registration. | `LIMM_STEP_ASIDE.md` §4–§5 | `trig_01H9kxG5d74PesCBcfbyGYkw` | scheduled |
 | 2026-12-04 15:07 | P-SLOW v2 fill read (read once) | Do slow-information MMSELL markets still earn ≥ +2¢ on real fills? Needs ≥ 100 fills. A PASS makes sizing above 3 contracts an owner decision. | `MMSELL_FILL_FORWARD_READ.md` §6 | `trig_018N8ZxREHNrgABVh2C2HCxm` | scheduled |
 | 2026-12-07 15:23 | State gas ladder screen, re-run | Does the 7-state gas ladder family reach CANDIDATE (≥ 100 entries, t ≥ 3.0, both halves positive)? A CANDIDATE leads to a taker-price read, not a paper book. | `MMSELL_LOOKALIKE_PROBE.md` §16 (first result §17) | `trig_01N3tddvLTSEY2jebghEz9UA` | scheduled |
 
@@ -30,6 +31,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 |---|---|---|
 | 2027-01-08 | P-SLOW v2 extension, read once, same bars | the 2026-12-04 read has fewer than 100 cell fills |
 | +2 weeks after each LIMM read | LIMM exits vs holding, next run | the read is still under the 30-market / 15-event floor |
+| 2026-12-01 16:17 | LIMM step-aside, re-read once, same bars | the 2026-11-17 read is HOLD (accrual) |
 | 2026-11-27 16:07 | LIMM fill hazard, re-read once, same bars | the 2026-11-13 read is HOLD under V0 (fewer than 3 series at the floor) |
 
 ## Other standing routines (operations, not this research)

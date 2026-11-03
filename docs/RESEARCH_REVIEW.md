@@ -87,8 +87,6 @@ Ordered by expected value to the goal. A candidate is not work until a review st
 - **Fill early-warning:** do snapshot features before a fill predict it, such as
   `trades_last_5m`, `price_range_5m_cents` or depth at best thinning? If so, a "pull the bid"
   rule. It needs study 5's fills first.
-- **Volume-incentive programmes:** `incentive_type = 'volume'` exists in `incentive_programs`
-  but has never been studied. A census of what they pay, and for what, is a new avenue.
 - **Reward attribution without screenshots:** rewards are confirmed only from the owner's
   screenshots. A data source that reads payouts directly, such as the balance residuals in
   `incentive_balance_observations` matched to programme end dates, would make every review's
