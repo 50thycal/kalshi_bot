@@ -39,6 +39,11 @@ created by `service.arm_live_canary`. Recording an epoch therefore means:
 5. updating `LIVE_TAG`/`TWIN_TAG` in `live.py` and every reference (reward ledger, livedash,
    check-in prompt).
 
+## Resolved 2026-11-03: option A (owner)
+
+The owner chose **A** ("option A", 2026-11-03), recorded as DEC-042. Option B stays available
+when the book's rules settle; nothing here is authorized beyond keeping the precedent.
+
 ## Options
 
 - **A. Keep the precedent (recommended for now).** Thesis §9.30/§9.34 record the operator's
