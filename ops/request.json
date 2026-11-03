@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "q1103k1715", "sql": "SELECT DISTINCT split_part(market_ticker,'-',2) e FROM live_orders WHERE strategy='Alimm1' AND market_ticker LIKE 'KXYTVIEWSHIGH-%26NOV-%' ORDER BY 1"}
