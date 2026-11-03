@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-mentions-forward-register-202611030240"],"id":"mf-receipt-3-1103"}
+{"type":"xos","command":"show","args":["mmsell-mentions-forward"],"id":"mf-show-1103"}
