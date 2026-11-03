@@ -1694,3 +1694,17 @@ tied to this experiment".
 
 **Revisit if** the book is restarted or renamed again. Name the successor here before the read.
 
+## DEC-042 — LIMM rule changes stay recorded in the thesis, not as new Experiment OS epochs
+
+**Date:** 2026-11-03 UTC. **Owner direction:** "option A"
+(`docs/handoffs/HANDOFF-limm-epoch-record.md`).
+
+- **Decision:**
+  - `Alimm1`'s rule changes keep being recorded in `docs/LIQUIDITY_INCENTIVE_THESIS.md` §9.x, the §9.30/§9.34 precedent.
+  - Each § boundary is treated as a non-poolable evidence boundary.
+  - No formal re-cut onto fresh tags.
+- **Why:** a re-cut needs a reviewed package, a stand-down, an `ARM_CANARY` hard stop and a `LIVE_STRATEGIES` change, and it would reset the book's in-memory state. That is not worth it while the rules still change every few days.
+- **Known cost:** Experiment OS stays behind the book's real rules, and its gates for `liquidity-incentive-mm` remain unreadable (BLOCKED_PLATFORM, XOS-000042).
+
+**Revisit when** the rules have been stable for a few weeks. That is the clean moment for option B.
+
