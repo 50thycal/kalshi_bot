@@ -95,6 +95,10 @@ Ordered by expected value to the goal. A candidate is not work until a review st
   Study 5 scores `KXYTVIEWSHIGH` as a series. If it reads `FILL-TRAP`, a per-channel split is
   the follow-up.
 
+- **Volume-programme bursts:** 33 volume programmes worth $17.5k ran from 09-19 to 10-29, and none
+  are live now (study 7). Watch for the next burst, then read what they pay for and whether our
+  flow earns them.
+
 ### MMSELL
 
 - **Untraded-capacity shortlist** (`UNTRADED_CAPACITY_CENSUS.md`): after the state gas ladders,

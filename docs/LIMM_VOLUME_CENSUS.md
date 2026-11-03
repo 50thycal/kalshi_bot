@@ -45,6 +45,29 @@ Kalshi's `incentive_programs` endpoint lists more than liquidity programmes. Its
 
 `{"type":"script","name":"limm_volume_census","args":[],"id":"rl-s7-census-20261103"}`
 
-## 5. Results
+## 5. Results (2026-11-03, `rl-s7-census-20261103`)
 
-Not run.
+```
+LIMM volume census — non-liquidity incentive programmes (pre-registered docs/LIMM_VOLUME_CENSUS.md)
+
+== by type (current terms)
+  type                    active since 09-01 pool since $  first seen   last seen
+  liquidity                 4244      204726  14203580.00  2026-09-17  2026-11-03
+  volume                       0          33     17500.00  2026-09-19  2026-10-29
+
+== active non-liquidity programmes by series (0 programmes, 0 series, $0.00/day in all)
+  series                   progs    $/day cap/acct $  types | description
+
+== overlap: 0 of 0 active non-liquidity markets were entered by one of our books in the last 30 days
+
+== VERDICT (a census; a nomination authorizes nothing)
+  NO-LEAD  (total $0.00/day; best series $0.00/day)
+```
+
+- **Verdict: NO-LEAD.** No volume programme is active today.
+- **They do exist:** 33 volume programmes were seen from 2026-09-19 to 10-29, with $17,500 of
+  pools in all, about $530 each. Each was live for a short time and none are live now.
+- **No overlap** with our books, because nothing is active.
+- **Reading:** volume rewards come in bursts and are large when they appear. The census bar
+  (an active pool) cannot be met between bursts. A follow-up would need to catch the next
+  burst. That is recorded on the review's candidate list, not started here.
