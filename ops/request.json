@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1103g0241", "sql": "SELECT DISTINCT ON (coalesce(market_title,'')) to_char(first_seen_at,'MM-DD HH24:MI') f, to_char(last_seen_at,'MM-DD HH24:MI') l, left(market_title,140) t FROM incentive_programs WHERE market_ticker='KXMAMDANIMENTION-26NOV18-BILL' ORDER BY coalesce(market_title,''), first_seen_at"}
+{"type":"noop"}
