@@ -129,6 +129,14 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-10-29", 199, "KXTRUMPMENTION-26OCT27"),
     ("2026-10-29", 170, "KXTRUMPMENTION-26OCT27"),
     ("2026-10-29", 192, "KXTRUMPMENTION-26OCT27"),
+    # Operator screenshot 2026-11-03 (lifetime $103.95): YouTube "Highest daily view count
+    # (October 2026)" programs, six rows, observed as one 1803c step at 11:46Z.
+    ("2026-11-03", 331, "KXYTVIEWSHIGH-OLI26NOV"),
+    ("2026-11-03", 297, "KXYTVIEWSHIGH-FUE26NOV"),
+    ("2026-11-03", 554, "KXYTVIEWSHIGH-YE26NOV"),
+    ("2026-11-03", 248, "KXYTVIEWSHIGH-MOR26NOV"),
+    ("2026-11-03", 226, "KXYTVIEWSHIGH-MOR26NOV"),
+    ("2026-11-03", 147, "KXYTVIEWSHIGH-YOU26NOV"),
 )
 
 
