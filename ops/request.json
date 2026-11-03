@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "ci1103b0022", "sql": "SELECT to_char(captured_at,'MM-DD HH24:MI') c, quantity_fp::text q, coalesce(realized_pnl::text,'-') r, coalesce(market_exposure::text,'-') e FROM positions WHERE market_ticker='KXYTVIEWSHIGH-OLI26NOV-12.0M' ORDER BY captured_at DESC LIMIT 4"}
