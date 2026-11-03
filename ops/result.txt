@@ -1,4 +1,22 @@
 # ops request [READ]
-# type=noop
-# code 45b30093bf3a25e73b9170ca59658bfef51f08f7 · started 2026-11-03T04:22:17Z
-(noop — nothing to do)
+# type=script  id=rl-s6-backtest-20261103
+# code f6b0b066ca5f600d5b6ed89bf9d86f520c9ca8d5 · started 2026-11-03T05:14:18Z
+LIMM step-aside — the 48h->24h band before close, reward minus fill markout (pre-registered docs/LIMM_STEP_ASIDE.md)
+
+window 2026-09-17T00:00 -> 2026-10-07T03:00; hourly snapshots (incl. mark tail) 86988; prints 87177
+markets with band hours 532; with base hours 753; markets with prints 491
+
+== pools (deciding model: conservative; R = net USD per market-day, ±se clustered by event)
+  pool     window  mkts  evts   reward   fill $ fills       R   ±se   R opt
+  live     band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  live     base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
+  mention  band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  mention  base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
+  youtube  band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  youtube  base       0     0     0.00     0.00     0     n/a   n/a     n/a
+  all      band     532   149  1076.18   267.69    80   +1.48  0.18   +0.51
+  all      base     753   231  1636.11   258.47    51   +0.43  0.07   +0.26
+
+== VERDICT (pool `live`, band; descriptive — a nomination is an OWNER decision)
+  HOLD (accrual)
+  `all` band, descriptive only: NOMINATE 24H
