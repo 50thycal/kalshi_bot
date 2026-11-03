@@ -1,0 +1,226 @@
+# ops request [READ]
+# type=xos  id=mf-show-1103
+# code 41093824dd8c504eda118f7539d37a8ec3fc0a59 · started 2026-11-03T02:43:23Z
+{
+  "key": "mmsell-mentions-forward",
+  "title": "mmsell mentions forward \u2014 the base mmsell10 paper cell carried forward",
+  "state": "PAPER",
+  "paused_from_state": null,
+  "origin": "operator",
+  "family": "maker",
+  "hypothesis": "The base mmsell10 cheap-tail cell, on MENTION markets, earns >= +2c/contract on paper fills that close after 2026-10-15 (the pre-registered \u00a76 forward read).",
+  "legacy_class": null,
+  "migration_integrity": null,
+  "platform_snapshot_id": 6,
+  "predecessor_experiment_id": null,
+  "retired_at": null,
+  "docs": {
+    "thesis": "docs/MMSELL_LIVE_CANARY_PATTERNS.md",
+    "closeout": "docs/handoffs/HANDOFF-mmsell-standdown-closeout.md",
+    "decision": "docs/DECISIONS.md#dec-041"
+  },
+  "versions": [
+    {
+      "version": 1,
+      "frozen_at": "2026-11-03 02:42:15.402278+00:00",
+      "fingerprint": "e01b112f1971bc64805e1e89f07a7a0c68c629b2b0185bee7160421be091b9b2",
+      "pre_registration_hash": "ac9ae646132e858720f58ec686049cff8d37945d83c2d0e3bc59df35e5b0d930",
+      "independent_variable": "none \u2014 one absolute arm judged on its own gate",
+      "held_constant": [
+        "the spec is the retired base book's, character for character (lo=5,hi=10,maxyes=7)",
+        "the global skip list and every global cap are unchanged",
+        "entry is the mmsell maker entry: buy NO at the no-bid, 1 contract, paper",
+        "exit is hold to settlement: no stop, take-profit, volatility gate or strangle",
+        "the tag is PAPER and appears in no live arm set; LIVE_STRATEGIES is not touched"
+      ],
+      "change_reason": null,
+      "arms": [
+        {
+          "arm_key": "base_cell",
+          "role": "control",
+          "strategy_tag": null,
+          "params": {
+            "tag": "Basemmsell10",
+            "band": "mid 5-10, yes<=7",
+            "book": "lo=5,hi=10,maxyes=7",
+            "predecessor_tag": "mmsell10"
+          }
+        }
+      ],
+      "gates": [
+        {
+          "gate_key": "base_cell_keep",
+          "kind": "kill",
+          "from_state": null,
+          "to_state": null,
+          "spec": {
+            "sample": {
+              "base_cell": {
+                "op": ">=",
+                "value": 30,
+                "metric": "settled_days"
+              }
+            },
+            "fail_any": [
+              {
+                "op": "<",
+                "arm": "base_cell",
+                "value": 0.0,
+                "metric": "pnl_cents_per_contract",
+                "min_evidence": {
+                  "op": ">=",
+                  "value": 14,
+                  "metric": "settled_days"
+                }
+              },
+              {
+                "op": "<",
+                "arm": "base_cell",
+                "value": 0.0,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "pass_all": [
+              {
+                "op": ">=",
+                "arm": "base_cell",
+                "value": 1.0,
+                "metric": "pnl_cents_per_contract"
+              },
+              {
+                "op": ">=",
+                "arm": "base_cell",
+                "value": 0.1,
+                "metric": "daily_pnl_stability"
+              }
+            ],
+            "description": "Keep/kill guard on the base mmsell10 cell carried forward on a fresh tag. FAIL (the copy has turned negative, or its daily P&L is unstable) ends the book. PASS keeps it; it authorizes no live change. The decision this book exists for is the pre-registered mentions forward read (MMSELL_LIVE_CANARY_PATTERNS.md \u00a76), recorded as monitoring.",
+            "max_evidence_horizon": {
+              "arms": [
+                "base_cell"
+              ],
+              "value": 90,
+              "metric": "settled_days"
+            }
+          },
+          "spec_hash": "9462967436cdd8f98246e5d23838c5cf0949cda9929c16c06f9d048fc9eac295",
+          "evidence_started_at": null,
+          "results": []
+        }
+      ],
+      "epochs": [
+        {
+          "epoch_number": 1,
+          "started_at": "2026-11-03 02:42:15.402278+00:00",
+          "ended_at": null,
+          "reason": "v1's first operating interval, pinned to the platform snapshot active at registration.",
+          "impact_class": null,
+          "platform_snapshot_fingerprint": "55b51990e0492e4b785ea23259ea219cc05d581f311d92b9048b45a19eb8a647",
+          "platform_snapshot": [
+            [
+              "DATA_PROVENANCE",
+              "live_vs_backfill_2026_08"
+            ],
+            [
+              "EXECUTION_ENGINE",
+              "live_executor_2026_08"
+            ],
+            [
+              "EXPERIMENT_ENGINE",
+              "foundation_pr1"
+            ],
+            [
+              "FEE_MODEL",
+              "maker_rate_2026_08_11"
+            ],
+            [
+              "FILL_MODEL",
+              "assumed_fill_plus_mmsell3_calibration"
+            ],
+            [
+              "KALSHI_API_SCHEMA",
+              "advanced_tier_2026_08_12"
+            ],
+            [
+              "MARKET_TAXONOMY",
+              "trumpmention_2026_10_27"
+            ],
+            [
+              "METRICS_ENGINE",
+              "live_fill_attribution_2026_10"
+            ],
+            [
+              "RISK_ENGINE",
+              "caps_2026_08"
+            ],
+            [
+              "SETTLEMENT_ENGINE",
+              "hold_to_settlement_2026_08"
+            ]
+          ],
+          "deployments": [
+            {
+              "deployment_key": "mmsell-mentions-forward-paper-1",
+              "stage": "PAPER",
+              "kind": "paper",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-11-03 02:42:15.402278+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "base_cell",
+                  "strategy_tag": "Basemmsell10"
+                }
+              ]
+            },
+            {
+              "deployment_key": "mmsell-mentions-forward-probe-1",
+              "stage": "PROBE",
+              "kind": "probe",
+              "twin_of_deployment_id": null,
+              "started_at": "2026-11-03 02:42:15.402278+00:00",
+              "ended_at": null,
+              "arms": [
+                {
+                  "arm_key": "base_cell",
+                  "strategy_tag": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": null,
+      "to": "IDEA",
+      "occurred_at": "2026-11-03 02:42:15.402278+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "experiment created",
+      "gate_result_id": null
+    },
+    {
+      "from": "IDEA",
+      "to": "PROBE",
+      "occurred_at": "2026-11-03 02:42:15.402278+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "the predecessor's paper history is recorded on v1 (\u00a77); it fixes the cell and the forward read, and authorizes nothing else",
+      "gate_result_id": null
+    },
+    {
+      "from": "PROBE",
+      "to": "PAPER",
+      "occurred_at": "2026-11-03 02:42:15.402278+00:00",
+      "actor": "claude-code",
+      "approved_by": null,
+      "reason": "owner direction 2026-11-03: carry the retired base mmsell10 paper book forward on a fresh tag for the \u00a76 mentions read (DEC-041)",
+      "gate_result_id": null
+    }
+  ],
+  "integrity_events": [],
+  "legacy_evidence": []
+}
