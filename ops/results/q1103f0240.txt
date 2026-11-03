@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=q1103f0240
+# code 41093824dd8c504eda118f7539d37a8ec3fc0a59 · started 2026-11-03T02:48:03Z
+string_agg                                                                                                                                                                                              
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+id,program_id,market_id,market_ticker,event_ticker,series_ticker,incentive_type,incentive_description,start_date,end_date,period_reward_raw,period_reward_unit,period_reward_usd,target_size,discount_f…
+
+(1 row)
