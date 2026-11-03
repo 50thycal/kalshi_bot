@@ -1661,3 +1661,31 @@ the new books".
 
 **Revisit if** a further restart renames the books before 2027-01-08. Name the successor here
 before the read.
+
+## DEC-041 — The mentions forward read continues on `Basemmsell10`
+
+**Date:** 2026-11-03 UTC. **Owner direction:** "add that paper book back just as a new name and
+tied to this experiment".
+
+- **Why:**
+  - `MMSELL_LIVE_CANARY_PATTERNS.md` §6 pre-registered a forward read on `mmsell10` paper
+    mention trades closing after 2026-10-15.
+  - The MMSELL close-out (owner, 2026-11-02, option a) retired `mmsell-price-ceiling-cell-size`.
+    That stopped the base `mmsell10` paper book, whose last trade was 2026-11-02 14:29:36Z. The
+    sample stopped growing.
+- **Decision:**
+  - The base book's spec, `lo=5,hi=10,maxyes=7`, runs verbatim on a fresh tag,
+    `Basemmsell10`, under its own paper experiment `mmsell-mentions-forward`. The spec comes
+    from the close-out's env receipt `lo-mmclose-env-m10`.
+  - The §6 sample is `mmsell10`'s mention trades through 2026-11-02 14:29:36Z, pooled with
+    `Basemmsell10`'s from its first trade.
+  - The bars and the 60 / 120 looks are unchanged.
+- **Taken blind:** no outcome in the window was read. Only the stop time of `mmsell10`'s paper
+  writes was looked up.
+- **Known cost:**
+  - A gap between the two books: no trade from 14:29Z on 11-02 until `Basemmsell10`'s first.
+  - The fresh tag holds no carried-over positions, so a market `mmsell10` already held can be
+    entered again by `Basemmsell10`. Count each market once, at its first entry.
+
+**Revisit if** the book is restarted or renamed again. Name the successor here before the read.
+

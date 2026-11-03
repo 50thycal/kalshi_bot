@@ -256,6 +256,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         liquidity_incentive_mm,
         marktangle,
         marktangle2,
+        mentions_forward,
         mmsell_win_set_2,
         mmsell_win_set_3,
         mmsell_win_set_canary,
@@ -367,6 +368,20 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=temperature_season.register,
             strategy_tags=(temperature_season.CELL_TAG,),
+        ),
+        "mmsell-mentions-forward": ExperimentPackage(
+            name="mmsell-mentions-forward",
+            experiment_key=mentions_forward.EXPERIMENT_KEY,
+            description=(
+                "The contract for `Basemmsell10`: the retired base mmsell10 paper book "
+                "(lo=5,hi=10,maxyes=7), verbatim, on a fresh tag, carried forward so the "
+                "pre-registered mentions forward read (MMSELL_LIVE_CANARY_PATTERNS.md §6) "
+                "keeps its sample (DEC-041). One keep/kill guard; the mentions read is a "
+                "monitoring read. Arms nothing, trades nothing, no real money: an "
+                "operator-side env append to MMSELL_VARIANTS creates the book."
+            ),
+            register=mentions_forward.register,
+            strategy_tags=(mentions_forward.BASE_TAG,),
         ),
         "mmsell-weather-bands": ExperimentPackage(
             name="mmsell-weather-bands",
