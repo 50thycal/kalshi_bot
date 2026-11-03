@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=q1103c0230
+# code 2315fc2d37f2247f362c4e3aca9ab74683276e87 · started 2026-11-03T02:27:24Z
+string_agg                                                                                                                                                                                              
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+id,program_row_id,market_ticker,at,book_valid,best_yes_bid,best_no_bid,spread_cents,yes_depth_at_best,no_depth_at_best,yes_depth_total,no_depth_total,yes_levels_json,no_levels_json,trades_last_5m,vol…
+
+(1 row)
