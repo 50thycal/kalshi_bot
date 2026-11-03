@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rc-f-1103-0313
-# code 41093824dd8c504eda118f7539d37a8ec3fc0a59 · started 2026-11-03T03:15:44Z
-strategy  orders  last_order                      
---------  ------  --------------------------------
-Alimm1    2       2026-11-03 02:56:32.888841+00:00
-
-(1 row)
