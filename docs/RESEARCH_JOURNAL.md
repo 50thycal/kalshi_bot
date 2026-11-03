@@ -1,5 +1,11 @@
 # Weather-markets research journal
 
+## Mentions forward read 2026-11-03 — sample carried onto `Basemmsell10` (DEC-041)
+
+- **What happened:** the MMSELL close-out retired the base `mmsell10` paper book on 11-02, which stopped the §6 mentions read's sample.
+- **Owner direction:** bring it back under a new name. The same spec now runs as `Basemmsell10` (paper experiment `mmsell-mentions-forward`, #722), first trade 02:49Z on 11-03.
+- **The read:** pools `mmsell10` through 11-02 14:29Z with `Basemmsell10`. Bars and looks are unchanged, and the decision was taken blind.
+
 ## LIMM fill hazard 2026-11-01 — pre-registered; first 72-hour research review
 
 - **New standing review:** every 72 hours the Research Lab checks what is done, what needs

@@ -1687,5 +1687,10 @@ tied to this experiment".
   - The fresh tag holds no carried-over positions, so a market `mmsell10` already held can be
     entered again by `Basemmsell10`. Count each market once, at its first entry.
 
+**Activated 2026-11-03.**
+- `REGISTER_PACKAGE` `mmsell-mentions-forward-register-202611030240` SUCCEEDED at 02:42:15Z (v1, e1, paper deployment `mmsell-mentions-forward-paper-1` with tag `Basemmsell10`).
+- The paper-only env act `mf-env-append-1103` appended the spec to `MMSELL_VARIANTS` and cleared the command slot. `LIVE_STRATEGIES` was unchanged.
+- First `Basemmsell10` paper trade: 02:49:31Z. The 15-minute readback (`mf-rb1-1103`) showed no new integrity event or drift.
+
 **Revisit if** the book is restarted or renamed again. Name the successor here before the read.
 
