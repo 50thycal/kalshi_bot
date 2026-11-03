@@ -1,1 +1,1 @@
-{"type": "db", "id": "q1103h0250", "sql": "SELECT split_part(market_ticker,'-',3) w, to_char(at,'HH24:MI') t, best_yes_bid yb, best_no_bid nb, round(yes_depth_total) ydt, trades_last_5m tr FROM incentive_market_snapshots WHERE market_ticker LIKE 'KXMAMDANIMENTION-26NOV18-%' AND at BETWEEN '2026-11-01 14:55' AND '2026-11-01 15:25' AND trades_last_5m IS NOT NULL ORDER BY 1,2"}
+{"type":"noop"}
