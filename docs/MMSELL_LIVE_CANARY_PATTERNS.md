@@ -75,6 +75,11 @@ the hypothesis.
   - ≤ 0¢ → mentions are dropped from it;
   - in between → HOLD until 120.
 - Nothing in the existing books changes while it accrues.
+- **Successor sample (DEC-041, 2026-11-03).** The base `mmsell10` paper book was retired on
+  2026-11-02 (its last paper trade 14:29:36Z). The same spec runs on, verbatim, as
+  `Basemmsell10` (experiment `mmsell-mentions-forward`). The sample is `mmsell10`'s mention
+  trades through that time, pooled with `Basemmsell10`'s from its first trade. The bars and the
+  60 / 120 looks are unchanged.
 
 ## 7. Results (2026-10-15; ops `paper-mmsell10-nolive-20261015a`, `scripts/live_canary_patterns.py`)
 

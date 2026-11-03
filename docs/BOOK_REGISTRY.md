@@ -147,6 +147,7 @@ classified series were never in the census, so post-boundary flow is the first g
 | `tfav` | **KILLED / disabled** | `docs/RESEARCH_JOURNAL.md` | buy model-underpriced hourly-crypto favorites | KILLED 2026-07-09 (−3.6¢ at n≥210); re-enable only under fresh pre-registration |
 | `wcprop` | **KILLED / disabled** | `docs/RESEARCH_JOURNAL.md`, `docs/IDEA_MODEL_20260704.md` | World Cup winner-ladder lag after a decisive result | KILLED (no repricing lag); WC window closed |
 | `xgame` | **collector only / book KILLED** | `docs/IDEA_MODEL_20260704.md` | cross-venue in-play lead-lag (PM leads, Kalshi lags) | book KILLED (P3 symmetric — both venues track the shared feed); collector-only |
+| `Basemmsell10` | **paper** (2026-11-03, experiment `mmsell-mentions-forward`) | `docs/MMSELL_LIVE_CANARY_PATTERNS.md` §6, DEC-041 | the retired base `mmsell10` cell (YES mid 5–10, sold ≤7¢, maker NO), carried forward on a fresh tag | keep/kill guard (FAIL < 0¢ after 14 settled days); the §6 mentions forward read decides the WIN-set mention allowlist |
 
 _Provenance note: this registry was introduced 2026-07-11 after a `pin15` book appeared from a
 parallel build session and the loop had to reverse-engineer its rationale — the exact failure this
