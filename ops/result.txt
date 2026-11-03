@@ -1,22 +1,17 @@
 # ops request [READ]
-# type=script  id=rl-s6-backtest-20261103
-# code f6b0b066ca5f600d5b6ed89bf9d86f520c9ca8d5 · started 2026-11-03T05:14:18Z
-LIMM step-aside — the 48h->24h band before close, reward minus fill markout (pre-registered docs/LIMM_STEP_ASIDE.md)
+# type=script  id=rl-s7-census-20261103
+# code f6b0b066ca5f600d5b6ed89bf9d86f520c9ca8d5 · started 2026-11-03T05:16:07Z
+LIMM volume census — non-liquidity incentive programmes (pre-registered docs/LIMM_VOLUME_CENSUS.md)
 
-window 2026-09-17T00:00 -> 2026-10-07T03:00; hourly snapshots (incl. mark tail) 86988; prints 87177
-markets with band hours 532; with base hours 753; markets with prints 491
+== by type (current terms)
+  type                    active since 09-01 pool since $  first seen   last seen
+  liquidity                 4244      204726  14203580.00  2026-09-17  2026-11-03
+  volume                       0          33     17500.00  2026-09-19  2026-10-29
 
-== pools (deciding model: conservative; R = net USD per market-day, ±se clustered by event)
-  pool     window  mkts  evts   reward   fill $ fills       R   ±se   R opt
-  live     band       0     0     0.00     0.00     0     n/a   n/a     n/a
-  live     base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
-  mention  band       0     0     0.00     0.00     0     n/a   n/a     n/a
-  mention  base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
-  youtube  band       0     0     0.00     0.00     0     n/a   n/a     n/a
-  youtube  base       0     0     0.00     0.00     0     n/a   n/a     n/a
-  all      band     532   149  1076.18   267.69    80   +1.48  0.18   +0.51
-  all      base     753   231  1636.11   258.47    51   +0.43  0.07   +0.26
+== active non-liquidity programmes by series (0 programmes, 0 series, $0.00/day in all)
+  series                   progs    $/day cap/acct $  types | description
 
-== VERDICT (pool `live`, band; descriptive — a nomination is an OWNER decision)
-  HOLD (accrual)
-  `all` band, descriptive only: NOMINATE 24H
+== overlap: 0 of 0 active non-liquidity markets were entered by one of our books in the last 30 days
+
+== VERDICT (a census; a nomination authorizes nothing)
+  NO-LEAD  (total $0.00/day; best series $0.00/day)
