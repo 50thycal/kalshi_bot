@@ -1,5 +1,13 @@
 # Weather-markets research journal
 
+## LIMM step-aside backtest + volume census 2026-11-03 — studies 6 and 7
+
+- **Step-aside (study 6) Part A:**
+  - The live universe had no band data in the 09-17 → 10-07 shadow window: HOLD (accrual).
+  - Across all watched programmes, quoting 48 h → 24 h before close netted +$1.48 per market-day against +$0.43 for today's window. That is descriptive and depends on the fill model.
+  - Part B reads mentions and YouTube forward on 2026-11-17 ([doc](LIMM_STEP_ASIDE.md)).
+- **Volume census (study 7):** NO-LEAD today, because no volume programme is active. But 33 programmes with $17.5k of pools ran 09-19 → 10-29, in bursts ([doc](LIMM_VOLUME_CENSUS.md)).
+
 ## Mentions forward read 2026-11-03 — sample carried onto `Basemmsell10` (DEC-041)
 
 - **What happened:** the MMSELL close-out retired the base `mmsell10` paper book on 11-02, which stopped the §6 mentions read's sample.

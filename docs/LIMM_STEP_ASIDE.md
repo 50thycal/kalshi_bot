@@ -77,4 +77,39 @@ the ~$5 bar, but nobody has measured the fills in those last 24 hours.
 
 ## 7. Results
 
-Not run.
+### Part A — backtest, 2026-09-17 → 10-07 (`rl-s6-backtest-20261103`)
+
+```
+LIMM step-aside — the 48h->24h band before close, reward minus fill markout (pre-registered docs/LIMM_STEP_ASIDE.md)
+
+window 2026-09-17T00:00 -> 2026-10-07T03:00; hourly snapshots (incl. mark tail) 86988; prints 87177
+markets with band hours 532; with base hours 753; markets with prints 491
+
+== pools (deciding model: conservative; R = net USD per market-day, ±se clustered by event)
+  pool     window  mkts  evts   reward   fill $ fills       R   ±se   R opt
+  live     band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  live     base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
+  mention  band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  mention  base       2     2     0.78     0.00     0   +0.19  0.09   +0.09
+  youtube  band       0     0     0.00     0.00     0     n/a   n/a     n/a
+  youtube  base       0     0     0.00     0.00     0     n/a   n/a     n/a
+  all      band     532   149  1076.18   267.69    80   +1.48  0.18   +0.51
+  all      base     753   231  1636.11   258.47    51   +0.43  0.07   +0.26
+
+== VERDICT (pool `live`, band; descriptive — a nomination is an OWNER decision)
+  HOLD (accrual)
+  `all` band, descriptive only: NOMINATE 24H
+```
+
+- **Verdict on `live`: HOLD (accrual), as expected.** The shadow window held no live-universe
+  band hours. Part B decides.
+- **`all` pool, descriptive only.** Across the 149 events of the top-150 programmes the
+  collector watched, the band earned **+$1.48 per market-day net of fills (±0.18)**. Today's
+  ≥ 48 h window earned +$0.43 (±0.07).
+  - The band paid more reward per day, and its fills cost more: 80 fills in 532 markets, against
+    51 in 753.
+  - Under `optimistic` fills the band drops to +$0.51, so the lead is sensitive to the fill
+    model.
+- **What this does and does not say:** quoting closer to close was net positive on that tape,
+  which was mostly sports ladders, not mentions. It says nothing yet about mention events, where
+  informed flow near the event is the risk. Part B (2026-11-17) reads the live universe.
