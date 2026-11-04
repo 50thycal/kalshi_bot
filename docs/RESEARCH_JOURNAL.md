@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## Fill early-warning backtest + sports screens 2026-11-04 — NO-SIGNAL; no sports candidate
+
+- **Fill early-warning (study 8 Part A):**
+  - The warning predicts fills: a lift of 37, with 61 of 110 fills in 3% of the hours.
+  - But pulling the bid then gives up more reward ($563) than it saves ($234), so the verdict is NO-SIGNAL.
+  - A narrower price-range trigger (5 of 10 filled) is a lead for a new test.
+  - Part B still reads 12-11 ([doc](LIMM_FILL_WARNING.md)).
+- **Sports screens (lookalike §18–19),** control reproduced:
+  - NHL periods: no cheap-tail cell, 0 entries;
+  - NFL team props: +3.8¢ on 36 entries, HOLD (thin);
+  - MLB innings: −15¢ on 9 entries, HOLD.
+  None is a candidate.
+
 ## LIMM step-aside backtest + volume census 2026-11-03 — studies 6 and 7
 
 - **Step-aside (study 6) Part A:**
