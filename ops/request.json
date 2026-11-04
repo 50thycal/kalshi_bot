@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1104d0510", "sql": "SELECT market_ticker t, side||'/'||action||'/'||status s, limit_price::text p, quantity::text q, coalesce(cancel_reason,'') r, created_at::text at FROM live_orders WHERE strategy='Alimm1' AND (status='resting' OR created_at > now()-interval '40 minutes' OR cancel_reason IN ('event_cap_trim','repriced')) AND coalesce(cancel_reason,'')<>'resting_sell:repriced' AND created_at > now()-interval '4 days' ORDER BY 6 DESC LIMIT 40"}
+{"type":"noop"}
