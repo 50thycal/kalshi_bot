@@ -375,8 +375,10 @@ def test_say_before_a_date_windows_and_non_mention_markets_are_outside_the_unive
 # ------------------------------------------------------- §9.69
 
 
-def test_a_bid_at_four_cents_or_more_gets_twenty_dollars():
-    """Reward follows contracts: $10 already buys 333 at 3c, but only 100 at 10c."""
+def test_a_bid_at_four_cents_or_more_gets_twenty_dollars(monkeypatch):
+    """Reward follows contracts: $10 already buys 333 at 3c, but only 100 at 10c. (The size-up
+    mechanism, with its §9.69 $20 budget; §9.72 set the number back to $10.)"""
+    monkeypatch.setattr(lv, "SIZE_UP_ORDER_DOLLARS", 20.00)
     cheap = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 3})
     assert (cheap.leg.price_cents, cheap.quantity) == (3, 333)        # $9.99
     five = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 5})
@@ -385,7 +387,8 @@ def test_a_bid_at_four_cents_or_more_gets_twenty_dollars():
     assert (ten.quantity, ten.collateral_usd) == (200, 20.0)
 
 
-def test_a_twenty_dollar_bid_still_fits_the_book_total():
+def test_a_twenty_dollar_bid_still_fits_the_book_total(monkeypatch):
+    monkeypatch.setattr(lv, "SIZE_UP_ORDER_DOLLARS", 20.00)
     q = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 5},
            strategy_exposure_now_usd=lv.MAX_STRATEGY_EXPOSURE_USD - 15.0)
     assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_EXPOSURE_CAP
@@ -419,3 +422,45 @@ def test_a_views_threshold_is_not_a_shared_word():
     another artist's 16.5M."""
     assert lv.market_word("KXYTVIEWSHIGH-ARI26NOV-16.5M", "KXYTVIEWSHIGH-ARI26NOV") is None
     assert lv.market_word("KXTRUMPMENTION-26OCT19-CEAS", "KXTRUMPMENTION-26OCT19") == "CEAS"
+
+
+# ------------------------------------------------------- §9.72
+
+
+def test_every_bid_is_ten_dollars_after_the_two_sweeps():
+    assert lv.SIZE_UP_ORDER_DOLLARS == 10.00
+    for price in (1, 3, 4, 5, 10):
+        assert lv.order_dollars(price) == 10.00
+    five = _s(reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 5})
+    assert (five.quantity, five.collateral_usd) == (200, 10.0)
+
+
+def test_a_side_bid_whose_reference_is_the_touch_rests_one_tick_behind():
+    # The NO reference is the best NO bid itself: joining it is the front of the line.
+    q = _s(best_no_bid=4, reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 4})
+    assert (q.leg.side, q.leg.price_cents, q.leg.reference_price_cents) == (lv.SIDE_NO, 3, 4)
+    assert not q.leg.at_or_above_reference
+    assert q.quantity == 333 and q.collateral_usd <= 10.0
+
+
+def test_a_side_bid_already_behind_the_touch_stays_at_its_reference():
+    q = _s(best_no_bid=6, reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 4})
+    assert (q.leg.price_cents, q.leg.reference_price_cents) == (4, 4)
+    assert q.leg.at_or_above_reference
+
+
+def test_a_one_cent_touch_has_nowhere_behind_to_go():
+    q = _s(best_no_bid=1, reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 1})
+    assert q.leg.price_cents == 1 and q.quantity == lv.MAX_CONTRACTS_PER_ORDER
+
+
+def test_behind_touch_can_be_switched_off(monkeypatch):
+    monkeypatch.setattr(lv, "SIDE_QUOTE_BEHIND_TOUCH", False)
+    q = _s(best_no_bid=4, reference_price_by_side={lv.SIDE_YES: 20, lv.SIDE_NO: 4})
+    assert q.leg.price_cents == 4
+
+
+def test_one_market_per_youtube_channel_three_per_other_event():
+    assert lv.max_markets_per_event("KXYTVIEWSHIGH-TAY26DEC") == 1
+    assert lv.max_markets_per_event("KXTRUMPMENTION-26NOV05") == lv.MAX_MARKETS_PER_EVENT == 3
+    assert lv.max_markets_per_event(None) == 3

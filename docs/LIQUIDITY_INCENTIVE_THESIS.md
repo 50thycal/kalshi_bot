@@ -3284,3 +3284,29 @@ open-market list, and its filled quantity at its limit price counts toward
 `live_strategy_exposure`. It drops out, as any filled order does, once Kalshi's position snapshot
 shows the market flat. Plain cancels and cancels with nothing filled are unchanged. No trading
 rule changes: the stop, take-profit and resting sells are the existing ones, now applied.
+
+### 9.72 Behind the touch, $10 bids, one market per YouTube channel (2026-11-04)
+
+**Read.** Two whole-bid sweeps in three days: Mamdani BILL (YES 10c×200, $20) on 2026-11-01,
+−$16.25; Drake `KXYTVIEWSHIGH-DRA26DEC-11.5M` (NO 4c×500, $20) at 22:03Z 2026-11-03, the YES
+bid moving 76→97 within a minute and the stop selling all 500 at 1c, −$15.35. Both bids sat at
+the best bid. Queue position decided fill size: `TAT26DEC-2.1M`, behind ~3,280 NO at 1c, got 11
+contracts of a comparable sweep. TAY and TAT each held three adjacent strikes of one channel-month,
+which one viral day fills together. Review: `scorecards/2026-11-03.md`, decisions (b) and (d).
+
+**Change (operator, 2026-11-04: "do one and two").**
+- `SIZE_UP_ORDER_DOLLARS` 20 → 10: every entry bid is $10 again (§9.69's size-up kept as a
+  structure). The worst single fill is about halved.
+- `SIDE_QUOTE_BEHIND_TOUCH`: a single-side bid whose reference price IS the best bid rests one
+  tick behind it (scored at one tick of discount); at 1c it stays. Held bids are moved the same
+  way by the re-price step, which now also re-sizes a bid above today's per-bid budget. "The
+  touch" for a held bid is everyone else's best bid, with our own order taken out.
+- `MONTH_WINDOW_MAX_MARKETS_PER_EVENT` = 1 (`max_markets_per_event`): one market per channel-month
+  on `KXYTVIEWSHIGH`; a held position counts as that one. Mention events keep 3. Resting bids
+  above the cap are cancelled (`event_cap_trim`), keeping the best estimated reward per hour.
+
+**Cost.** Less reward: a $10 bid at 4–10c rests half the contracts, a bid behind the touch scores
+at a discount, and trimmed bids forfeit what their programmes accrued. A full sweep through every
+level (BILL, Drake) still fills a behind-touch bid — there the $10 cap does the work. Change if
+mention reward per event falls under ~$5 for two review windows, or YouTube reward per channel
+falls by more than the fills it saved.

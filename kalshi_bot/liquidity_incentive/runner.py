@@ -366,6 +366,9 @@ class IncentiveLiveRunner:
         out_of_band = self._retire_out_of_band(session, executor, now)
         if out_of_band:
             summary["outcomes"]["out_of_band"] = out_of_band
+        over_cap = self._retire_over_event_cap(session, executor, now)
+        if over_cap:
+            summary["outcomes"]["event_cap_trim"] = over_cap
         snapped = self._snapshot_own_books(session, now)
         if snapped:
             summary["book_snapshots"] = snapped
@@ -410,7 +413,7 @@ class IncentiveLiveRunner:
         # words of three capped Trump events, so every fetch was refused event_cap and a free
         # slot stayed empty (the §9.39 failure, with the per-event cap as the filter).
         own_per_event = repo.live_book_open_event_counts(session, limm.LIVE_TAG)
-        capped = {ev for ev, n in own_per_event.items() if n >= limm.MAX_MARKETS_PER_EVENT}
+        capped = {ev for ev, n in own_per_event.items() if n >= limm.max_markets_per_event(ev)}
         if capped:
             n_before = len(candidates)
             candidates = [p for p in candidates if (p.event_ticker or "") not in capped]
@@ -454,7 +457,7 @@ class IncentiveLiveRunner:
         # §9.56: this book may rest in up to MAX_MARKETS_PER_EVENT markets of one event; an event
         # is blocked once it reaches that, or once any live book HOLDS a position on it.
         blocked_events = {ev for ev, n in own_per_event.items()
-                          if n >= limm.MAX_MARKETS_PER_EVENT}
+                          if n >= limm.max_markets_per_event(ev)}
         for c in built:
             ev = c.get("event_ticker")
             if ev and ev not in blocked_events and repo.event_has_open_live_position(
@@ -535,7 +538,7 @@ class IncentiveLiveRunner:
             placed_event = candidate.get("event_ticker")
             if placed_event:
                 own_per_event[placed_event] = own_per_event.get(placed_event, 0) + 1
-                if own_per_event[placed_event] >= limm.MAX_MARKETS_PER_EVENT:
+                if own_per_event[placed_event] >= limm.max_markets_per_event(placed_event):
                     blocked_events.add(placed_event)
             for leg in legs:
                 exposure_now += leg.collateral_usd
@@ -840,6 +843,36 @@ class IncentiveLiveRunner:
         self._save_out_of_band(session, now, force=changed)
         return n
 
+    def _retire_over_event_cap(self, session, executor, now: datetime) -> int:
+        """§9.72: cancel purely resting bids on an event that holds more markets than its cap
+        (`limm.max_markets_per_event`) — the bids rested before the cap was lowered. Markets
+        holding a position or a working sell are never touched; they count toward the cap first,
+        so a channel already held loses all its resting bids. Among the resting bids the one
+        with the best estimated reward per hour on its current book is kept (an unreadable book
+        ranks last). Returns the number of markets cancelled."""
+        counts = repo.live_book_open_event_counts(session, limm.LIVE_TAG)
+        over = {ev for ev, n in counts.items() if n > limm.max_markets_per_event(ev)}
+        if not over:
+            return 0
+        resting = self._stale_held_pairs(session, now, min_age_seconds=0.0)
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
+        n = 0
+        for ev in sorted(over):
+            mine = {t: w for t, w in resting.items() if (w[0].event_ticker or "") == ev}
+            if not mine:
+                continue
+            keep = limm.max_markets_per_event(ev) - (counts[ev] - len(mine))
+            ranked = sorted(mine, key=lambda t: -(self._held_reward_per_hour(
+                t, mine[t], programs, now) or 0.0))
+            for ticker in ranked[max(0, keep):]:
+                if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                    ticker=ticker, reason="event_cap_trim"):
+                    n += 1
+                    logger.info(f"incentive book: event_cap_trim: cancelled resting bid on "
+                                f"{ticker} ({ev} over its {limm.max_markets_per_event(ev)}-market "
+                                f"cap)")
+        return n
+
     def _load_out_of_band(self, session, now: datetime) -> None:
         """Restore the out-of-band clocks from the newest saved copy, once per process. A clock
         whose last out-of-band read is older than the gap allowance is dropped (it restarts).
@@ -904,25 +937,45 @@ class IncentiveLiveRunner:
                 continue
             c = candidate_from_book(programs[ticker], ob, now=now)
             ref = (c.get("reference_price_by_side") or {}).get(row.side)
-            if ref is None or int(row.limit_price) >= int(ref):
+            if ref is None:
+                continue
+            held_usd = int(row.limit_price) * float(row.quantity or 0) / 100.0
+            # Our own resting order is in this book; take it out before quoting, and read this
+            # side's best bid and reference from what is left (§9.72: "at the touch" means at or
+            # above everyone ELSE's best bid, not the level our own order makes).
+            side_key = "yes_levels" if row.side == limm.SIDE_YES else "no_levels"
+            lv = dict(c.get(side_key) or {})
+            left = lv.get(int(row.limit_price), 0.0) - float(row.quantity)
+            if left > 1e-9:
+                lv[int(row.limit_price)] = left
+            else:
+                lv.pop(int(row.limit_price), None)
+            c[side_key] = lv
+            others_best = max(lv) if lv else None
+            # §9.72: a bid sized over today's per-bid budget (a pre-§9.72 $20 bid) is re-sized,
+            # and one sitting at the front of the line is moved behind it, even at its reference.
+            oversized = held_usd > limm.order_dollars(int(row.limit_price)) + 0.01
+            at_touch = (limm.SIDE_QUOTE_BEHIND_TOUCH and others_best is not None
+                        and int(row.limit_price) >= int(others_best)
+                        and int(row.limit_price) - limm.QUOTE_TICKS_BEHIND_TOUCH >= 1)
+            if int(row.limit_price) >= int(ref) and not oversized and not at_touch:
                 continue            # at or above the reference: full credit already
-            # Our own resting order is in this book; take it out before quoting.
-            for key in ("yes_levels", "no_levels"):
-                if (key == "yes_levels") == (row.side == limm.SIDE_YES):
-                    lv = dict(c.get(key) or {})
-                    left = lv.get(int(row.limit_price), 0.0) - float(row.quantity)
-                    if left > 1e-9:
-                        lv[int(row.limit_price)] = left
-                    else:
-                        lv.pop(int(row.limit_price), None)
-                    c[key] = lv
+            if at_touch or oversized:
+                stripped = side_score(lv, c.get("target_size"),
+                                      discount_factor(c.get("discount_factor_bps")))
+                refs = dict(c.get("reference_price_by_side") or {})
+                if stripped.reference_price is not None:
+                    refs[row.side] = stripped.reference_price
+                c["reference_price_by_side"] = refs
+                c["best_yes_bid" if row.side == limm.SIDE_YES else "best_no_bid"] = others_best
             q = limm.quote_candidate(c, excluded_series=self.excluded_series())
-            if not isinstance(q, limm.SideQuote) or q.leg.side != row.side \
-                    or int(q.leg.price_cents) == int(row.limit_price):
+            if not isinstance(q, limm.SideQuote) or q.leg.side != row.side:
+                continue
+            if int(q.leg.price_cents) == int(row.limit_price) and not (
+                    oversized and q.quantity < int(row.quantity or 0)):
                 continue
             # §9.69: a re-price across SIZE_UP_MIN_PRICE_CENTS doubles the bid's dollars, so it
             # must still fit the book's total.
-            held_usd = int(row.limit_price) * float(row.quantity or 0) / 100.0
             if repo.live_strategy_exposure(session, limm.LIVE_TAG) - held_usd \
                     + q.collateral_usd > limm.MAX_STRATEGY_EXPOSURE_USD + 1e-9:
                 continue
