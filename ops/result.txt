@@ -1,8 +1,8 @@
 # ops request [READ]
-# type=db  id=rc-a2-1104-0313
-# code e655a0bd55e435aade5ef5796e26663dede18554 · started 2026-11-04T03:14:47Z
-trades_4h  trade_mkts_4h  last_trade                      
----------  -------------  --------------------------------
-2240       41             2026-11-04 03:14:35.217132+00:00
+# type=db  id=rc-b-1104-0313
+# code e655a0bd55e435aade5ef5796e26663dede18554 · started 2026-11-04T03:15:07Z
+settled_markets  settled_events
+---------------  --------------
+18               16            
 
 (1 row)
