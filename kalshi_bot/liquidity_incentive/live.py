@@ -66,7 +66,10 @@ MAX_ORDER_DOLLARS = 10.00
 #: instead. Reward follows contracts resting against a ~1,000-contract Target Size: at 1-3c $10
 #: already buys 333-500 contracts, at 9-10c only ~100, so the extra dollars go where they buy
 #: reward. The book's total (`MAX_STRATEGY_EXPOSURE_USD`) is unchanged.
-SIZE_UP_ORDER_DOLLARS = 20.00
+#: 20.00 -> 10.00 (§9.72, operator 2026-11-04): two whole-bid sweeps in three days (Mamdani BILL
+#: −$16.25, Drake 11.5M −$15.35) each took the full $20; every bid is $10 again, so the worst
+#: single fill is about halved. The size-up structure stays so it can be restored by one number.
+SIZE_UP_ORDER_DOLLARS = 10.00
 SIZE_UP_MIN_PRICE_CENTS = 4
 
 
@@ -89,6 +92,20 @@ MAX_STRATEGY_EXPOSURE_USD = 100.00
 #: The shared risk — every word of one speech is said in the same hour — is what the §9.55
 #: pre-event cancel removes; a held POSITION on an event still blocks further entries there.
 MAX_MARKETS_PER_EVENT = 3
+#: §9.72 (operator 2026-11-04): a MONTH_WINDOW_SERIES event is ONE channel's month
+#: (`KXYTVIEWSHIGH-TAY26DEC`), and its strikes are adjacent view counts that one viral day fills
+#: together — TAY and TAT each held three. One market per channel-month. A held position on the
+#: channel counts as its one market (`live_book_open_event_counts` includes held markets).
+MONTH_WINDOW_MAX_MARKETS_PER_EVENT = 1
+
+
+def max_markets_per_event(event_ticker: str | None) -> int:
+    """§9.72: the per-event market cap for this event — 1 for a month-window series, else
+    MAX_MARKETS_PER_EVENT."""
+    series = (event_ticker or "").split("-", 1)[0].upper()
+    if series in MONTH_WINDOW_SERIES:
+        return min(MONTH_WINDOW_MAX_MARKETS_PER_EVENT, MAX_MARKETS_PER_EVENT)
+    return MAX_MARKETS_PER_EVENT
 #: Refuse a leg priced above this. Was the one-sided book's 25c cheap-side cap; a pair always
 #: has a dear side, so the cap bounds each leg. 90 -> 5 (§9.41, operator decision 2026-09-29):
 #: only cheap-both-sides pairs. The lopsided pairs the 90c cap admitted (gas at 10c/28c NO legs)
@@ -362,6 +379,13 @@ MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 10.0
 #: fill Target Size from the best price down, so behind a touch that alone meets it we would
 #: score nothing and join the touch instead. The cost is at most one tick of discount factor.
 QUOTE_TICKS_BEHIND_TOUCH = 1
+#: §9.72 (operator 2026-11-04): the single-side bid (§9.48) no longer joins the touch. When its
+#: side's reference price IS the best bid — so the bid would sit at the front of the line, the
+#: first thing a sweep takes — it rests QUOTE_TICKS_BEHIND_TOUCH below, scoring at one tick of
+#: discount. At 1c there is nowhere behind to go and the bid stays (its loss is capped at 1c).
+#: Queue position decided fill size on 2026-11-02: TAT 2.1M behind ~3,280 got 11 of a sweep;
+#: BILL and Drake at the touch filled whole.
+SIDE_QUOTE_BEHIND_TOUCH = True
 
 #: Freshness buckets for ranking (§9.42): programs pay most in their first hours and decay
 #: steeply after, so a newer program outranks a thinner book within the same bucket width.
@@ -602,7 +626,8 @@ def build_side_quote(
     strategy_exposure_now_usd: float = 0.0,
     max_price_cents: int = MAX_PRICE_CENTS,
 ) -> SideQuote | Refusal:
-    """§9.48: one bid on the cheap side, AT that side's reference price (full scoring credit).
+    """§9.48: one bid on the cheap side, AT that side's reference price (full scoring credit) —
+    or, §9.72, one tick behind it when the reference is the best bid itself.
 
     Same gates as the pair (window, two-sided book meeting Target Size, depth rule, programme
     time, concentration). The side is the one whose reference price is <= `max_price_cents`,
@@ -626,7 +651,14 @@ def build_side_quote(
         known = {s: refs.get(s) for s in (SIDE_YES, SIDE_NO)}
         return Refusal(REFUSE_TOO_EXPENSIVE,
                        f"no side's reference price is within {max_price_cents}c ({known})")
-    price, side = min(cands)
+    ref_price, side = min(cands)
+    price = ref_price
+    touch = best_yes_bid if side == SIDE_YES else best_no_bid
+    behind = False
+    if SIDE_QUOTE_BEHIND_TOUCH and touch is not None and price >= int(touch) \
+            and price - QUOTE_TICKS_BEHIND_TOUCH >= 1:
+        price -= QUOTE_TICKS_BEHIND_TOUCH
+        behind = True
     budget = order_dollars(price)
     qty = min(MAX_CONTRACTS_PER_ORDER, int(budget * 100 // price))
     if qty < 1:
@@ -640,9 +672,11 @@ def build_side_quote(
             f"${MAX_STRATEGY_EXPOSURE_USD:.2f}")
     leg = LiveQuote(
         market_ticker=market_ticker, side=side, price_cents=price, quantity=qty,
-        collateral_usd=collateral, max_loss_usd=collateral, reference_price_cents=price,
-        at_or_above_reference=True,
-        reason=f"rested the cheap {side} side at its {price}c reference price",
+        collateral_usd=collateral, max_loss_usd=collateral, reference_price_cents=ref_price,
+        at_or_above_reference=not behind,
+        reason=(f"rested the cheap {side} side at {price}c, one tick behind its {ref_price}c "
+                f"reference at the touch (§9.72)") if behind else
+               f"rested the cheap {side} side at its {price}c reference price",
     )
     return SideQuote(market_ticker=market_ticker, leg=leg, quantity=qty,
                      collateral_usd=collateral, max_loss_usd=collateral,

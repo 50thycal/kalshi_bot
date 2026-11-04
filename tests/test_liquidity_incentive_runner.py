@@ -1257,7 +1257,7 @@ def test_a_quote_at_its_reference_is_left_alone(live_db, settings):
     with db.session_scope() as s:
         _program(s, t)
         s.add(m.LiveOrder(market_ticker=t, event_ticker=t, strategy=limm.LIVE_TAG, side="no",
-                          action="buy", limit_price=3, quantity=500, status="resting",
+                          action="buy", limit_price=3, quantity=333, status="resting",
                           kalshi_order_id="K-R", client_order_id="K-R",
                           created_at=NOW - timedelta(hours=2)))
         s.flush()
@@ -2262,3 +2262,76 @@ def test_other_cancels_are_not_read_as_positions(live_db, settings):
         s.flush()
         assert repo.live_book_open_tickers(s, limm.LIVE_TAG) == set()
         assert repo.count_live_book_open(s, limm.LIVE_TAG) == 0
+
+
+# --- §9.72: behind the touch, $10 bids, one market per YouTube channel -------------------------
+
+def _rest972(s, t, *, price, qty, event=None, oid=None, age_hours=2.0):
+    s.add(m.LiveOrder(market_ticker=t, event_ticker=event or t, strategy=limm.LIVE_TAG,
+                      side="no", action="buy", limit_price=price, quantity=qty, status="resting",
+                      kalshi_order_id=oid or f"K-{t}", client_order_id=oid or f"K-{t}",
+                      created_at=NOW - timedelta(hours=age_hours)))
+
+
+def test_a_bid_at_the_front_of_the_line_is_moved_one_tick_behind(live_db, settings):
+    # Our NO 4c x250 sits at 4c with 300 others: everyone else's best NO bid is 4c too, so we
+    # are at the touch. It moves to 3c (still in the same market and programme).
+    t = "KXTEST-T"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 550), (3, 400)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        _rest972(s, t, price=4, qty=250)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("repriced") == 1 and client.canceled == [f"K-{t}"]
+    assert [(o["ticker"], o["price"]) for o in client.placed][0] == (t, "0.9700")
+
+
+def test_a_bid_already_behind_the_touch_is_left_alone(live_db, settings):
+    t = "KXTEST-T"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(4, 300), (3, 650)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        _rest972(s, t, price=3, qty=333)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert "repriced" not in out["outcomes"] and client.canceled == []
+
+
+def test_a_pre_cap_twenty_dollar_bid_is_resized_to_ten(live_db, settings):
+    # 5c x400 = $20, behind a 6c touch: right price, too big. Re-placed at 5c x200 ($10).
+    t = "KXTEST-Z"
+    client = FakeClient({t: _book([(23, 100), (20, 400)], [(6, 300), (5, 900)])})
+    with db.session_scope() as s:
+        _program(s, t)
+        _rest972(s, t, price=5, qty=400)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("repriced") == 1 and client.canceled == [f"K-{t}"]
+    first = client.placed[0]
+    assert first["ticker"] == t and first["price"] == "0.9500"
+    assert float(first["count"]) * 0.05 <= 10.0 + 1e-9
+
+
+def test_extra_bids_on_one_youtube_channel_are_trimmed_to_one(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 10)
+    ev = "KXYTVIEWSHIGH-TAY26DEC"
+    tickers = [f"{ev}-13.2M", f"{ev}-13.3M", f"{ev}-14.5M"]
+    other = "KXTRUMPMENTION-26NOV20"
+    others = [f"{other}-A", f"{other}-B"]
+    book = _book([(23, 100), (20, 400)], [(1, 1400)])      # at their 1c reference: no re-price
+    client = FakeClient({t: book for t in tickers + others})
+    with db.session_scope() as s:
+        for t in tickers:
+            _program(s, t, series="KXYTVIEWSHIGH", event=ev)
+            _rest972(s, t, price=1, qty=500, event=ev)
+        for t in others:
+            _program(s, t, series="KXTRUMPMENTION", event=other)
+            _rest972(s, t, price=1, qty=500, event=other)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("event_cap_trim") == 2
+    assert "repriced" not in out["outcomes"]
+    assert len([c for c in client.canceled if c.startswith(f"K-{ev}")]) == 2
+    assert not [c for c in client.canceled if c.startswith(f"K-{other}")]
