@@ -47,13 +47,18 @@ verdict. **A recommendation here is not a gate verdict** and never moves a lifec
 4. **Write the file** `YYYY-MM-DD.md`: the scorecard output verbatim (fenced), then the trend
    review and recommendations, in under 60 lines of prose. Open a docs-only PR and merge it
    when CI is green.
-5. **Update the dashboard** (https://claude.ai/artifact/GKUXvPcdU7RJRUEsNvNCfP): run the script again with
-   `--json --days 7`. Then update the datasets:
-   - upload `by_tag`, `by_book`, `by_event`, `losers` and `overlap` as JSON files, one per call;
-   - append this run's per-book totals to `history`;
-   - replace `recommendations` with this run's list, with the fields `id`, `area`, `call`,
-     `item`, `evidence` and `change_if`;
-   - each upload updates its dataset's `source` and `updated`.
+5. **Update the dashboard** (https://claude.ai/artifact/GKUXvPcdU7RJRUEsNvNCfP). This takes
+   three approvals (owner request 2026-11-04):
+   - run the script again with `--json --days 7` and save its object to a file;
+   - run `python scripts/mmsell_dashboard_bundle.py --scorecard <file> --out scorecard.json`;
+   - upload that one file to the dashboard;
+   - update `datasets/scorecard` to point at it (`source`, `updated`);
+   - read the page check once.
+
+   The bundle holds every table. Each row's `ds` field names its table, and the page splits them
+   with `dash.calc`. Run history and recommendations are rebuilt from the review files here: each
+   file's `JSON` line, and the newest file's `| area | call | item | evidence | change if |` table.
+   So write this run's file first, and keep both. Old uploads are not deleted.
 6. **Tell the operator** in plain words: net this window, the one trend that matters, and the
    recommendations. Nothing is built or changed without the operator's go.
 
