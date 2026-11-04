@@ -67,4 +67,41 @@ the fill.
 
 ## 6. Results
 
-Not run.
+### Part A — backtest, 2026-09-17 → 10-07 (`rl-s8-backtest-20261104`)
+
+```
+LIMM fill warning — snapshot signals one hour before a resting bid's fill (pre-registered docs/LIMM_FILL_WARNING.md)
+
+window 2026-09-17T00:00 -> 2026-10-07T03:00; hourly snapshots (incl. mark tail) 86988; prints 87177
+qualifying hours 40573; markets 753; markets with prints 359
+
+== pool `all` (conservative fills)
+  hours 40573 (warned 1321); fills 110 (warned 61) in 30 events; feature nulls: trades_5m 0, depth 4157
+  fill rate warned 0.046 vs unwarned 0.001; lift 36.99
+  pull-on-warning: fill cost avoided $233.77, reward given up $563.44; gain -329.67 ± 147.66 (events 184)
+  single features (descriptive): depth_drop>=50%: 48/1133 filled; range_5m>=2c: 5/10 filled; trades_5m>=1: 25/252 filled
+  VERDICT (decides): NO-SIGNAL
+
+== pool `live` (conservative fills)
+  hours 12 (warned 2); fills 0 (warned 0) in 0 events; feature nulls: trades_5m 0, depth 2
+  fill rate warned 0.000 vs unwarned 0.000; lift n/a
+  pull-on-warning: fill cost avoided $0.00, reward given up $0.16; gain -0.16 ± n/a (events 1)
+  single features (descriptive): trades_5m>=1: 0/2 filled
+  VERDICT (descriptive): HOLD (accrual)
+```
+
+- **Verdict (`all`): NO-SIGNAL.** The pre-registered rule is the gain's UCB < 0. The gain was
+  −$329.67 ± 147.66, so the UCB is about −$40.
+- **The warning predicts fills.**
+  - Warned hours filled at 4.6%, against 0.1% unwarned: a lift of 37.
+  - 61 of the 110 fills fell in only 3% of the hours.
+- **But pulling the bid there costs more than it saves.**
+  - It avoids $234 of fill cost and gives up $563 of reward.
+  - The warned hours are the active, high-reward hours.
+- **Descriptive only** (these cannot be re-scoped into this verdict):
+  - the 5-minute price-range trigger (≥ 2¢) fired 10 times and 5 filled;
+  - the depth-halving trigger was the broad, expensive one: 48 fills in 1,133 hours.
+  A narrower rule, such as a price-range or combined trigger, would be a **new** pre-registered
+  test, not a revision of this one.
+- **`live`:** no data in this window (12 hours), as with study 6.
+- **Part B still reads once on 2026-12-11, unchanged.**

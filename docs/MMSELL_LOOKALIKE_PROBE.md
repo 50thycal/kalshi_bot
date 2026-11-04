@@ -634,5 +634,126 @@ of MMSELL's 20 slots (`RESEARCH_REVIEW.md`).
 
 ## 19. Results: sports structures (2026-11-04)
 
-Not run.
+- **Control:** `rl-sports-ctl-20261104` (the city rain family) reproduced: 83 entries over 55 days,
+  +4.21¢, t 2.26. The round counts.
+- **The family runs' own "control not reproduced" lines are moot:** they run `--no-control` by
+  design, as in §17.
+
+| family | first entries / days | ¢/contract | t | verdict |
+|---|---|---|---|---|
+| `KXNHL-PERIODS` | **0 / 0**, from about 1,200 priced markets | n/a | n/a | **HOLD: no cell** |
+| `KXNFL-TEAMPROPS` | 36 / 22 | +3.83 | 1.50 | **HOLD (thin)** |
+| `KXMLB-INNINGS` | 9 / 9 | −15.33 | −1.04 | **HOLD (thin)** |
+
+- **NHL periods:** the cheap-tail cell (YES 5–10¢, ask ≤ 7¢, 48 h to 1 h before close) never
+  occurs. These markets are quoted, but not as cheap tails inside the entry window. The MMSELL
+  cell does not apply here, which is a structural no rather than an edge reading.
+- **NFL team props:** positive (+3.8¢) but well short of the floor. NFL race to points (24
+  entries, one loss) carries it, and the history goes back only to 2026-09. A re-run is worth
+  it once the season has added about 100 entries.
+- **MLB innings:** almost no cell (9 entries), and those lost. The MLB season is over, so this
+  will not accrue until spring.
+- **No CANDIDATE, so nothing moves toward a paper tape.**
+
+**KXNHL-PERIODS** (`rl-nhl-fam-20261104`):
+
+```
+=== MMSELL look-alike probe — 5 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXNHL1PTOTAL             1160    1115  2026-09..2026-11    165    90%
+  KXNHL2PTOTAL             1261    1216  2026-09..2026-11    254    65%
+  KXNHL3PTOTAL             1256    1211  2026-09..2026-11    257    86%
+  KXNHL1P                   750     705  2026-09..2026-11    276   100%
+  KXNHL3P                   750     705  2026-09..2026-11    270   100%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXNHL1PTOTAL               0
+  KXNHL2PTOTAL               0
+  KXNHL3PTOTAL               0
+  KXNHL1P                    0
+  KXNHL3P                    0
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXNHL-PERIODS              0
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXNHL-PERIODS           1080/1222     88% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+```
+
+**KXNFL-TEAMPROPS** (`rl-nflt-fam-20261104`):
+
+```
+=== MMSELL look-alike probe — 5 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXNFLTEAMSACK            1220    1210  2026-09..2026-11    297    93%
+  KXNFLPASSATT              996     982  2026-09..2026-11    237   100%
+  KXNFLRACE                1875    1860  2026-09..2026-11    297   100%
+  KXNFLFIRSTTDTEAM          366     363  2026-09..2026-11    147    73%
+  KXNFLWINS                 544     242  2026-09..2026-11    169    12%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXNFLTEAMSACK              8     7    6.62    0.00     0   +6.62    +7.57   8.21 0/0   HOLD
+  KXNFLPASSATT               2     2    6.00    0.00     0   +6.00    +6.00    nan 0/0   HOLD
+  KXNFLRACE                 24    20    6.62    4.17     1   +2.46    +2.95   0.62 0/1   HOLD
+  KXNFLFIRSTTDTEAM           0
+  KXNFLWINS                  2     2    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXNFL-TEAMPROPS           36    22    6.61    2.78     1   +3.83    +6.27   1.50 2/2   HOLD
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXNFL-TEAMPROPS        2026-09: 12 @ +6.6, 2026-10: 23 @ +2.3, 2026-11: 1 @ +6.0
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXNFL-TEAMPROPS          938/1147     82% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+```
+
+**KXMLB-INNINGS** (`rl-mlbi-fam-20261104`):
+
+```
+=== MMSELL look-alike probe — 4 series; cell 5<=mid<=10, yes_ask<=7; first in-cell entry, gross, 1 contract ===
+
+  series                 listed settled              span priced   >=1h
+  KXMLBINNINGTOTAL         9452    9435  2026-08..2026-10    244    99%
+  KXMLBINNINGWIN          14953   14926  2026-08..2026-10    244   100%
+  KXMLBOUTS                2369    2327  2026-06..2026-10    228   100%
+  KXMLBF7                  3615    3609  2026-07..2026-10    218   100%
+
+  A. PER SERIES (first in-cell entry)
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXMLBINNINGTOTAL           0
+  KXMLBINNINGWIN             1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXMLBOUTS                  1     1    7.00    0.00     0   +7.00    +7.00    nan 0/0   HOLD
+  KXMLBF7                    7     7    6.86   28.57     2  -21.71   -21.71  -1.18 0/0   HOLD
+
+  B. PER FAMILY (one bet per family-day) — the pre-registered gate reads here
+                             n  days    impl    real  loss    c/ct    c/day      t   mo+ verdict
+  KXMLB-INNINGS              9     9    6.89   22.22     2  -15.33   -15.33  -1.04 0/0   HOLD
+
+  C. PER FAMILY BY MONTH (n, c/ct)
+  KXMLB-INNINGS          2026-08: 1 @ +7.0, 2026-09: 4 @ -18.0, 2026-10: 4 @ -18.2
+
+  D. LIFETIME — share of priced markets quoted >= 1h before close (the bot's entry floor); below 50% a family is untradeable without a global change
+  KXMLB-INNINGS            930/934     100% FEASIBLE
+
+  CONTROL KXRAIN: NOT REPRODUCED (needs >= +2 c/ct and t >= 2). Run does not count; gate readings are void.
+
+  Notes: gross of fees, maker price the paper books assume (no fill model); hourly candles; a series MMSELL skips (KXHIGH, KXLOW) has no paper evidence to compare.
+```
 

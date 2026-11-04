@@ -99,8 +99,13 @@ Ordered by expected value to the goal. A candidate is not work until a review st
   are live now (study 7). Watch for the next burst, then read what they pay for and whether our
   flow earns them.
 
+- **Narrow fill-warning trigger:** in study 8's backtest, a 5-minute price range of 2¢ or more
+  preceded a fill 5 times in 10. A new pre-registered test of that trigger alone, or combined
+  with a print, is a candidate.
+
 ### MMSELL
 
-- **Untraded-capacity shortlist** (`UNTRADED_CAPACITY_CENSUS.md`): after the state gas ladders,
-  the remaining structures are NHL periods, NFL team props and MLB innings. Each goes through
-  `kalshi-idea-model` first.
+- **NFL team props re-run** (lookalike §19: +3.8¢ on 36 entries) once the season adds ~100
+  entries. NHL periods have no cell; MLB innings wait for spring.
+- **Untraded-capacity shortlist, remaining:** the commodity/FX 15-minute markets (a new
+  mechanic, not an MMSELL cell).
