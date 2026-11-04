@@ -109,3 +109,8 @@ Ordered by expected value to the goal. A candidate is not work until a review st
   entries. NHL periods have no cell; MLB innings wait for spring.
 - **Untraded-capacity shortlist, remaining:** the commodity/FX 15-minute markets (a new
   mechanic, not an MMSELL cell).
+- **Pooled state-data family** (monthly state jobs, permits, port, rent and visitor ladders,
+  such as KXWAAEROEMP, KXCABUILDPERMITS, KXNYNJPORTTEU): slow information, P-SLOW's thesis.
+  Screened 2026-11-04 and not built. There is no local history, and §12's outside-weather
+  replays entered the cell only about 2–3% of the time. Revisit if a cheap count of settled
+  markets shows more than about 800 across the family.
