@@ -1,23 +1,4 @@
 # ops request [READ]
-# type=db  id=rv-econ-1104-2100
-# code 98fc835d18e18aa625def6f66babd56f46e2bd2b · started 2026-11-04T20:55:28Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 661, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 657, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 467, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 511, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
-    cur.execute(sql)
-  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.GroupingError: subquery uses ungrouped column "m.ticker" from outer query
-LINE 1: ...RE split_part(p.market_ticker,'-',1) = split_part(m.ticker,'...
-                                                             ^
+# type=noop
+# code 98fc835d18e18aa625def6f66babd56f46e2bd2b · started 2026-11-04T20:56:01Z
+(noop — nothing to do)
