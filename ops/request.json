@@ -1,1 +1,1 @@
-{"type":"xos","command":"list","id":"rv-list-1104-2050"}
+{"type":"xos","command":"show","args":["liquidity-incentive-mm"],"id":"rv-show-1104-2050"}
