@@ -1,87 +1,51 @@
 # ops request [READ]
-# type=xos  id=rv-sb-1104-2050
-# code 98fc835d18e18aa625def6f66babd56f46e2bd2b · started 2026-11-04T20:52:01Z
-liquidity-incentive-mm  [LIVE_CANARY]  v1 epoch 2  snapshot 4f9adf15daa64035…  window 2026-09-17 15:52:12.737385+00:00 →
-arm        role       tags  settled  ¢/trade  win%  open  entries
----------  ---------  ----  -------  -------  ----  ----  -------
-limm1side  treatment  -     0.0      -        -     0.0   0.0    
-  gate live_canary_keep [kill]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.565161+00:00
-    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
-  gate paper_to_live_smoke [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.599212+00:00
-    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
-  gate shadow_instrument_ready [promotion PROBE→PAPER]  latest: BLOCKED_PLATFORM @ 2026-10-16 09:34:21.630299+00:00
-    platform boundary blocks interpretation: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the di
-
-mmsell-correlation-cap  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-09-05 13:57:08.116743+00:00 →
-arm             role       tags      settled  ¢/trade  win%   open   entries
---------------  ---------  --------  -------  -------  -----  -----  -------
-contest_capped  treatment  Gmmsell1  4299.0   1.3362   94.88  64.0   4371.0 
-uncapped        control    Gmmsell0  9949.0   1.0998   94.63  153.0  10157.0
-  gate paper_keep [kill]  latest: (never evaluated)
-
-mmsell-mentions-forward  [PAPER]  v1 epoch 1  snapshot 55b51990e0492e4b…  window 2026-11-03 02:42:15.402278+00:00 →
-arm        role     tags          settled  ¢/trade  win%   open   entries
----------  -------  ------------  -------  -------  -----  -----  -------
-base_cell  control  Basemmsell10  282.0    1.1531   94.68  139.0  421.0  
-  gate base_cell_keep [kill]  latest: (never evaluated)
-
-mmsell-price-ceiling-cell-size-2  [LIVE_CANARY]  v1 epoch 2  snapshot 55b51990e0492e4b…  window 2026-10-30 13:39:00.571751+00:00 →
-arm       role       tags       settled  ¢/trade  win%   open  entries
---------  ---------  ---------  -------  -------  -----  ----  -------
-mmsell10  treatment  Smmsell10  28.0     6.4304   100.0  7.0   35.0   
-  gate live_canary_keep [kill]  latest: HOLD @ 2026-11-03 06:34:50.175792+00:00
-    sample floor not met: mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10 live_settled_contracts=44 vs >= 150
-  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-11-04 12:07:58.314020+00:00
-    all pass conditions met: mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10 realizable_cents_per_trade=1.298
-
-mmsell-rain-season  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-14 03:20:41.640884+00:00 →
-arm            role       tags         settled  ¢/trade  win%   open  entries
--------------  ---------  -----------  -------  -------  -----  ----  -------
-rain_adjacent  treatment  Rainmmsell2  63.0     10.6273  100.0  2.0   65.0   
-rain_cell      control    Rainmmsell1  64.0     4.817    98.44  3.0   67.0   
-  gate adjacent_winter_keep [kill]  latest: (never evaluated)
-  gate cell_winter_keep [kill]  latest: (never evaluated)
-
-mmsell-temperature-season  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-15 02:50:08.433875+00:00 →
-arm        role     tags         settled  ¢/trade  win%   open  entries
----------  -------  -----------  -------  -------  -----  ----  -------
-temp_cell  control  Tempmmsell1  925.0    1.0982   94.59  57.0  982.0  
-  gate temp_cell_winter_keep [kill]  latest: (never evaluated)
-
-mmsell-type-tight  [PAPER]  v1 epoch 3  snapshot 55b51990e0492e4b…  window 2026-10-27 11:23:05.735977+00:00 →
-arm       role       tags      settled  ¢/trade  win%   open  entries
---------  ---------  --------  -------  -------  -----  ----  -------
-Tmmsell1  secondary  Tmmsell1  79.0     5.1981   98.73  39.0  118.0  
-Tmmsell2  secondary  Tmmsell2  35.0     3.6086   97.14  1.0   36.0   
-Tmmsell5  secondary  Tmmsell5  116.0    4.7306   98.28  49.0  165.0  
-Tmmsell6  secondary  Tmmsell6  415.0    1.6342   95.18  78.0  496.0  
-  gate paper_keep [promotion PAPER→LIVE_CANARY]  latest: BLOCKED_PLATFORM @ 2026-10-27 11:23:12.938685+00:00
-    platform boundary blocks interpretation: MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposit
-
-mmsell-weather-bands  [PAPER]  v1 epoch 1  snapshot 4f9adf15daa64035…  window 2026-10-15 09:55:18.815540+00:00 →
-arm          role       tags         settled  ¢/trade  win%   open  entries
------------  ---------  -----------  -------  -------  -----  ----  -------
-hight_ultra  treatment  Tempmmsell3  956.0    1.5009   98.54  50.0  1006.0 
-rain_ultra   treatment  Rainmmsell3  60.0     0.9403   98.33  3.0   63.0   
-temp_upper   control    Tempmmsell2  760.0    0.8988   87.89  46.0  806.0  
-  gate hight_ultra_winter_keep [kill]  latest: (never evaluated)
-  gate rain_ultra_winter_keep [kill]  latest: (never evaluated)
-  gate temp_upper_winter_keep [kill]  latest: (never evaluated)
-
-mmsell-wide-control  [PAPER]  v1 epoch 1  snapshot 5c3720fca2fe36f0…  window 2026-08-16 14:14:43.720928+00:00 →
-arm     role     tags    settled  ¢/trade  win%   open   entries
-------  -------  ------  -------  -------  -----  -----  -------
-mmsell  control  mmsell  19699.0  1.8769   79.32  200.0  20101.0
-
-mmsell-win-set-3  [LIVE_CANARY]  v1 epoch 2  snapshot 55b51990e0492e4b…  window 2026-10-30 13:40:55.565405+00:00 →
-arm     role       tags       settled  ¢/trade  win%   open  entries
-------  ---------  ---------  -------  -------  -----  ----  -------
-winset  treatment  Zmmsell10  26.0     6.4331   100.0  6.0   32.0   
-  gate live_canary_keep [kill]  latest: HOLD @ 2026-11-04 20:17:43.417516+00:00
-    sample floor not met: mmsell-win-set-3/v1/e2/winset live_settled_contracts=54 vs >= 150
-  gate paper_to_live_canary [promotion PAPER→LIVE_CANARY]  latest: PASS @ 2026-11-04 12:08:01.800833+00:00
-    all pass conditions met: mmsell-win-set-3/v1/e2/winset realized_pnl_usd=1.6136
-
-theta-tail-sell  [PAUSED]
-  (no version (minimal legacy stub))
-
+# type=xos  id=rv-list-1104-2050
+# code 98fc835d18e18aa625def6f66babd56f46e2bd2b · started 2026-11-04T20:53:05Z
+key                                  state        origin      family               version  class                 integrity
+-----------------------------------  -----------  ----------  -------------------  -------  --------------------  ---------
+freeze-dark-window-pin               RETIRED      operator    structural           v1       ACTIVE_PAPER          B        
+liquidity-incentive-mm               LIVE_CANARY  operator    liquidity_incentive  v1       native                -        
+live-shape-probe                     RETIRED      operator    operational          -        HISTORICAL_UNTRACKED  D        
+marktangle-2-conditional-dependence  RETIRED      operator    serial_dependence    v1       native                -        
+marktangle-conditional-reversion     RETIRED      operator    serial_dependence    v1       native                -        
+mmsell10-queue-aware-cancel          RETIRED      operator    maker                v1       native                -        
+mmsell11-no-late-entry               RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell4-skip-list                    RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-anchor-stops                  RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-anchor-strangle               RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-anchor-vol-entry              RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-correlation-cap               PAPER        operator    risk_concentration   v1       native                -        
+mmsell-first-cohort                  RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-maker-offset-ab               RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-mentions-forward              PAPER        operator    maker                v1       native                -        
+mmsell-price-ceiling                 RETIRED      operator    maker                v2       ACTIVE_PAPER          B        
+mmsell-price-ceiling-capacity        RETIRED      operator    maker                v3       native                -        
+mmsell-price-ceiling-cell-size       RETIRED      operator    maker                v1       native                -        
+mmsell-price-ceiling-cell-size-2     LIVE_CANARY  operator    maker                v1       native                -        
+mmsell-price-ceiling-contest-cap     RETIRED      operator    maker                v1       native                -        
+mmsell-price-ceiling-size-split      RETIRED      operator    maker                v1       native                -        
+mmsell-rain-season                   PAPER        operator    maker                v1       native                -        
+mmsell-reviewed-universe             RETIRED      operator    risk_concentration   v1       native                -        
+mmsell-scan-depth                    RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-scheduled-settle-live         RETIRED      operator    maker                v1       ACTIVE_LIVE           B        
+mmsell-temperature-season            PAPER        operator    maker                v1       native                -        
+mmsell-type-tight                    PAPER        operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-type-tight-retired            RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-type-wide                     RETIRED      operator    maker                -        RETIRED_OR_KILLED     C        
+mmsell-variants-2026-07              RETIRED      operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-weather-bands                 PAPER        operator    maker                v1       native                -        
+mmsell-wide-control                  PAPER        operator    maker                v1       ACTIVE_PAPER          B        
+mmsell-win-set                       RETIRED      operator    maker                v2       native                -        
+mmsell-win-set-2                     RETIRED      operator    maker                v1       native                -        
+mmsell-win-set-3                     LIVE_CANARY  operator    maker                v1       native                -        
+origin-scanner-books                 RETIRED      operator    scanner              -        HISTORICAL_UNTRACKED  D        
+perp-v1                              RETIRED      operator    perp                 v1       native                -        
+pin15                                RETIRED      operator    observation_pin      -        RETIRED_OR_KILLED     C        
+tfav                                 RETIRED      operator    favorite_buy         -        RETIRED_OR_KILLED     C        
+theta4-fat-tail                      RETIRED      operator    theta                v1       ACTIVE_LIVE           B        
+theta-tail-sell                      PAUSED       operator    theta                -        ACTIVE_PAPER          C        
+wcprop                               RETIRED      operator    structural           -        RETIRED_OR_KILLED     C        
+weather-consensus                    RETIRED      operator    forecast             -        RETIRED_OR_KILLED     C        
+weather-consensus-city               RETIRED      operator    forecast             -        RETIRED_OR_KILLED     C        
+weather-legacy-cells                 RETIRED      operator    forecast             -        RETIRED_OR_KILLED     D        
+xgame                                RETIRED      idea_model  cross_venue          -        RETIRED_OR_KILLED     C        
