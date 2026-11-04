@@ -1,12 +1,4 @@
 # ops request [READ]
-# type=db  id=rc-f7-1104-0313
-# code e655a0bd55e435aade5ef5796e26663dede18554 · started 2026-11-04T03:16:31Z
-strategy   orders_7d  last_order                      
----------  ---------  --------------------------------
-Alimm1     236        2026-11-04 01:07:49.184644+00:00
-Ymmsell10  30         2026-11-03 18:32:24.133440+00:00
-Xmmsell10  36         2026-11-03 18:32:23.076797+00:00
-Vmmsell10  15         2026-10-30 13:32:15.884167+00:00
-Kmmsell10  60         2026-10-30 13:32:14.435800+00:00
-
-(5 rows)
+# type=noop
+# code e655a0bd55e435aade5ef5796e26663dede18554 · started 2026-11-04T03:16:49Z
+(noop — nothing to do)
