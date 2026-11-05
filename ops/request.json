@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT status, coalesce(cancel_reason,'') AS reason, count(*) AS n, max(created_at) AS last_created FROM live_orders WHERE strategy = 'Alimm1' AND created_at >= now() - interval '3 days' GROUP BY 1, 2 ORDER BY 4 DESC LIMIT 15", "id": "rc-arest-1105-2320"}
