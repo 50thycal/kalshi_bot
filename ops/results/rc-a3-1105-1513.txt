@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=rc-a3-1105-1513
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-05T15:18:52Z
+series                mkts_24h
+--------------------  --------
+KXGENERALCOUNTY       44      
+KXSTATEBALLOTMEASURE  29      
+KXAAAGASM             26      
+KXWAAEROEMP           13      
+KXCABALLOTMEASURES    12      
+KXYTVIEWSHIGH         12      
+KXNYNJPORTTEU         9       
+KXNYCASKRENT          8       
+KXCITYCHAMPS          8       
+KXWATECHEMP           8       
+KXAPRPOTUS            8       
+KXFLVISITORCOUNT      7       
+KXILNUCLEAR           7       
+KXTXERCOTPEAK         7       
+KXPAMFGEMP            6       
+
+(15 rows)
