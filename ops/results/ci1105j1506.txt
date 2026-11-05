@@ -1,0 +1,16 @@
+# ops request [READ]
+# type=db  id=ci1105j1506
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-05T15:06:18Z
+k  t                              s                p  q    at                            
+-  -----------------------------  ---------------  -  ---  ------------------------------
+O  KXMAMDANIMENTION-26NOV18-FREE  yes/buy/resting  9  111   2026-11-05 05:55:26.764845+00
+O  KXYTVIEWSHIGH-FUE26DEC-16.0M   no/sell/resting  2  250   2026-11-04 22:15:27.032185+00
+O  KXYTVIEWSHIGH-FUE26DEC-16.0M   no/sell/resting  2  250   2026-11-04 22:15:26.968335+00
+O  KXYTVIEWSHIGH-FUT26DEC-5.0M    no/sell/resting  2  250   2026-11-05 02:42:31.418588+00
+O  KXYTVIEWSHIGH-FUT26DEC-5.0M    no/sell/resting  2  250   2026-11-05 02:42:31.484093+00
+O  KXYTVIEWSHIGH-TAT26DEC-2.1M    no/sell/resting  1  5     2026-11-04 04:53:52.580221+00
+O  KXYTVIEWSHIGH-TAT26DEC-2.1M    no/sell/resting  1  6     2026-11-04 04:53:52.491902+00
+O  KXYTVIEWSHIGH-WEE26DEC-15.0M   no/sell/resting  2  250   2026-11-05 02:42:31.747277+00
+O  KXYTVIEWSHIGH-WEE26DEC-15.0M   no/sell/resting  2  250   2026-11-05 02:42:31.805549+00
+
+(9 rows)
