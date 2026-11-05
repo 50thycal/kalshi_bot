@@ -228,6 +228,12 @@ def is_event_mention(series: str | None, event_ticker: str | None, title: str | 
 #: bid steps aside ENTRY_STEP_ASIDE_HOURS before that window ends. The Tate McRae market of this
 #: series paid $5.05 on 2026-10-23, the largest single payout the book has had.
 MONTH_WINDOW_SERIES = frozenset({"KXYTVIEWSHIGH"})
+#: §9.73 (operator, 2026-11-05: "stop YouTube and do mentions only"): series that get NO new
+#: entry bids, and whose resting entry bids are cancelled (`series_paused`). They stay in the
+#: universe so a position already held there keeps its resting sells, stop and settlement — only
+#: new risk stops. Five YouTube channels were swept to 1c in five days (DRA, KEN, FUT, WEE, FUE);
+#: YouTube is −$15.50 realized lifetime against $23.08 of rewards.
+ENTRY_PAUSED_SERIES = frozenset({"KXYTVIEWSHIGH"})
 #: The measured month ends at local midnight; 04:00Z is midnight US Eastern (daylight time) and
 #: earlier than midnight Pacific, so the cutoff is never after the window has closed.
 MONTH_WINDOW_END_HOUR_UTC = 4

@@ -139,6 +139,8 @@ RISK_ENVELOPE: dict = {
     # behind a reference that is the touch.
     "month_window_max_markets_per_event": limm.MONTH_WINDOW_MAX_MARKETS_PER_EVENT,
     "side_quote_behind_touch": limm.SIDE_QUOTE_BEHIND_TOUCH,
+    # §9.73: no new entries in these series; held positions there are still managed.
+    "entry_paused_series": sorted(limm.ENTRY_PAUSED_SERIES),
     "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,

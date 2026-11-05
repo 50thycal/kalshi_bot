@@ -313,8 +313,11 @@ class IncentiveLiveRunner:
         return executor._switches_on() and executor._allowed(limm.LIVE_TAG)
 
     def excluded_series(self) -> frozenset[str]:
+        """Series this book places no new entry bid in: the settings list (reserved for other
+        live books) plus `limm.ENTRY_PAUSED_SERIES` (§9.73)."""
         raw = getattr(self.settings, "liquidity_incentive_excluded_series", "") or ""
-        return frozenset(s.strip().upper() for s in raw.split(",") if s.strip())
+        return frozenset(s.strip().upper() for s in raw.split(",") if s.strip()) \
+            | frozenset(limm.ENTRY_PAUSED_SERIES)
 
     # --- the cycle ------------------------------------------------------------
 
@@ -366,6 +369,9 @@ class IncentiveLiveRunner:
         out_of_band = self._retire_out_of_band(session, executor, now)
         if out_of_band:
             summary["outcomes"]["out_of_band"] = out_of_band
+        paused = self._retire_paused_series(session, executor, now)
+        if paused:
+            summary["outcomes"]["series_paused"] = paused
         over_cap = self._retire_over_event_cap(session, executor, now)
         if over_cap:
             summary["outcomes"]["event_cap_trim"] = over_cap
@@ -841,6 +847,21 @@ class IncentiveLiveRunner:
         changed = {t: v[0] for t, v in before.items()} != \
             {t: v[0] for t, v in self._out_of_band.items()}
         self._save_out_of_band(session, now, force=changed)
+        return n
+
+    def _retire_paused_series(self, session, executor, now: datetime) -> int:
+        """§9.73: cancel every purely resting entry bid in a `limm.ENTRY_PAUSED_SERIES` series.
+        Held positions there (and their resting sells) are left to the position manager."""
+        if not limm.ENTRY_PAUSED_SERIES:
+            return 0
+        n = 0
+        for ticker in self._stale_held_pairs(session, now, min_age_seconds=0.0):
+            if ticker.split("-", 1)[0].upper() not in limm.ENTRY_PAUSED_SERIES:
+                continue
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG, ticker=ticker,
+                                                reason="series_paused"):
+                n += 1
+                logger.info(f"incentive book: series_paused: cancelled resting bid on {ticker}")
         return n
 
     def _retire_over_event_cap(self, session, executor, now: datetime) -> int:
