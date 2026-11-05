@@ -1517,8 +1517,9 @@ def test_only_event_tied_mention_markets_are_quoted(live_db, settings, monkeypat
 
 def test_youtube_views_high_markets_are_quoted_and_other_views_series_are_not(
         live_db, settings, monkeypatch):
-    """§9.69: the one series added to the universe."""
+    """§9.69: the one series added to the universe (with §9.73's pause lifted)."""
     monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "ENTRY_PAUSED_SERIES", frozenset())
     book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
     client = FakeClient({"KXYTVIEWSHIGH-TAT26OCT-8.0M": book, "KXYTVIEWSW-TAT26OCT-8.0M": book})
     with db.session_scope() as s:
@@ -2314,6 +2315,7 @@ def test_a_pre_cap_twenty_dollar_bid_is_resized_to_ten(live_db, settings):
 
 
 def test_extra_bids_on_one_youtube_channel_are_trimmed_to_one(live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "ENTRY_PAUSED_SERIES", frozenset())
     monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
     monkeypatch.setattr(limm, "MAX_OPEN_ORDERS", 10)
     ev = "KXYTVIEWSHIGH-TAY26DEC"
@@ -2335,3 +2337,26 @@ def test_extra_bids_on_one_youtube_channel_are_trimmed_to_one(live_db, settings,
     assert "repriced" not in out["outcomes"]
     assert len([c for c in client.canceled if c.startswith(f"K-{ev}")]) == 2
     assert not [c for c in client.canceled if c.startswith(f"K-{other}")]
+
+
+# --- §9.73: YouTube paused, mentions only ---------------------------------------------------
+
+def test_youtube_is_paused_by_default():
+    assert "KXYTVIEWSHIGH" in limm.ENTRY_PAUSED_SERIES
+
+
+def test_a_paused_series_gets_no_new_bid_and_its_resting_bids_are_cancelled(live_db, settings):
+    ev = "KXYTVIEWSHIGH-TAY26DEC"
+    rest, fresh = f"{ev}-14.5M", "KXYTVIEWSHIGH-BAD26DEC-26.5M"
+    other = "KXTEST-M"
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    client = FakeClient({rest: book, fresh: book, other: book})
+    with db.session_scope() as s:
+        _program(s, rest, series="KXYTVIEWSHIGH", event=ev)
+        _program(s, fresh, series="KXYTVIEWSHIGH", event="KXYTVIEWSHIGH-BAD26DEC")
+        _program(s, other)
+        _rest972(s, rest, price=3, qty=333, event=ev)
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert out["outcomes"].get("series_paused") == 1 and client.canceled == [f"K-{rest}"]
+    assert {o["ticker"] for o in client.placed} == {other}

@@ -3310,3 +3310,22 @@ at a discount, and trimmed bids forfeit what their programmes accrued. A full sw
 level (BILL, Drake) still fills a behind-touch bid — there the $10 cap does the work. Change if
 mention reward per event falls under ~$5 for two review windows, or YouTube reward per channel
 falls by more than the fills it saved.
+
+### 9.73 YouTube paused — mention events only (2026-11-05)
+
+**Read.** In five days five YouTube channels were swept through every NO level to 1c: Drake
+11.5M (−$15.35), Kendrick 5.0M (−$5.35, a §9.72 behind-touch bid), Future 5.0M and Weeknd 15.0M
+(500 NO at 1c each, 02:39–02:40Z Nov 5, held), Fuerza Regida 16.0M (held). Each looks informed —
+the YES side jumps to 86–99 within a minute — and behind-touch cannot dodge a full sweep; §9.72's
+$10 cap only bounds it. YouTube lifetime: $23.08 rewards, −$38.58 fills, −$15.50 realized,
+−$30.61 with the held 1c positions marked at zero. Mention events remain the only net-positive
+type (+$7.53).
+
+**Change (operator, 2026-11-05: "stop YouTube and do mentions only").** `ENTRY_PAUSED_SERIES =
+{KXYTVIEWSHIGH}`: the series is added to the runner's excluded series (no new entry bid) and every
+purely resting entry bid there is cancelled (`series_paused`). It stays in the universe, so held
+positions keep their resting sells, stop and settlement. Mention markets are unchanged and keep
+§9.72's $10 / behind-touch rules.
+
+**Cost.** YouTube programme rewards (Oct-month $18.03) stop accruing, including the OLI Dec
+programme. Revisit only with a fill-side signal that predicts sweeps (view-count momentum).
