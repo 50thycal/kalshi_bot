@@ -1,19 +1,4 @@
 # ops request [READ]
-# type=db  id=ci1105a0055
-# code afe5ccf292bca7c530c2bca6c7e6092a044de0c1 · started 2026-11-05T00:55:32Z
-k  t                              s                p  q    at                            
--  -----------------------------  ---------------  -  ---  ------------------------------
-O  KXYTVIEWSHIGH-BAD26DEC-26.5M   no/buy/resting   8  125   2026-11-04 17:58:47.533598+00
-O  KXYTVIEWSHIGH-FUE26DEC-16.0M   no/sell/resting  2  250   2026-11-04 22:15:26.968335+00
-O  KXYTVIEWSHIGH-FUE26DEC-16.0M   no/sell/resting  2  250   2026-11-04 22:15:27.032185+00
-O  KXYTVIEWSHIGH-FUT26DEC-5.0M    no/buy/resting   1  500   2026-11-04 05:03:44.361381+00
-O  KXYTVIEWSHIGH-JUS26DEC-14.75M  no/buy/resting   1  500   2026-11-04 21:13:15.024464+00
-O  KXYTVIEWSHIGH-KAT26DEC-16.0M   no/buy/resting   3  333   2026-11-04 08:22:38.512118+00
-O  KXYTVIEWSHIGH-OLI26DEC-8.0M    no/buy/resting   3  333   2026-11-04 13:03:06.369039+00
-O  KXYTVIEWSHIGH-POS26DEC-6.0M    no/buy/resting   2  500   2026-11-04 20:56:37.717242+00
-O  KXYTVIEWSHIGH-TAT26DEC-2.1M    no/sell/resting  1  6     2026-11-04 04:53:52.491902+00
-O  KXYTVIEWSHIGH-TAT26DEC-2.1M    no/sell/resting  1  5     2026-11-04 04:53:52.580221+00
-O  KXYTVIEWSHIGH-TAY26DEC-14.5M   no/buy/resting   5  200   2026-11-04 05:03:28.71902+00 
-O  KXYTVIEWSHIGH-WEE26DEC-15.0M   no/buy/resting   1  500   2026-11-04 05:04:33.463747+00
-
-(12 rows)
+# type=noop
+# code afe5ccf292bca7c530c2bca6c7e6092a044de0c1 · started 2026-11-05T00:55:50Z
+(noop — nothing to do)
