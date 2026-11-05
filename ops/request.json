@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1105b0255", "sql": "SELECT f.market_ticker t, f.side||'/'||f.action s, f.price::text p, f.quantity::text q, coalesce(f.raw_fill_json::json->>'created_time','') ct FROM fills f JOIN live_orders o ON o.kalshi_order_id=f.kalshi_order_id WHERE o.strategy='Alimm1' AND f.filled_at > now()-interval '3 hours' ORDER BY 5"}
+{"type":"noop"}
