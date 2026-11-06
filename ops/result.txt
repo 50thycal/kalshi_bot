@@ -1,28 +1,101 @@
 # ops request [READ]
-# type=script  id=rl-gridpin-1106i
-# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:07:01Z
-GRIDPIN census — read-only; pre-registered in docs/GRIDPIN_THESIS.md
+# type=script  id=rl-pm15-1106j
+# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:09:52Z
+# desk_fetch https://gamma-api.polymarket.com/markets?limit=8&closed=true&order=endDate&ascending=false&tag_slug=15M
+# HTTP 200 · application/json · 47206 bytes
+[
+ {
+  "acceptingOrders": false,
+  "acceptingOrdersTimestamp": "2026-07-31T19:09:57Z",
+  "active": true,
+  "approved": true,
+  "archived": false,
+  "automaticallyActive": true,
+  "automaticallyResolved": true,
+  "bestAsk": 0.001,
+  "clearBookOnStart": true,
+  "clobTokenIds": "[\"104724011435282767010255443219369824983743637512947884356127488519927851482313\", \"68334702258659129580925274523346942282277587207664190338420276864684873277615\"]",
+  "closed": true,
+  "closedTime": "2026-08-08 20:27:18+00",
+  "comboStatus": "disabled",
+  "conditionId": "0x7ba05d259657e856a103b43c85357dcd2d5446fc056230b0e4eb20420af076d6",
+  "createdAt": "2026-07-31T19:06:42.802234Z",
+  "customLiveness": 0,
+  "cyom": false,
+  "deploying": false,
+  "deployingTimestamp": "2026-07-31T19:08:11.904337Z",
+  "description": "This market will resolve according to the next individual to formally assume the position of Attorney General of the United States between market creation and January 19, 2029, 11:59 PM ET.\n\nA person will be considered to formally assume the position of Attorney General of the United States if they are appointed to the position by the President and confirmed by the Senate, or if they assume the position through a recess appointment. Acting or interim holders of the specified position do not qualify.\n\nIf no individual assumes the position by January 19, 2029 at 11:59PM ET, this market will resolve to \"Other\". \n\nThe resolution source for this market will be official information from the White House or United States Senate; however, a consensus of credible reporting may also be used.",
+  "enableOrderBook": true,
+  "endDate": "2029-01-19T23:59:00Z",
+  "endDateIso": "2029-01-19",
+  "events": [
+   {
+    "active": true,
+    "archived": false,
+    "automaticallyActive": true,
+    "automaticallyResolved": true,
+    "closed": true,
+    "closedTime": "2026-08-08T23:33:13Z",
+    "commentCount": 0,
+    "createdAt": "2026-07-31T19:06:38.3284Z",
+    "creationDate": "2026-07-31T19:15:06.837355Z",
+    "cumulativeMarkets": false,
+    "cyom": false,
+    "deploying": false,
+    "deployingTimestamp": "2026-07-31T19:07:07.651576Z",
+    "description": "This market will resolve according to the next individual to formally assume the position of Attorney General of the United States between market creation and January 19, 2029, 11:59 PM ET.\n\nA person will be considered to formally assume the position of Attorney General of the United States if they are appointed to the position by the President and confirmed by the Senate, or if they assume the position through a recess appointment. Acting or interim holders of the specified position do not qualify.\n\nIf no individual assumes the position by January 19, 2029 at 11:59PM ET, this market will resolve to \"Other\". \n\nThe resolution source for this market will be official information from the White House or United States Senate; however, a consensus of credible reporting may also be used.",
+    "enableNegRisk": true,
+    "enableOrderBook": true,
+    "endDate": "2029-01-19T23:59:00Z",
+    "estimateValue": false,
+    "eventMetadata": {
+     "context_requires_regen": true
+    },
+    "featured": false,
+    "gmpChartMode": "default",
+    "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/who-will-trump-announce-as-next-ag-p7QRIjETOSqO.jpg",
+    "id": "777919",
+    "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/who-will-trump-announce-as-next-ag-p7QRIjETOSqO.jpg",
+    "negRisk": true,
+    "negRiskAugmented": true,
+    "negRiskMarketID": "0x8e650b5d2265ba2ef3a9f2b52567155ba0e973b412ff29d2a44bd8a1a4f6fe00",
+    "new": false,
+    "openInterest": 3381.912191,
+    "pendingDeployment": false,
+    "resolutionSource": "",
+    "restricted": true,
+    "showAllOutcomes": true,
+    "showMarketImages": false,
+    "slug": "who-will-be-trumps-next-attorney-general-20260731141822084",
+    "sortBy": "price",
+    "startDate": "2026-07-31T19:10:08.150439Z",
+    "ticker": "who-will-be-trumps-next-attorney-general-20260731141822084",
+    "title": "Who will be Trump's next Attorney General?",
+    "updatedAt": "2026-08-13T15:31:28.650302Z",
+    "version": "v1",
+    "volume": 12863.265257
+   }
+  ],
+  "fallbackResolutionType": "none",
+  "featured": false,
+  "feeSchedule": {
+   "exponent": 1,
+   "rate": 0.04,
+   "rebateRate": 0.25,
+   "takerOnly": true
+  },
+  "feeType": "politics_fees",
+  "feesEnabled": true,
+  "funded": false,
+  "groupItemThreshold": "11",
+  "groupItemTitle": "Andrew Bailey",
+  "hasReviewedDates": true,
+  "holdingRewardsEnabled": false,
+  "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-donald-trump-announce-person-h-as-the-next-united-states-attorney-general-by-june-30-dGlITR7UXykf.jpg",
+  "id": "3244610",
+  "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-donald-trump-announce-person-h-as-the-next-united-states-attorney-general-by-june-30-dGlITR7UXykf.jpg",
+  "makerBaseFee": 1000,
+  "manualActivation": false,
+  "marketMakerAddress": "
 
-== C0 universe ==
-  rungs listed 1159  settled 1121 over 66 event-days (2026-08-30 .. 2026-11-04)
-  settled rungs with volume 933  total settled volume 1,904,512
-  of 400 checked, traded after 19:00 CT: 109
-
-== C1 grading source (ERCOT NP6-346-CD) ==
-  operating days parsed 32 (2026-10-04 .. 2026-11-04)
-  settled rungs graded 589, reproduced 589 (100.0%)
-  NP6-346 daily max - Kalshi expiration_value: median +0.0 MW, max |diff| 0.8 MW over 31 days
-
-== C2 same-day timing (ERCOT dashboard) ==
-  now 21:07 CT; hourly systemLoad posted through HE20 (ended 20:00 CT) -> 67 min ago; bar <= 90
-  2026-11-04: dashboard hourly max 58,499.3 MW vs NP6-346 58,499.3 MW (diff +0.0); rungs flipped 0/19
-
--- reported, never decides: 5-min vs hourly (today) --
-  5-min peak so far 60,889 MW vs hourly peak so far 60,751 MW (gap +138 MW; strike spacing ~500 MW)
-  hourly mean of 5-min demand vs posted hourly systemLoad over 18 hours: mean |err| 0.05%, max 0.12%  (small -> the hourly value can be computed live)
-
-  sibling grid-like series on Kalshi: ['KXPJMWESTW', 'KXTXERCOTPEAKD', 'KXPJMDOMW', 'KXERCOTNORTHM', 'KXSPOTIFYSONGSPPTONIGHT', 'KXMISOINDM', 'KXMISOINDW', 'ERCOTX', 'KXPJMWESTM', 'KXSPOTIFYSONGSPPINOISES', 'KXUTILITYPJMWEST', 'KXERCOTHOUW', 'KXPJMAEPDAYM', 'KXUTILITYERCOT', 'KXERCOTHOUM', 'KXPAPJM', 'KXERCOTX', 'KXERCOTNORTHW', 'KXPJMDOMM', 'KXTXERCOTPEAK', 'KXUSPPI', 'KXERCOTWESTW', 'KXSPOTIFYSONGSPPNICETOKNOWYOU', 'KXERCOTWESTM', 'KXFERCPJM', 'KXPJMAEPDAYW', 'KXPJMBREAKUP', 'KXPJMEMERGENCY', 'KXSPOTIFYSONGSPPSTARS', 'KXSPOTIFYSONGSPPSTATESIDE', 'KXUSPPIYOY', 'KXSPOTIFYSONGSPPROMEO', 'KXSPOTIFYSONGSPPILLEGAL']
-
-== verdict ==
-  CENSUS CLEARS
-   - C0-C2 pass -> build scripts/kalshi_gridpin_study.py (P1-P4)
+… [47234 more chars; raise --max-chars (cap 20000) or use --find]
