@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["ts-cutoff-xfer-1106d"],"id":"ts-cutoff-rcpt-1106e"}
+{"type":"xos","command":"issue-show","args":["XOS-000048"],"id":"ts-cutoff-show-1106f"}
