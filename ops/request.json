@@ -1,1 +1,1 @@
-{"type": "db", "id": "ci1106b0718", "sql": "SELECT 'B' k, '' e, residual_cents::text n, at::text at FROM incentive_balance_observations WHERE residual_cents<>0 AND at > now()-interval '3 days' UNION ALL SELECT 'P', event_ticker, count(*)::text, min(end_date)::text FROM incentive_programs WHERE end_date > now() AND (series_ticker LIKE '%MENTION%' OR series_ticker LIKE 'KXTRUMPSAY%') GROUP BY event_ticker ORDER BY 1,4"}
+{"type":"noop"}
