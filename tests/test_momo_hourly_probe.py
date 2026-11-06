@@ -122,3 +122,21 @@ def test_census_absent_series_and_allowlist():
     import ops_runner  # noqa: E402 - scripts/ is on sys.path above
     assert "short_window_census" in ops_runner.ALLOWED_SCRIPTS
     assert "momo_hourly_probe" in ops_runner.ALLOWED_SCRIPTS
+
+
+def test_label_tally_attributes_every_row_and_adds_up():
+    # docs/handoffs/HANDOFF-kalshi-historical-cutoff.md: every label says where it came from,
+    # and a row with no label is counted as not found, never dropped.
+    raw = [{"ev": "E1", "mk": "E1-A"}, {"ev": "E1", "mk": "E1-B"},
+           {"ev": "E0", "mk": "E0-A"}, {"ev": "E9", "mk": "E9-A"}]
+    results = {"E1-A": 1, "E0-A": 0}
+    t = mp.label_tally(raw, results, {"E1": "live", "E0": "historical", "E9": "not_found"})
+    assert t.line() == "labels: live 1 / historical 1 / not found 2"
+    assert t.total == len(raw)
+
+
+def test_event_results_reads_the_historical_tier(monkeypatch):
+    monkeypatch.setattr(mp.ks, "event_markets", lambda ev, tickers=(): (
+        [{"ticker": "E0-A", "result": "yes"}, {"ticker": "E0-B", "result": "no"},
+         {"ticker": "E0-C", "result": ""}], "historical"))
+    assert mp.event_results("E0", {"E0-A"}) == ({"E0-A": 1, "E0-B": 0}, "historical")

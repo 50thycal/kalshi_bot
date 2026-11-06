@@ -369,7 +369,8 @@ def real_labels(rows: list[dict]) -> tuple[list[dict], bool]:
     events = sorted({r["event"] for r in rows})
     print(f"  fetching settled results for {len(events):,} events from Kalshi's public "
           "market-data endpoint (no key)...")
-    real, ok_events = fetch_kalshi_results(events)
+    sources: dict[str, str] = {}
+    real, ok_events = fetch_kalshi_results(events, sources=sources)
     covered = []
     for r in rows:
         got = real.get(r["ticker"])
@@ -381,6 +382,8 @@ def real_labels(rows: list[dict]) -> tuple[list[dict], bool]:
     cov = len(covered) / len(rows) if rows else 0.0
     print(f"  events read: {ok_events:,}/{len(events):,}   markets with a real result: "
           f"{len(covered):,}/{len(rows):,} ({cov:.2%})   bar {COVERAGE_BAR:.0%}")
+    print("  " + _sl.label_tally(rows, real, sources).line()
+          + f"   events that errored: {sum(1 for v in sources.values() if v == 'error'):,}")
     if not covered:
         print("  NOTHING retrieved. Nothing below can be scored.")
         return [], False
