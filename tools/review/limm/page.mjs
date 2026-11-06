@@ -116,8 +116,8 @@ function question(q) {
 const rows = (list, f) => list.map(f).join('');
 // The operator's own question, at the top of the section it belongs to.
 const asked = (k) => ASKED[k] ? `<blockquote class="asked"><span>You asked · ${esc(ASKED[k].when)}</span>${esc(ASKED[k].q)}</blockquote>` : '';
-const STATE = { built: 'Built · waiting on merge', kept: 'No change' };
-const builtCard = (b) => `<article class="built" data-state="${b.state}"><header><h3>${esc(b.title)}</h3><span class="chip ${b.state === 'built' ? 'go' : ''}">${esc(STATE[b.state])}</span></header><p>${esc(b.what)}</p><p class="pn mono">${esc(b.id)}: answered option 1 (recommended)</p></article>`;
+const STATE = { built: 'Built · waiting on merge', live: 'Live', blocked: 'Live · blocked', kept: 'No change' };
+const builtCard = (b) => `<article class="built" data-state="${b.state === 'kept' ? 'kept' : 'built'}"><header><h3>${esc(b.title)}</h3><span class="chip ${b.state === 'blocked' ? 'maybe' : b.state === 'kept' ? '' : 'go'}">${esc(STATE[b.state])}</span></header><p>${esc(b.what)}</p><p class="pn mono">${esc(b.id)}: answered option 1 (recommended)</p></article>`;
 const html = `<title>Alimm1 Review Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -271,14 +271,14 @@ code { font: 13px var(--mono); }
   <section id="tab-built" aria-labelledby="h-built">
     <h2 id="h-built">Built from your answers</h2>
     ${asked('built')}
-    <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Four changes are built and tested; three needed no change. They go live when the pull request merges and the worker redeploys.</p>
+    <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Four changes are live since Nov 5, 11:37 PM CT (PR #743); three needed no change. The window trial is live but blocked by another book’s positions; that needs one more answer.</p>
     <div class="grid">${rows(BUILT, builtCard)}</div>
   </section>
 
   <section id="tab-decide" class="hidden-tab" aria-labelledby="h-decide">
     <h2 id="h-decide">Decide</h2>
     ${asked('decide')}
-    <p class="lead">Seven questions. The recommended option is first. Each carries the reason in one line; the tabs above carry the detail.</p>
+    <p class="lead">One new question (round 2) on top, then round 1’s seven, already answered. The recommended option is first. Each carries the reason in one line; the tabs above carry the detail.</p>
     <div class="qs">${rows(QUESTIONS, question)}
       <fieldset class="q" data-q="r1-general"><legend>Anything else?</legend><label class="note"><span>Notes</span><textarea id="qn-r1-general" rows="3"></textarea></label><div class="saved" aria-live="polite"></div></fieldset>
     </div>

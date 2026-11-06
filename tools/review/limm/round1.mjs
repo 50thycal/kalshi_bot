@@ -54,6 +54,16 @@ export const GROC_STEPS = [
 
 export const QUESTIONS = [
   {
+    id: 'r2-window-event-block',
+    q: 'Round 2: the window trial is live but blocked. The bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s “Trump says X” set. Should window markets be blocked only on the same word instead of the whole week?',
+    options: [
+      'Yes: for KXTRUMPSAY, block only a word another book holds or rests on, not the whole weekly set (recommended)',
+      'No: keep the whole-week block; the trial runs only in weeks mmsell sits out',
+      'Stop the window trial',
+    ],
+    why: 'Different words in one week resolve separately, unlike the words of one speech. mmsell is short YES on its words and we would be long YES on others, so a burst of words being said moves the two books in opposite directions rather than stacking risk. The same-word guard, which stops two books trading one market, stays. This loosens a live safeguard, so it waits on your answer.',
+  },
+  {
     id: 'r1-windows',
     q: 'The window-markets study says PROMISING. Start a small live trial?',
     options: [
@@ -122,10 +132,10 @@ export const ASKED = {
 
 // Round 1's answers read back (answers-2026-11-06.json) and what each one changed.
 export const BUILT = [
-  { id: 'r1-windows', title: 'Window markets: live trial', state: 'built', what: 'KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. Same $100 / 10-market / 3-per-event caps. The monthly and company series stay out.' },
-  { id: 'r1-stepaside', title: '24-hour step-aside', state: 'built', what: 'Mention-event bids now leave 24 h before the event instead of 48 h. Window markets keep 48 h. After the next two mention events I compare reward gained with fills taken.' },
-  { id: 'r1-small', title: 'Skip events under $5', state: 'built', what: 'A mention event is entered only if the book’s projected reward there (held bids plus the best new ones, to their step-aside) is $5 or more.' },
-  { id: 'r1-409', title: '409 fix', state: 'built', what: 'A refused (409) bid or sell is checked on the exchange at once and marked not placed, instead of after 15 minutes. This also stops maintenance 409s on resting sells being booked as “filled”.' },
+  { id: 'r1-windows', title: 'Window markets: live trial', state: 'blocked', what: 'Live since Nov 5, 11:37 PM CT, but no bid can be placed yet. KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. But the bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s set (Nov 9), as it does most weeks. All 32 markets are turned away for that reason. See the new question on Decide.' },
+  { id: 'r1-stepaside', title: '24-hour step-aside', state: 'live', what: 'Mention-event bids now leave 24 h before the event instead of 48 h. Window markets keep 48 h. After the next two mention events I compare reward gained with fills taken.' },
+  { id: 'r1-small', title: 'Skip events under $5', state: 'live', what: 'A mention event is entered only if the book’s projected reward there (held bids plus the best new ones, to their step-aside) is $5 or more.' },
+  { id: 'r1-409', title: '409 fix', state: 'live', what: 'A refused (409) bid or sell is checked on the exchange at once and marked not placed, instead of after 15 minutes. This also stops maintenance 409s on resting sells being booked as “filled”.' },
   { id: 'r1-grocsafe', title: 'Crowding filter', state: 'kept', what: 'No change: GROC and SAFE stay turned away while their books are too crowded to pay.' },
   { id: 'r1-youtube', title: 'YouTube leftovers', state: 'kept', what: 'No change: held, sells stay up at 2c.' },
   { id: 'r1-tz', title: 'Central time', state: 'kept', what: 'Confirmed. Reports and check-ins stay in CT.' },
