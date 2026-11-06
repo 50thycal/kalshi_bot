@@ -1,1 +1,1 @@
-{"type": "script", "name": "limm_window_probe", "args": []}
+{"type":"script","name":"short_window_census","args":["--days","7"],"id":"rl-swc-1106n"}
