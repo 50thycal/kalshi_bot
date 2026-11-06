@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"rl-ct-volclock-1106a"}
+{"type":"xos","command":"issue-command-show","args":["ts-cutoff-open-1106a"],"id":"ts-cutoff-rcpt-1106b"}
