@@ -271,7 +271,7 @@ code { font: 13px var(--mono); }
   <section id="tab-built" aria-labelledby="h-built">
     <h2 id="h-built">Built from your answers</h2>
     ${asked('built')}
-    <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Round 1’s four changes are live since Nov 5, 11:37 PM CT (PR #743); three needed no change. Your round-2 answer (block window markets per word) is built and waiting on merge.</p>
+    <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Round 1’s four changes are live since Nov 5, 11:37 PM CT (PR #743); three needed no change. Your round-2 answer (block window markets per word) is live since 6:57 AM CT (PR #749), and the window trial placed its first three bids.</p>
     <div class="grid">${rows(BUILT, builtCard)}</div>
   </section>
 
