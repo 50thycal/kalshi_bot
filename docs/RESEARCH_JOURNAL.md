@@ -1,5 +1,20 @@
 # Weather-markets research journal
 
+## VOLCLOCK run 1 2026-11-06 — HOLD (instrument); P3 fails regardless, recommend close
+
+- **Verdict per contract:** HOLD (instrument). Close-spot coverage was 0.86 against the 0.90 floor
+  ([`VOLCLOCK_PREREG.md`](VOLCLOCK_PREREG.md), ops `rl-volclock-run-1106`). 44 trading days, 2,311 rows,
+  0% label exclusion, ET-hour match 1.0.
+- **Why it is effectively closed:** P3 uses no close spot and fails. Buying the crossing side in the
+  windows nets −1.96¢ per contract (p5 −4.30). Ungated: R = 1.39 (BTC is more volatile in the windows,
+  mostly at the open) and D = +4.31¢ (CI excludes 0).
+- **Lesson:** the hourly ladder is **clock-blind** (crossing quote ~25¢ in every class) but calibrated
+  to the busy hours. So the mispricing is the quiet-hour crossing side being dear (−4.45¢), not the
+  scheduled windows being cheap. With MOMO-H, there is no open buy-side calibration question on this
+  ladder for a 1–3 minute bot.
+- **Not promoted:** quiet-hour crossing-side selling (+2.71¢ ungated, post hoc) is tail-selling-family
+  and would need its own pre-registration on post-11-06 data. Recorded as an observation only.
+
 ## VOLCLOCK 2026-11-06 — pre-registered (hourly BTC ladder vs scheduled US vol windows)
 
 - **What:** hold A2 of the 11-06 idea-model run, released by MOMO-H's KILL. Does the hourly `KXBTCD`

@@ -157,7 +157,7 @@ errors here). Recommended route: an Experiment OS issue owned by Platform Change
 | **GRIDPIN** | settled day count ≥ 60 | **FIRED and CLEARED 11-06** → full probe P1–P4 is the next build |
 | **EARNBEAT** | Q3 reports settle | due week of 2026-11-09 |
 | **ECON-REACT** | genuine prints settled | still thin (13 settled at 09-29); re-check monthly |
-| **VOLCLOCK** (new) | A1 verdict recorded | **trigger met → pre-registered 11-06** (`VOLCLOCK_PREREG.md`, `scripts/volclock_probe.py`); a different mechanism, not a rescue |
+| **VOLCLOCK** (new) | A1 verdict recorded | **run 1 11-06: HOLD (instrument), P3 FAIL regardless → recommend close** (`VOLCLOCK_PREREG.md`); quiet-hour overpricing noted as an observation only |
 | ~~MOMO-15~~ | A1 shows a signal (P1) | **closed**: A1 KILL |
 | **XVENUE15/5** (reopened) | operator wants a cross-venue direction | census-ready (public price histories on both venues) |
 | **GRID-SIBLINGS** (new) | GRIDPIN P1 reads | conditional |
