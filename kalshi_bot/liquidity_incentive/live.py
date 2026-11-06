@@ -160,6 +160,15 @@ MIN_PROJECTED_PROGRAM_USD = 1.00
 #: step-aside — is at least this. Oct 13 ($3.31), Oct 17 ($1.70) and Oct 24 ($1.82) each paid less
 #: than one typical fill loss.
 MIN_EVENT_PROJECTED_USD = 5.00
+#: §9.76 (operator, 2026-11-06: "change the bot to audit existing resting bids and pull them if
+#: they are earning below the 5 dollar threshold"): the same floor applied to bids ALREADY
+#: resting — per mention EVENT (its held bids together) and per WORD for a window-say market
+#: (§9.75: each word is its own bet). Window entries must clear it too, so a bid is never placed
+#: only to be pulled at the next audit. Mamdani FREE ($4.01) and KXTRUMPSAY REFI (re-priced to
+#: 8c, ~$0) were the first two.
+MIN_RESTING_PROJECTED_USD = MIN_EVENT_PROJECTED_USD
+#: How often the audit re-reads held books (one orderbook GET per resting market).
+RESTING_AUDIT_EVERY_SECONDS = 900.0
 
 #: §9.55 (operator decision 2026-10-15): the universe is MENTION markets tied to ONE scheduled
 #: event (a rally, a broadcast, an earnings call) — "will X be said during <event>". Over the
