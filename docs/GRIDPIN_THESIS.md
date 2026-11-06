@@ -2,7 +2,7 @@
 
 *Thesis written 2026-09-29, before any validation ran. The predictions below are pre-registered
 and are not re-scoped after results. Promoted from [`IDEA_MODEL_20260929.md`](IDEA_MODEL_20260929.md)
-(S1) on Calvin's request ("run the GRIDPIN next"). Status: **CENSUS HOLD (accrual), run 2 on 2026-09-29. C1 and C2 pass; C0 is short only on days. See RESULTS.**
+(S1) on Calvin's request ("run the GRIDPIN next"). Status: **CENSUS CLEARS (run 3, 2026-11-06); full probe P1–P4 built (`scripts/kalshi_gridpin_study.py`), verdict pending. See RESULTS.**
 Census script: `scripts/kalshi_gridpin_census.py`.*
 
 **One-liner.** Late in the Texas day, after the afternoon peak, the day's maximum *hourly-integrated*
@@ -141,6 +141,47 @@ sources exist. It did not look at any Kalshi price.
   days. The full probe (if it is ever built) must accumulate these readings forward.
 - **Not built:** the S8 morning mid versus day-ahead forecast print, which was description-only
   in the idea report.
+
+## Full-probe implementation notes (added 2026-11-06, before the full probe ran)
+
+Recorded **before** `scripts/kalshi_gridpin_study.py` ran for the first time. These are the
+operational readings of P1–P4 above; no bar changed, and none of these is re-scoped after results.
+
+- **Graded window is rolling.** The only keyless hourly path is NP6-346-CD, retained about 31
+  days, so the probe grades the rungs of the last ~31 operating days only (the census saw
+  10-04 .. 11-04). It does not accumulate on its own; the per-entry ledger it prints is what a
+  later run may pool with, window against non-overlapping window.
+- **No lookahead (the publication lag).** An hour's NP6-346 value is usable at decision time *t*
+  only when its hour ended at least **90 minutes** before *t* (the C2 bar; the census measured
+  40–67 min). Lags of 60 and 120 min are printed as sensitivity and never decide. NP6-346 is
+  used as a stand-in for the as-posted dashboard value, which C2 found identical (0 flips).
+- **P1 entry rule.** Per (rung, side), one entry: the first *observed* 1-min candle close at or
+  after the decision whose ask for that side is ≤ **97¢** (YES ask = `yes_ask`; NO ask =
+  1 − `yes_bid`). A quote is never backward-filled from before the decision. YES is decided when
+  the published running max exceeds the strike. NO is decided from 21:00 CT when the strike is
+  ≥ 1,000 MW above the published running max, and must still be decided at the entry minute.
+  One contract, held to settlement, net of `ceil(0.07·P·(1−P)·100)`.
+- **P1 accuracy** is the share of entries whose side matches Kalshi's own `result`, which is
+  independent of NP6-346.
+- **P1 below n = 60 gives no verdict either way:** HOLD (accrual), with the numbers printed. The
+  KILL bars (mean ≤ +0.5¢, accuracy < 95%) are applied only at n ≥ 60.
+- **P2 control.** Rung-sides that are *undecided* at the quote minute (neither rule fires), on
+  the same operating day, in a CT clock hour that holds at least one P1 entry quoted 85–97¢. The
+  first in-band (85–97¢) observed ask in such an hour, one per (rung, side). P2 compares the
+  in-band P1 entries with the control. It needs n ≥ 20 on each side, otherwise UNTESTABLE.
+- **P3.** Graded only on operating days for which a full 5-minute demand series exists, from
+  ERCOT's same-day `supply-demand.json`. Gap class: hourly max < strike ≤ 5-min max. Entry: NO
+  at the first observed ask after the 5-min series first reaches the strike. No such history is
+  archived, so P3 is expected to be **UNTESTABLE** historically. Under the decision rule, the
+  paper book would then carry the forward P3 check at n = 20.
+- **P4 depth proxy.** Historical order books are not public. Depth at or better than the entry
+  price is measured as the contracts that takers bought **on our side at or better than our
+  price** on the public tape, from 60 s before our entry to 30 min after. This is size that
+  demonstrably rested there. A live order-book snapshot of open rungs is printed as
+  description only. Entries per event-day are P1 entries divided by graded operating days.
+- **Slices (description):** entry hour (CT), margin from running max to strike (0–500 /
+  500–1,500 / 1,500–3,000 / ≥ 3,000 MW), side, ask band (< 85¢ vs 85–97¢), and calendar
+  split-half.
 
 ## RESULTS
 
