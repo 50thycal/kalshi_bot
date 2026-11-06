@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rc-b-1106-1513
-# code 1958bc6595d054bbaecfd8b97fa234d780675a91 · started 2026-11-06T15:20:25Z
-settled_markets  settled_events
----------------  --------------
-18               16            
-
-(1 row)
