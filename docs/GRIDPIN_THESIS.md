@@ -2,7 +2,7 @@
 
 *Thesis written 2026-09-29, before any validation ran. The predictions below are pre-registered
 and are not re-scoped after results. Promoted from [`IDEA_MODEL_20260929.md`](IDEA_MODEL_20260929.md)
-(S1) on Calvin's request ("run the GRIDPIN next"). Status: **CENSUS CLEARS (run 3, 2026-11-06); full probe P1–P4 built (`scripts/kalshi_gridpin_study.py`), verdict pending. See RESULTS.**
+(S1) on Calvin's request ("run the GRIDPIN next"). Status: **FULL PROBE run 1 (2026-11-06): HOLD. P1 thin (n=16), P2 and P3 untestable, P4 FAIL (median tape depth 0). Not a book. Re-run on the next non-overlapping window about 2026-12-06. See RESULTS.**
 Census script: `scripts/kalshi_gridpin_census.py`.*
 
 **One-liner.** Late in the Texas day, after the afternoon peak, the day's maximum *hourly-integrated*
@@ -241,3 +241,61 @@ mean (0.12% max). Sibling grid series on Kalshi now include `KXPJMWESTW`, `KXPJM
 
 **Next (as pre-registered):** the full probe `scripts/kalshi_gridpin_study.py` (P1–P4) is now
 buildable. Building it is the next Research Lab step; this census authorizes nothing else.
+
+
+**Full probe run 1, 2026-11-06 (ops `rl-gridpin-study-1106a`, code `f748165`): HOLD. P4 FAILS; P1 thin.**
+Graded window **10-04 .. 11-04** (31 operating days, 589 settled rungs). NP6-346 reproduces 589/589
+results, and every rung returned candles (195,569 candles, about 330 per rung, so candles are
+sparse and appear on activity). No bar changed.
+
+| prediction | result | read |
+|---|---|---|
+| P1 decided-side discount | **n=16**, mean **+6.44¢** (se 2.32), win 16/16 (100%) | **HOLD (accrual)**: n < 60 |
+| P2 not favorite drift | P1 in-band (85–97¢) n=13 at **+2.46¢**; undecided control n=19 at **−38.2¢** (58% win) | **UNTESTABLE**: n < 20 on both sides |
+| P3 mechanics gap | no 5-min history for any graded day (supply-demand.json holds 11-05 and 11-06 only) | **UNTESTABLE** |
+| P4 capacity | median tape depth **0** contracts (p75 5; 44% of entries had any same-side print); **0.52 entries/day** (bar 0.5) | **FAIL**: depth |
+
+The decision rule gives **HOLD**. Under P4 as pre-registered, a depth failure is "a hobby, never a book".
+
+**What the numbers say.**
+- **The market reprices decided rungs before the published hourly value can reach us.**
+  - Only 16 of about 589 rungs ever offered a decided side at ≤ 97¢. The median entry came 175 minutes after the decision.
+  - The YES side almost never lingers: 4 entries.
+- **Most of the mean comes from three sub-85¢ fills:** +37¢ on 10-04 T61500, and +18¢ and +16¢ on 10-09. The in-band entries net +2.46¢, which is about the cost floor.
+- **The sample is concentrated.**
+  - 12 of 16 entries fall on 10-04 and 10-05, and none falls in the second half of the window.
+  - 9 of 16 are at the 23:55 CT close-minute candle, where a fill is doubtful (see amendment A1 below).
+- **Lag sensitivity is flat.** At 60 minutes: n=19, +7.42¢. At 120 minutes: n=16, +6.44¢.
+- **The control is striking, but it is description only.** Undecided rungs quoted 85–97¢ in the same hours lost **−38¢** on average. In this ladder the in-band favourite is *not* safe unless the hourly value has already decided it. That is the direction P2 predicts, at n=19, one short of the floor.
+- **Economics even if P1 passed:** about 0.5 entries/day × about +2.5¢ in-band × depth near 0. That is cents per month, against a $100/month north star.
+
+**P1 ledger, run 1** (for pooling with a later, non-overlapping window; columns are
+day, ticker, side, entry CT, ask ¢, decided CT, running max MW, strike, result, net ¢):
+```
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T64000,no,22:26,97,21:00,60263,64000,no,+2
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T61500,no,23:55,61,21:00,60263,61500,no,+37
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T62500,no,23:55,96,21:00,60263,62500,no,+3
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T63500,no,23:55,97,21:00,60263,63500,no,+2
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T64500,no,23:55,96,21:00,60263,64500,no,+3
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T65000,no,23:55,96,21:00,60263,65000,no,+3
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T65500,no,23:55,97,21:00,60263,65500,no,+2
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T66000,no,23:55,97,21:00,60263,66000,no,+2
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T66500,no,23:55,97,21:00,60263,66500,no,+2
+2026-10-04,KXTXERCOTPEAKD-26OCT05-T67000,no,23:55,97,21:00,60263,67000,no,+2
+2026-10-05,KXTXERCOTPEAKD-26OCT06-T71000,no,21:50,97,21:00,69952,71000,no,+2
+2026-10-05,KXTXERCOTPEAKD-26OCT06-T71500,no,22:23,94,21:00,69952,71500,no,+5
+2026-10-09,KXTXERCOTPEAKD-26OCT10-T72500,yes,22:08,80,17:30,73918,72500,yes,+18
+2026-10-09,KXTXERCOTPEAKD-26OCT10-T73000,yes,22:08,83,18:30,73918,73000,yes,+16
+2026-10-16,KXTXERCOTPEAKD-26OCT17-T54000,yes,02:37,97,02:30,54532,54000,yes,+2
+2026-10-16,KXTXERCOTPEAKD-26OCT17-T54500,yes,02:38,97,02:30,54532,54500,yes,+2
+```
+
+**Amendments, recorded after run 1 and before run 2.** Neither re-reads run 1.
+- **A1 (stricter primary).** From run 2 on, an entry at a candle ending at or after `close_time − 60 s` is excluded from P1. It is reported separately. A fill at the closing minute is not demonstrable.
+- **A2 (description only, never decides).** Candles are sparse (about 330 per rung-day), so the no-backfill rule can miss a decided side whose ask sat unchanged at ≤ 97¢ from before the decision. Run 2 also prints P1 with the quote carried forward from the last candle at or before the decision. This sizes the undercount. It does not grade.
+
+**Next (as pre-registered):**
+- **Re-run once on the next non-overlapping NP6-346 window, about 2026-12-06** (operating days from 11-05), and pool P1 and P2 with the run-1 ledger.
+- If **P4 still fails**, GRIDPIN is closed as a hobby (HOLD, never a book) and parked.
+- A KILL on P1 or P2 closes the ERCOT pin.
+- **GRID-SIBLINGS stays HOLD**: its trigger was "GRIDPIN P1 reads", and P1 has not read.

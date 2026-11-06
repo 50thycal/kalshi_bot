@@ -1,5 +1,23 @@
 # Weather-markets research journal
 
+## GRIDPIN full probe 2026-11-06 — HOLD: the ladder reprices first, and there is no depth
+
+The [ERCOT daily-peak pin](GRIDPIN_THESIS.md) full probe (`scripts/kalshi_gridpin_study.py`, ops
+`rl-gridpin-study-1106a`) graded 589 settled rungs over 31 days (10-04 .. 11-04). Hourly values
+were used only 90 minutes after the hour ended.
+
+- **P1, HOLD (thin).** Only **16** decided sides were ever offered at ≤ 97¢. They netted +6.44¢ and all 16 won.
+  - The in-band (85–97¢) entries net only +2.46¢. The mean comes from three sub-85¢ fills.
+  - 12 entries fall on two days, and 9 are at the closing minute.
+- **P2, untestable** (13 vs 19). Undecided in-band favourites lost −38¢, which is description only.
+- **P3, untestable.** There is no 5-minute history.
+- **P4, FAIL.** Median same-side tape depth is **0** contracts.
+
+The market re-marks decided rungs before the published hourly value arrives, and what is left is
+too thin to fill. Two amendments are recorded for run 2: A1 excludes closing-minute entries, and A2
+adds a carry-forward sensitivity that is description only. Re-run on the next window, about 12-06.
+If P4 fails again, GRIDPIN is parked as a hobby.
+
 ## Fill early-warning backtest + sports screens 2026-11-04 — NO-SIGNAL; no sports candidate
 
 - **Fill early-warning (study 8 Part A):**
