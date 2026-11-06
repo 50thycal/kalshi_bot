@@ -135,6 +135,14 @@ def test_verdict_ladder():
     assert vp.verdict(ok, math.nan, math.nan, 4, 1, 7, 2, 1).startswith("KILL (P1")
 
 
+def test_label_tally_adds_up_and_reads_both_tiers():
+    raw = [{"ev": "E1", "mk": "A"}, {"ev": "E1", "mk": "B"}, {"ev": "E2", "mk": "C"},
+           {"ev": "E3", "mk": "D"}]
+    tally = vp.label_tally(raw, {"A": 1, "C": 0}, {"E1": vp.ks.LIVE, "E2": vp.ks.HISTORICAL})
+    assert tally.counts == {vp.ks.LIVE: 1, vp.ks.HISTORICAL: 1, vp.ks.NOT_FOUND: 2}
+    assert tally.total == len(raw)
+
+
 def test_p0_failures_and_allowlist():
     assert vp.p0_failures(46, 500, 500, 0.0, 1.0, 1.0) == []
     assert len(vp.p0_failures(30, 200, 500, 0.06, 0.8, 0.98)) == 5

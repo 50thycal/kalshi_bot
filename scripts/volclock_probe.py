@@ -4,7 +4,8 @@ Pre-registration: docs/VOLCLOCK_PREREG.md (P0-P3, decision rule). Constants belo
 from it; tests pin them.
 
 Read-only. DATABASE_URL_RO (crypto_ladder_snapshots, one ET day per query, exact event tickers)
-+ Kalshi PUBLIC REST for each market's official settlement result. No orders, no writes.
++ Kalshi PUBLIC REST for each market's official settlement result, live tier then historical tier
+(scripts/kalshi_settled.py). No orders, no writes.
 
 No lookahead: the decision row is the T-40 quote; the official result and the close spot only
 SCORE it. Hour classes are a calendar fact known days ahead.
@@ -23,9 +24,10 @@ import os
 import random
 import sys
 import time
-import urllib.error
-import urllib.request
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kalshi_settled as ks  # noqa: E402
 
 # --- pre-registered constants (docs/VOLCLOCK_PREREG.md) ------------------------------------
 SERIES = "KXBTCD"
@@ -43,9 +45,6 @@ KILL_CENTS, P2_SIGNAL_CENTS, P3_NET_EV_CENTS = 1.5, 3.0, 1.5
 FEE_QTY = 10
 BOOT_N, BOOT_SEED = 2000, 20261106
 
-KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
-_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 _MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 # All 24 events feed `caps` (the close spot of a 16:00 event is read from the 17:00 event's
@@ -327,41 +326,24 @@ def analyse(rows: list[dict], events: list[dict], counts: dict) -> dict:
 
 # --- IO -------------------------------------------------------------------------------------
 
-def _get(path: str, params: dict) -> dict:
-    qs = "&".join(f"{k}={v}" for k, v in params.items() if v not in (None, ""))
-    url = f"{KALSHI}{path}?{qs}"
-    for attempt in range(5):
-        req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 (fixed host)
-                return json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            if exc.code in (429, 500, 502, 503) and attempt < 4:
-                time.sleep(1.5 * (2 ** attempt))
-                continue
-            raise
-        except (urllib.error.URLError, TimeoutError, OSError):
-            if attempt < 4:
-                time.sleep(1.5 * (2 ** attempt))
-                continue
-            raise
-    return {}
-
-
-def event_results(event_ticker: str) -> dict[str, int]:
+def event_results(event_ticker: str, tickers=()) -> tuple[dict[str, int], str]:
+    """({market: 1|0}, source). Live first, then Kalshi's historical tier (XOS-000048): settled
+    markets older than the cutoff are not served by live /markets, and losing them is silent."""
+    markets, source = ks.event_markets(event_ticker, tickers)
     out: dict[str, int] = {}
-    cursor = ""
-    for _ in range(10):
-        page = _get("/markets", {"event_ticker": event_ticker, "limit": 1000, "cursor": cursor})
-        for m in page.get("markets") or []:
-            res = (m.get("result") or "").lower()
-            if res in ("yes", "no"):
-                out[m["ticker"]] = 1 if res == "yes" else 0
-        cursor = page.get("cursor") or ""
-        if not cursor:
-            break
-        time.sleep(0.08)
-    return out
+    for m in markets:
+        res = ks.result_of(m)
+        if res is not None:
+            out[m["ticker"]] = 1 if res == "yes" else 0
+    return out, source
+
+
+def label_tally(raw: list[dict], results: dict[str, int], ev_source: dict[str, str]) -> ks.Tally:
+    """Decision rows by where their label came from; a row with no yes/no result is not_found."""
+    tally = ks.Tally()
+    for r in raw:
+        tally.add(ev_source.get(r["ev"], ks.NOT_FOUND) if r["mk"] in results else ks.NOT_FOUND)
+    return tally
 
 
 def _db_url() -> str:
@@ -419,14 +401,21 @@ def main(argv=None) -> int:
                 day += dt.timedelta(days=1)
                 n += 1
     results: dict[str, int] = {}
+    ev_source: dict[str, str] = {}
     fetch_err = 0
-    for ev in sorted({r["ev"] for r in raw}):
+    by_ev: dict[str, set[str]] = defaultdict(set)
+    for r in raw:
+        by_ev[r["ev"]].add(r["mk"])
+    for ev in sorted(by_ev):
         try:
-            results.update(event_results(ev))
+            got, ev_source[ev] = event_results(ev, by_ev[ev])
+            results.update(got)
         except Exception as exc:  # noqa: BLE001 - an unreadable event is counted as excluded
             fetch_err += 1
+            ev_source[ev] = ks.NOT_FOUND
             print(f"result fetch failed {ev}: {exc}", file=sys.stderr)
         time.sleep(0.06)
+    tally = label_tally(raw, results, ev_source)
     hour_match = _mean([1.0 if r["hour_ok"] else 0.0 for r in raw]) if raw else 0.0
     rows, counts = build_rows(raw, results)
     counts["exclusion"] = round(counts["no_label"] / len(raw), 4) if raw else 1.0
@@ -435,6 +424,7 @@ def main(argv=None) -> int:
     print(f"raw decisions {len(raw)}, labelled+classed {len(rows)}, no official label "
           f"{counts['no_label']} (P0 exclusion), dropped (no spot/strike or on strike) "
           f"{counts['dropped']}, result fetch errors {fetch_err}, ET hour match {hour_match:.4f}")
+    ks.report(tally)
     if len(rows) < 50:
         print("VERDICT: HOLD (instrument: P0 data floor) - too few usable rows to analyse")
         return 0

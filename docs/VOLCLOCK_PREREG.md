@@ -89,9 +89,11 @@ is a trading day. Events on the 2026-11-27 half day would be excluded (outside t
   crossing side is NO, price = 100 − mid, outcome Yx = 1 − Y.
 - **Crossing residual:** r = 100·Yx − (crossing-side mid), in cents. Positive r means the crossing
   side was cheap.
-- **Label Y:** the official Kalshi settlement `result` of the market (public REST,
-  `/markets?event_ticker=`), as in MOMO-H amendment A1. The quote never prices a point after the
-  decision; the label only scores it.
+- **Label Y:** the official Kalshi settlement `result` of the market (public REST), as in MOMO-H
+  amendment A1. It is read through `scripts/kalshi_settled.py`, live `/markets` first and then Kalshi's
+  historical tier, so markets past the live cutoff are not silently lost (XOS-000048). The probe
+  prints the label source line (live / historical / not found). The quote never prices a point after
+  the decision; the label only scores it.
 - **Realized move (one per event):** 10,000·|ln(spot at close / spot at decision)| in bp, where spot
   at close is the nearest `KXBTCD` capture (any event) within ±3 min of the event's close time.
 
@@ -113,7 +115,7 @@ is a trading day. Events on the 2026-11-27 half day would be excluded (outside t
   - |D| < 1.5¢ → **KILL (the clock is priced)**.
   - 90% CI includes 0 and |D| < 3.0¢ → **KILL**.
   - 90% CI includes 0 and |D| ≥ 3.0¢ → **HOLD (under-powered)**: re-read once trading days double
-    (about 2027-01-15), on the label path that then exists for older markets.
+    (about 2027-01-15); the historical-tier label read makes that re-read possible.
   - CI excludes 0 and 1.5¢ ≤ |D| < 3.0¢ → **HOLD (weak)**, same re-read.
   - CI excludes 0 and |D| ≥ 3.0¢ → **P2 signal**, go to P3.
 - **P3 — tradeable.** In WINDOW rows only, a taker buy held to settlement, signed by D: D > 0 buys the
@@ -139,7 +141,7 @@ large but noisy D is neither killed nor promoted.
 - **Script:** `scripts/volclock_probe.py` (allowlisted in `scripts/ops_runner.py`). Read-only:
   `DATABASE_URL_RO` with `default_transaction_read_only=on`, one ET day per query, exact event
   tickers (`= ANY(...)`, never a string range: production collates `en_US.utf8`, MOMO-H amendment
-  A2), plus Kalshi public REST for labels. No orders, no writes.
+  A2), plus Kalshi public REST for labels (live then historical tier). No orders, no writes.
 - **Run:** `{"type":"script","name":"volclock_probe","args":["--start","2026-09-01","--end","2026-11-05"]}`.
 - **Output:** P0 counts, R with CI, D with CI, P3 EV with p5, per-class and per-window tables, the
   descriptive splits, and one `VERDICT:` line from the rule above.

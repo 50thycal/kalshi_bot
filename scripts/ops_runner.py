@@ -257,6 +257,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_metalhalt_census",
     "kalshi_kpi_census",
     "kalshi_gridpin_census",
+    "kalshi_gridpin_study",
     "limm_scorecard",
     "limm_window_probe",
     "mmsell_scorecard",

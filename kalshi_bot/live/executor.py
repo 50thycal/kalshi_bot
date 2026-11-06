@@ -809,8 +809,11 @@ class LiveExecutor:
             return "unknown"
         except KalshiAPIError as exc:
             if getattr(exc, "status_code", None) == 409:
-                repo.update_live_order_status(session, row, status="submitted",
-                                              cancel_reason="409_already_exists")
+                # §9.74: settle it now against the exchange, not after a 15-minute grace.
+                settled = self._settle_incentive_409(session, row)
+                if settled == "not_landed":
+                    self.summary.rejected += 1
+                    return "rejected"
                 self.summary.placed += 1
                 return "placed"
             repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
@@ -836,6 +839,41 @@ class LiveExecutor:
             "sent_yes_price": yes_price, "count": qty, "reason": reason,
             "coid": client_order_id, "kalshi_order_id": koid}})
         return "placed"
+
+    def _settle_incentive_409(self, session, row) -> str:
+        """§9.74 (operator, 2026-11-06): an incentive order answered 409 is looked up on the
+        exchange at once instead of waiting INCENTIVE_409_GRACE_SECONDS. Its client_order_id is a
+        fresh uuid, so a 409 is not "our identical send already landed" — it is Kalshi refusing
+        (seen at the tail of the Thursday maintenance window). Found by client_order_id -> the
+        row takes the exchange's status and order id; absent -> it is `not_landed`
+        now, freeing the slot. A failed lookup keeps the old behaviour
+        (`submitted` 409_already_exists; reconcile settles it after the grace period).
+        Returns "landed", "not_landed" or "unknown"."""
+        repo.update_live_order_status(session, row, status="submitted",
+                                      cancel_reason="409_already_exists")
+        try:
+            orders = _items(self.client.get_orders(ticker=row.market_ticker), "orders")
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — fall back to reconcile's grace period
+            logger.warning(f"incentive 409 lookup failed for {row.market_ticker}: "
+                           f"{type(exc).__name__}: {str(exc)[:200]}")
+            return "unknown"
+        exch = next((o for o in orders if o.get("client_order_id") == row.client_order_id), None)
+        if exch is not None:
+            repo.update_live_order_status(session, row, status=_map_status(exch.get("status")),
+                                          kalshi_order_id=exch.get("order_id"), raw=exch)
+            logger.info(f"incentive 409 order found on exchange: {row.market_ticker} "
+                        f"coid={row.client_order_id}")
+            return "landed"
+        # Every order this book sends is a v2 post-only order, listed in this feed (executed ones
+        # too) under its client_order_id; a held position or an older fill on the ticker says
+        # nothing about THIS order (that inference is what booked 409'd resting sells 'filled').
+        repo.update_live_order_status(session, row, status="not_landed",
+                                      cancel_reason="409_not_found_on_exchange")
+        logger.warning(f"incentive 409 order never landed -> not_landed (immediate): "
+                       f"{row.market_ticker} {row.side} {row.action} coid={row.client_order_id}")
+        return "not_landed"
 
     # --- liquidity-incentive exits (thesis §9.37) ------------------------------------------
     #
@@ -1002,8 +1040,9 @@ class LiveExecutor:
             return "unknown"
         except KalshiAPIError as exc:
             if getattr(exc, "status_code", None) == 409:
-                repo.update_live_order_status(session, row, status="submitted",
-                                              cancel_reason="409_already_exists")
+                # §9.74: settle it now; a 409 that never landed is not a placed sell.
+                if self._settle_incentive_409(session, row) == "not_landed":
+                    return "rejected"
                 return "placed"
             repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
             self.summary.rejected += 1

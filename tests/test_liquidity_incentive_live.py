@@ -402,7 +402,7 @@ def test_youtube_views_markets_step_aside_before_their_month_ends():
               close_time=datetime(2026, 11, 4, 15, tzinfo=timezone.utc))
     end = datetime(2026, 11, 1, 4, tzinfo=timezone.utc)
     assert lv.pre_event_cutoff(**kw) == end
-    assert lv.entry_cutoff(**kw) == end - timedelta(hours=lv.ENTRY_STEP_ASIDE_HOURS)
+    assert lv.entry_cutoff(**kw) == end - timedelta(hours=lv.WINDOW_ENTRY_STEP_ASIDE_HOURS)
     assert lv.in_universe("KXYTVIEWSHIGH", "KXYTVIEWSHIGH-TAT26NOV", kw["title"])
     # A programme that ends first cuts it off sooner.
     early = datetime(2026, 10, 30, tzinfo=timezone.utc)
@@ -464,3 +464,57 @@ def test_one_market_per_youtube_channel_three_per_other_event():
     assert lv.max_markets_per_event("KXYTVIEWSHIGH-TAY26DEC") == 1
     assert lv.max_markets_per_event("KXTRUMPMENTION-26NOV05") == lv.MAX_MARKETS_PER_EVENT == 3
     assert lv.max_markets_per_event(None) == 3
+
+
+# --- §9.74 (operator, 2026-11-06, review page round 1) -----------------------------------
+
+def test_window_say_markets_are_in_the_universe_and_step_aside_48h_before_close():
+    from datetime import datetime, timedelta, timezone
+    close = datetime(2026, 11, 9, 5, tzinfo=timezone.utc)
+    kw = dict(series="KXTRUMPSAY", event_ticker="KXTRUMPSAY-26NOV09",
+              title="Will Trump say Hout before Nov 9?", program_end=close, close_time=close)
+    assert lv.in_universe("KXTRUMPSAY", "KXTRUMPSAY-26NOV09", kw["title"])
+    assert not lv.is_event_mention("KXTRUMPSAY", "KXTRUMPSAY-26NOV09", kw["title"])
+    assert lv.pre_event_cutoff(**kw) == close
+    assert lv.entry_cutoff(**kw) == close - timedelta(hours=48)
+    # the other window series stay out of the trial
+    assert not lv.in_universe("KXTRUMPSAYMONTH", "KXTRUMPSAYMONTH-26NOV30", "x before Dec")
+
+
+def test_mention_events_step_aside_24h_and_windows_48h():
+    assert lv.ENTRY_STEP_ASIDE_HOURS == 24.0
+    assert lv.step_aside_hours("KXTRUMPMENTION") == 24.0
+    assert lv.step_aside_hours("KXMAMDANIMENTION") == 24.0
+    assert lv.step_aside_hours("KXTRUMPSAY") == 48.0
+    assert lv.step_aside_hours("KXYTVIEWSHIGH") == 48.0
+
+
+def _window_quote(yes_ref, no_ref, *, hours_to_close=60.0):
+    return lv.build_side_quote(
+        market_ticker="KXTRUMPSAY-26NOV09-HOUT", best_yes_bid=yes_ref, best_no_bid=no_ref,
+        yes_resting_total=5000.0, no_resting_total=5000.0, target_size=1000.0,
+        hours_to_close=hours_to_close,
+        reference_price_by_side={lv.SIDE_YES: yes_ref, lv.SIDE_NO: no_ref},
+        program_hours_remaining=60.0, event_ticker="KXTRUMPSAY-26NOV09")
+
+
+def test_window_say_bids_only_the_cheap_yes_side_behind_the_touch():
+    q = _window_quote(8, 90)
+    assert isinstance(q, lv.SideQuote)
+    assert q.leg.side == lv.SIDE_YES and q.leg.price_cents == 7
+    assert q.leg.price_cents * q.leg.quantity <= 1000
+
+
+def test_window_say_never_bids_no_even_when_no_is_the_cheap_side():
+    q = _window_quote(92, 6)
+    assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_TOO_EXPENSIVE
+
+
+def test_window_say_is_exempt_from_the_seven_day_close_floor_but_mentions_are_not():
+    assert isinstance(_window_quote(8, 90, hours_to_close=60.0), lv.SideQuote)
+    q = lv.build_side_quote(
+        market_ticker="KXTRUMPMENTION-26NOV09-HOUT", best_yes_bid=8, best_no_bid=90,
+        yes_resting_total=5000.0, no_resting_total=5000.0, target_size=1000.0,
+        hours_to_close=60.0, reference_price_by_side={lv.SIDE_YES: 8, lv.SIDE_NO: 90},
+        program_hours_remaining=60.0, event_ticker="KXTRUMPMENTION-26NOV09")
+    assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_CLOSES_TOO_SOON

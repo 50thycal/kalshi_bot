@@ -215,6 +215,9 @@ def build_entries(series_list, per_series, min_vol, sample, band, htc_max, verbo
         if not markets:
             continue
         markets = markets[:sample]
+        if any(m.get("source") == "historical" for m in markets):
+            # Settled markets past Kalshi's historical cutoff come from the historical tier.
+            notes.append(f"{series}: {flb.source_line(markets)}")
         got = saw_band = 0
         for m in markets:
             scanned += 1

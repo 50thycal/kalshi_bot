@@ -54,6 +54,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import kalshi_settled as ks  # live + historical tier reads
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -156,18 +157,46 @@ def dark_window_start(group: str, ts: float, max_back_h: int = 80) -> float | No
 # --- data fetch (reused shape from kalshi_pinned_study) -----------------------------
 
 
+#: The last settled_events() scan: page read errors, whether it reached the end of the feed,
+#: and the oldest market close it saw — what `report_event_scan` needs to say what it missed.
+EVENT_SCAN = {"errors": 0, "exhausted": False, "oldest_close": None}
+
+
 def settled_events(max_pages: int) -> list[dict]:
+    """Settled events with nested markets, LIVE tier only. Live /events stops serving events
+    settled before Kalshi's historical cutoff, and no all-series archive scan is verified, so
+    this cannot read the historical tier; `report_event_scan` says whether that lost anything
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). An unreadable page is counted, not
+    read as the end of the feed."""
     out, cursor = [], ""
+    EVENT_SCAN.update(errors=0, exhausted=False, oldest_close=None)
     for _ in range(max_pages):
         page = xl._get(f"{KALSHI}/events?status=settled&with_nested_markets=true"
                        f"&limit=200&cursor={cursor}")
-        evs = (page or {}).get("events") or []
+        if page is None:
+            EVENT_SCAN["errors"] += 1
+            break
+        evs = page.get("events") or []
         out.extend(evs)
-        cursor = (page or {}).get("cursor") or ""
+        for ev in evs:
+            for m in ev.get("markets") or []:
+                c = ks.close_ts(m)
+                if c is not None and (EVENT_SCAN["oldest_close"] is None
+                                      or c < EVENT_SCAN["oldest_close"]):
+                    EVENT_SCAN["oldest_close"] = c
+        cursor = page.get("cursor") or ""
         if not cursor or not evs:
+            EVENT_SCAN["exhausted"] = True
             break
         time.sleep(0.05)
     return out
+
+
+def report_event_scan(events: list[dict]) -> None:
+    n_ev, n_mk = ks.result_gaps(events)
+    print(f"  events with a market lacking a yes/no result: {n_ev} ({n_mk} markets)")
+    print("  " + ks.live_only_note(EVENT_SCAN["oldest_close"], EVENT_SCAN["exhausted"],
+                                   EVENT_SCAN["errors"]))
 
 
 def trades(ticker: str, max_pages: int = 5) -> list[dict]:
@@ -409,6 +438,7 @@ def main(argv: list[str] | None = None) -> int:
 
     events = settled_events(args.max_event_pages)
     print(f"\nsettled events scanned: {len(events)}")
+    report_event_scan(events)
 
     # Build the target list: settled commodity markets with a strike + yes/no result.
     targets: list[tuple[dict, str, str]] = []  # (market, commodity, group)

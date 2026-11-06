@@ -48,6 +48,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import cluster_stats as cs  # noqa: E402
+import kalshi_settled as ks  # noqa: E402
 from mmsell_market_types import (  # noqa: E402
     RO_OPTIONS,
     UNCLASSIFIED,
@@ -262,9 +263,13 @@ def fetch_series_text(prefix: str, want: int = SAMPLE_MARKETS_PER_PREFIX,
     refuses to propose anything. Kalshi's market-data endpoints are public and need no key, and
     the ops runner has open egress.
 
-    Draws from settled markets first, then open ones, so the sample spans a series' history
-    rather than whatever happens to be listed today — a rule document that changed mid-season
-    should show up as a conflict, not as whichever version was fetched.
+    Draws from settled markets first, then open ones, then — if the sample is still short —
+    Kalshi's historical tier, so the sample spans a series' history rather than whatever happens
+    to be listed today — a rule document that changed mid-season should show up as a conflict,
+    not as whichever version was fetched. A series whose settled markets all predate Kalshi's
+    historical cutoff is otherwise invisible to live /markets
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). `sources` counts the inspected markets
+    by tier, and `historical_errors` the archive reads that failed.
 
     Returns unique markets inspected, the deduplicated documents, and the raw field names seen,
     so a schema change at Kalshi surfaces as a reported field list rather than empty evidence.
@@ -291,7 +296,20 @@ def fetch_series_text(prefix: str, want: int = SAMPLE_MARKETS_PER_PREFIX,
             seen_tickers.add(tkr)
             markets.append(m)
             schema = schema or sorted(m.keys())
+            m["_source"] = ks.LIVE
         time.sleep(0.1)
+    arch = ks.ScanCount()
+    if len(markets) < want:
+        for m in ks.iter_series_markets(prefix, status=None, max_pages=1, limit=want,
+                                        count=arch, tiers=(ks.HISTORICAL,)):
+            tkr = str(m.get("ticker") or "")
+            if tkr in seen_tickers:
+                continue
+            seen_tickers.add(tkr)
+            markets.append(m)
+            schema = schema or sorted(k for k in m if k != "_source")
+            if len(markets) >= want:
+                break
     docs: dict[str, dict] = {}
     for m in markets:
         rules = " ".join(str(m.get(k) or "")
@@ -304,8 +322,12 @@ def fetch_series_text(prefix: str, want: int = SAMPLE_MARKETS_PER_PREFIX,
             "category": str(m.get("category") or ""),
             "can_close_early": m.get("can_close_early"), "n_markets": 0})
         docs[key]["n_markets"] += 1
+    sources = {ks.LIVE: 0, ks.HISTORICAL: 0}
+    for m in markets:
+        sources[m.get("_source", ks.LIVE)] += 1
     return {"unique_markets": len(markets), "docs": list(docs.values()), "schema": schema,
-            "statuses": SAMPLE_STATUSES}
+            "statuses": SAMPLE_STATUSES + ("historical",), "sources": sources,
+            "historical_errors": arch.errors[ks.HISTORICAL]}
 
 
 # --- signals ---------------------------------------------------------------------------------------
@@ -539,10 +561,15 @@ def main(argv: list[str] | None = None) -> int:
             fetched[prefix] = got
         n_docs = sum(len(g["docs"]) for g in fetched.values())
         n_mkts = sum(g["unique_markets"] for g in fetched.values())
+        src = {t: sum((g.get("sources") or {}).get(t, 0) for g in fetched.values())
+               for t in (ks.LIVE, ks.HISTORICAL)}
+        h_err = sum(int(g.get("historical_errors") or 0) for g in fetched.values())
         print(f"  Kalshi rules text fetched for {len(fetched)}/{min(args.top, len(ranked))} "
               f"prefixes: {n_mkts:,} unique markets inspected yielding {n_docs:,} DISTINCT rule")
         print(f"  documents (up to {SAMPLE_MARKETS_PER_PREFIX} markets per prefix, drawn from "
-              f"{'+'.join(SAMPLE_STATUSES)}; public endpoint, no key)")
+              f"{'+'.join(SAMPLE_STATUSES)}, then the historical tier; public endpoint, no key)")
+        print(f"  markets inspected: live {src[ks.LIVE]} / historical {src[ks.HISTORICAL]}"
+              f"   historical-tier read errors: {h_err}")
         print("  Strong signals below are counted over DOCUMENTS, never markets: a series that")
         print("  shares one rule text across forty markets is ONE observation of what Kalshi")
         print("  says, and reporting it as forty was the accounting error in run `tax-6`.")

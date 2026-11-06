@@ -1504,7 +1504,8 @@ def test_only_event_tied_mention_markets_are_quoted(live_db, settings, monkeypat
                          "KXTEST-A": book, "KXTRUMPMENTION-26SEP18-SOON": book})
     with db.session_scope() as s:
         _mention(s, "KXTRUMPMENTION-26SEP20-PEAC", event="KXTRUMPMENTION-26SEP20")
-        # A "say X before <date>" window: no event to step aside for.
+        # A "say X before <date>" window (§9.74 trial) whose programme ends in 48h: its 48h
+        # step-aside has already come, so it is not even fetched.
         _mention(s, "KXTRUMPSAY-26SEP25-X", event="KXTRUMPSAY-26SEP25", series="KXTRUMPSAY",
                  title='Will Trump say "X" before Sep 25, 2026?')
         _program(s, "KXTEST-A")                                  # not a mention market
@@ -1513,6 +1514,28 @@ def test_only_event_tied_mention_markets_are_quoted(live_db, settings, monkeypat
         out = _cycle(client, settings, s)
     assert client.asked == ["KXTRUMPMENTION-26SEP20-PEAC"]
     assert out["placed"] == 1 and client.placed[0]["ticker"] == "KXTRUMPMENTION-26SEP20-PEAC"
+
+
+def test_window_say_markets_get_a_cheap_yes_bid_and_the_other_window_series_do_not(
+        live_db, settings, monkeypatch):
+    """§9.74 (operator, 2026-11-06): KXTRUMPSAY joins on the cheap YES side only, even though
+    it closes inside the 7-day floor; KXTRUMPSAYMONTH stays out."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    book = _book([(8, 300), (7, 300)], [(90, 300), (88, 300)])
+    client = FakeClient({"KXTRUMPSAY-26SEP25-HOUT": book, "KXTRUMPSAYMONTH-26SEP30-HOUT": book})
+    with db.session_scope() as s:
+        _mention(s, "KXTRUMPSAY-26SEP25-HOUT", event="KXTRUMPSAY-26SEP25", series="KXTRUMPSAY",
+                 hours=100.0, close_hours=100.0,
+                 title='Will Trump say "Hout" before Sep 25, 2026?')
+        _mention(s, "KXTRUMPSAYMONTH-26SEP30-HOUT", event="KXTRUMPSAYMONTH-26SEP30",
+                 series="KXTRUMPSAYMONTH", hours=100.0, close_hours=100.0,
+                 title='Will Trump say "Hout" before Sep 30, 2026?')
+        out = _cycle(client, settings, s)
+    assert client.asked == ["KXTRUMPSAY-26SEP25-HOUT"]
+    assert out["placed"] == 1
+    o = client.placed[0]
+    assert o["ticker"] == "KXTRUMPSAY-26SEP25-HOUT" and o["side"] == "bid"   # bid = buys YES
+    assert float(o["price"]) * 100 < 8                                          # behind 8c touch
 
 
 def test_youtube_views_high_markets_are_quoted_and_other_views_series_are_not(
@@ -2360,3 +2383,58 @@ def test_a_paused_series_gets_no_new_bid_and_its_resting_bids_are_cancelled(live
         out = _cycle(client, settings, s)
     assert out["outcomes"].get("series_paused") == 1 and client.canceled == [f"K-{rest}"]
     assert {o["ticker"] for o in client.placed} == {other}
+
+
+# --- §9.74: mention events projected under $5 are skipped ---------------------------------
+
+def _cq(ticker, event, usd, *, mention=True):
+    c = {"market_ticker": ticker, "event_ticker": event, "mention_event": mention,
+         "program_hours_remaining": 10.0, "hours_to_step_aside": 10.0}
+    return (c, usd / 10.0)
+
+
+def _drop(ranked, **kw):
+    from kalshi_bot.liquidity_incentive import runner as rn
+    orig = rn.quote_rate
+    rn.quote_rate = lambda cq: cq[1]
+    try:
+        return rn.drop_small_events(ranked, **kw)
+    finally:
+        rn.quote_rate = orig
+
+
+def test_a_mention_event_projected_under_five_dollars_is_skipped(monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    ranked = [_cq("E1-A", "E1", 1.5), _cq("E1-B", "E1", 1.5), _cq("E2-A", "E2", 6.0)]
+    kept, dropped = _drop(ranked, held_usd_by_event={}, held_n_by_event={})
+    assert [c["market_ticker"] for c, _ in kept] == ["E2-A"]
+    assert {c["market_ticker"] for c, _ in dropped} == {"E1-A", "E1-B"}
+
+
+def test_held_bids_and_remembered_markets_count_toward_the_event(monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    ranked = [_cq("E1-A", "E1", 1.5)]
+    kept, _ = _drop(ranked, held_usd_by_event={"E1": 4.0}, held_n_by_event={"E1": 1})
+    assert len(kept) == 1
+    kept, _ = _drop(ranked, held_usd_by_event={}, held_n_by_event={},
+                    remembered_usd_by_event={"E1": [2.0, 2.0]})
+    assert len(kept) == 1
+
+
+def test_only_room_under_the_event_cap_counts_and_held_tickers_count_once(monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    ranked = [_cq("E1-A", "E1", 2.0), _cq("E1-B", "E1", 2.0), _cq("E1-C", "E1", 2.0)]
+    # two already held (worth $0.50) leave room for one more: $2.50 < $5
+    kept, _ = _drop(ranked, held_usd_by_event={"E1": 0.5}, held_n_by_event={"E1": 2})
+    assert kept == []
+    ranked = [_cq("E1-H", "E1", 9.0)]
+    kept, _ = _drop(ranked, held_usd_by_event={"E1": 1.0}, held_n_by_event={"E1": 1},
+                    held_tickers=frozenset({"E1-H"}))
+    assert kept == []
+
+
+def test_window_markets_are_not_events_and_pass(monkeypatch):
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    kept, _ = _drop([_cq("KXTRUMPSAY-26NOV09-HOUT", "KXTRUMPSAY-26NOV09", 1.0, mention=False)],
+                    held_usd_by_event={}, held_n_by_event={})
+    assert len(kept) == 1

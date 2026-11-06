@@ -54,6 +54,16 @@ export const GROC_STEPS = [
 
 export const QUESTIONS = [
   {
+    id: 'r2-window-event-block',
+    q: 'Round 2: the window trial is live but blocked. The bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s “Trump says X” set. Should window markets be blocked only on the same word instead of the whole week?',
+    options: [
+      'Yes: for KXTRUMPSAY, block only a word another book holds or rests on, not the whole weekly set (recommended)',
+      'No: keep the whole-week block; the trial runs only in weeks mmsell sits out',
+      'Stop the window trial',
+    ],
+    why: 'Different words in one week resolve separately, unlike the words of one speech. mmsell is short YES on its words and we would be long YES on others, so a burst of words being said moves the two books in opposite directions rather than stacking risk. The same-word guard, which stops two books trading one market, stays. This loosens a live safeguard, so it waits on your answer.',
+  },
+  {
     id: 'r1-windows',
     q: 'The window-markets study says PROMISING. Start a small live trial?',
     options: [
@@ -108,4 +118,25 @@ export const QUESTIONS = [
     options: ['Yes, Central', 'No: another zone (say which in the note)'],
     why: 'Set from your screenshot: 7:17 PM when it was 01:17 UTC.',
   },
+];
+
+// The operator's own question at the top of each section (operator, 2026-11-06: "if I asked a
+// question, that question should be at the top of that section or decision to remind me").
+export const ASKED = {
+  windows: { when: 'Nov 5, 9:10 PM CT', q: 'The “Trump says X before Dec 1” style markets are open-ended windows… Let’s explore those again.' },
+  groc: { when: 'Nov 5, 9:10 PM CT', q: 'We tried GROC and SAFE yesterday around 10:00 UTC, but Kalshi rejected both. Why didn’t we try placing a resting order again? What happened?' },
+  book: { when: 'Nov 5', q: 'What is my expected rewards? I only see one market we have a resting order on, is there more?' },
+  decide: { when: 'Nov 5, 9:10 PM CT', q: 'Also can you change your settings to be in my time zone?' },
+  built: { when: 'Nov 5, 11:05 PM CT', q: 'Answers are locked. Review that and start building.' },
+};
+
+// Round 1's answers read back (answers-2026-11-06.json) and what each one changed.
+export const BUILT = [
+  { id: 'r1-windows', title: 'Window markets: live trial', state: 'blocked', what: 'Live since Nov 5, 11:37 PM CT, but no bid can be placed yet. KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. But the bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s set (Nov 9), as it does most weeks. All 32 markets are turned away for that reason. See the new question on Decide.' },
+  { id: 'r1-stepaside', title: '24-hour step-aside', state: 'live', what: 'Mention-event bids now leave 24 h before the event instead of 48 h. Window markets keep 48 h. After the next two mention events I compare reward gained with fills taken.' },
+  { id: 'r1-small', title: 'Skip events under $5', state: 'live', what: 'A mention event is entered only if the book’s projected reward there (held bids plus the best new ones, to their step-aside) is $5 or more.' },
+  { id: 'r1-409', title: '409 fix', state: 'live', what: 'A refused (409) bid or sell is checked on the exchange at once and marked not placed, instead of after 15 minutes. This also stops maintenance 409s on resting sells being booked as “filled”.' },
+  { id: 'r1-grocsafe', title: 'Crowding filter', state: 'kept', what: 'No change: GROC and SAFE stay turned away while their books are too crowded to pay.' },
+  { id: 'r1-youtube', title: 'YouTube leftovers', state: 'kept', what: 'No change: held, sells stay up at 2c.' },
+  { id: 'r1-tz', title: 'Central time', state: 'kept', what: 'Confirmed. Reports and check-ins stay in CT.' },
 ];

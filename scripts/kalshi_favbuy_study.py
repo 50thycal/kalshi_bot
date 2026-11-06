@@ -39,7 +39,7 @@ import os
 import sys
 from collections import defaultdict
 
-import xvenue_leadlag as xl  # _get (browser UA + retries), _num
+import kalshi_settled as ks  # live + historical tier settlement reads
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 
@@ -101,23 +101,21 @@ def load_snapshots(conn, since: str | None) -> list[dict]:
         return [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
 
 
-def fetch_results(series_list: list[str], pages: int) -> dict[str, int]:
-    """market_ticker -> settled 1/0 (yes/no), from the Kalshi public archive."""
+def fetch_results(series_list: list[str], pages: int,
+                  sources: dict[str, str] | None = None,
+                  count: ks.ScanCount | None = None) -> dict[str, int]:
+    """market_ticker -> settled 1/0 (yes/no), from Kalshi's live tier and then its historical
+    tier (settled markets older than the historical cutoff are only served there;
+    docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). `sources` gets each label's tier."""
     out: dict[str, int] = {}
     for series in series_list:
-        cursor = ""
-        for _ in range(pages):
-            page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                           f"&limit=1000&cursor={cursor}")
-            mkts = (page or {}).get("markets") or []
-            for m in mkts:
-                res = (m.get("result") or "").lower()
-                tk = m.get("ticker") or ""
-                if tk and res in ("yes", "no"):
-                    out[tk] = 1 if res == "yes" else 0
-            cursor = (page or {}).get("cursor") or ""
-            if not cursor or not mkts:
-                break
+        for m in ks.iter_series_markets(series, max_pages=pages, count=count):
+            res = (m.get("result") or "").lower()
+            tk = m.get("ticker") or ""
+            if tk and res in ("yes", "no"):
+                out[tk] = 1 if res == "yes" else 0
+                if sources is not None:
+                    sources[tk] = m["_source"]
     return out
 
 
@@ -200,8 +198,15 @@ def main(argv: list[str] | None = None) -> int:
               "re-run once the worker has cycled.")
         return 0
 
-    results = fetch_results(series_list, args.pages)
+    sources: dict[str, str] = {}
+    scan = ks.ScanCount()
+    results = fetch_results(series_list, args.pages, sources, scan)
     labeled = [s for s in snaps if s["market_ticker"] in results]
+    tally = ks.Tally()
+    for tk in {s["market_ticker"] for s in snaps if s["market_ticker"]}:
+        tally.add(sources.get(tk, ks.NOT_FOUND))
+    print("  " + tally.line() + "   (per snapshot market; not found includes not yet settled)")
+    print("  " + scan.line())
     ev_count = len({s["event_ticker"] for s in labeled})
     print(f"  settle-labeled snapshots: {len(labeled)} "
           f"({len(snaps) - len(labeled)} unsettled/unarchived dropped), events: {ev_count}")
