@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rc-a2-1106-0713
-# code 78e47d3d9d6deeea670bfd50446bc6c2547dd6cc · started 2026-11-06T07:16:04Z
-trades_4h  trade_mkts_4h  last_trade                      
----------  -------------  --------------------------------
-209        32             2026-11-06 07:09:39.226110+00:00
-
-(1 row)
