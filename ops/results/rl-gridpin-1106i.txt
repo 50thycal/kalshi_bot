@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=script  id=rl-gridpin-1106i
+# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:07:01Z
+GRIDPIN census — read-only; pre-registered in docs/GRIDPIN_THESIS.md
+
+== C0 universe ==
+  rungs listed 1159  settled 1121 over 66 event-days (2026-08-30 .. 2026-11-04)
+  settled rungs with volume 933  total settled volume 1,904,512
+  of 400 checked, traded after 19:00 CT: 109
+
+== C1 grading source (ERCOT NP6-346-CD) ==
+  operating days parsed 32 (2026-10-04 .. 2026-11-04)
+  settled rungs graded 589, reproduced 589 (100.0%)
+  NP6-346 daily max - Kalshi expiration_value: median +0.0 MW, max |diff| 0.8 MW over 31 days
+
+== C2 same-day timing (ERCOT dashboard) ==
+  now 21:07 CT; hourly systemLoad posted through HE20 (ended 20:00 CT) -> 67 min ago; bar <= 90
+  2026-11-04: dashboard hourly max 58,499.3 MW vs NP6-346 58,499.3 MW (diff +0.0); rungs flipped 0/19
+
+-- reported, never decides: 5-min vs hourly (today) --
+  5-min peak so far 60,889 MW vs hourly peak so far 60,751 MW (gap +138 MW; strike spacing ~500 MW)
+  hourly mean of 5-min demand vs posted hourly systemLoad over 18 hours: mean |err| 0.05%, max 0.12%  (small -> the hourly value can be computed live)
+
+  sibling grid-like series on Kalshi: ['KXPJMWESTW', 'KXTXERCOTPEAKD', 'KXPJMDOMW', 'KXERCOTNORTHM', 'KXSPOTIFYSONGSPPTONIGHT', 'KXMISOINDM', 'KXMISOINDW', 'ERCOTX', 'KXPJMWESTM', 'KXSPOTIFYSONGSPPINOISES', 'KXUTILITYPJMWEST', 'KXERCOTHOUW', 'KXPJMAEPDAYM', 'KXUTILITYERCOT', 'KXERCOTHOUM', 'KXPAPJM', 'KXERCOTX', 'KXERCOTNORTHW', 'KXPJMDOMM', 'KXTXERCOTPEAK', 'KXUSPPI', 'KXERCOTWESTW', 'KXSPOTIFYSONGSPPNICETOKNOWYOU', 'KXERCOTWESTM', 'KXFERCPJM', 'KXPJMAEPDAYW', 'KXPJMBREAKUP', 'KXPJMEMERGENCY', 'KXSPOTIFYSONGSPPSTARS', 'KXSPOTIFYSONGSPPSTATESIDE', 'KXUSPPIYOY', 'KXSPOTIFYSONGSPPROMEO', 'KXSPOTIFYSONGSPPILLEGAL']
+
+== verdict ==
+  CENSUS CLEARS
+   - C0-C2 pass -> build scripts/kalshi_gridpin_study.py (P1-P4)
