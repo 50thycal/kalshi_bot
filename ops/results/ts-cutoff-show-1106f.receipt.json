@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "0b893463c7c9fabec7973dda025dc28a8d459fda",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-06T05:52:33Z",
+  "id": "ts-cutoff-show-1106f",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ts-cutoff-show-1106f.receipt.json",
+  "result_file": "ops/results/ts-cutoff-show-1106f.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42170956256",
+  "service": null,
+  "started_at": "2026-11-06T05:52:30Z",
+  "targets": [],
+  "type": "xos"
+}
