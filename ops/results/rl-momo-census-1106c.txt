@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rl-momo-census-1106c
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:54:57Z
+est_total_rows  size     min_evt          max_evt         
+--------------  -------  ---------------  ----------------
+5799456         2272 MB  KXBTC-26AUG0100  KXETHD-26SEP3017
+
+(1 row)
