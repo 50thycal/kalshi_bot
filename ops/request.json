@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000048"],"id":"ts-cutoff-show-1106f"}
+{"type":"xos","command":"issue-command-list","args":["--limit","15"],"id":"ts-cutoff-cmdlist-1106g"}
