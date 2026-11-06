@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code b7ef1b4224ac87461289c48ededc9b5cab9c09c2 · started 2026-11-06T04:06:43Z
-(noop — nothing to do)
+# type=db  id=rl-cutoff-open-1106r
+# code 87316e108e03752620a69d73315f84451843a031 · started 2026-11-06T05:09:43Z
+opened       open_trades  tickers  oldest      series_over_60d
+-----------  -----------  -------  ----------  ---------------
+d_under_30d  1084         451      2026-10-23                 
+
+(1 row)
