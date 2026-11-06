@@ -1,20 +1,126 @@
-# ops request [READ]
-# type=xos  id=ts-cutoff-cmdlist-1106g
-# code 0b893463c7c9fabec7973dda025dc28a8d459fda · started 2026-11-06T05:56:23Z
-command                    action        status     issue       actor                   role           completed                       
--------------------------  ------------  ---------  ----------  ----------------------  -------------  --------------------------------
-ts-cutoff-xfer-1106d       TRANSFER      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.273281+00:00
-ts-cutoff-fix-1106d        PROPOSE_FIX   SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.238678+00:00
-ts-cutoff-link3-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.197323+00:00
-ts-cutoff-link2-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.159642+00:00
-ts-cutoff-link1-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.119867+00:00
-ts-cutoff-ev4-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.073253+00:00
-ts-cutoff-ev3-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.009836+00:00
-ts-cutoff-ev2-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.968811+00:00
-ts-cutoff-ev1-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.917987+00:00
-ts-cutoff-status-1106d     STATUS        SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.833995+00:00
-ts-cutoff-triage-1106d     TRIAGE        SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.755228+00:00
-ts-cutoff-open-1106a       OPEN_MANUAL   SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:17:32.813424+00:00
-rl-sba-31-ev-20261029      ADD_EVIDENCE  SUCCEEDED  XOS-000031  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.305253+00:00
-rl-sba-47-ev-20261029      ADD_EVIDENCE  SUCCEEDED  XOS-000047  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.267126+00:00
-rl-sba-09-triage-20261029  TRIAGE        SUCCEEDED  XOS-000009  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.219860+00:00
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=ts-cutoff-clear-1106h
+# code 0b893463c7c9fabec7973dda025dc28a8d459fda · started 2026-11-06T05:57:18Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 5208 bytes, sha256:56b120d6d0874395>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 78,
+#       "grandfathered": 13,
+#       "native": 65
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize2-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize2-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset3-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset3-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 10,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-11-06 05:57:32.805276+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "46 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Xmmsell10",
+#             "Ymmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "55b51990e0492e4b",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 78,
+#           "grandfathered": 13,
+#           "native": 65
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
+#       },
