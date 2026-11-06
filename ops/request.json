@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gamma-api.polymarket.com/public-search?q=bitcoin%20up%20or%20down&limit_per_type=20","--find","updown","--window","120","--max-chars","4000"],"id":"rl-pm15-1106k"}
+{"type": "db", "sql": "SELECT count(*) AS snaps_4h, count(DISTINCT market_ticker) AS mkts_4h, max(at) AS last_snap, now() AS db_now FROM incentive_market_snapshots WHERE at >= now() - interval '4 hours'", "id": "rc-a1-1106-0313"}
