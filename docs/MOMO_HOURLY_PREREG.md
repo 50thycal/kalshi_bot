@@ -66,6 +66,18 @@ computed from that day. Two changes follow, both about the instrument and not th
    and the native `trailing_move_15m` column where both exist. A correlation below 0.9 marks the read
    **HOLD (instrument)**.
 
+## Amendment A2 — 2026-11-06 ~03:40Z, instrument fix; still no statistic computed
+
+The first ops run (`rl-momo-run-1106m`, code `7734679`) read **0 decision rows on every day** and
+returned `HOLD (instrument: P0 data floor)`. Cause, confirmed on production (`rl-momo-coll-1106o`):
+the database collates `en_US.utf8`, which ignores punctuation at the first comparison level, so the
+day selector `event_ticker >= 'KXBTCD-26OCT15' AND < 'KXBTCD-26OCT15~'` matched nothing (0 rows,
+against 5,264 rows for three exact hourly tickers). The local end-to-end check had used a C-collated
+database and could not see this. Reproduced locally under an ICU `en-US` database, then fixed by
+selecting the day's **24 exact hourly event tickers** (`= ANY(...)`). Verified under both collations.
+Nothing about the hypothesis, rows, thresholds, label or bootstrap changed. The 0-row run produced
+no statistic, so this amendment is not informed by results.
+
 ## What a PASS would and would not authorize
 
 A PASS on P1 and P2 authorizes **writing a paper-book package** for review. It authorizes no

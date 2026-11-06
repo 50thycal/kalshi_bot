@@ -34,12 +34,17 @@ def test_fee_matches_kalshi_formula():
     assert mp.fee_cents(0.0) == 0.0 and mp.fee_cents(100.0) == 0.0
 
 
-def test_event_prefix_covers_every_hour_of_the_date():
-    lo, hi = mp.event_prefix("KXBTCD", dt.date(2026, 10, 15))
-    assert lo == "KXBTCD-26OCT15"
-    for h in ("00", "17", "23"):
-        assert lo <= f"KXBTCD-26OCT15{h}" < hi
-    assert not (lo <= "KXBTCD-26OCT1600" < hi)
+def test_day_event_tickers_are_the_24_exact_hourly_tickers():
+    evs = mp.day_event_tickers("KXBTCD", dt.date(2026, 10, 15))
+    assert len(evs) == 24 and evs[0] == "KXBTCD-26OCT1500" and evs[-1] == "KXBTCD-26OCT1523"
+    assert "KXBTCD-26OCT1600" not in evs
+    assert mp.day_event_tickers("KXBTCD", dt.date(2026, 11, 1))[5] == "KXBTCD-26NOV0105"
+
+
+def test_day_sql_selects_by_exact_ticker_never_a_string_range():
+    # Production collates en_US.utf8; a '~'-bounded range matched 0 rows there (rl-momo-run-1106m).
+    assert "= any(%(evs)s)" in mp.DAY_SQL
+    assert "%(lo)s" not in mp.DAY_SQL and "%(hi)s" not in mp.DAY_SQL
 
 
 def test_momentum_and_buckets():
