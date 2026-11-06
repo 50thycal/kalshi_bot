@@ -3368,3 +3368,10 @@ operator marked the weekly series "Go further").
 
 **Watch.** First KXTRUMPSAY fills (expected small: 2–3c YES); whether 24h earns more than it
 loses on the next two mention events; `small_event` counts in the cycle log.
+
+**Live 2026-11-06 05:37Z (deploy cc71127c).** First cycles: `considered` 19 → 51, `small_event` 1,
+and all 32 KXTRUMPSAY programmes refused `event_cap` before any fetch. Cause: the §9.65
+position block — an event any live book holds a position on is not entered — and Xmmsell10 /
+Ymmsell10 hold KXTRUMPSAY-26NOV09 (they trade most weekly sets). The trial cannot place while
+that holds. Put to the operator as review question `r2-window-event-block` (block window-say
+markets per word, not per week); no change without the answer.
