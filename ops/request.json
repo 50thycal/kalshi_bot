@@ -1,1 +1,1 @@
-{"type":"script","name":"momo_hourly_probe","args":["--start","2026-08-01","--end","2026-11-05"],"id":"ts-momo-instr-1106c"}
+{"type": "db", "id": "evblk-1106a", "sql": "SELECT o.strategy, o.event_ticker, count(*) AS n, min(o.created_at) AS first FROM live_orders o WHERE o.market_ticker LIKE 'KXTRUMPSAY-%' AND o.created_at > now() - interval '21 days' GROUP BY 1,2 ORDER BY 2 DESC LIMIT 15"}
