@@ -1,30 +1,103 @@
+day 2026-08-01: 0 decision rows
+day 2026-08-02: 0 decision rows
+day 2026-08-03: 0 decision rows
+day 2026-08-04: 0 decision rows
+day 2026-08-05: 0 decision rows
+day 2026-08-06: 0 decision rows
+day 2026-08-07: 0 decision rows
+day 2026-08-08: 0 decision rows
+day 2026-08-09: 0 decision rows
+day 2026-08-10: 0 decision rows
+day 2026-08-11: 0 decision rows
+day 2026-08-12: 0 decision rows
+day 2026-08-13: 0 decision rows
+day 2026-08-14: 0 decision rows
+day 2026-08-15: 0 decision rows
+day 2026-08-16: 0 decision rows
+day 2026-08-17: 0 decision rows
+day 2026-08-18: 0 decision rows
+day 2026-08-19: 0 decision rows
+day 2026-08-20: 0 decision rows
+day 2026-08-21: 0 decision rows
+day 2026-08-22: 0 decision rows
+day 2026-08-23: 0 decision rows
+day 2026-08-24: 0 decision rows
+day 2026-08-25: 0 decision rows
+day 2026-08-26: 0 decision rows
+day 2026-08-27: 0 decision rows
+day 2026-08-28: 0 decision rows
+day 2026-08-29: 0 decision rows
+day 2026-08-30: 0 decision rows
+day 2026-08-31: 0 decision rows
+day 2026-09-01: 0 decision rows
+day 2026-09-02: 0 decision rows
+day 2026-09-03: 0 decision rows
+day 2026-09-04: 0 decision rows
+day 2026-09-05: 0 decision rows
+day 2026-09-06: 0 decision rows
+day 2026-09-07: 0 decision rows
+day 2026-09-08: 0 decision rows
+day 2026-09-09: 0 decision rows
+day 2026-09-10: 0 decision rows
+day 2026-09-11: 0 decision rows
+day 2026-09-12: 0 decision rows
+day 2026-09-13: 0 decision rows
+day 2026-09-14: 0 decision rows
+day 2026-09-15: 0 decision rows
+day 2026-09-16: 0 decision rows
+day 2026-09-17: 0 decision rows
+day 2026-09-18: 0 decision rows
+day 2026-09-19: 0 decision rows
+day 2026-09-20: 0 decision rows
+day 2026-09-21: 0 decision rows
+day 2026-09-22: 0 decision rows
+day 2026-09-23: 0 decision rows
+day 2026-09-24: 0 decision rows
+day 2026-09-25: 0 decision rows
+day 2026-09-26: 0 decision rows
+day 2026-09-27: 0 decision rows
+day 2026-09-28: 0 decision rows
+day 2026-09-29: 0 decision rows
+day 2026-09-30: 0 decision rows
+day 2026-10-01: 0 decision rows
+day 2026-10-02: 0 decision rows
+day 2026-10-03: 0 decision rows
+day 2026-10-04: 0 decision rows
+day 2026-10-05: 0 decision rows
+day 2026-10-06: 0 decision rows
+day 2026-10-07: 0 decision rows
+day 2026-10-08: 0 decision rows
+day 2026-10-09: 0 decision rows
+day 2026-10-10: 0 decision rows
+day 2026-10-11: 0 decision rows
+day 2026-10-12: 0 decision rows
+day 2026-10-13: 0 decision rows
+day 2026-10-14: 0 decision rows
+day 2026-10-15: 0 decision rows
+day 2026-10-16: 0 decision rows
+day 2026-10-17: 0 decision rows
+day 2026-10-18: 0 decision rows
+day 2026-10-19: 0 decision rows
+day 2026-10-20: 0 decision rows
+day 2026-10-21: 0 decision rows
+day 2026-10-22: 0 decision rows
+day 2026-10-23: 0 decision rows
+day 2026-10-24: 0 decision rows
+day 2026-10-25: 0 decision rows
+day 2026-10-26: 0 decision rows
+day 2026-10-27: 0 decision rows
+day 2026-10-28: 0 decision rows
+day 2026-10-29: 0 decision rows
+day 2026-10-30: 0 decision rows
+day 2026-10-31: 0 decision rows
+day 2026-11-01: 0 decision rows
+day 2026-11-02: 0 decision rows
+day 2026-11-03: 0 decision rows
+day 2026-11-04: 0 decision rows
+day 2026-11-05: 0 decision rows
 # ops request [READ]
-# type=script  id=rl-swc-1106n
-# code 773467923d0fbae4c84ae4801dd3895af1fbf17c · started 2026-11-06T03:31:25Z
-# short-window census - last 7 days (docs/IDEA_MODEL_20261106.md)
-series          settled    /day            vol      vol/day  med/mkt   yes%  open  spr_c
-KXBTC15M            664    94.9  2,155,233,395  307,890,485 3,231,738   47.4     1    1.0
-KXETH15M            664    94.9    153,680,131   21,954,304  219,764   49.8     1    1.0
-KXSOL15M            664    94.9     72,309,080   10,329,868  101,974   49.1     1    1.0
-KXXRP15M            664    94.9     87,717,693   12,531,099  125,459   52.9     1    1.0
-KXDOGE15M           664    94.9     44,817,649    6,402,521   62,963   49.1     1    1.0
-KXBNB15M            664    94.9     20,220,851    2,888,693   26,575   49.4     1    1.0
-KXHYPE15M           664    94.9     34,556,592    4,936,656   45,541   48.3     1    2.0
-KXBTC5M        (no markets: series absent or inactive)
-KXETH5M        (no markets: series absent or inactive)
-KXGOLD15M           443    63.3    220,064,526   31,437,789  488,402   46.5     1    1.0
-KXSILVER15M         443    63.3     30,301,308    4,328,758   64,689   48.8     1    1.0
-KXGOLDH            6000   857.1      2,065,583      295,083        0   73.1   150    2.0
-KXSILVERH          6000   857.1      1,123,441      160,491        0   60.4   102    2.0
-KXBTCD             6000   857.1     60,401,048    8,628,721        0   57.1   238    1.0
-KXETHD             6000   857.1      1,369,394      195,627        0   51.4   350    1.0
-KXSOLD             6000   857.1        310,134       44,304        0   54.0   350    5.0
-KXBTC              6000   857.1      1,591,846      227,406        0    0.5   238    2.0
-KXETH              6000   857.1        238,647       34,092        0    0.4   350    6.0
-KXINXU             2600   371.4     10,138,101    1,448,300        8   40.2   835   40.0
-KXNASDAQ100U       6000   857.1      2,840,735      405,819        1   43.9  1000   12.0
-KXINX               150    21.4        173,025       24,717        2    3.3    30   14.0
-KXEURUSDH      (no markets: series absent or inactive)
-KXUSDJPYH      (no markets: series absent or inactive)
-KXWTIH             6000   857.1        730,115      104,302        0   25.1   228    2.5
-note: settled counts are capped at --max-pages x 1000 per series; a cap hit reads as a floor.
+# type=script  id=rl-momo-run-1106m
+# code 773467923d0fbae4c84ae4801dd3895af1fbf17c · started 2026-11-06T03:31:35Z
+# MOMO-H probe - series KXBTCD, 2026-08-01..2026-11-05 (docs/MOMO_HOURLY_PREREG.md)
+raw decisions 0, usable 0, no official label 0 (P0 exclusion), dropped for missing lookback/quote 0
+VERDICT: HOLD (instrument: P0 data floor) - too few usable rows to analyse
