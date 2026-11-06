@@ -78,6 +78,23 @@ selecting the day's **24 exact hourly event tickers** (`= ANY(...)`). Verified u
 Nothing about the hypothesis, rows, thresholds, label or bootstrap changed. The 0-row run produced
 no statistic, so this amendment is not informed by results.
 
+## Run 2 and amendment A3 — 2026-11-06 ~04:00Z (results-AWARE; disclosed)
+
+**Run 2** (`rl-momo-run2-1106p`, code `9d474c1`, 08-01..11-05) read 8,815 decisions. 2,612 (29.6%)
+had **no official label** while the API returned **0 fetch errors**. Verdict per this contract:
+**HOLD (instrument: P0)**, not a verdict. Because usable rows exceeded 50, the probe still printed its
+statistics, and **they have been seen**. Descriptive only, non-decisive: S = −0.44¢ (90% CI −5.67 to
++4.58), implied fade-trade EV −1.75¢ (p5 −4.24), every quintile residual within ±1.4¢, every taker
+leg negative after fee, reconstruction corr 0.957, sensitivity agreement 99.9% (n = 1,594).
+
+**Hypothesis for the missing labels:** markets settled before Kalshi's historical cutoff (about August)
+no longer carry `result` on the live `/markets` endpoint. **A3:** re-run on **2026-09-01..11-05** to
+(a) test that hypothesis (exclusion should fall to about 0%) and (b) apply the unchanged P0–P2 rule to
+the window where labels exist. A3 was written **after** run 2's statistics were seen. It restricts the
+window for a data-availability reason, and the seen estimate is already in the KILL zone, so it cannot
+rescue a pass. A pass on the restricted window would therefore be treated as suspect. Rows, thresholds,
+label and bootstrap are unchanged.
+
 ## What a PASS would and would not authorize
 
 A PASS on P1 and P2 authorizes **writing a paper-book package** for review. It authorizes no
