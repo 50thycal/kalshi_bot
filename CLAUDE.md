@@ -193,7 +193,7 @@ never merged into the default branch. Full mechanism: **`docs/OPS_RUNBOOK.md`**.
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
 - Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
 - Global monitor + daily check-in → `docs/MONITOR.md` (skill `daily-checkin`)
-- Shared skills → `.claude/skills/` (process: `finite-work-handoff`, `session-brief`, `daily-checkin`; autonomous desk: `claude-desk-continue`; research:
+- Shared skills → `.claude/skills/` (process: `finite-work-handoff`, `session-brief`, `daily-checkin`, `review-page` (HTML decision pages for larger rounds of questions); autonomous desk: `claude-desk-continue`; research:
   `kalshi-idea-model`, `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`; live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
 - Evo fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`, `docs/EVO_SEARCH_CAPABILITY.md`
 - Research history → `docs/RESEARCH_JOURNAL.md`, thesis docs in `docs/`

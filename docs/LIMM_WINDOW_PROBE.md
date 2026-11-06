@@ -42,4 +42,4 @@ B ignores §9.70's partial-fill cancel (a whole $10 fill is the worst case).
 
 ## 5. Results
 
-Not run.
+Not run yet. The operator review page shows the results when they land: `tools/review/limm/README.md`.
