@@ -93,3 +93,27 @@ def test_p0_floor_and_reconstruction_gate():
     assert mp.verdict(60, 5000, 0.0, math.nan, 5, 1, 9, 3, 1).startswith("PASS")
     assert mp.verdict(60, 5000, 0.0, 0.99, -5, -9, -1, 0.5, -1).startswith("P1 SIGNAL")
     assert mp.verdict(60, 5000, 0.0, 0.99, 2.0, 0.5, 3.5, 3, 1).startswith("HOLD (weak")
+
+
+# --- scripts/short_window_census.py (same run, recon only) ----------------------------------
+_SPEC2 = importlib.util.spec_from_file_location("short_window_census", _SCRIPTS / "short_window_census.py")
+swc = importlib.util.module_from_spec(_SPEC2)
+_SPEC2.loader.exec_module(swc)  # type: ignore[union-attr]
+
+
+def test_census_summarize_counts_volume_yes_share_and_spread():
+    settled = [{"volume_fp": "100.00", "result": "yes"}, {"volume_fp": "300.00", "result": "no"},
+               {"volume_fp": "200.00", "result": "yes"}]
+    open_mkts = [{"yes_bid_dollars": "0.4800", "yes_ask_dollars": "0.5000"},
+                 {"yes_bid_dollars": "0.0000", "yes_ask_dollars": "0.0300"}]   # one-sided: ignored
+    r = swc.summarize("KXTEST", settled, open_mkts, 2.0)
+    assert r["exists"] and r["settled"] == 3 and r["settled_per_day"] == 1.5
+    assert r["settled_volume"] == 600 and r["volume_per_day"] == 300 and r["median_vol_per_mkt"] == 200
+    assert r["yes_share"] == 0.667 and r["open"] == 2 and r["open_median_spread_c"] == 2.0
+
+
+def test_census_absent_series_and_allowlist():
+    assert swc.summarize("KXNONE", [], [], 7.0)["exists"] is False
+    import ops_runner  # noqa: E402 - scripts/ is on sys.path above
+    assert "short_window_census" in ops_runner.ALLOWED_SCRIPTS
+    assert "momo_hourly_probe" in ops_runner.ALLOWED_SCRIPTS

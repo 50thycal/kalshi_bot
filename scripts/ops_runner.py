@@ -177,6 +177,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_decay_study",
     "kalshi_pin15_study",
     "momo_hourly_probe",            # docs/MOMO_HOURLY_PREREG.md (hourly BTC ladder vs price action)
+    "short_window_census",          # docs/IDEA_MODEL_20261106.md (rolling 15m/hourly venues, recon)
     "kalshi_freeze_study",
     "kalshi_freeze_listing_check",
     "kalshi_compin_study",
