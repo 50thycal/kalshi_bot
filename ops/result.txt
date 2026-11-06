@@ -1,4 +1,115 @@
+day 2026-09-01: 53 decision rows
+day 2026-09-02: 49 decision rows
+day 2026-09-03: 64 decision rows
+day 2026-09-04: 0 decision rows
+day 2026-09-05: 20 decision rows
+day 2026-09-06: 24 decision rows
+day 2026-09-07: 0 decision rows
+day 2026-09-08: 40 decision rows
+day 2026-09-09: 50 decision rows
+day 2026-09-10: 43 decision rows
+day 2026-09-11: 68 decision rows
+day 2026-09-12: 13 decision rows
+day 2026-09-13: 23 decision rows
+day 2026-09-14: 47 decision rows
+day 2026-09-15: 57 decision rows
+day 2026-09-16: 57 decision rows
+day 2026-09-17: 46 decision rows
+day 2026-09-18: 59 decision rows
+day 2026-09-19: 29 decision rows
+day 2026-09-20: 35 decision rows
+day 2026-09-21: 76 decision rows
+day 2026-09-22: 0 decision rows
+day 2026-09-23: 0 decision rows
+day 2026-09-24: 61 decision rows
+day 2026-09-25: 62 decision rows
+day 2026-09-26: 16 decision rows
+day 2026-09-27: 26 decision rows
+day 2026-09-28: 67 decision rows
+day 2026-09-29: 47 decision rows
+day 2026-09-30: 61 decision rows
+day 2026-10-01: 57 decision rows
+day 2026-10-02: 60 decision rows
+day 2026-10-03: 17 decision rows
+day 2026-10-04: 22 decision rows
+day 2026-10-05: 44 decision rows
+day 2026-10-06: 47 decision rows
+day 2026-10-07: 47 decision rows
+day 2026-10-08: 63 decision rows
+day 2026-10-09: 46 decision rows
+day 2026-10-10: 15 decision rows
+day 2026-10-11: 21 decision rows
+day 2026-10-12: 38 decision rows
+day 2026-10-13: 45 decision rows
+day 2026-10-14: 56 decision rows
+day 2026-10-15: 62 decision rows
+day 2026-10-16: 56 decision rows
+day 2026-10-17: 17 decision rows
+day 2026-10-18: 24 decision rows
+day 2026-10-19: 43 decision rows
+day 2026-10-20: 50 decision rows
+day 2026-10-21: 49 decision rows
+day 2026-10-22: 43 decision rows
+day 2026-10-23: 40 decision rows
+day 2026-10-24: 29 decision rows
+day 2026-10-25: 22 decision rows
+day 2026-10-26: 47 decision rows
+day 2026-10-27: 42 decision rows
+day 2026-10-28: 40 decision rows
+day 2026-10-29: 48 decision rows
+day 2026-10-30: 62 decision rows
+day 2026-10-31: 18 decision rows
+day 2026-11-01: 20 decision rows
+day 2026-11-02: 47 decision rows
+day 2026-11-03: 41 decision rows
+day 2026-11-04: 58 decision rows
+day 2026-11-05: 74 decision rows
 # ops request [READ]
-# type=noop
-# code 78e47d3d9d6deeea670bfd50446bc6c2547dd6cc · started 2026-11-06T11:18:27Z
-(noop — nothing to do)
+# type=script  id=rl-volclock-run-1106
+# code eaa370045c3b0b12c886dc9dca50a1e6fa011b96 · started 2026-11-06T13:51:04Z
+# VOLCLOCK probe - series KXBTCD, 2026-09-01..2026-11-05 (docs/VOLCLOCK_PREREG.md)
+raw decisions 2703, labelled+classed 2702, no official label 0 (P0 exclusion), dropped (no spot/strike or on strike) 1, result fetch errors 0, ET hour match 1.0000
+labels: live 2703 / historical 0 / not found 0
+historical cutoff: {"market_positions_last_updated_ts": "2026-09-07T00:00:00Z", "market_settled_ts": "2026-09-07T00:00:00Z", "orders_updated_ts": "2026-10-23T00:00:00Z", "trades_created_ts": "2026-09-07T00:00:00Z"}
+{
+ "trading_days": 44,
+ "rows_window": 1122,
+ "rows_control": 1189,
+ "exclusion": 0.0,
+ "dropped": 1,
+ "hour_match": 1.0,
+ "close_spot_coverage": 0.8598,
+ "R": 1.3863,
+ "R_ci90": [
+  1.105,
+  1.7248
+ ],
+ "D": 4.305,
+ "D_ci90": [
+  0.861,
+  7.647
+ ],
+ "trade": "buy crossing side",
+ "trade_ev": -1.959,
+ "trade_ev_p5": -4.301,
+ "p0_failures": [
+  "close-spot coverage 0.860 < 0.9"
+ ],
+ "verdict": "HOLD (instrument: P0 - close-spot coverage 0.860 < 0.9)",
+ "D_weekend_same_clock": -4.348
+}
+descriptive slices (decide nothing):
+slice                       rows  evts |move|bp    xpx  xwon%  resid  EVbuyX  EVbuyO
+WINDOW                      1122   132    35.23  25.19  25.04  -0.15   -1.96   -1.63
+CONTROL                     1189   132    25.41  24.98  20.52  -4.45   -6.23    2.71
+WKND_W                       176    53    11.04  24.62  19.32   -5.3   -7.36     3.3
+WKND_C                       215    53    13.14  25.14  24.19  -0.95   -2.74    -0.8
+WINDOW 09:00                 338    44    30.77  25.16  24.26  -0.89   -2.74   -0.91
+WINDOW 10:00                 472    44    56.75  25.25  27.97   2.71    0.92   -4.47
+WINDOW 16:00                 312    44    22.14  25.14  21.47  -3.67   -5.47    1.91
+CONTROL 12:00                475    44    32.72  24.82  21.05  -3.76   -5.53    2.03
+CONTROL 13:00                376    44    20.54  25.22  18.88  -6.34   -8.13    4.58
+CONTROL 14:00                338    44     22.7  24.93   21.6  -3.33   -5.11    1.58
+09:00 Thursday (claims)       74    10     35.7  25.44  27.03   1.59   -0.23   -3.37
+09:00 other weekdays         264    34    29.12  25.08  23.48  -1.59   -3.44   -0.22
+VERDICT: HOLD (instrument: P0 - close-spot coverage 0.860 < 0.9)
