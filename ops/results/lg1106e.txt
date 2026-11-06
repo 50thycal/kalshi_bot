@@ -1,0 +1,25 @@
+# latest deployment ec4630ff-3b02-42d4-ae72-98e4f46da747 (status=SUCCESS, created=2026-11-05T05:51:06.083Z)
+# ops request [READ]
+# type=logs  service=main  id=lg1106e
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:47:03Z
+# target service: main
+2026-11-06T02:35:30.507712905Z INFO  incentive smoke cycle
+    considered| 19
+    fetched| 3
+    placed| 0
+    outcomes| {"book_too_deep":2,"gate:dedup":1}
+2026-11-06T02:38:00.883126003Z INFO  incentive smoke cycle
+    considered| 19
+    fetched| 1
+    placed| 0
+    outcomes| {"gate:dedup":1}
+2026-11-06T02:40:41.728246007Z INFO  incentive smoke cycle
+    considered| 19
+    fetched| 1
+    placed| 0
+    outcomes| {"gate:dedup":1}
+2026-11-06T02:45:13.268783771Z INFO  incentive smoke cycle
+    considered| 19
+    fetched| 1
+    placed| 0
+    outcomes| {"gate:dedup":1}
