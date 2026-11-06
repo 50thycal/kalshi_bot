@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## VOLCLOCK 2026-11-06 — pre-registered (hourly BTC ladder vs scheduled US vol windows)
+
+- **What:** hold A2 of the 11-06 idea-model run, released by MOMO-H's KILL. Does the hourly `KXBTCD`
+  ladder under-price the strike-**crossing** side in hours holding a scheduled US event (08:30 release
+  slot, 09:30 open, 16:00 close), against a midday control on the same trading days?
+- **Contract:** [`VOLCLOCK_PREREG.md`](VOLCLOCK_PREREG.md), probe `scripts/volclock_probe.py`. P1 asks
+  first whether BTC is actually more volatile in those hours (else KILL, mechanism absent); P2 the
+  crossing-residual difference; P3 the window-only taker EV after fee. Prior sceptical.
+- **Why not a rescue:** a calendar signal, direction-free, split by strike-vs-spot; MOMO-H's pooled
+  statistics on overlapping rows were seen and are disclosed, nothing by hour or side was.
+
 ## GRIDPIN full probe 2026-11-06 — HOLD: the ladder reprices first, and there is no depth
 
 The [ERCOT daily-peak pin](GRIDPIN_THESIS.md) full probe (`scripts/kalshi_gridpin_study.py`, ops

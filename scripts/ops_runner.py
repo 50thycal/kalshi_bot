@@ -178,6 +178,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_pin15_study",
     "momo_hourly_probe",            # docs/MOMO_HOURLY_PREREG.md (hourly BTC ladder vs price action)
     "short_window_census",          # docs/IDEA_MODEL_20261106.md (rolling 15m/hourly venues, recon)
+    "volclock_probe",               # docs/VOLCLOCK_PREREG.md (hourly BTC ladder vs scheduled vol windows)
     "kalshi_freeze_study",
     "kalshi_freeze_listing_check",
     "kalshi_compin_study",
