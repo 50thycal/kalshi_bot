@@ -3407,3 +3407,9 @@ every `RESTING_AUDIT_EVERY_SECONDS` (15 min): each purely resting bid that has r
 the entry rule sums them); a window-say WORD alone (§9.75). An unreadable book is kept. Window
 entries now also need $5 projected per word (`drop_small_events`), so a bid is never placed only
 to be pulled at the next audit. Other markets (held positions, resting sells) are untouched.
+
+**Live 2026-11-06 15:45Z (deploy 0e724227).** First audit 15:47Z pulled all four resting bids
+(`low_projection`): Mamdani FREE (event $3.68 to its step-aside), KXTRUMPSAY REFI ($2.06), AUTO and
+QUAN ($0.00 — both words firmed: AUTO's best YES bid 5c → 15c by 15:42Z, leaving a 4c bid 11 ticks
+behind and unscored). The dashboard's per-bid "expected" figures were placement-time estimates.
+No KXTRUMPSAY re-entry this week: the 26NOV09 set is inside 24h of its 48h step-aside.
