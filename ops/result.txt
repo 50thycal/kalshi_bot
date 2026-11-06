@@ -1,22 +1,7 @@
 # ops request [READ]
-# type=db  id=rc-a3-1106-1513
-# code eaa370045c3b0b12c886dc9dca50a1e6fa011b96 · started 2026-11-06T15:19:28Z
-series            mkts_24h
-----------------  --------
-KXAAAGASM         26      
-KXWAAEROEMP       13      
-KXWATECHEMP       10      
-KXNYNJPORTTEU     9       
-KXAPRPOTUS        8       
-KXCITYCHAMPS      8       
-KXNYCASKRENT      8       
-KXWALLSTBONUS     7       
-KXFLVISITORCOUNT  7       
-KXILNUCLEAR       7       
-KXTXERCOTPEAK     7       
-KXCABUILDPERMITS  6       
-KXPAMFGEMP        6       
-KXBIGSKYOPEN      5       
-KXASPENMTNOPEN    5       
+# type=db  id=rc-a4-1106-1513
+# code 1958bc6595d054bbaecfd8b97fa234d780675a91 · started 2026-11-06T15:19:57Z
+series  live_progs
+------  ----------
 
-(15 rows)
+(0 rows)
