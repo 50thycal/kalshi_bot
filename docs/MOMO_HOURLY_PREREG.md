@@ -95,6 +95,37 @@ window for a data-availability reason, and the seen estimate is already in the K
 rescue a pass. A pass on the restricted window would therefore be treated as suspect. Rows, thresholds,
 label and bootstrap are unchanged.
 
+## Run 3: VERDICT KILL (2026-11-06 04:04Z)
+
+`rl-momo-run3-1106q`, code `b7ef1b4`, window 2026-09-01..11-05 (A3). The label hypothesis is
+**confirmed**: exclusion fell from 29.6% to **0.16%** (10 of 6,134). Kalshi's docs say live `/markets`
+stops returning settled markets older than a moving cutoff (target about 3 months); they move to
+`/historical/markets`.
+
+| measure | value | pre-registered bar |
+|---|---|---|
+| days / decisions | 66 / 5,610 | ≥ 40 / ≥ 1,000 (P0 pass) |
+| label exclusion | 0.16% | ≤ 10% (pass) |
+| reconstruction corr | 0.957 (n = 5,610) | ≥ 0.9 (pass) |
+| **S** (Q5 − Q1 residual) | **−0.67¢**, 90% CI **−5.76 to +4.44** | \|S\| ≥ 3 with CI excluding 0; KILL if \|S\| < 1.5 or CI includes 0 |
+| implied fade-trade net EV | −1.63¢ (p5 −4.24) | ≥ +1.5¢ with p5 > 0 |
+| sensitivity label | 99.9% agreement (n = 1,571); S = −0.44¢ | decides nothing |
+
+| quintile | n | avg 15-min move | avg quote | YES won | won − quote | buy YES net | buy NO net |
+|---|---|---|---|---|---|---|---|
+| Q1 (fell most) | 1,122 | −27.6 bp | 53.1¢ | 54.4% | +1.27¢ | −0.67¢ | −3.22¢ |
+| Q2 | 1,122 | −7.4 bp | 50.6¢ | 49.9% | −0.70¢ | −2.68¢ | −1.28¢ |
+| Q3 | 1,121 | +0.5 bp | 50.4¢ | 52.0% | +1.56¢ | −0.39¢ | −3.52¢ |
+| Q4 | 1,123 | +9.7 bp | 48.1¢ | 47.6% | −0.50¢ | −2.49¢ | −1.49¢ |
+| Q5 (rose most) | 1,122 | +34.3 bp | 47.4¢ | 48.0% | +0.60¢ | −1.39¢ | −2.58¢ |
+
+**KILL: momentum over the last 15 minutes is priced on the hourly BTC ladder.** All ten taker legs are
+negative after fee. Limit of the read: the interval is about ±5¢ wide, so it rules out large
+mispricings, not a 1–2¢ one. A 1–2¢ mispricing could not clear the ~2¢ take-and-hold cost anyway.
+Per the contract, do not spawn threshold variants. MOMO-15 (conditional on a signal here) is closed.
+A3's results-aware disclosure stands: run 2's pooled statistics (S = −0.44¢) had been seen, and they
+were in the KILL zone too.
+
 ## What a PASS would and would not authorize
 
 A PASS on P1 and P2 authorizes **writing a paper-book package** for review. It authorizes no
