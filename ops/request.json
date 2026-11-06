@@ -1,1 +1,1 @@
-{"type": "db", "id": "aud-1106a", "sql": "SELECT market_ticker, at, best_yes_bid, best_no_bid, trades_last_5m FROM incentive_market_snapshots WHERE market_ticker IN ('KXTRUMPSAY-26NOV09-AUTO','KXTRUMPSAY-26NOV09-QUAN','KXTRUMPSAY-26NOV09-REFI') AND at > '2026-11-06 12:55+00' ORDER BY market_ticker, at DESC LIMIT 30"}
+{"type":"noop"}
