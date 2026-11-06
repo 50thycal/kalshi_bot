@@ -3329,3 +3329,42 @@ positions keep their resting sells, stop and settlement. Mention markets are unc
 
 **Cost.** YouTube programme rewards (Oct-month $18.03) stop accruing, including the OLI Dec
 programme. Revisit only with a fill-side signal that predicts sweeps (view-count momentum).
+
+### 9.74 Window-say trial, 24h mention step-aside, $5 event floor, immediate 409 check (2026-11-06)
+
+**Decided on the review page** (`tools/review/limm/`, answers in
+`tools/review/limm/answers-2026-11-06.json`; every answer took the recommended option, and the
+operator marked the weekly series "Go further").
+
+- **Window-say trial (r1-windows).** Study 8 (`docs/LIMM_WINDOW_PROBE.md`) read PROMISING: 16
+  qualifying markets at ~$1.04/market-day; 238 past entries, 69% filled at −$0.31 each, 11 filled
+  bids won. `WINDOW_SAY_SERIES = {KXTRUMPSAY}` joins the universe, **YES side only**
+  (`WINDOW_SAY_SIDE`): a NO bid is swept the moment the word is said (§9.73's failure), a cheap YES
+  bid is not. Its cutoff is the market's close (or programme end); bids step aside
+  `WINDOW_ENTRY_STEP_ASIDE_HOURS` = 48h before it, which is where the late, hope-fades fills
+  cluster. Exempt from the 7-day `MIN_HOURS_TO_CLOSE` floor (a weekly window closes within days);
+  `MIN_HOURS_BEFORE_EVENT` still needs 24h of resting time. Everything else is unchanged: $10
+  bids, §9.72 behind-touch price, the $100 / 10-market / 3-per-event caps, exits. KXTRUMPSAYMONTH
+  (0 qualifying) and KXTRUMPSAYCOMPANY (unmarked) stay out. KXTRUMPSAY is also traded by mmsell;
+  the shared strategy-agnostic dedup gate keeps the two books off each other's tickers.
+- **24h step-aside for mention events (r1-stepaside).** `ENTRY_STEP_ASIDE_HOURS` 48 → 24 for
+  dated mention events; window markets (§9.69 month windows, §9.74 window-say) keep 48h
+  (`step_aside_hours`). Trial on the next two mention events, then compare reward gained against
+  fills taken in the extra day.
+- **$5 event floor (r1-small).** `MIN_EVENT_PROJECTED_USD = 5.00`: a mention event is entered
+  only when this book's projected reward there — held bids plus the best new markets it may add
+  under the per-event cap, each rate × hours to its step-aside — reaches $5
+  (`runner.drop_small_events`, outcome `small_event`). Markets not fetched this cycle count at
+  their remembered rate.
+- **Immediate 409 check (r1-409).** An incentive bid or resting sell answered 409 is looked up in
+  the orders feed by its client order id at once (`LiveExecutor._settle_incentive_409`): found →
+  it takes the exchange's status; absent → `not_landed` now (was: after 15 minutes). The client
+  order id is a fresh uuid, so a 409 is a refusal, not "already exists". The old fallback (a
+  held position or older fill on the ticker read as "it executed") is what recorded maintenance
+  409s on resting sells as `filled`; the orders feed decides now. A failed lookup keeps the
+  §9.45 grace-period path.
+- **Unchanged by answer:** the book-too-deep filter (r1-grocsafe), the YouTube leftovers held
+  with their sells up (r1-youtube), reports in US Central time (r1-tz).
+
+**Watch.** First KXTRUMPSAY fills (expected small: 2–3c YES); whether 24h earns more than it
+loses on the next two mention events; `small_event` counts in the cycle log.

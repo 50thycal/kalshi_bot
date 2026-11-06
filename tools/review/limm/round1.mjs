@@ -109,3 +109,24 @@ export const QUESTIONS = [
     why: 'Set from your screenshot: 7:17 PM when it was 01:17 UTC.',
   },
 ];
+
+// The operator's own question at the top of each section (operator, 2026-11-06: "if I asked a
+// question, that question should be at the top of that section or decision to remind me").
+export const ASKED = {
+  windows: { when: 'Nov 5, 9:10 PM CT', q: 'The “Trump says X before Dec 1” style markets are open-ended windows… Let’s explore those again.' },
+  groc: { when: 'Nov 5, 9:10 PM CT', q: 'We tried GROC and SAFE yesterday around 10:00 UTC, but Kalshi rejected both. Why didn’t we try placing a resting order again? What happened?' },
+  book: { when: 'Nov 5', q: 'What is my expected rewards? I only see one market we have a resting order on, is there more?' },
+  decide: { when: 'Nov 5, 9:10 PM CT', q: 'Also can you change your settings to be in my time zone?' },
+  built: { when: 'Nov 5, 11:05 PM CT', q: 'Answers are locked. Review that and start building.' },
+};
+
+// Round 1's answers read back (answers-2026-11-06.json) and what each one changed.
+export const BUILT = [
+  { id: 'r1-windows', title: 'Window markets: live trial', state: 'built', what: 'KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. Same $100 / 10-market / 3-per-event caps. The monthly and company series stay out.' },
+  { id: 'r1-stepaside', title: '24-hour step-aside', state: 'built', what: 'Mention-event bids now leave 24 h before the event instead of 48 h. Window markets keep 48 h. After the next two mention events I compare reward gained with fills taken.' },
+  { id: 'r1-small', title: 'Skip events under $5', state: 'built', what: 'A mention event is entered only if the book’s projected reward there (held bids plus the best new ones, to their step-aside) is $5 or more.' },
+  { id: 'r1-409', title: '409 fix', state: 'built', what: 'A refused (409) bid or sell is checked on the exchange at once and marked not placed, instead of after 15 minutes. This also stops maintenance 409s on resting sells being booked as “filled”.' },
+  { id: 'r1-grocsafe', title: 'Crowding filter', state: 'kept', what: 'No change: GROC and SAFE stay turned away while their books are too crowded to pay.' },
+  { id: 'r1-youtube', title: 'YouTube leftovers', state: 'kept', what: 'No change: held, sells stay up at 2c.' },
+  { id: 'r1-tz', title: 'Central time', state: 'kept', what: 'Confirmed. Reports and check-ins stay in CT.' },
+];
