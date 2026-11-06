@@ -2438,3 +2438,57 @@ def test_window_markets_are_not_events_and_pass(monkeypatch):
     kept, _ = _drop([_cq("KXTRUMPSAY-26NOV09-HOUT", "KXTRUMPSAY-26NOV09", 1.0, mention=False)],
                     held_usd_by_event={}, held_n_by_event={})
     assert len(kept) == 1
+
+
+# --- §9.75: window-say markets are blocked per word, not per week -------------------------
+
+def _other_book_holds(s, ticker, event, *, qty=-30.0):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy="Xmmsell10",
+                      side="no", action="buy", limit_price=94, quantity=30, status="filled",
+                      kalshi_order_id=f"K-mm-{ticker}", client_order_id=f"mm-{ticker}",
+                      created_at=NOW - timedelta(hours=5)))
+    s.add(m.Position(market_ticker=ticker, captured_at=NOW, side="no", quantity=qty,
+                     quantity_fp=qty, avg_price=94.0))
+    s.flush()
+
+
+def test_another_books_position_blocks_only_its_word_in_a_window_event(
+        live_db, settings, monkeypatch):
+    """§9.75: mmsell holding one KXTRUMPSAY word no longer blocks the whole week."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    book = _book([(8, 300), (7, 300)], [(90, 300), (88, 300)])
+    ev = "KXTRUMPSAY-26SEP25"
+    client = FakeClient({f"{ev}-HELD": book, f"{ev}-FREE": book})
+    with db.session_scope() as s:
+        for w in ("HELD", "FREE"):
+            _mention(s, f"{ev}-{w}", event=ev, series="KXTRUMPSAY", hours=100.0,
+                     close_hours=100.0, title=f'Will Trump say "{w}" before Sep 25, 2026?')
+        _other_book_holds(s, f"{ev}-HELD", ev)
+        out = _cycle(client, settings, s)
+    assert client.asked == [f"{ev}-FREE"]            # the held word is not even fetched
+    assert out["placed"] == 1 and client.placed[0]["ticker"] == f"{ev}-FREE"
+    assert client.placed[0]["side"] == "bid"         # YES
+
+
+def test_another_books_position_still_blocks_a_whole_mention_event(
+        live_db, settings, monkeypatch):
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
+    book = _book([(23, 100), (20, 400)], [(4, 30), (3, 300), (2, 300)])
+    ev = "KXTRUMPMENTION-26SEP20"
+    client = FakeClient({f"{ev}-PEAC": book, f"{ev}-HELD": book})
+    with db.session_scope() as s:
+        _mention(s, f"{ev}-PEAC", event=ev)
+        _mention(s, f"{ev}-HELD", event=ev)
+        _other_book_holds(s, f"{ev}-HELD", ev)
+        out = _cycle(client, settings, s)
+    assert client.asked == [] and out["placed"] == 0
+    assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 2
+
+
+def test_window_say_per_word_block_can_be_switched_off(monkeypatch):
+    assert not limm.event_position_blocks("KXTRUMPSAY-26NOV09")
+    assert limm.event_position_blocks("KXTRUMPMENTION-26NOV09")
+    monkeypatch.setattr(limm, "WINDOW_SAY_BLOCK_PER_WORD", False)
+    assert limm.event_position_blocks("KXTRUMPSAY-26NOV09")

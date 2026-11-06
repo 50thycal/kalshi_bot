@@ -148,6 +148,8 @@ RISK_ENVELOPE: dict = {
     "window_entry_step_aside_hours": limm.WINDOW_ENTRY_STEP_ASIDE_HOURS,
     "entry_step_aside_hours": limm.ENTRY_STEP_ASIDE_HOURS,
     "min_event_projected_usd": limm.MIN_EVENT_PROJECTED_USD,
+    # §9.75: window-say markets blocked per word (account-held word refused), not per event.
+    "window_say_block_per_word": limm.WINDOW_SAY_BLOCK_PER_WORD,
     "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,
