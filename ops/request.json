@@ -1,1 +1,1 @@
-{"type":"script","name":"short_window_census","args":["--days","7"],"id":"rl-swc-1106n"}
+{"type":"script","name":"momo_hourly_probe","args":["--start","2026-08-01","--end","2026-11-05"],"id":"rl-momo-run-1106m"}
