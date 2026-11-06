@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_gridpin_census","args":["--max-docs","75"],"id":"rl-gridpin-1106i"}
+{"type":"script","name":"desk_fetch","args":["https://gamma-api.polymarket.com/markets?limit=8&closed=true&order=endDate&ascending=false&tag_slug=15M","--max-chars","5000"],"id":"rl-pm15-1106j"}
