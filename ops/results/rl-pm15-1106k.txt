@@ -1,0 +1,30 @@
+# ops request [READ]
+# type=script  id=rl-pm15-1106k
+# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:10:16Z
+# desk_fetch https://gamma-api.polymarket.com/public-search?q=bitcoin%20up%20or%20down&limit_per_type=20
+# HTTP 200 · application/json · 131507 bytes
+# 12 window(s) around 'updown'
+---
+rdsMinSize": 50,      "rfqEnabled": false,      "showGmpOutcome": false,      "showGmpSeries": false,      "slug": "btc-updown-5m-1775181000",      "spread": 0.01,      "startDate": "2026-04-02T01:58:12.365266Z",      "startDateIso": "2026-04-02"
+---
+ }    ],    "seriesSlug": "btc-up-or-down-5m",    "showAllOutcomes": true,    "showMarketImages": true,    "slug": "btc-updown-5m-1775181000",    "startDate": "2026-04-02T02:03:13.802366Z",    "startTime": "2026-04-03T01:50:00Z",    "tags": [    
+---
+e,      "label": "5M",      "slug": "5M",      "updatedAt": "2026-04-17T20:48:44.301846Z"     }    ],    "ticker": "btc-updown-5m-1775181000",    "title": "Bitcoin Up or Down - April 2, 9:50PM-9:55PM ET",    "updatedAt": "2026-04-04T02:04:49.7471
+---
+rdsMinSize": 50,      "rfqEnabled": false,      "showGmpOutcome": false,      "showGmpSeries": false,      "slug": "btc-updown-5m-1773976200",      "spread": 0.01,      "startDate": "2026-03-19T03:18:27.248532Z",      "startDateIso": "2026-03-19"
+---
+ }    ],    "seriesSlug": "btc-up-or-down-5m",    "showAllOutcomes": true,    "showMarketImages": true,    "slug": "btc-updown-5m-1773976200",    "startDate": "2026-03-19T03:20:37.889002Z",    "startTime": "2026-03-20T03:10:00Z",    "tags": [    
+---
+e,      "label": "5M",      "slug": "5M",      "updatedAt": "2026-04-17T20:48:44.301846Z"     }    ],    "ticker": "btc-updown-5m-1773976200",    "title": "Bitcoin Up or Down - March 19, 11:10PM-11:15PM ET",    "updatedAt": "2026-03-21T03:20:12.4
+---
+ardsMinSize": 0,      "rfqEnabled": false,      "showGmpOutcome": false,      "showGmpSeries": false,      "slug": "btc-updown-5m-1771863900",      "spread": 0.001,      "startDate": "2026-02-22T16:33:09.881861Z",      "startDateIso": "2026-02-22
+---
+ }    ],    "seriesSlug": "btc-up-or-down-5m",    "showAllOutcomes": true,    "showMarketImages": true,    "slug": "btc-updown-5m-1771863900",    "startDate": "2026-02-22T16:33:37.346526Z",    "startTime": "2026-02-23T16:25:00Z",    "tags": [    
+---
+e,      "label": "5M",      "slug": "5M",      "updatedAt": "2026-04-17T20:48:44.301846Z"     }    ],    "ticker": "btc-updown-5m-1771863900",    "title": "Bitcoin Up or Down - February 23, 11:25AM-11:30AM ET",    "updatedAt": "2026-02-25T00:29:0
+---
+ardsMinSize": 0,      "rfqEnabled": false,      "showGmpOutcome": false,      "showGmpSeries": false,      "slug": "btc-updown-15m-1771868700",      "spread": 0.001,      "startDate": "2026-02-22T17:53:10.900694Z",      "startDateIso": "2026-02-2
+---
+}    ],    "seriesSlug": "btc-up-or-down-15m",    "showAllOutcomes": true,    "showMarketImages": true,    "slug": "btc-updown-15m-1771868700",    "startDate": "2026-02-22T17:53:39.478261Z",    "startTime": "2026-02-23T17:45:00Z",    "tags": [   
+---
+      "label": "15M",      "slug": "15M",      "updatedAt": "2026-04-15T21:09:13.736904Z"     }    ],    "ticker": "btc-updown-15m-1771868700",    "title": "Bitcoin Up or Down - February 23, 12:45PM-1:00PM ET",    "updatedAt": "2026-02-25T00:29:1
