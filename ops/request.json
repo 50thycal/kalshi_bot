@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"rl-ct-1106a"}
+{"type": "logs", "filter": "NOV18-GROC", "limit": 60, "id": "lg1106a"}
