@@ -5,7 +5,7 @@
 // Store: `reviews/{itemId}` {verdict, note}; `answers/{questionId}` {choice, note}.
 // Usage: node tools/review/limm/page.mjs <out.html>
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { ROUND_DATE, TZ_NOTE, BOOK, SERIES, PRIOR, GROC_STEPS, QUESTIONS } from './round1.mjs';
+import { ROUND_DATE, TZ_NOTE, BOOK, SERIES, PRIOR, GROC_STEPS, QUESTIONS, ASKED, BUILT } from './round1.mjs';
 
 const here = new URL('.', import.meta.url);
 const out = process.argv[2];
@@ -114,6 +114,10 @@ function question(q) {
 }
 
 const rows = (list, f) => list.map(f).join('');
+// The operator's own question, at the top of the section it belongs to.
+const asked = (k) => ASKED[k] ? `<blockquote class="asked"><span>You asked · ${esc(ASKED[k].when)}</span>${esc(ASKED[k].q)}</blockquote>` : '';
+const STATE = { built: 'Built · waiting on merge', kept: 'No change' };
+const builtCard = (b) => `<article class="built" data-state="${b.state}"><header><h3>${esc(b.title)}</h3><span class="chip ${b.state === 'built' ? 'go' : ''}">${esc(STATE[b.state])}</span></header><p>${esc(b.what)}</p><p class="pn mono">${esc(b.id)}: answered option 1 (recommended)</p></article>`;
 const html = `<title>Alimm1 Review Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -234,6 +238,13 @@ textarea { font: 15px/1.4 var(--body); color: var(--ink); background: var(--grou
 .prior div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; border-bottom: 1px dashed var(--rule); padding-bottom: 6px; }
 .prior dt { color: var(--muted); font-size: 14px; } .prior dd { margin: 0; } .prior small { display: block; color: var(--muted); font-size: 12px; }
 code { font: 13px var(--mono); }
+.asked { margin: 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--ticket); border-radius: 0 8px 8px 0; font-size: 16px; font-style: italic; max-width: 72ch; }
+.asked span { display: block; font: 500 11px/1.4 var(--mono); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+.built { background: var(--ticket); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 8px; min-width: 0; }
+.built[data-state="built"] { border-color: var(--go); box-shadow: inset 4px 0 0 var(--go); }
+.built header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.built p { margin: 0; }
+.mono { font-family: var(--mono); font-size: 12px; }
 @media (max-width: 600px) { .kv { grid-template-columns: repeat(3, minmax(0, 1fr)); } .steps li { grid-template-columns: 1fr; gap: 0; } .prior div { grid-template-columns: 1fr; gap: 0; } }
 @media (prefers-reduced-motion: no-preference) { .item { transition: border-color .2s, opacity .2s; } }
 </style>
@@ -242,13 +253,14 @@ code { font: 13px var(--mono); }
   <header class="intro">
     <div class="eyebrow">Alimm1 · liquidity rewards · round 1 · ${ROUND_DATE}</div>
     <h1>Alimm1 Review Desk</h1>
-    <p>Your three questions from last night, plus the decisions still open from the 72-hour reviews. Mark what you think on the <b>Decide</b> tab; the other tabs hold the evidence behind each one. Everything saves as you go, and the next session reads it back. Nothing in the live bot changes until you say so. ${esc(TZ_NOTE)}</p>
+    <p>Round 1 is answered and built: the <b>Built</b> tab shows what each answer changed. Your answers stay editable on <b>Decide</b>, and each section opens with the question you asked. ${esc(TZ_NOTE)}</p>
     <p class="store" id="store">Connecting to the review store…</p>
   </header>
 
   <nav class="bar-sticky" aria-label="Sections">
     <div class="tabs" role="group" aria-label="Tab">
-      <button type="button" data-tab="decide" aria-pressed="true">Decide</button>
+      <button type="button" data-tab="built" aria-pressed="true">Built</button>
+      <button type="button" data-tab="decide" aria-pressed="false">Decide</button>
       <button type="button" data-tab="windows" aria-pressed="false">Window markets</button>
       <button type="button" data-tab="groc" aria-pressed="false">GROC &amp; SAFE</button>
       <button type="button" data-tab="book" aria-pressed="false">The book</button>
@@ -256,8 +268,16 @@ code { font: 13px var(--mono); }
     <div class="tally" id="tally">0 of ${QUESTIONS.length} answered</div>
   </nav>
 
-  <section id="tab-decide" aria-labelledby="h-decide">
+  <section id="tab-built" aria-labelledby="h-built">
+    <h2 id="h-built">Built from your answers</h2>
+    ${asked('built')}
+    <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Four changes are built and tested; three needed no change. They go live when the pull request merges and the worker redeploys.</p>
+    <div class="grid">${rows(BUILT, builtCard)}</div>
+  </section>
+
+  <section id="tab-decide" class="hidden-tab" aria-labelledby="h-decide">
     <h2 id="h-decide">Decide</h2>
+    ${asked('decide')}
     <p class="lead">Seven questions. The recommended option is first. Each carries the reason in one line; the tabs above carry the detail.</p>
     <div class="qs">${rows(QUESTIONS, question)}
       <fieldset class="q" data-q="r1-general"><legend>Anything else?</legend><label class="note"><span>Notes</span><textarea id="qn-r1-general" rows="3"></textarea></label><div class="saved" aria-live="polite"></div></fieldset>
@@ -266,6 +286,7 @@ code { font: 13px var(--mono); }
 
   <section id="tab-windows" class="hidden-tab" aria-labelledby="h-win">
     <h2 id="h-win">Window markets ${verdictChip()}</h2>
+    ${asked('windows')}
     <p class="lead">“Trump says X before a date.” Each word resolves YES the moment it is said, so there is no set time to step aside first. That is why they were dropped in October. Which side we bid changes everything.</p>
     <div class="panel">${sidesDiagram()}</div>
     <div class="panel"><h3>What the study found</h3>${probeBlock()}</div>
@@ -276,6 +297,7 @@ code { font: 13px var(--mono); }
 
   <section id="tab-groc" class="hidden-tab" aria-labelledby="h-groc">
     <h2 id="h-groc">Why GROC and SAFE weren’t retried</h2>
+    ${asked('groc')}
     <p class="lead">Kalshi refused both at the tail of its Thursday maintenance. The bot was free to try again, but every hourly check since has turned them down as too crowded to earn anything. FREE, on the same event, still qualifies and is resting.</p>
     <div class="panel">${grocFlow()}</div>
     <ol class="steps panel">${rows(GROC_STEPS, (s) => `<li><time>${esc(s.t)}</time><div><b>${esc(s.h)}</b><p>${esc(s.d)}</p></div></li>`)}</ol>
@@ -283,6 +305,7 @@ code { font: 13px var(--mono); }
 
   <section id="tab-book" class="hidden-tab" aria-labelledby="h-book">
     <h2 id="h-book">The book</h2>
+    ${asked('book')}
     <p class="lead">As of ${esc(BOOK.asOf)}. Net so far is ${usd(BOOK.netSoFar)} (settled fills plus ${usd(BOOK.rewardsConfirmed)} of confirmed rewards), or ${usd(BOOK.netIfLeftoversZero)} if the YouTube leftovers go to zero.</p>
     <div class="panel scroll"><h3>Resting bids</h3><table><thead><tr><th>Market</th><th>Side</th><th>Price × size</th><th>At risk</th></tr></thead><tbody>${rows(BOOK.resting, (r) => `<tr><td>${esc(r.what)}</td><td class="${r.side === 'YES' ? 'yes' : 'noside'}">${r.side}</td><td class="n">${r.price}c × ${r.qty}</td><td class="n">${usd(r.usd)}</td></tr>`)}</tbody></table></div>
     <div class="panel scroll"><h3>Held</h3><table><thead><tr><th>Market</th><th>Side</th><th>Bought</th><th>Exit</th></tr></thead><tbody>${rows(BOOK.held, (r) => `<tr><td>${esc(r.what)}</td><td class="${r.side === 'YES' ? 'yes' : 'noside'}">${r.side}</td><td class="n">${r.qty} at ${r.price}c</td><td>${esc(r.exit)}</td></tr>`)}</tbody></table></div>
@@ -300,7 +323,7 @@ code { font: 13px var(--mono); }
   const LS = 'alimm1-review-r1';
   const lsGet = () => { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch { return {}; } };
   const lsSet = (v) => { try { localStorage.setItem(LS, JSON.stringify(v)); } catch {} };
-  let tab = 'decide';
+  let tab = 'built';
 
   function paintItem(el) {
     const r = state[el.dataset.coll][el.dataset.id] || {};
@@ -366,10 +389,10 @@ code { font: 13px var(--mono); }
   });
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;
-    try { sessionStorage.setItem(LS + '-tab', tab); } catch {}
+    try { sessionStorage.setItem(LS + '-tab2', tab); } catch {}
     paintTab();
   }));
-  try { tab = sessionStorage.getItem(LS + '-tab') || 'decide'; } catch {}
+  try { tab = sessionStorage.getItem(LS + '-tab2') || 'built'; } catch {}
 
   const local = lsGet();
   Object.assign(state.reviews, local.reviews || {});

@@ -53,6 +53,8 @@ SKIP_BOOK_ERROR = "book_error"
 SKIP_NO_SLOTS = "no_slots"
 #: A placeable candidate whose projected programme payout is under limm.MIN_PROJECTED_PROGRAM_USD.
 SKIP_LOW_PROJECTED = "low_projected_payout"
+#: §9.74: a placeable mention-event candidate whose EVENT projects under MIN_EVENT_PROJECTED_USD.
+SKIP_SMALL_EVENT = "small_event"
 
 #: A market whose BOOK refused a pair is skipped for this long before its book is fetched again.
 #: Without it the bounded fetch budget is spent on the same first-ranked books every cycle: on
@@ -117,10 +119,15 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _series(row) -> str:
+    return row.series_ticker or (row.market_ticker or "").split("-", 1)[0]
+
+
 def _entry_cutoff(row) -> datetime | None:
-    """§9.63: `_pre_event_cutoff` less ENTRY_STEP_ASIDE_HOURS — when a resting BID steps aside."""
+    """§9.63: `_pre_event_cutoff` less `step_aside_hours` (§9.74) — when a resting BID steps
+    aside."""
     cutoff = _pre_event_cutoff(row)
-    return None if cutoff is None else cutoff - timedelta(hours=limm.ENTRY_STEP_ASIDE_HOURS)
+    return None if cutoff is None else cutoff - timedelta(hours=limm.step_aside_hours(_series(row)))
 
 
 def _pre_event_cutoff(row) -> datetime | None:
@@ -129,6 +136,14 @@ def _pre_event_cutoff(row) -> datetime | None:
         series=row.series_ticker or (row.market_ticker or "").split("-", 1)[0],
         event_ticker=row.event_ticker, title=row.market_title,
         program_end=_aware(row.end_date), close_time=_aware(row.close_time))
+
+
+def _hours_for(program, now: datetime) -> dict:
+    """The two horizons `earning_hours` reads, for a programme row without a fetched book."""
+    end = _aware(program.end_date)
+    cut = _entry_cutoff(program)
+    return {"program_hours_remaining": None if end is None else (end - now).total_seconds() / 3600.0,
+            "hours_to_step_aside": None if cut is None else (cut - now).total_seconds() / 3600.0}
 
 
 def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
@@ -149,6 +164,7 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
     hours_left = None if end is None else (end - now).total_seconds() / 3600.0
     close = _aware(program.close_time)
     hours_to_close = None if close is None else (close - now).total_seconds() / 3600.0
+    step_aside = _entry_cutoff(program)
     start = _aware(program.start_date)
     age = None if start is None else (now - start).total_seconds() / 3600.0
     return {
@@ -166,6 +182,12 @@ def candidate_from_book(program, orderbook: dict, *, now: datetime) -> dict:
         },
         "program_hours_remaining": hours_left,
         "hours_to_close": hours_to_close,
+        # §9.74: hours until this bid must step aside, and whether its event is a dated mention
+        # event (the $5-per-event minimum applies to those).
+        "hours_to_step_aside": (None if step_aside is None
+                                else (step_aside - now).total_seconds() / 3600.0),
+        "mention_event": limm.is_event_mention(_series(program), program.event_ticker,
+                                               program.market_title),
         # Depth AT the touch per side decides whether resting one tick behind still scores.
         "yes_touch_depth": yes_map[max(yes_map)] if yes_map else None,
         "no_touch_depth": no_map[max(no_map)] if no_map else None,
@@ -229,6 +251,47 @@ def projected_payout(cq) -> float:
     if hours_left is None or hours_left <= 0:
         return 0.0
     return quote_rate(cq) * float(hours_left)
+
+
+def earning_hours(c: dict) -> float:
+    """§9.74: hours a bid here can still earn — to the programme's end or its step-aside,
+    whichever comes first."""
+    hours = [h for h in (c.get("program_hours_remaining"), c.get("hours_to_step_aside"))
+             if h is not None]
+    return max(0.0, min(hours)) if hours else 0.0
+
+
+def drop_small_events(ranked: list, *, held_usd_by_event: dict[str, float],
+                      held_n_by_event: dict[str, int],
+                      remembered_usd_by_event: dict[str, list[float]] | None = None,
+                      held_tickers: frozenset[str] = frozenset(),
+                      ) -> tuple[list, list]:
+    """§9.74 (operator, 2026-11-06, r1-small): drop every candidate of a MENTION event whose
+    projected reward to this book is under `MIN_EVENT_PROJECTED_USD`. The event's projection is
+    what this book already holds there plus the best new markets it may still add (up to its
+    per-event cap), each rate x `earning_hours`; markets not fetched this cycle count at their
+    remembered rate, so a bounded fetch budget does not make an event look small. Window and
+    month-window markets are not events and pass. A held market fetched again this cycle is
+    counted once, as held (`held_tickers`). Returns (kept, dropped)."""
+    fresh: dict[str, list[float]] = {}
+    for cq in ranked:
+        c = cq[0]
+        ev = c.get("event_ticker") or ""
+        if not (c.get("mention_event") and ev):
+            continue
+        vals = fresh.setdefault(ev, [])
+        if c.get("market_ticker") not in held_tickers:
+            vals.append(quote_rate(cq) * earning_hours(c))
+    small = set()
+    for ev, vals in fresh.items():
+        pool = sorted(vals + list((remembered_usd_by_event or {}).get(ev, [])), reverse=True)
+        room = max(0, limm.max_markets_per_event(ev) - int(held_n_by_event.get(ev, 0)))
+        total = float(held_usd_by_event.get(ev, 0.0)) + sum(pool[:room])
+        if total < limm.MIN_EVENT_PROJECTED_USD:
+            small.add(ev)
+    kept = [cq for cq in ranked if (cq[0].get("event_ticker") or "") not in small]
+    dropped = [cq for cq in ranked if (cq[0].get("event_ticker") or "") in small]
+    return kept, dropped
 
 
 def rank_by_projected_payout(ranked: list) -> tuple[list, list]:
@@ -474,6 +537,18 @@ class IncentiveLiveRunner:
         ranked, dropped = rank_by_projected_payout(ranked)
         if dropped:
             summary["outcomes"][SKIP_LOW_PROJECTED] = len(dropped)
+        fetched = {c["market_ticker"] for c in built}
+        held_usd, held_n = self._held_projection_by_event(session, now)
+        held_tickers = frozenset(repo.live_book_open_tickers(session, limm.LIVE_TAG))
+        ranked, small = drop_small_events(
+            ranked, held_usd_by_event=held_usd, held_n_by_event=held_n,
+            held_tickers=held_tickers,
+            remembered_usd_by_event=self._remembered_by_event(
+                [p for p in candidates
+                 if p.market_ticker not in fetched and p.market_ticker not in held_tickers], now))
+        if small:
+            summary["outcomes"][SKIP_SMALL_EVENT] = len(small)
+            dropped = dropped + small
         self._remember_rewards(built, ranked + dropped, now)
         # Every candidate that produced no pair is still reported, by its refusal code, so a
         # cycle that placed nothing says which cap or which book stopped it.
@@ -1626,6 +1701,37 @@ class IncentiveLiveRunner:
         n_best = min(len(best), max(1, max_fetch // 2))
         return best[:n_best] + unknown + best[n_best:] + [p for _v, p in zero]
 
+    def _remembered_by_event(self, programs: list, now: datetime) -> dict[str, list[float]]:
+        """§9.74: remembered projected payouts (rate x earning hours) of markets not fetched this
+        cycle, by event, for `drop_small_events`."""
+        out: dict[str, list[float]] = {}
+        for p in programs:
+            seen = self._reward_seen.get(p.market_ticker)
+            if not seen or seen[0] <= 0 or not p.event_ticker:
+                continue
+            hrs = earning_hours(_hours_for(p, now))
+            if hrs > 0:
+                out.setdefault(p.event_ticker, []).append(seen[0] * hrs)
+        return out
+
+    def _held_projection_by_event(self, session, now: datetime
+                                  ) -> tuple[dict[str, float], dict[str, int]]:
+        """§9.74: per event, this book's working markets (count) and their projected payout to
+        step-aside at the last remembered rate (0 when not remembered)."""
+        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
+        usd: dict[str, float] = {}
+        n: dict[str, int] = {}
+        for ticker in repo.live_book_open_tickers(session, limm.LIVE_TAG):
+            p = programs.get(ticker)
+            if p is None or not p.event_ticker:
+                continue
+            n[p.event_ticker] = n.get(p.event_ticker, 0) + 1
+            seen = self._reward_seen.get(ticker)
+            if seen:
+                usd[p.event_ticker] = usd.get(p.event_ticker, 0.0) \
+                    + seen[0] * earning_hours(_hours_for(p, now))
+        return usd, n
+
     def _remember_rewards(self, built: list[dict], quotable: list, now: datetime) -> None:
         """§9.69: record the estimated reward rate of every book fetched this cycle; a book that
         produced no quote is remembered at zero."""
@@ -1671,7 +1777,8 @@ class IncentiveLiveRunner:
             if close is None:
                 continue
             to_close = (close - now).total_seconds() / 3600.0
-            if not (limm.MIN_HOURS_TO_CLOSE <= to_close <= limm.MAX_HOURS_TO_CLOSE):
+            floor = 0.0 if limm.is_window_say(_series(row)) else limm.MIN_HOURS_TO_CLOSE
+            if not (floor <= to_close <= limm.MAX_HOURS_TO_CLOSE):
                 continue
             start = _aware(row.start_date)
             age = (now - start).total_seconds() / 3600.0 if start is not None else float("inf")

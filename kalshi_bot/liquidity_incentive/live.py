@@ -155,6 +155,11 @@ DEAD_QUOTE_FRACTION = 0.10
 #: hour x hours remaining), and skip any whose projection is under this — a programme that cannot
 #: plausibly clear Kalshi's $1.00 minimum pays nothing however long we rest there (§9.49).
 MIN_PROJECTED_PROGRAM_USD = 1.00
+#: §9.74 (operator, 2026-11-06, review page r1-small): a MENTION event is entered only when this
+#: book's projected reward there — its held bids plus the best new ones it may add, each to its
+#: step-aside — is at least this. Oct 13 ($3.31), Oct 17 ($1.70) and Oct 24 ($1.82) each paid less
+#: than one typical fill loss.
+MIN_EVENT_PROJECTED_USD = 5.00
 
 #: §9.55 (operator decision 2026-10-15): the universe is MENTION markets tied to ONE scheduled
 #: event (a rally, a broadcast, an earnings call) — "will X be said during <event>". Over the
@@ -234,6 +239,18 @@ MONTH_WINDOW_SERIES = frozenset({"KXYTVIEWSHIGH"})
 #: new risk stops. Five YouTube channels were swept to 1c in five days (DRA, KEN, FUT, WEE, FUE);
 #: YouTube is −$15.50 realized lifetime against $23.08 of rewards.
 ENTRY_PAUSED_SERIES = frozenset({"KXYTVIEWSHIGH"})
+#: §9.74 (operator, 2026-11-06, review page r1-windows + "Go further" on the weekly series): a
+#: small live trial of "Trump says X before <date>" WINDOW markets, cheap YES side only. A NO bid
+#: there is swept the moment the word is said; a cheap YES bid is not (YES jumps away from it) and
+#: fills late, as hope fades — which the WINDOW_ENTRY_STEP_ASIDE_HOURS step-aside before the window
+#: closes avoids. Study 8 (docs/LIMM_WINDOW_PROBE.md): 16 qualifying markets at ~$1.04/market-day;
+#: 238 past entries, 69% filled at -$0.31 each, 11 filled bids won. Same $10 bid, §9.72
+#: behind-touch price, $100 / 10-market / 3-per-event caps as the rest of the book.
+WINDOW_SAY_SERIES = frozenset({"KXTRUMPSAY"})
+#: The only side a window market may be bid on.
+WINDOW_SAY_SIDE = "yes"
+#: Window bids step aside this long before the window closes (the late, hope-fades fills).
+WINDOW_ENTRY_STEP_ASIDE_HOURS = 48.0
 #: The measured month ends at local midnight; 04:00Z is midnight US Eastern (daylight time) and
 #: earlier than midnight Pacific, so the cutoff is never after the window has closed.
 MONTH_WINDOW_END_HOUR_UTC = 4
@@ -252,11 +269,17 @@ def month_window_end(series: str | None, event_ticker: str | None):
                     tzinfo=timezone.utc)
 
 
+def is_window_say(series: str | None) -> bool:
+    """§9.74: a "says X before <date>" window market in the live trial."""
+    return (series or "").upper() in WINDOW_SAY_SERIES
+
+
 def in_universe(series: str | None, event_ticker: str | None, title: str | None) -> bool:
-    """The markets this book may rest in: event-tied mentions (§9.55) and the month-window
-    series (§9.69)."""
+    """The markets this book may rest in: event-tied mentions (§9.55), the month-window
+    series (§9.69) and the window-say trial (§9.74)."""
     return is_event_mention(series, event_ticker, title) \
-        or month_window_end(series, event_ticker) is not None
+        or month_window_end(series, event_ticker) is not None \
+        or is_window_say(series)
 
 
 def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str | None,
@@ -272,6 +295,10 @@ def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str
     window_end = month_window_end(series, event_ticker)
     if window_end is not None:
         return min(t for t in (window_end, program_end, close_time) if t is not None)
+    if is_window_say(series):
+        # §9.74: the window is the market itself; it ends at close (or the programme's end).
+        ends = [t for t in (program_end, close_time) if t is not None]
+        return min(ends) if ends else None
     if not is_event_mention(series, event_ticker, title):
         return None
     if program_end is not None and close_time is not None and (
@@ -281,10 +308,14 @@ def pre_event_cutoff(*, series: str | None, event_ticker: str | None, title: str
     return datetime(d.year, d.month, d.day, EVENT_DATE_FALLBACK_HOUR_UTC, tzinfo=timezone.utc)
 
 #: §9.63 (operator, 2026-10-19): entries step aside this long before the pre-event cutoff, not
-#: just at it. 5 of the 6 mention-market fills since 2026-10-13 came within ~2 days of the event
+#: just at it. 48 -> 24 for MENTION events (§9.74, operator 2026-11-06, review page
+#: r1-stepaside: "try 24 hours on the next two mention events, then compare"): the 48h rule cut
+#: reward more than fill losses, the bad fills landed days earlier, and the §9.70 partial-fill
+#: cancel and §9.72 $10 cap now bound them. Window markets (month windows §9.69, window-say
+#: §9.74) keep WINDOW_ENTRY_STEP_ASIDE_HOURS. 5 of the 6 mention-market fills since 2026-10-13 came within ~2 days of the event
 #: (−$19.6 of −$26.5). Unfilled bids are cancelled and no new bid is placed inside the window; a
 #: held leg's resting sells still run to `pre_event_cutoff`.
-ENTRY_STEP_ASIDE_HOURS = 48.0
+ENTRY_STEP_ASIDE_HOURS = 24.0
 #: §9.63: after one of our bids fills, our other resting bids in the same event and on the same
 #: word in other events are cancelled, and no new bid goes there, for this long. A fill is the
 #: sign of a seller who knows something (NQE then FENT, one event, 4h apart; CEAS Oct 19 then
@@ -297,11 +328,20 @@ FILL_CONTAGION_HOURS = 12.0
 PARTIAL_FILL_CANCEL_MIN_CONTRACTS = 1.0
 
 
+def step_aside_hours(series: str | None) -> float:
+    """§9.74: how long before `pre_event_cutoff` a bid steps aside — WINDOW_ENTRY_STEP_ASIDE_HOURS
+    for a window market (month window §9.69, window-say §9.74), else ENTRY_STEP_ASIDE_HOURS."""
+    s = (series or "").upper()
+    if s in MONTH_WINDOW_SERIES or s in WINDOW_SAY_SERIES:
+        return WINDOW_ENTRY_STEP_ASIDE_HOURS
+    return ENTRY_STEP_ASIDE_HOURS
+
+
 def entry_cutoff(**kw):
     """§9.63: the last moment a bid may rest or be placed — `pre_event_cutoff` less
-    ENTRY_STEP_ASIDE_HOURS. None outside the event-mention universe."""
+    `step_aside_hours`. None outside the universe."""
     cutoff = pre_event_cutoff(**kw)
-    return None if cutoff is None else cutoff - timedelta(hours=ENTRY_STEP_ASIDE_HOURS)
+    return None if cutoff is None else cutoff - timedelta(hours=step_aside_hours(kw.get("series")))
 
 
 def market_word(ticker: str | None, event_ticker: str | None) -> str | None:
@@ -649,7 +689,10 @@ def build_side_quote(
         return refused
     refs = reference_price_by_side or {}
     cands = []
+    window = is_window_say(market_ticker.split("-", 1)[0] if market_ticker else "")
     for side in (SIDE_YES, SIDE_NO):
+        if window and side != WINDOW_SAY_SIDE:
+            continue    # §9.74: a window NO bid is swept the moment the word is said
         ref = refs.get(side)
         if ref is not None and 1 <= int(ref) <= int(max_price_cents):
             cands.append((int(ref), side))
@@ -712,7 +755,9 @@ def _entry_refusal(
     # that cannot resolve within days is refused whatever its book looks like.
     if hours_to_close is None:
         return Refusal(REFUSE_NO_CLOSE_TIME, "market carries no close time")
-    if hours_to_close < MIN_HOURS_TO_CLOSE:
+    if hours_to_close < MIN_HOURS_TO_CLOSE and not is_window_say(series):
+        # §9.74: a window market closes when its window ends; its step-aside (48h before close)
+        # and MIN_HOURS_BEFORE_EVENT bound it instead.
         return Refusal(REFUSE_CLOSES_TOO_SOON,
                        f"closes in {hours_to_close:.1f}h, need {MIN_HOURS_TO_CLOSE:g}h")
     if hours_to_close > MAX_HOURS_TO_CLOSE:

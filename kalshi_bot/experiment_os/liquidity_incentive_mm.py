@@ -141,6 +141,13 @@ RISK_ENVELOPE: dict = {
     "side_quote_behind_touch": limm.SIDE_QUOTE_BEHIND_TOUCH,
     # §9.73: no new entries in these series; held positions there are still managed.
     "entry_paused_series": sorted(limm.ENTRY_PAUSED_SERIES),
+    # §9.74: window-say trial (cheap YES only, stepped aside before close), mention-event
+    # step-aside, and the per-event projected-reward floor.
+    "window_say_series": sorted(limm.WINDOW_SAY_SERIES),
+    "window_say_side": limm.WINDOW_SAY_SIDE,
+    "window_entry_step_aside_hours": limm.WINDOW_ENTRY_STEP_ASIDE_HOURS,
+    "entry_step_aside_hours": limm.ENTRY_STEP_ASIDE_HOURS,
+    "min_event_projected_usd": limm.MIN_EVENT_PROJECTED_USD,
     "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,

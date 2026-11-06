@@ -609,7 +609,11 @@ class ShardClient(FakeLiveClient):
     def get_market_exchange_index(self, ticker):
         return self.exchange_index
 
+    orders_fail = False
+
     def get_orders(self, **kw):
+        if self.orders_fail:
+            raise RuntimeError("orders feed down")
         return {"orders": self.orders}
 
     def get_fills(self, **kw):
@@ -648,13 +652,74 @@ def test_the_default_shard_still_places(settings):
 
 
 def _a_409_pair(settings, client):
+    """A pair answered 409 whose immediate §9.74 lookup FAILED, so it falls back to the
+    reconcile grace period (§9.45) — the path these tests cover."""
     from kalshi_bot.kalshi.errors import KalshiAPIError
 
     client.fail = KalshiAPIError(409, "order_already_exists", "/portfolio/events/orders")
+    client.orders_fail = True
     ex = _exec(settings, client=client)
     assert _place(ex, settings, strategy=limm.LIVE_TAG) == "placed"
     client.fail = None
+    client.orders_fail = False
     return ex
+
+
+def test_a_409_is_settled_at_once_when_the_order_is_not_on_the_exchange(settings):
+    """§9.74 (operator, r1-409): no 15-minute wait — a 409'd bid absent from the exchange is
+    not_landed immediately, the slot and dedup are free, and the cycle sees a rejection."""
+    from kalshi_bot.kalshi.errors import KalshiAPIError
+
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient(fail=KalshiAPIError(409, "conflict", "/portfolio/events/orders"))
+    ex = _exec(settings, client=client)
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "rejected"
+    assert _statuses() == [("not_landed", "409_not_found_on_exchange")]
+    with db.session_scope() as s:
+        assert not repo.live_open_order_exists(s, "KXTEST-A")
+
+
+def test_a_409_is_settled_at_once_when_the_order_did_land(settings):
+    from kalshi_bot.kalshi.errors import KalshiAPIError
+
+    class LandedClient(ShardClient):
+        def get_orders(self, **kw):
+            return {"orders": [{"client_order_id": o["client_order_id"], "order_id": "K-9",
+                                "status": "resting"} for o in self.placed]}
+
+    _db(settings)
+    _limm_settings(settings)
+    # the first leg is answered 409 but is found resting; the second places normally
+    client = LandedClient(fail=KalshiAPIError(409, "conflict", "/portfolio/events/orders"))
+    ex = _exec(settings, client=client)
+    calls = {"n": 0}
+    orig = client.create_events_order
+
+    def once(order):
+        calls["n"] += 1
+        if calls["n"] > 1:
+            client.fail = None
+        return orig(order)
+    client.create_events_order = once
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "placed"
+    with db.session_scope() as s:
+        rows = sorted((r.status, r.kalshi_order_id or "") for r in s.scalars(select(m.LiveOrder)))
+    assert ("resting", "K-9") in rows
+
+
+def test_a_409_with_a_held_position_is_still_settled_by_the_orders_feed(settings):
+    """The old inference — a position on the ticker means the 409'd order executed — is what
+    booked 409'd resting sells 'filled'. The orders feed decides now."""
+    from kalshi_bot.kalshi.errors import KalshiAPIError
+
+    _db(settings)
+    _limm_settings(settings)
+    client = ShardClient(fail=KalshiAPIError(409, "conflict", "/portfolio/events/orders"),
+                         positions=[{"ticker": "KXTEST-A", "position_fp": "5.00"}])
+    ex = _exec(settings, client=client)
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "rejected"
+    assert _statuses() == [("not_landed", "409_not_found_on_exchange")]
 
 
 def _age_orders(minutes):

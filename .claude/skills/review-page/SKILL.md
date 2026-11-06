@@ -41,6 +41,13 @@ ops reads or results files, never retyped from memory.
 
 ## Page conventions
 
+- **The operator's question first.** When a section or decision answers something the operator
+  asked, open it with that question, quoted, with when it was asked ("You asked · Nov 5, 9:10 PM
+  CT"), before any evidence (operator, 2026-11-06: "if I asked a question, that question should
+  be at the top of that section or decision to remind me"). Keep the quotes in the data module
+  (`ASKED` in `tools/review/limm/round1.mjs`).
+- **After the answers:** the next republish opens on a "Built" tab: one card per answer saying
+  what changed (or that nothing needed to) and its state (built, merged, live).
 - **Questions:** radios, recommended option first and labelled
   "(recommended)", one line of why under each, a notes box on each, and one
   "Anything else?" at the end. Plain words; each question stands on its own.
