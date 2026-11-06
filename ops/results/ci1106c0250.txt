@@ -1,0 +1,20 @@
+# ops request [READ]
+# type=db  id=ci1106c0250
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:47:41Z
+e                          n    avg_pool  tot_pool  tgt   st          pend                           cl          ex                                                    
+-------------------------  ---  --------  --------  ----  ----------  -----------------------------  ----------  ------------------------------------------------------
+KXTRUMPSAY-26NOV09         42   90        3780      1000  2026-11-03  2026-11-03 18:31:33+00         2026-11-03  Will Trump say "Zohran / Mamdani" before Nov 9, 2026? 
+KXTRUMPSAYMONTH-26DEC01    23   50        1150      1000  2026-11-01  2026-11-02 12:46:16+00         2026-11-02  Will Trump say "Zohran / Mamdani" before Dec 1, 2026? 
+KXTRUMPSAYCOMPANY-26DEC01  62   50        3100      1000  2026-11-01  2026-11-02 12:45:59+00         2026-11-02  Will Trump say "X / Twitter" before Dec 1, 2026?      
+KXTRUMPSAY-26NOV02         70   100       7000      1000  2026-10-26  2026-10-26 21:33:44+00         2026-10-26  Will Trump say "Zohran / Mamdani" before Nov 2, 2026? 
+KXTRUMPSAY-26OCT26         73   100       7300      1000  2026-10-19  2026-10-20 13:42:19+00         2026-10-20  Will Trump say "Zohran / Mamdani" before Oct 26, 2026?
+KXTRUMPSAY-26OCT19         82   100       8200      1000  2026-10-12  2026-10-12 21:21:51+00         2026-10-12  Will Trump say "Zohran / Mamdani" before Oct 19, 2026?
+KXTRUMPSAY-26OCT12         76   100       7600      1000  2026-10-05  2026-10-06 01:55:18+00         2026-10-06  Will Trump say "Zohran / Mamdani" before Oct 12, 2026?
+KXTRUMPSAYCOMPANY-26NOV01  138  100       13800     1000  2026-10-01  2026-10-02 17:35:39+00         2026-10-02  Will Trump say "X / Twitter" before Nov 1, 2026?      
+KXTRUMPSAYMONTH-26NOV01    68   100       6800      1000  2026-10-01  2026-10-04 13:40:17+00         2026-10-04  Will Trump say "Zohran / Mamdani" before Nov 1, 2026? 
+KXTRUMPSAY-26OCT05         74   100       7400      1000  2026-09-28  2026-09-28 21:24:44+00         2026-09-28  Will Trump say "Zohran / Mamdani" before Oct 5, 2026? 
+KXTRUMPSAY-26SEP28         61   100       6100      1000  2026-09-21  2026-09-28 14:00:00+00         2026-09-28  Will Trump say "Zohran / Mamdani" before Sep 28, 2026?
+KXTRUMPSAYCOMPANY-26OCT01  79   100       7900      1000  2026-09-15  2026-09-29 04:02:39.033643+00  2026-09-30  Will Trump say "Verizon" before Oct 1, 2026?          
+KXTRUMPSAYMONTH-26OCT01    36   100       3600      1000  2026-09-15  2026-09-29 04:02:39.033643+00  2026-10-01  Will Trump say "Zohran / Mamdani" before Oct 1, 2026? 
+
+(13 rows)
