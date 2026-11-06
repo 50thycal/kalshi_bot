@@ -183,3 +183,20 @@ This run used the day fix from #490. No bar changed.
 
 **Trigger (as pre-registered).** Re-run this census once the settled day count reaches 60, around the end of October 2026. At that point C0 clears on days as well, and the full probe (`scripts/kalshi_gridpin_study.py`, P1–P4) becomes buildable. Sibling series noted for sizing: `KXTXERCOTPEAK`, `KXERCOTX`, `KXUTILITYERCOT`, and PJM (`KXPAPJM`, `KXUTILITYPJMWEST`).
 
+
+**Run 3, 2026-11-06 (ops `rl-gridpin-1106i`, code `9d9c674`, `--max-docs 75`): CENSUS CLEARS.**
+Fired-hold re-run from the 2026-11-06 idea-model run (`docs/IDEA_MODEL_20261106.md`). No bar changed.
+
+| gate | result |
+|---|---|
+| C0 universe | **1,121 settled rungs over 66 event-days** (08-30 .. 11-04), floor 40 days: **pass**. Settled rungs with volume **933** (floor 150), total settled volume 1,904,512 contracts. Traded after 19:00 CT: **109 of 400 checked** (floor 60): **pass**. |
+| C1 grading source | NP6-346-CD reproduces **589 / 589 (100.0%)** graded rungs over 32 operating days (10-04 .. 11-04); median diff +0.0 MW, max abs 0.8 MW. **PASS** |
+| C2 same-day timing | Hourly `systemLoad` posted 67 min after hour end (bar ≤ 90); 11-04 dashboard max equals NP6-346 exactly, 0 of 19 rungs flipped. **PASS** |
+
+Reported, never decides: today's 5-minute peak 60,889 MW vs hourly peak 60,751 MW (gap +138 MW against
+~500 MW strike spacing); the hourly mean of 5-minute demand reproduces the posted hourly value to 0.05%
+mean (0.12% max). Sibling grid series on Kalshi now include `KXPJMWESTW`, `KXPJMDOMW`, `KXERCOTNORTHM`,
+`KXMISOINDM`, `KXMISOINDW`, `KXPJMWESTM`, `ERCOTX` — a possible universe extension, not graded here.
+
+**Next (as pre-registered):** the full probe `scripts/kalshi_gridpin_study.py` (P1–P4) is now
+buildable. Building it is the next Research Lab step; this census authorizes nothing else.
