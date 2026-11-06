@@ -255,6 +255,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_kpi_census",
     "kalshi_gridpin_census",
     "limm_scorecard",
+    "limm_window_probe",
     "mmsell_scorecard",
 )
 
