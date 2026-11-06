@@ -69,6 +69,8 @@ def _generic_universe(monkeypatch):
     # §9.55–9.62 tests were written against the 15-minute cutoff; §9.63's 48h step-aside has
     # its own tests at the end of this file.
     monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 0.0)
+    # §9.76's $5 resting audit has its own tests at the end of this file.
+    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 0.0)
 
 
 def _book(yes, no):
@@ -2492,3 +2494,86 @@ def test_window_say_per_word_block_can_be_switched_off(monkeypatch):
     assert limm.event_position_blocks("KXTRUMPMENTION-26NOV09")
     monkeypatch.setattr(limm, "WINDOW_SAY_BLOCK_PER_WORD", False)
     assert limm.event_position_blocks("KXTRUMPSAY-26NOV09")
+
+
+# --- §9.76: resting bids audited against the $5 floor ----------------------------------------
+
+def _resting_yes(s, ticker, event, *, price=5, qty=200, hours_old=2):
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
+                      side="yes", action="buy", limit_price=price, quantity=qty,
+                      status="resting", kalshi_order_id=f"K-{ticker}", client_order_id=f"K-{ticker}",
+                      created_at=NOW - timedelta(hours=hours_old)))
+    s.flush()
+
+
+def _audit(monkeypatch, s, client, settings, rates):
+    """Run only the audit, with each ticker's reward rate per hour stubbed."""
+    monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 5.0)
+    runner = run.IncentiveLiveRunner(client, settings)
+    monkeypatch.setattr(runner, "_held_reward_per_hour",
+                        lambda t, w, p, now: rates.get(t))
+    return runner._retire_low_projection(s, _exec(settings, client), NOW)
+
+
+def test_a_window_word_projected_under_five_dollars_is_pulled_alone(live_db, settings,
+                                                                    monkeypatch):
+    ev = "KXTRUMPSAY-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        for w in ("REFI", "QUAN"):
+            _mention(s, f"{ev}-{w}", event=ev, series="KXTRUMPSAY", hours=100.0,
+                     close_hours=100.0, title=f'Will Trump say "{w}" before Sep 25, 2026?')
+            _resting_yes(s, f"{ev}-{w}", ev)
+        # 100h to close - 48h step-aside = 52 earning hours
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-REFI": 0.0, f"{ev}-QUAN": 0.15})
+    assert n == 1 and client.canceled == [f"K-{ev}-REFI"]       # QUAN: 0.15 x 52 = $7.80
+
+
+def test_a_mention_event_whose_resting_bids_project_under_five_dollars_loses_them(
+        live_db, settings, monkeypatch):
+    ev = "KXMAMDANIMENTION-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _mention(s, f"{ev}-FREE", event=ev, series="KXMAMDANIMENTION", hours=100.0)
+        _resting_yes(s, f"{ev}-FREE", ev, price=9, qty=111)
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-FREE": 0.03})   # x ~100h = ~$3
+    assert n == 1 and client.canceled == [f"K-{ev}-FREE"]
+
+
+def test_mention_bids_are_summed_per_event_before_the_floor(live_db, settings, monkeypatch):
+    ev = "KXTRUMPMENTION-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        for w in ("A", "B"):
+            _mention(s, f"{ev}-{w}", event=ev, hours=100.0)
+            _resting_yes(s, f"{ev}-{w}", ev)
+        # ~$4 each (0.04/h x ~100h) is under $5 alone, but the event's ~$8 together is kept
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-A": 0.04, f"{ev}-B": 0.04})
+    assert n == 0 and client.canceled == []
+
+
+def test_an_unreadable_book_and_a_young_bid_are_kept(live_db, settings, monkeypatch):
+    ev = "KXTRUMPSAY-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _mention(s, f"{ev}-X", event=ev, series="KXTRUMPSAY", hours=100.0, close_hours=100.0,
+                 title='Will Trump say "X" before Sep 25, 2026?')
+        _resting_yes(s, f"{ev}-X", ev)
+        _mention(s, f"{ev}-Y", event=ev, series="KXTRUMPSAY", hours=100.0, close_hours=100.0,
+                 title='Will Trump say "Y" before Sep 25, 2026?')
+        _resting_yes(s, f"{ev}-Y", ev, hours_old=0.2)             # under an hour old
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-X": None, f"{ev}-Y": 0.0})
+    assert n == 0 and client.canceled == []
+
+
+def test_a_window_entry_under_five_dollars_is_not_placed(monkeypatch):
+    from kalshi_bot.liquidity_incentive import runner as rn
+    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 5.0)
+    monkeypatch.setattr(rn, "quote_rate", lambda cq: cq[1])
+    mk = lambda t, r: ({"market_ticker": t, "event_ticker": "KXTRUMPSAY-26NOV09",  # noqa: E731
+                        "window_say": True, "program_hours_remaining": 50.0,
+                        "hours_to_step_aside": 10.0}, r)
+    kept, dropped = rn.drop_small_events([mk("W-A", 0.4), mk("W-B", 0.6)],
+                                         held_usd_by_event={}, held_n_by_event={})
+    assert [c["market_ticker"] for c, _ in kept] == ["W-B"]                  # $6 vs $4

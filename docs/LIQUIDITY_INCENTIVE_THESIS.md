@@ -3391,3 +3391,19 @@ account holds under any tag. A filled position leaves no in-flight order, so gat
 let a YES bid sit on a word mmsell holds NO on, and Kalshi would net the two. Dated mention
 events keep the whole-event block (all words of one speech resolve in the same hour). mmsell's own
 `gate:held` already refuses a word this book holds.
+
+### 9.76 Resting bids audited against the $5 floor (2026-11-06)
+
+**Read.** §9.74's $5 floor only gated NEW entries. Two bids already resting were under it: Mamdani
+FREE (~$0.32/day, ~$4.01 to Nov 18, less with the 24h step-aside) and KXTRUMPSAY REFI (re-priced
+5c → 8c as its word firmed; ~$0 to its step-aside).
+
+**Change (operator, 2026-11-06: "change the bot to audit existing resting bids and pull them if
+they are earning below the 5 dollar threshold").** `IncentiveLiveRunner._retire_low_projection`,
+every `RESTING_AUDIT_EVERY_SECONDS` (15 min): each purely resting bid that has rested
+`STALE_PAIR_SECONDS` (1h) has its book re-read and its reward projected to its step-aside
+(current-book rate x `earning_hours`). Below `MIN_RESTING_PROJECTED_USD` ($5) → cancelled
+(`low_projection`) and cooled down for an hour. Unit: a mention EVENT (its held bids summed, as
+the entry rule sums them); a window-say WORD alone (§9.75). An unreadable book is kept. Window
+entries now also need $5 projected per word (`drop_small_events`), so a bid is never placed only
+to be pulled at the next audit. Other markets (held positions, resting sells) are untouched.

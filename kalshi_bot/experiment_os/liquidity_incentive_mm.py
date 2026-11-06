@@ -150,6 +150,8 @@ RISK_ENVELOPE: dict = {
     "min_event_projected_usd": limm.MIN_EVENT_PROJECTED_USD,
     # §9.75: window-say markets blocked per word (account-held word refused), not per event.
     "window_say_block_per_word": limm.WINDOW_SAY_BLOCK_PER_WORD,
+    # §9.76: resting bids audited against the same floor (per mention event / per window word).
+    "min_resting_projected_usd": limm.MIN_RESTING_PROJECTED_USD,
     "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,
