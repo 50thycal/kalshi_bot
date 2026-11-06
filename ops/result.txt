@@ -1,12 +1,16 @@
 # ops request [READ]
-# type=db  id=rc-f7-1106-1113
-# code 78e47d3d9d6deeea670bfd50446bc6c2547dd6cc · started 2026-11-06T11:17:39Z
-strategy   orders_7d  last_order                      
----------  ---------  --------------------------------
-Ymmsell10  48         2026-11-06 05:42:31.744159+00:00
-Xmmsell10  53         2026-11-06 05:42:30.485482+00:00
-Alimm1     85         2026-11-05 09:59:51.363709+00:00
-Vmmsell10  3          2026-10-30 13:32:15.884167+00:00
-Kmmsell10  3          2026-10-30 13:32:14.435800+00:00
+# type=db  id=rc-alimm_rest-1106-1113
+# code 78e47d3d9d6deeea670bfd50446bc6c2547dd6cc · started 2026-11-06T11:18:09Z
+status      reason                     n   last_created                    
+----------  -------------------------  --  --------------------------------
+not_landed  409_not_found_on_exchange  2   2026-11-05 09:59:51.363709+00:00
+resting                                9   2026-11-05 05:55:26.764845+00:00
+canceled    series_paused              6   2026-11-05 05:10:47.751434+00:00
+filled                                 7   2026-11-04 20:52:13.049066+00:00
+canceled    repriced                   11  2026-11-04 20:12:01.137920+00:00
+canceled    resting_sell:repriced      10  2026-11-04 06:56:22.705906+00:00
+canceled    replaced                   1   2026-11-04 05:03:28.719020+00:00
+canceled    event_cap_trim             2   2026-11-03 22:06:37.370802+00:00
+canceled    resting_sell:stop_loss     1   2026-11-03 13:28:09.164108+00:00
 
-(5 rows)
+(9 rows)
