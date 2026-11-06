@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "f74816505b2668eb892b3cc6cfe1430c5e49c3ad",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-06T05:34:32Z",
+  "id": "rl-gridpin-study-1106a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-gridpin-study-1106a.receipt.json",
+  "result_file": "ops/results/rl-gridpin-study-1106a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42168938601",
+  "service": null,
+  "started_at": "2026-11-06T05:31:48Z",
+  "targets": [],
+  "type": "script"
+}

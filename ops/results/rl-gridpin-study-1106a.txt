@@ -1,0 +1,72 @@
+# ops request [READ]
+# type=script  id=rl-gridpin-study-1106a
+# code f74816505b2668eb892b3cc6cfe1430c5e49c3ad · started 2026-11-06T05:31:48Z
+GRIDPIN full probe (P1-P4) — read-only; pre-registered in docs/GRIDPIN_THESIS.md
+
+== data ==
+  rungs listed 1159; NP6-346 hourly days 32 (2026-10-04 .. 2026-11-04)
+  graded universe: 589 settled rungs over 31 operating days (strike types ['greater'])
+  NP6-346 daily max reproduces 589/589 results (100.0%)
+  candles: 589/589 rungs returned candles; 195,569 candles, 194,898 with a two-sided-or-one-sided quote
+
+== P1 decided-side discount (lag 90 min, cap 97c) ==
+  all      n=16   mean +6.44c (se 2.32)  win 100.0%
+  yes      n=4    mean +9.50c (se 3.77)  win 100.0%
+  no       n=12   mean +5.42c (se 2.76)  win 100.0%
+  by entry hour:
+            02h CT  n=2    mean +2.00c (se 0.00)  win 100.0%
+            21h CT  n=1    mean +2.00c (se 0.00)  win 100.0%
+            22h CT  n=4    mean +10.25c (se 3.43)  win 100.0%
+            23h CT  n=9    mean +6.22c (se 3.63)  win 100.0%
+  by margin to strike:
+          0-500 MW  n=1    mean +2.00c (se 0.00)  win 100.0%
+      1500-3000 MW  n=2    mean +4.00c (se 0.71)  win 100.0%
+       3000-inf MW  n=8    mean +2.25c (se 0.15)  win 100.0%
+       500-1500 MW  n=5    mean +15.00c (se 5.77)  win 100.0%
+  by ask band:
+            85-97c  n=13   mean +2.46c (se 0.23)  win 100.0%
+              <85c  n=3    mean +23.67c (se 5.46)  win 100.0%
+  split-half: first (2026-10-04..) n=16   mean +6.44c (se 2.32)  win 100.0%
+              second (2026-10-19..) n=0
+  minutes from decision to entry: median 175, share entered at the decision minute or the next 0%
+  P1: HOLD (accrual) — n=16 < 60
+  (sensitivity, never decides) lag 60 min: n=19   mean +7.42c (se 2.06)  win 100.0%
+  (sensitivity, never decides) lag 120 min: n=16   mean +6.44c (se 2.32)  win 100.0%
+
+== P2 not just favorite drift (same day, same CT hour, 85-97c) ==
+  P1 in-band  n=13   mean +2.46c (se 0.23)  win 100.0%
+  control     n=19   mean -38.16c (se 11.32)  win 57.9%
+  P2: UNTESTABLE — in-band P1 n=13, control n=19 (need 20 each)
+
+== P3 mechanics sub-claim (5-min vs hourly gap class) ==
+  5-min demand days available [datetime.date(2026, 11, 5), datetime.date(2026, 11, 6)]; full graded days 0
+  gap class NO at ask  n=0
+  P3: UNTESTABLE — gap-class n=0 < 20 (no 5-min history)
+
+== P4 capacity (tape proxy: same-side taker prints at <= our price, -60 s..+30 min) ==
+  depth per entry: median 0, p25 0, p75 5; share with any print 44%
+  (description) live book, open rung-sides asked 85-97c: n=0, median best-ask size 0
+  P4: FAIL — median tape depth 0 (bar 5); 0.52 entries/day (bar 0.5)
+
+== verdict ==
+  HOLD — P1 HOLD (accrual), P2 UNTESTABLE, P4 FAIL
+   P1 HOLD (accrual) | P2 UNTESTABLE | P3 UNTESTABLE | P4 FAIL
+   graded window 2026-10-04 .. 2026-11-04 (31 days; NP6-346 retention is rolling, so a re-run sees a later window)
+
+-- P1 ledger (day,ticker,side,entry_ct,ask_c,decided_ct,m_mw,strike,result,pnl_c) --
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T64000,no,22:26,97,21:00,60263,64000,no,+2
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T61500,no,23:55,61,21:00,60263,61500,no,+37
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T62500,no,23:55,96,21:00,60263,62500,no,+3
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T63500,no,23:55,97,21:00,60263,63500,no,+2
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T64500,no,23:55,96,21:00,60263,64500,no,+3
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T65000,no,23:55,96,21:00,60263,65000,no,+3
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T65500,no,23:55,97,21:00,60263,65500,no,+2
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T66000,no,23:55,97,21:00,60263,66000,no,+2
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T66500,no,23:55,97,21:00,60263,66500,no,+2
+  2026-10-04,KXTXERCOTPEAKD-26OCT05-T67000,no,23:55,97,21:00,60263,67000,no,+2
+  2026-10-05,KXTXERCOTPEAKD-26OCT06-T71000,no,21:50,97,21:00,69952,71000,no,+2
+  2026-10-05,KXTXERCOTPEAKD-26OCT06-T71500,no,22:23,94,21:00,69952,71500,no,+5
+  2026-10-09,KXTXERCOTPEAKD-26OCT10-T72500,yes,22:08,80,17:30,73918,72500,yes,+18
+  2026-10-09,KXTXERCOTPEAKD-26OCT10-T73000,yes,22:08,83,18:30,73918,73000,yes,+16
+  2026-10-16,KXTXERCOTPEAKD-26OCT17-T54000,yes,02:37,97,02:30,54532,54000,yes,+2
+  2026-10-16,KXTXERCOTPEAKD-26OCT17-T54500,yes,02:38,97,02:30,54532,54500,yes,+2
