@@ -45,6 +45,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import cluster_stats as cs  # noqa: E402
+import kalshi_settled as ks  # noqa: E402
 from mmsell_market_types import RO_OPTIONS, _to_libpq_url  # noqa: E402
 from theta_tail_diagnosis import _yes_resolved  # noqa: E402
 
@@ -281,13 +282,9 @@ def load_universe(cur, since: str, tte_max: float) -> list[dict]:
 
 # --- Kalshi's own settled results ----------------------------------------------------------------
 
-KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
-_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-
-
 def fetch_kalshi_results(events: list[str], timeout: float = 20.0,
-                         limit_events: int | None = None) -> tuple[dict[str, bool], int]:
+                         limit_events: int | None = None,
+                         sources: dict[str, str] | None = None) -> tuple[dict[str, bool], int]:
     """{market_ticker: yes_resolved} straight from Kalshi, per EVENT.
 
     This is the evidence the database does not hold. `markets` carries no crypto ladder row, so
@@ -296,42 +293,59 @@ def fetch_kalshi_results(events: list[str], timeout: float = 20.0,
     endpoints are public and serve a `result` field on settled markets, so the population's real
     outcomes are fetchable rather than derivable.
 
-    One request per event (~66 markets each), so ~2,100 requests covers the whole window.
+    Live tier first, then Kalshi's historical tier (`kalshi_settled.event_markets`): a market
+    settled before the historical cutoff (~3 months) is not served by live `/markets`, and the
+    default `--since` reaches past it. Reading live alone lost those labels with no error
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md).
+
     Returns the results and how many events were successfully read, because partial coverage
     must be visible: a label set that silently covers 60% of the universe is worse than one
-    that says so.
+    that says so. `sources`, when given, is filled with {event: live|historical|not_found}, and
+    an event that could not be read at all is recorded as `error`.
     """
-    import urllib.request
-
     out: dict[str, bool] = {}
     ok_events = 0
     for i, ev in enumerate(events):
         if limit_events is not None and i >= limit_events:
             break
-        url = f"{KALSHI}/markets?event_ticker={ev}&limit=200"
-        req = urllib.request.Request(url, headers={"User-Agent": _UA,
-                                                   "Accept": "application/json"})
-        markets = None
+        markets, source = None, "error"
         for attempt in range(2):
             try:
-                with urllib.request.urlopen(req, timeout=timeout) as resp:   # noqa: S310
-                    markets = json.loads(resp.read().decode()).get("markets") or []
+                markets, source = ks.event_markets(ev)
                 break
             except Exception:                                        # noqa: BLE001
                 time.sleep(0.4 * (attempt + 1))
+        if sources is not None:
+            sources[ev] = source
         if markets is None:
             continue
         got = 0
         for m in markets:
-            res = str(m.get("result") or "").lower()
+            res = ks.result_of(m)
             tkr = str(m.get("ticker") or "")
-            if tkr and res in ("yes", "no"):
+            if tkr and res is not None:
                 out[tkr] = (res == "yes")
                 got += 1
         if got:
             ok_events += 1
         time.sleep(0.08)
     return out, ok_events
+
+
+def label_tally(rows: list[dict], real: dict[str, bool], sources: dict[str, str]):
+    """Scored markets by where their real result came from; adds up to len(rows).
+
+    A market without a yes/no result is `not found` whatever answered for its event (including
+    an event that errored). A result whose event has no recorded source only arises when a
+    caller bypasses `fetch_kalshi_results` (tests); it is counted as live."""
+    tally = ks.Tally()
+    for r in rows:
+        if r["ticker"] in real:
+            src = sources.get(r["event"], ks.LIVE)
+            tally.add(src if src in ks.SOURCES and src != ks.NOT_FOUND else ks.LIVE)
+        else:
+            tally.add(ks.NOT_FOUND)
+    return tally
 
 
 # --- the rule ------------------------------------------------------------------------------------
@@ -614,11 +628,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"fetching REAL settled results from Kalshi for {len(events):,} events"
               + (f" (capped at {args.kalshi_max_events})" if args.kalshi_max_events else "")
               + "...")
-        real, ok_events = fetch_kalshi_results(events, limit_events=args.kalshi_max_events)
+        sources: dict[str, str] = {}
+        real, ok_events = fetch_kalshi_results(events, limit_events=args.kalshi_max_events,
+                                               sources=sources)
         covered = [r for r in rows if r["ticker"] in real]
         head("0. REAL KALSHI RESULTS — the path that replaces the derivation")
         print(f"  events read successfully: {ok_events:,} of "
-              f"{min(len(events), args.kalshi_max_events or len(events)):,}")
+              f"{min(len(events), args.kalshi_max_events or len(events)):,}"
+              f"   events that errored: {sum(1 for v in sources.values() if v == 'error'):,}")
+        print("  " + label_tally(rows, real, sources).line()
+              + ("   (events past --kalshi-max-events count as not found)"
+                 if args.kalshi_max_events else ""))
         print(f"  markets with a REAL result: {len(covered):,} of {len(rows):,} "
               f"({len(covered) / max(1, len(rows)):.2%} of the scored universe)")
         if covered:

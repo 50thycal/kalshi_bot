@@ -4,7 +4,8 @@ Pre-registration: docs/MOMO_HOURLY_PREREG.md (P0-P2, KILL, amendment A1). Consta
 are copied from it; tests pin them.
 
 Read-only. DATABASE_URL_RO (crypto_ladder_snapshots, one day per query) + Kalshi PUBLIC REST
-for each market's official settlement result. No orders, no writes.
+for each market's official settlement result, live tier then historical tier
+(scripts/kalshi_settled.py). No orders, no writes.
 
 Usage (ops channel):
     {"type":"script","name":"momo_hourly_probe","args":["--start","2026-08-01"]}
@@ -20,9 +21,10 @@ import os
 import random
 import sys
 import time
-import urllib.error
-import urllib.request
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kalshi_settled as ks  # noqa: E402
 
 # --- pre-registered constants (docs/MOMO_HOURLY_PREREG.md) -------------------------------
 SERIES = "KXBTCD"
@@ -37,9 +39,6 @@ BOOT_N, BOOT_SEED = 2000, 20261106
 RECON_MIN_CORR = 0.9
 SENS_YES, SENS_NO = 97.0, 3.0
 
-KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
-_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 _MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 DAY_SQL = """
@@ -185,6 +184,15 @@ def verdict(n_days: int, n_dec: int, exclusion: float, recon: float, s: float, c
     return "P1 SIGNAL / P2 FAIL (real but not tradeable after cost)"
 
 
+def label_tally(raw: list[dict], results: dict[str, int], ev_source: dict[str, str]) -> ks.Tally:
+    """Decision rows by where their label came from. A row whose market has no yes/no result is
+    `not found` whatever tier answered for its event, so the line adds up to len(raw)."""
+    tally = ks.Tally()
+    for r in raw:
+        tally.add(ev_source.get(r["ev"], ks.NOT_FOUND) if r["mk"] in results else ks.NOT_FOUND)
+    return tally
+
+
 def split_rows(raw: list[dict], results: dict[str, int]) -> tuple[list[dict], int, int]:
     """(usable, no_label, dropped). P0's exclusion counts ONLY label failures (amendment A1);
     rows lacking a 15-min lookback or a two-sided quote are dropped and reported separately."""
@@ -251,41 +259,17 @@ def analyse(rows: list[dict], n_total: int, n_excluded: int) -> dict:
 
 # --- IO -------------------------------------------------------------------------------------
 
-def _get(path: str, params: dict) -> dict:
-    qs = "&".join(f"{k}={v}" for k, v in params.items() if v not in (None, ""))
-    url = f"{KALSHI}{path}?{qs}"
-    for attempt in range(5):
-        req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 (fixed host)
-                return json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            if exc.code in (429, 500, 502, 503) and attempt < 4:
-                time.sleep(1.5 * (2 ** attempt))
-                continue
-            raise
-        except (urllib.error.URLError, TimeoutError, OSError):
-            if attempt < 4:
-                time.sleep(1.5 * (2 ** attempt))
-                continue
-            raise
-    return {}
-
-
-def event_results(event_ticker: str) -> dict[str, int]:
+def event_results(event_ticker: str, tickers=()) -> tuple[dict[str, int], str]:
+    """({market: 1|0}, source). Live first, then Kalshi's historical tier: settled markets older
+    than the historical cutoff are not served by live /markets (run 2 lost 29.6% of its labels
+    to that with zero errors; docs/handoffs/HANDOFF-kalshi-historical-cutoff.md)."""
+    markets, source = ks.event_markets(event_ticker, tickers)
     out: dict[str, int] = {}
-    cursor = ""
-    for _ in range(10):
-        page = _get("/markets", {"event_ticker": event_ticker, "limit": 1000, "cursor": cursor})
-        for m in page.get("markets") or []:
-            res = (m.get("result") or "").lower()
-            if res in ("yes", "no"):
-                out[m["ticker"]] = 1 if res == "yes" else 0
-        cursor = page.get("cursor") or ""
-        if not cursor:
-            break
-        time.sleep(0.08)
-    return out
+    for m in markets:
+        res = ks.result_of(m)
+        if res is not None:
+            out[m["ticker"]] = 1 if res == "yes" else 0
+    return out, source
 
 
 def _db_url() -> str:
@@ -337,16 +321,27 @@ def main(argv=None) -> int:
                 day += dt.timedelta(days=1)
                 n += 1
     results: dict[str, int] = {}
-    for ev in sorted({r["ev"] for r in raw}):
+    ev_source: dict[str, str] = {}
+    fetch_errors = 0
+    by_ev: dict[str, set[str]] = defaultdict(set)
+    for r in raw:
+        by_ev[r["ev"]].add(r["mk"])
+    for ev in sorted(by_ev):
         try:
-            results.update(event_results(ev))
+            got, ev_source[ev] = event_results(ev, by_ev[ev])
+            results.update(got)
         except Exception as exc:  # noqa: BLE001 - an unreadable event is counted as excluded
+            fetch_errors += 1
+            ev_source[ev] = ks.NOT_FOUND
             print(f"result fetch failed {ev}: {exc}", file=sys.stderr)
         time.sleep(0.06)
+    tally = label_tally(raw, results, ev_source)
     usable, no_label, dropped = split_rows(raw, results)
     print(f"# MOMO-H probe - series {SERIES}, {start}..{end} (docs/MOMO_HOURLY_PREREG.md)")
     print(f"raw decisions {len(raw)}, usable {len(usable)}, no official label {no_label} "
           f"(P0 exclusion), dropped for missing lookback/quote {dropped}")
+    ks.report(tally)
+    print(f"events {len(by_ev)}, result fetch errors {fetch_errors}")
     if len(usable) < 50:
         print("VERDICT: HOLD (instrument: P0 data floor) - too few usable rows to analyse")
         return 0
