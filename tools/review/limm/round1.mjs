@@ -55,13 +55,13 @@ export const GROC_STEPS = [
 export const QUESTIONS = [
   {
     id: 'r1-windows',
-    q: 'Window markets (“Trump says X before a date”): what should happen after the study?',
+    q: 'The window-markets study says PROMISING. Start a small live trial?',
     options: [
-      'Go by the study’s verdict: a small live trial if it says PROMISING, drop them if AVOID, keep watching if NOT-YET (recommended)',
-      'Start a small live trial now, whatever the study says',
+      'Yes: cheap YES bids only, $10 each, one tick behind the best price, out 48 h before the window closes, inside the existing $100 / 10-market cap (recommended)',
+      'Not yet: re-run the study next week and decide then',
       'Leave window markets out',
     ],
-    why: 'A trial would be cheap YES bids only, $10 each, behind the best price, out 48 hours before the window closes. Any live change still needs your go.',
+    why: 'Today 16 markets qualify at about $1.04 a day each. In 238 past entries, 69% filled but cost only $0.31 each on average (a 2–3c YES bid loses little), and 11 filled bids won. The worst single fill is the $10 bid. This changes what the live bot trades, so it waits on this answer.',
   },
   {
     id: 'r1-grocsafe',

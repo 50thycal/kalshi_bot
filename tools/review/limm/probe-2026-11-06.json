@@ -1,0 +1,17 @@
+{
+  "source": "scripts/limm_window_probe.py via ops, run 8055 (2026-11-06T03:16:51Z, code 9d9c674e)",
+  "verdict": "PROMISING",
+  "A": {
+    "programmes": 114,
+    "series": {
+      "KXTRUMPSAY": {"mk": 39, "yes_cheap": 12, "no_cheap": 1, "qual": 11, "usd_day": 14.47},
+      "KXTRUMPSAYCOMPANY": {"mk": 53, "yes_cheap": 5, "no_cheap": 5, "qual": 5, "usd_day": 2.22},
+      "KXTRUMPSAYMONTH": {"mk": 22, "yes_cheap": 0, "no_cheap": 2, "qual": 0, "usd_day": 0.0}
+    },
+    "qual": 16,
+    "mean": 1.04,
+    "best10_usd_day": 13.67
+  },
+  "B": {"scanned": 605, "entered": 238, "filled": 165, "filled_won_yes": 11, "fill_usd": -73.22, "rested_market_days": 1362, "reward_usd": 1420.31, "net": 1347.09, "loss_share": 0.05},
+  "note": "The history's reward is today's rate times every past market, with no 10-market cap, so its size is an upper bound. The useful parts are that 69% of entries filled yet fills cost only $0.31 each on average, and 11 of 165 filled bids won. Under the book's real cap (10 markets) today's best ten estimate about $13.67 a day."
+}

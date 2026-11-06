@@ -42,4 +42,16 @@ B ignores §9.70's partial-fill cancel (a whole $10 fill is the worst case).
 
 ## 5. Results
 
-Not run yet. The operator review page shows the results when they land: `tools/review/limm/README.md`.
+Run 2026-11-06 03:16Z (ops run 8055, code 9d9c674e). Raw output: `tools/review/limm/probe-2026-11-06.json`.
+
+- **A.** 114 running programmes; 16 qualify (KXTRUMPSAY 11, KXTRUMPSAYCOMPANY 5, KXTRUMPSAYMONTH 0),
+  mean **$1.04/market-day**; the best ten together ~$13.67/day.
+- **B.** 605 settled markets scanned, 238 entered, 165 filled (69%), 11 filled bids won YES.
+  Fill P&L **−$73.22** (−$0.31/entry; worst −$10.00). Reward at A's rate $1,420.31 over 1,362
+  market-days; fills cost 5% of it.
+- **Verdict: PROMISING** (≥$0.50/market-day on ≥10 markets; ≥100 entries; fills ≤40%).
+
+Read with §4: B's reward applies today's rate to every past market with no 10-market cap, so its
+size is an upper bound; the robust finding is the fill side (frequent but cheap fills). PROMISING
+nominates a live trial only; it is put to the operator on the review page
+(`tools/review/limm/README.md`, question `r1-windows`).
