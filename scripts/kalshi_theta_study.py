@@ -28,6 +28,7 @@ import time
 import urllib.request
 from collections import defaultdict
 
+import kalshi_settled as ks  # live + historical tier market scans
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -64,43 +65,43 @@ def _iso_to_unix(iso: str) -> int:
         return 0
 
 
-def fetch_settled(series: str, pages: int, min_vol: float) -> list[dict]:
-    """Settled binaries for a series, newest first, keeping strike + close fields."""
+def fetch_settled(series: str, pages: int, min_vol: float,
+                  count: ks.ScanCount | None = None) -> list[dict]:
+    """Settled binaries for a series, newest first, keeping strike + close fields.
+
+    Live tier, then Kalshi's historical tier (a market settled before the historical cutoff is
+    only served there; docs/handoffs/HANDOFF-kalshi-historical-cutoff.md)."""
     out: list[dict] = []
-    cursor = ""
-    for _ in range(pages):
-        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                       f"&limit=1000&cursor={cursor}")
-        mkts = (page or {}).get("markets") or []
-        for m in mkts:
-            res = (m.get("result") or "").lower()
-            if res not in ("yes", "no"):
-                continue
-            vol = xl._num(m.get("volume_fp")) or xl._num(m.get("volume"))
-            if vol < min_vol:
-                continue
-            close = _iso_to_unix(m.get("close_time"))
-            if not close:
-                continue
-            tk = m.get("ticker") or ""
-            out.append({
-                "ticker": tk, "series": series, "close": close, "result": res,
-                "vol": vol, "event": tk.rsplit("-", 1)[0],
-                "strike_type": (m.get("strike_type") or "").lower(),
-                "floor": m.get("floor_strike"), "cap": m.get("cap_strike"),
-                "sub": m.get("yes_sub_title") or m.get("subtitle") or "",
-            })
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not mkts:
-            break
+    for m in ks.iter_series_markets(series, max_pages=pages, count=count):
+        res = (m.get("result") or "").lower()
+        if res not in ("yes", "no"):
+            continue
+        vol = xl._num(m.get("volume_fp")) or xl._num(m.get("volume"))
+        if vol < min_vol:
+            continue
+        close = _iso_to_unix(m.get("close_time"))
+        if not close:
+            continue
+        tk = m.get("ticker") or ""
+        out.append({
+            "ticker": tk, "series": series, "close": close, "result": res,
+            "vol": vol, "event": tk.rsplit("-", 1)[0],
+            "strike_type": (m.get("strike_type") or "").lower(),
+            "floor": m.get("floor_strike"), "cap": m.get("cap_strike"),
+            "sub": m.get("yes_sub_title") or m.get("subtitle") or "",
+            "source": m["_source"],
+        })
     return out
 
 
 def fetch_market_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
     """{minute_ts: (yes_bid_c, yes_ask_c)} from Kalshi 1-min candlesticks."""
     out: dict[int, tuple] = {}
-    data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-                   f"?start_ts={start}&end_ts={end}&period_interval=1")
+    q = f"?start_ts={start}&end_ts={end}&period_interval=1"
+    data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks{q}")
+    if not (data or {}).get("candlesticks"):
+        # A market past the historical cutoff has its candles in the historical tier.
+        data = xl._get(f"{KALSHI}/historical/markets/{ticker}/candlesticks{q}")
     for c in (data or {}).get("candlesticks") or []:
         ts = c.get("end_period_ts")
         yb = (c.get("yes_bid") or {}).get("close_dollars")
@@ -281,7 +282,10 @@ def main(argv: list[str] | None = None) -> int:
     products: dict[str, str] = {}
     for series, product in pairs:
         series = series.strip().upper()
-        mkts = fetch_settled(series, args.pages, args.min_vol)
+        scan = ks.ScanCount()
+        mkts = fetch_settled(series, args.pages, args.min_vol, scan)
+        print(f"  {series}: {ks.source_line({'_source': m['source']} for m in mkts)}; "
+              f"scanned {scan.line()}")
         by_series[series] = mkts
         products[series] = product.strip()
         if mkts:

@@ -37,6 +37,7 @@ import time
 from collections import defaultdict
 from statistics import median
 
+import kalshi_settled as ks  # live + historical tier market scans
 import xvenue_game as xg  # _norm, _ticker_day
 import xvenue_leadlag as xl  # _get, _num, CODE2NAME, _norm_country
 
@@ -59,30 +60,28 @@ def _iso_to_unix(iso: str) -> int:
 # --- data ----------------------------------------------------------------------------
 
 
+#: Every Kalshi market scan this run made, by tier (live / historical) — printed by main().
+SCAN = ks.ScanCount()
+
+
 def fetch_settled_match_markets(series: str, pages: int) -> list[dict]:
+    """Settled (live tier, then Kalshi's historical tier) and closed match markets. A match
+    settled before the historical cutoff is only served by the historical tier
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md); each row carries `source`."""
     out: list[dict] = []
     for status in ("settled", "closed"):
-        cursor = ""
-        for _ in range(pages):
-            page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status={status}"
-                           f"&limit=1000&cursor={cursor}")
-            mkts = (page or {}).get("markets") or []
-            for m in mkts:
-                tk = m.get("ticker") or ""
-                if not tk:
-                    continue
-                out.append({
-                    "series": series,
-                    "ticker": tk,
-                    "event": tk.rsplit("-", 1)[0],
-                    "team": xg._norm((m.get("yes_sub_title") or "").split(":")[-1]),
-                    "result": (m.get("result") or "").lower(),
-                    "close": _iso_to_unix(m.get("close_time")),
-                    "day": xg._ticker_day(tk),
-                })
-            cursor = (page or {}).get("cursor") or ""
-            if not cursor or not mkts:
-                break
+        for m in ks.iter_series_markets(series, status=status, max_pages=pages, count=SCAN):
+            tk = m.get("ticker") or ""
+            out.append({
+                "series": series,
+                "ticker": tk,
+                "event": tk.rsplit("-", 1)[0],
+                "team": xg._norm((m.get("yes_sub_title") or "").split(":")[-1]),
+                "result": (m.get("result") or "").lower(),
+                "close": _iso_to_unix(m.get("close_time")),
+                "day": xg._ticker_day(tk),
+                "source": m["_source"],
+            })
     return out
 
 
@@ -93,21 +92,15 @@ def fetch_winner_map() -> dict[str, str]:
     48 teams — far beyond the static contender dict, kept only as a fallback)."""
     out: dict[str, str] = {}
     for status in ("open", "settled", "closed"):
-        cursor = ""
-        for _ in range(4):
-            page = xl._get(f"{KALSHI}/markets?series_ticker={WINNER_SERIES}"
-                           f"&status={status}&limit=200&cursor={cursor}")
-            mkts = (page or {}).get("markets") or []
-            for m in mkts:
-                tk = m.get("ticker") or ""
-                name = xg._norm(xl._norm_country(m.get("yes_sub_title") or ""))
-                if not name:
-                    name = xl.CODE2NAME.get(tk.rsplit("-", 1)[-1]) or ""
-                if name and name not in out:
-                    out[name] = tk
-            cursor = (page or {}).get("cursor") or ""
-            if not cursor or not mkts:
-                break
+        # settled also reads the historical tier (a contract settled before the cutoff)
+        for m in ks.iter_series_markets(WINNER_SERIES, status=status, max_pages=4, limit=200,
+                                        count=SCAN):
+            tk = m.get("ticker") or ""
+            name = xg._norm(xl._norm_country(m.get("yes_sub_title") or ""))
+            if not name:
+                name = xl.CODE2NAME.get(tk.rsplit("-", 1)[-1]) or ""
+            if name and name not in out:
+                out[name] = tk
     return out
 
 
@@ -123,8 +116,11 @@ def fetch_candles(series: str, ticker: str, start: int, end: int) -> tuple[dict,
     s = start
     while s < end:
         e = min(s + step, end)
-        data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-                       f"?start_ts={s}&end_ts={e}&period_interval=1")
+        q = f"?start_ts={s}&end_ts={e}&period_interval=1"
+        data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks{q}")
+        if not (data or {}).get("candlesticks"):
+            # A market past the historical cutoff has its candles in the historical tier.
+            data = xl._get(f"{KALSHI}/historical/markets/{ticker}/candlesticks{q}")
         for c in (data or {}).get("candlesticks") or []:
             ts = c.get("end_period_ts")
             if ts is None:
@@ -225,6 +221,8 @@ def main(argv: list[str] | None = None) -> int:
     markets: list[dict] = []
     for series in MATCH_SERIES:
         markets.extend(fetch_settled_match_markets(series, args.pages))
+    print(f"  match {ks.source_line({'_source': m['source']} for m in markets)}; "
+          f"scanned {SCAN.line()}")
     by_event: dict[str, list[dict]] = defaultdict(list)
     for m in markets:
         if m["close"] and m["close"] >= since:

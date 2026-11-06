@@ -20,10 +20,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
+import sys
 import time
 import urllib.error
 import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kalshi_settled as ks  # noqa: E402
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 _UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -69,17 +74,23 @@ def _get(path: str, params: dict) -> dict:
     return {}
 
 
-def markets(series: str, status: str, min_close_ts: int | None, max_pages: int) -> list[dict]:
-    out, cursor = [], ""
-    for _ in range(max_pages):
-        page = _get("/markets", {"series_ticker": series, "status": status, "limit": 1000,
-                                 "min_close_ts": min_close_ts, "cursor": cursor})
-        rows = page.get("markets") or []
-        out.extend(rows)
-        cursor = page.get("cursor") or ""
-        if not cursor or not rows:
-            break
-        time.sleep(0.1)
+def markets(series: str, status: str, min_close_ts: int | None, max_pages: int,
+            scan: ks.ScanCount | None = None) -> list[dict]:
+    """One series' markets. A settled scan also reads Kalshi's historical tier when the window
+    reaches past the historical cutoff (read at runtime): live /markets stops serving settled
+    markets older than it (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). A failed LIVE
+    read raises, as before (the series row prints ERROR); a failed historical read is counted
+    in `scan` and printed."""
+    part = ks.ScanCount()
+    out = ks.series_markets(series, status=status, min_close_ts=min_close_ts,
+                            max_pages=max_pages, get=_get, count=part)
+    if part.errors[ks.LIVE]:
+        raise RuntimeError(f"live /markets read failed for {series} ({status})")
+    if scan is not None:
+        for src in (ks.LIVE, ks.HISTORICAL):
+            scan.counts[src] += part.counts[src]
+            scan.errors[src] += part.errors[src]
+            scan.truncated[src] = scan.truncated[src] or part.truncated[src]
     return out
 
 
@@ -115,9 +126,10 @@ def main(argv=None) -> int:
     print(f"# short-window census - last {args.days:g} days (docs/IDEA_MODEL_20261106.md)")
     print(f"{'series':<14} {'settled':>8} {'/day':>7} {'vol':>14} {'vol/day':>12} {'med/mkt':>8} "
           f"{'yes%':>6} {'open':>5} {'spr_c':>6}")
+    scan = ks.ScanCount()
     for s in args.series:
         try:
-            r = summarize(s, markets(s, "settled", since, args.max_pages),
+            r = summarize(s, markets(s, "settled", since, args.max_pages, scan),
                           markets(s, "open", None, 1), args.days)
         except Exception as exc:  # noqa: BLE001 - one bad series must not sink the census
             print(f"{s:<14} ERROR {exc}")
@@ -130,7 +142,12 @@ def main(argv=None) -> int:
         print(f"{s:<14} {r['settled']:>8} {r['settled_per_day']:>7} {r['settled_volume']:>14,} "
               f"{r['volume_per_day']:>12,} {r['median_vol_per_mkt']:>8,} {ys:>6} {r['open']:>5} {sp:>6}")
         time.sleep(0.2)
-    print("note: settled counts are capped at --max-pages x 1000 per series; a cap hit reads as a floor.")
+    print("note: settled counts are capped at --max-pages x 1000 per series (per tier); a cap hit "
+          "reads as a floor.")
+    print("settled " + scan.line())
+    cut = ks.cutoff(_get)
+    if cut:
+        print("historical cutoff: " + json.dumps(cut, sort_keys=True))
     return 0
 
 

@@ -102,10 +102,13 @@ def main(argv: list[str] | None = None) -> int:
 
     series_list = flb.discover_series(args.top_series, args.max_pages)
     settled: list[dict] = []
+    scan = flb.ks.ScanCount()
     for s in series_list:
         if args.no_sports and flb.category(s) == "Sports":
             continue
-        settled.extend(flb.fetch_settled_for_series(s, args.per_series, args.min_vol))
+        settled.extend(flb.fetch_settled_for_series(s, args.per_series, args.min_vol, scan))
+    # Settled markets past Kalshi's historical cutoff come from the historical tier.
+    print(f"  collected {flb.source_line(settled)}; scanned {scan.line()}")
     if not settled:
         print("  (no settled markets collected)")
         return 0

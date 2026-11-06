@@ -18,10 +18,12 @@ Four questions, four sections:
      Every already-listed cheap market is bucketed by the week it ENTERS that window
      (close - 14d). No modeling: these markets exist today and their close dates are published.
   3. SEASONAL CADENCE — the trailing settled-market cadence per regime, and an explicit report
-     of the RETENTION WALL. Kalshi serves only a rolling ~70-day settled window (paging to
-     cursor exhaustion bottoms out on the same date for every series; KXNFLGAME returns zero),
-     so a prior-year comparison cannot be computed from this API at any page budget. What the
-     section does show is which regimes are decaying and which are arriving inside that window.
+     of how far settled history reaches. The "RETENTION WALL" this section used to report is
+     Kalshi's HISTORICAL CUTOFF: live /markets stops serving settled markets older than
+     /historical/cutoff (about three months), and they move to /historical/markets. The scan now
+     reads that tier too (scripts/kalshi_settled.py), so history reaches past the wall wherever
+     the archive was read to exhaustion; where it was not (page cap), the wall still bounds the
+     covered weeks and the section says so. (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md)
   4. SETTLEMENT-DATE CONCENTRATION — the risk the forecast exists to surface. mmsell's risk
      model is "many small independent positions"; 60 positions settling on one election night
      is closer to ONE position at 60x size. Reports the busiest settlement dates as a fraction
@@ -41,6 +43,7 @@ import datetime as _dt
 import time
 from collections import defaultdict
 
+import kalshi_settled as ks  # live + historical tier market scans
 import mmsell_seasonal as ms
 import xvenue_leadlag as xl  # _get (browser-UA fetch, retries), _num
 
@@ -123,9 +126,21 @@ def fetch_open_markets(max_pages: int, verbose: bool = False) -> list[dict]:
     return out
 
 
+#: What every settled-history scan read, by tier — printed by section 3.
+SCAN = ks.ScanCount()
+
+
+def _merge_scan(into: ks.ScanCount, part: ks.ScanCount) -> None:
+    for src in (ks.LIVE, ks.HISTORICAL):
+        into.counts[src] += part.counts[src]
+        into.errors[src] += part.errors[src]
+        into.truncated[src] = into.truncated[src] or part.truncated[src]
+
+
 def fetch_settled_deep(series: str, max_pages: int, min_vol: float,
                        since: int) -> tuple[list[dict], int]:
-    """Settled markets for one series back to `since` (unix), newest-first pagination.
+    """Settled markets for one series back to `since` (unix): the live tier newest-first, then,
+    if live did not reach `since`, Kalshi's historical tier.
 
     Returns (rows, reach) where `reach` is the OLDEST close time the pagination actually got to.
     Reach matters as much as the rows: a high-frequency series (KXBTCD lists ~300 markets a day)
@@ -133,35 +148,55 @@ def fetch_settled_deep(series: str, max_pages: int, min_vol: float,
     empty week is indistinguishable from a week with no markets unless the caller knows how far
     back the data goes. Callers must blank uncovered weeks rather than print them as zero.
 
+    The historical tier's ordering is not verified, so it only EXTENDS `reach` when it was read
+    to exhaustion (no page cap, no read error). A capped archive scan still contributes its rows,
+    but the covered range stays where the live tier left it — an unordered partial read is not a
+    contiguous date range. Each row carries `source` (live/historical).
+
     kalshi_flb.fetch_settled_for_series caps at 3 pages and stops on a count, which is right for
     an edge sample but wrong for a CADENCE count — a season's worth of NFL markets needs walking
     to the end."""
     out: list[dict] = []
-    cursor = ""
+    seen: set[str] = set()
     reach = None
-    for _ in range(max_pages):
-        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                       f"&limit=1000&cursor={cursor}")
-        mkts = (page or {}).get("markets") or []
-        oldest = None
-        for m in mkts:
-            tk = m.get("ticker") or ""
-            close = ms.close_unix(m.get("close_time") or "")
-            if not close or not tk:
-                continue
-            oldest = close if oldest is None else min(oldest, close)
-            if close < since:
-                continue
-            out.append({
-                "ticker": tk, "series": series, "close": close,
+
+    def row(m: dict, close: int) -> dict:
+        return {"ticker": m["ticker"], "series": series, "close": close,
                 "result": (m.get("result") or "").lower(),
                 "volume": xl._num(m.get("volume") or m.get("volume_fp")),
-            })
-        if oldest is not None:
-            reach = oldest if reach is None else min(reach, oldest)
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not mkts or (oldest is not None and oldest < since):
-            break
+                "source": m["_source"]}
+
+    live = ks.ScanCount()
+    for m in ks.iter_series_markets(series, max_pages=max_pages, count=live, tiers=(ks.LIVE,)):
+        tk = m.get("ticker") or ""
+        close = ms.close_unix(m.get("close_time") or "")
+        if not close or not tk:
+            continue
+        reach = close if reach is None else min(reach, close)
+        if close < since:
+            break               # newest-first: everything after this is older still
+        seen.add(tk)
+        out.append(row(m, close))
+    _merge_scan(SCAN, live)
+
+    if reach is None or reach >= since:
+        arch = ks.ScanCount()
+        arch_oldest = None
+        for m in ks.iter_series_markets(series, max_pages=max_pages, count=arch,
+                                        tiers=(ks.HISTORICAL,)):
+            tk = m.get("ticker") or ""
+            close = ms.close_unix(m.get("close_time") or "")
+            if not close or not tk or tk in seen:
+                continue
+            arch_oldest = close if arch_oldest is None else min(arch_oldest, close)
+            if close < since:
+                continue
+            seen.add(tk)
+            out.append(row(m, close))
+        _merge_scan(SCAN, arch)
+        complete = not arch.truncated[ks.HISTORICAL] and not arch.errors[ks.HISTORICAL]
+        if complete and arch_oldest is not None:
+            reach = arch_oldest if reach is None else min(reach, arch_oldest)
     rows = [m for m in out if m["volume"] >= min_vol or min_vol <= 0]
     return rows, (reach if reach is not None else int(time.time()))
 
@@ -337,23 +372,29 @@ def report_cadence(series_map: dict[str, str], now: int, weeks: int, rates: dict
               f"(dormant, renamed, or a bad seed guess): {', '.join(sorted(dead)[:14])}"
               + (" ..." if len(dead) > 14 else ""))
 
-    # THE RETENTION WALL. Kalshi's settled-market feed serves only a rolling ~70 days: paging a
-    # series to cursor exhaustion (not a page cap) bottoms out on the same date for every series
-    # regardless of size, KXNFLGAME returns zero markets, and status=finalized/closed return
-    # nothing at all. So a prior-year comparison — the obvious way to forecast a season — is not
-    # available from this API at any page budget, and printing one would be inventing data.
-    # What IS available is the trailing cadence inside the wall, which shows the CURRENT regime
-    # decaying and the next one arriving.
+    # THE RETENTION WALL is Kalshi's HISTORICAL CUTOFF: live /markets stops serving settled
+    # markets older than /historical/cutoff (~3 months), which is why paging the live feed to
+    # cursor exhaustion bottomed out on the same date for every series. Those markets are served
+    # by /historical/markets, which fetch_settled_deep now reads. Its ordering is unverified, so
+    # a regime's reach extends past the wall only where that archive was read to exhaustion; a
+    # page-capped archive scan leaves the wall in place for that regime. A prior-year projection
+    # is still not shown: this section reports the trailing cadence over the weeks covered.
     wall = max(reach.values()) if reach else now
     deepest = min(reach.values()) if reach else now
-    print(f"\n  RETENTION WALL: settled history reaches back to "
+    print(f"\n  SETTLED HISTORY: {SCAN.line()}")
+    cut = ks.cutoff()
+    if cut:
+        print(f"  historical cutoff in force: {cut}")
+    print(f"  RETENTION WALL: settled history reaches back to "
           f"{_dt.datetime.utcfromtimestamp(deepest):%Y-%m-%d} "
           f"({(now - deepest) / 86400:.0f}d) at best; the shallowest regime stops at "
           f"{_dt.datetime.utcfromtimestamp(wall):%Y-%m-%d}.")
-    print("  Kalshi serves a rolling ~70-day settled window, so LAST season is unavailable at any")
-    print("  page budget — a prior-year projection cannot be computed and is not shown. The fix is")
-    print("  to CAPTURE settled history as it happens (the weather backfill already does exactly")
-    print("  this); see docs/MMSELL_SEASONAL_FORECAST.md. Trailing cadence inside the wall:")
+    print("  The live feed alone stops at Kalshi's historical cutoff (~3 months); the historical")
+    print("  tier extends a regime past it only where that archive was read to exhaustion" +
+          (" — it was page-capped for some series here (raise --hist-pages)."
+           if SCAN.truncated[ks.HISTORICAL] else "."))
+    print("  No prior-year projection is shown; see docs/MMSELL_SEASONAL_FORECAST.md. Trailing")
+    print("  cadence over the covered weeks:")
 
     regs = sorted(want & set(reach),
                   key=lambda r: -sum(wk.get(r, 0) for wk in hist.values()))[:10]
@@ -525,6 +566,17 @@ def main(argv: list[str] | None = None) -> int:
                 age = f"{(now - cl[0]) / 86400:.0f}d" if cl else "-"
                 print(f"    {s:14s} {status:10s}: n={len(cl):6d} pages={pages:3d} "
                       f"exhausted={not cursor} oldest={oldest} ({age} ago) newest={newest}")
+            # The live feed's floor above is Kalshi's historical cutoff; the archive holds the
+            # rest. Walk it too, so the probe shows what is actually reachable.
+            arch = ks.ScanCount()
+            cl = sorted(c for c in (ms.close_unix(m.get("close_time") or "") for m in
+                                    ks.iter_series_markets(s, max_pages=25, count=arch,
+                                                           tiers=(ks.HISTORICAL,))) if c)
+            oldest = (f"{_dt.datetime.utcfromtimestamp(cl[0]):%Y-%m-%d}" if cl else "-")
+            newest = (f"{_dt.datetime.utcfromtimestamp(cl[-1]):%Y-%m-%d}" if cl else "-")
+            print(f"    {s:14s} {'historical':10s}: n={len(cl):6d} "
+                  f"exhausted={not arch.truncated[ks.HISTORICAL]} "
+                  f"errors={arch.errors[ks.HISTORICAL]} oldest={oldest} newest={newest}")
         return 0
 
     if args.list_series:

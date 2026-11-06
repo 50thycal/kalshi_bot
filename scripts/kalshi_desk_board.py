@@ -304,12 +304,25 @@ def _book_levels(book: dict, side: str, depth: int) -> list[tuple[int, int]]:
     return out[:depth]
 
 
+def market_any(ticker: str) -> tuple[dict, str]:
+    """(market, tier): live `/markets/{t}`, then `/historical/markets/{t}` when live has no
+    market. A market settled before Kalshi's historical cutoff is only served by the
+    historical tier (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). `_get` prints any HTTP
+    error to stderr, so a live failure that falls through is visible, and the tier is printed."""
+    for path, tier in ((f"/markets/{ticker}", "live"), (f"/historical/markets/{ticker}",
+                                                      "historical")):
+        data = _get(path)
+        mk = data.get("market") or data
+        if mk:
+            return mk, tier
+    return {}, "not found"
+
+
 def detail(args) -> int:
     now = datetime.now(timezone.utc)
-    data = _get(f"/markets/{args.ticker}")
-    mk = data.get("market") or data
+    mk, tier = market_any(args.ticker)
     if not mk:
-        print(f"market {args.ticker!r} not found")
+        print(f"market {args.ticker!r} not found (live or historical tier)")
         return 1
     ev_data = _get(f"/events/{mk.get('event_ticker')}") if mk.get("event_ticker") else {}
     ev = ev_data.get("event") or ev_data or {}
@@ -320,7 +333,7 @@ def detail(args) -> int:
         print(f"  outcome    {row['sub']}")
     print(f"  category   {row['category']}   series {row['series']}   event {row['event']}")
     htc_s = "-" if row["htc"] is None else f"{row['htc']:.1f}h"
-    print(f"  status     {row['status']}   close {row['close']}   ({htc_s})")
+    print(f"  status     {row['status']}   close {row['close']}   ({htc_s})   tier {tier}")
     if mk.get("result"):
         print(f"  result     {mk['result']}")
     print(f"  expiration {mk.get('expiration_time') or '-'}   strike {row['strike_type'] or '-'} "

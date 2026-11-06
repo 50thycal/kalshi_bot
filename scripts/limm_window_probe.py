@@ -37,6 +37,8 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import kalshi_settled as ks  # noqa: E402
+
 # --- pre-registered constants ----------------------------------------------------------------
 SERIES = ("KXTRUMPSAY", "KXTRUMPSAYMONTH", "KXTRUMPSAYCOMPANY")
 MAX_PRICE, MIN_PRICE = 10, 1           # cheap side band, cents
@@ -185,8 +187,11 @@ def part_a(rows) -> tuple[float, int]:
 
 def _candles(series: str, tk: str, start: int, end: int) -> list[tuple[int, int | None, int | None]]:
     """[(end_ts, yes_bid_close_c, trade_low_c)] hourly."""
-    data = _get(f"/series/{series}/markets/{tk}/candlesticks?start_ts={start}&end_ts={end}"
-                f"&period_interval=60")
+    q = f"?start_ts={start}&end_ts={end}&period_interval=60"
+    data = _get(f"/series/{series}/markets/{tk}/candlesticks{q}")
+    if not (data or {}).get("candlesticks"):
+        # A market past the historical cutoff has its candles in the historical tier.
+        data = _get(f"/historical/markets/{tk}/candlesticks{q}")
     out = []
     for c in (data or {}).get("candlesticks") or []:
         yb = c.get("yes_bid") or {}
@@ -200,6 +205,37 @@ def _candles(series: str, tk: str, start: int, end: int) -> list[tuple[int, int 
     return out
 
 
+def _history_markets(series: str, since: dt.datetime, scan: ks.ScanCount):
+    """One series' settled window markets: the live tier's settled events, then — when the
+    window reaches past Kalshi's historical cutoff (read at runtime) — the historical tier's
+    markets the events did not already carry. Live /events stops serving settled events older
+    than the cutoff (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). Each market is tagged
+    `_source`; an unreadable live page is counted in `scan`, never read as "no more events"."""
+    seen: set[str] = set()
+    cursor = ""
+    for _page in range(20):
+        data = _get(f"/events?series_ticker={series}&status=settled&with_nested_markets=true"
+                    f"&limit=100" + (f"&cursor={cursor}" if cursor else ""))
+        if data is None:
+            scan.errors[ks.LIVE] += 1
+            break
+        if not data:
+            break
+        for ev in data.get("events") or []:
+            for m in ev.get("markets") or []:
+                seen.add(m.get("ticker") or "")
+                m["_source"] = ks.LIVE
+                scan.counts[ks.LIVE] += 1
+                yield m
+        cursor = data.get("cursor") or ""
+        if not cursor:
+            break
+    for m in ks.iter_series_markets(series, min_close_ts=int(since.timestamp()), max_pages=20,
+                                    count=scan, tiers=(ks.HISTORICAL,)):
+        if m["ticker"] not in seen:
+            yield m
+
+
 def part_b(usd_per_day: float, max_markets: int) -> tuple[int, float, float]:
     print("\n== B. HISTORY — settled window markets, $10 YES bid, rest until close - "
           f"{STEP_ASIDE_H:g}h, conservative fill (trade low <= our price)")
@@ -210,62 +246,57 @@ def part_b(usd_per_day: float, max_markets: int) -> tuple[int, float, float]:
     rest_days = 0.0
     fill_pnls = []
     n_seen = 0
+    scan = ks.ScanCount()
+    used = {ks.LIVE: 0, ks.HISTORICAL: 0}
     for series in SERIES:
-        cursor = ""
-        for _page in range(20):
-            data = _get(f"/events?series_ticker={series}&status=settled&with_nested_markets=true"
-                        f"&limit=100" + (f"&cursor={cursor}" if cursor else ""))
-            if not data:
+        for m in _history_markets(series, since, scan):
+            close = _ts(m.get("close_time"))
+            opened = _ts(m.get("open_time"))
+            if close is None or opened is None or close < since:
+                continue
+            if n_seen >= max_markets:
                 break
-            for ev in data.get("events") or []:
-                for m in ev.get("markets") or []:
-                    close = _ts(m.get("close_time"))
-                    opened = _ts(m.get("open_time"))
-                    if close is None or opened is None or close < since:
-                        continue
-                    if n_seen >= max_markets:
-                        break
-                    n_seen += 1
-                    res = (m.get("result") or "").lower()
-                    if res not in ("yes", "no"):
-                        continue
-                    stop = close - dt.timedelta(hours=STEP_ASIDE_H)
-                    cs = _candles(series, m["ticker"], int(opened.timestamp()),
-                                  int(close.timestamp()))
-                    entry = None
-                    for ts, ybc, _low in cs:
-                        t = dt.datetime.fromtimestamp(ts, dt.timezone.utc)
-                        if t < opened + dt.timedelta(hours=ENTRY_DELAY_H) or t >= stop:
-                            continue
-                        p = price_rule(ybc, None)
-                        if p is not None:
-                            entry = (t, p)
-                            break
-                    if entry is None:
-                        continue
-                    t0, p = entry
-                    q = qty_for(p)
-                    entered += 1
-                    hit = None
-                    for ts, _ybc, low in cs:
-                        t = dt.datetime.fromtimestamp(ts, dt.timezone.utc)
-                        if t <= t0 or t >= stop:
-                            continue
-                        if low is not None and low <= p:
-                            hit = t
-                            break
-                    end_rest = hit or min(stop, close)
-                    rest_days += max(0.0, (end_rest - t0).total_seconds() / 86400.0)
-                    if hit is not None:
-                        filled += 1
-                        g = (100 if res == "yes" else 0) - p
-                        yes_won += res == "yes"
-                        pnl_c += g * q
-                        fill_pnls.append(g * q / 100.0)
-                    time.sleep(0.05)
-            cursor = data.get("cursor") or ""
-            if not cursor:
-                break
+            n_seen += 1
+            used[m["_source"]] += 1
+            res = (m.get("result") or "").lower()
+            if res not in ("yes", "no"):
+                continue
+            stop = close - dt.timedelta(hours=STEP_ASIDE_H)
+            cs = _candles(series, m["ticker"], int(opened.timestamp()),
+                          int(close.timestamp()))
+            entry = None
+            for ts, ybc, _low in cs:
+                t = dt.datetime.fromtimestamp(ts, dt.timezone.utc)
+                if t < opened + dt.timedelta(hours=ENTRY_DELAY_H) or t >= stop:
+                    continue
+                p = price_rule(ybc, None)
+                if p is not None:
+                    entry = (t, p)
+                    break
+            if entry is None:
+                continue
+            t0, p = entry
+            q = qty_for(p)
+            entered += 1
+            hit = None
+            for ts, _ybc, low in cs:
+                t = dt.datetime.fromtimestamp(ts, dt.timezone.utc)
+                if t <= t0 or t >= stop:
+                    continue
+                if low is not None and low <= p:
+                    hit = t
+                    break
+            end_rest = hit or min(stop, close)
+            rest_days += max(0.0, (end_rest - t0).total_seconds() / 86400.0)
+            if hit is not None:
+                filled += 1
+                g = (100 if res == "yes" else 0) - p
+                yes_won += res == "yes"
+                pnl_c += g * q
+                fill_pnls.append(g * q / 100.0)
+            time.sleep(0.05)
+    print(f"  markets scanned: live {used[ks.LIVE]} / historical {used[ks.HISTORICAL]}; "
+          f"read {scan.line()}")
     print(f"  markets scanned {n_seen}; entered {entered}; filled {filled} "
           f"({(filled / entered * 100) if entered else 0:.0f}%); filled that won YES {yes_won}")
     fill_usd = pnl_c / 100.0

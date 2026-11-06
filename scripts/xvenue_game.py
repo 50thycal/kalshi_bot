@@ -20,6 +20,7 @@ import json
 import re
 import time
 
+import kalshi_settled as ks  # live + historical tier market scans
 import xvenue_crypto as xc  # kalshi_candles (reliable 1-min)
 import xvenue_leadlag as xl  # _get, _num, align
 import xvenue_shock as xs  # shock_study, Shock
@@ -48,27 +49,27 @@ def _ticker_day(ticker: str) -> str:
 # --- match recent WC games across venues -------------------------------------------
 
 
+#: Kalshi market scans by tier (live / historical) — printed by main().
+SCAN = ks.ScanCount()
+
+
 def kalshi_wc_games() -> dict:
-    """(day, team) -> kalshi market ticker, for KXWCGAME per-team regulation markets."""
+    """(day, team) -> kalshi market ticker, for KXWCGAME per-team regulation markets.
+
+    The settled scan also reads Kalshi's historical tier: a game settled before the historical
+    cutoff is not served by live /markets (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md)."""
     out: dict[tuple[str, str], str] = {}
     for status in ("open", "settled"):
-        cursor = ""
-        for _ in range(8):
-            page = xl._get(f"{KALSHI}/markets?series_ticker=KXWCGAME&status={status}"
-                           f"&limit=200&cursor={cursor}")
-            mkts = (page or {}).get("markets") or []
-            for m in mkts:
-                tk = m.get("ticker") or ""
-                sub = m.get("yes_sub_title") or ""           # 'Reg Time: Portugal'
-                team = _norm(sub.split(":")[-1])
-                if not team or team == "tie":
-                    continue
-                day = _ticker_day(tk)
-                if day:
-                    out[(day, team)] = tk
-            cursor = (page or {}).get("cursor") or ""
-            if not cursor or not mkts:
-                break
+        for m in ks.iter_series_markets("KXWCGAME", status=status, max_pages=8, limit=200,
+                                        count=SCAN):
+            tk = m.get("ticker") or ""
+            sub = m.get("yes_sub_title") or ""           # 'Reg Time: Portugal'
+            team = _norm(sub.split(":")[-1])
+            if not team or team == "tie":
+                continue
+            day = _ticker_day(tk)
+            if day:
+                out[(day, team)] = tk
     return out
 
 
@@ -113,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"=== In-play game lead-lag (WC, 1-min, shock>={args.shock:g}c,"
           f" follow={args.horizon}min) ===")
     print(f"  Kalshi games: {len(kg)}  Polymarket games: {len(pg)}  matched: {len(matched)}")
+    print(f"  Kalshi scan {SCAN.line()}")
     if not matched:
         print(f"  Kalshi sample keys: {sorted(kg)[:8]}")
         print(f"  PM sample keys: {sorted(pg)[:8]}")
