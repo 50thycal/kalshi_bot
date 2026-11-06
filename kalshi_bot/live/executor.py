@@ -685,6 +685,13 @@ class LiveExecutor:
                 or repo.live_open_order_exists(session, ticker)):
             self.summary.skipped_dedup += 1
             return "gate:dedup", []
+        # 4a. §9.75: never bid a market the ACCOUNT already holds under any tag. A filled
+        #     position leaves no in-flight order, so 4 alone would let this book bid YES on a
+        #     word another book holds NO on (window-say markets are now blocked per word, not
+        #     per event), and Kalshi would net the two books' contracts.
+        if self._account_holds(session, ticker):
+            self.summary.skipped_dedup += 1
+            return "gate:held", []
         # 4b. default matching-engine shard only (§9.45). An order for a market on another shard
         #     is answered 409 and never rests — on 2026-10-01 two oil pairs (exchange_index 2)
         #     came back 409, never landed, and held both of this book's slots for hours. An

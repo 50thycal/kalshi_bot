@@ -127,15 +127,16 @@ export const ASKED = {
   groc: { when: 'Nov 5, 9:10 PM CT', q: 'We tried GROC and SAFE yesterday around 10:00 UTC, but Kalshi rejected both. Why didn’t we try placing a resting order again? What happened?' },
   book: { when: 'Nov 5', q: 'What is my expected rewards? I only see one market we have a resting order on, is there more?' },
   decide: { when: 'Nov 5, 9:10 PM CT', q: 'Also can you change your settings to be in my time zone?' },
-  built: { when: 'Nov 5, 11:05 PM CT', q: 'Answers are locked. Review that and start building.' },
+  built: { when: 'Nov 6, 5:40 AM CT', q: 'Yeah let’s set that up so we can still open up those resting orders for the incentive program.' },
 };
 
 // Round 1's answers read back (answers-2026-11-06.json) and what each one changed.
 export const BUILT = [
-  { id: 'r1-windows', title: 'Window markets: live trial', state: 'blocked', what: 'Live since Nov 5, 11:37 PM CT, but no bid can be placed yet. KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. But the bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s set (Nov 9), as it does most weeks. All 32 markets are turned away for that reason. See the new question on Decide.' },
+  { id: 'r1-windows', title: 'Window markets: live trial', state: 'built', what: 'Live since Nov 5, 11:37 PM CT. It was blocked by mmsell’s positions in the weekly set; your round-2 answer unblocks it (per-word blocking, waiting on merge). KXTRUMPSAY (the weekly series you marked Go further) joins the book: cheap YES bids only, $10, one tick behind the best price, out 48 h before the window closes. But the bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s set (Nov 9), as it does most weeks. All 32 markets are turned away for that reason. See the new question on Decide.' },
   { id: 'r1-stepaside', title: '24-hour step-aside', state: 'live', what: 'Mention-event bids now leave 24 h before the event instead of 48 h. Window markets keep 48 h. After the next two mention events I compare reward gained with fills taken.' },
   { id: 'r1-small', title: 'Skip events under $5', state: 'live', what: 'A mention event is entered only if the book’s projected reward there (held bids plus the best new ones, to their step-aside) is $5 or more.' },
   { id: 'r1-409', title: '409 fix', state: 'live', what: 'A refused (409) bid or sell is checked on the exchange at once and marked not placed, instead of after 15 minutes. This also stops maintenance 409s on resting sells being booked as “filled”.' },
+  { id: 'r2-window-event-block', title: 'Window markets: block per word', state: 'built', what: 'A window market is now refused only when another book rests on or holds that same word, not when it holds any word of the week. Dated mention events keep the whole-event block. The bot also never bids a word the account already holds under any tag, so two books never net each other.' },
   { id: 'r1-grocsafe', title: 'Crowding filter', state: 'kept', what: 'No change: GROC and SAFE stay turned away while their books are too crowded to pay.' },
   { id: 'r1-youtube', title: 'YouTube leftovers', state: 'kept', what: 'No change: held, sells stay up at 2c.' },
   { id: 'r1-tz', title: 'Central time', state: 'kept', what: 'Confirmed. Reports and check-ins stay in CT.' },

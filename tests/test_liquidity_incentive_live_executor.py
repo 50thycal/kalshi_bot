@@ -968,3 +968,15 @@ def test_every_resting_page_is_read_and_an_orphan_is_revived(settings):
         assert row.status in ("partial", "resting")  # working again: rules can cancel it
     assert [c.get("cursor") for c in client.order_calls if c.get("status") == "resting"] \
         == [None, "p2"]
+
+
+def test_a_market_the_account_holds_under_another_tag_is_refused(settings):
+    """§9.75: gate:held — never bid a word another book holds (Kalshi would net them)."""
+    _db(settings)
+    _limm_settings(settings)
+    with db.session_scope() as s:
+        s.add(m.Position(market_ticker="KXTEST-A", captured_at=datetime.now(timezone.utc),
+                         side="no", quantity=-30, quantity_fp=-30, avg_price=94.0))
+    ex = _exec(settings, client=ShardClient())
+    assert _place(ex, settings, strategy=limm.LIVE_TAG) == "gate:held"
+    assert ex.client.placed == []

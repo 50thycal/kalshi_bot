@@ -3375,3 +3375,19 @@ position block — an event any live book holds a position on is not entered —
 Ymmsell10 hold KXTRUMPSAY-26NOV09 (they trade most weekly sets). The trial cannot place while
 that holds. Put to the operator as review question `r2-window-event-block` (block window-say
 markets per word, not per week); no change without the answer.
+
+### 9.75 Window-say markets blocked per word, not per week (2026-11-06)
+
+**Read.** §9.74 went live with all 32 KXTRUMPSAY programmes refused `event_cap`: Xmmsell10 and
+Ymmsell10 hold positions in KXTRUMPSAY-26NOV09, and §9.65 refuses any event a live book holds
+a position on. mmsell trades most weekly sets, so the trial could not place.
+
+**Change (operator, 2026-11-06 5:40 AM CT, review question r2-window-event-block, option 1: "let's
+set that up so we can still open up those resting orders").** `WINDOW_SAY_BLOCK_PER_WORD`:
+`event_position_blocks(event)` is False for window-say events, so another book's position no
+longer blocks the week; the runner instead drops, before fetching, any word the account holds
+(any tag). New executor gate 4a `gate:held` (all incentive entries): never bid a market the
+account holds under any tag. A filled position leaves no in-flight order, so gate 4 alone would
+let a YES bid sit on a word mmsell holds NO on, and Kalshi would net the two. Dated mention
+events keep the whole-event block (all words of one speech resolve in the same hour). mmsell's own
+`gate:held` already refuses a word this book holds.

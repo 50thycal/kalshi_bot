@@ -251,6 +251,21 @@ WINDOW_SAY_SERIES = frozenset({"KXTRUMPSAY"})
 WINDOW_SAY_SIDE = "yes"
 #: Window bids step aside this long before the window closes (the late, hope-fades fills).
 WINDOW_ENTRY_STEP_ASIDE_HOURS = 48.0
+#: §9.75 (operator, 2026-11-06: "let's set that up so we can still open up those resting orders",
+#: review question r2-window-event-block): a window-say market is blocked per WORD, not per
+#: week. The §9.65 rule — never enter an event any live book holds a position on — exists
+#: because every word of one speech is said in the same hour; the words of a weekly window
+#: resolve separately. mmsell holds KXTRUMPSAY positions most weeks, which blocked all 32
+#: markets of the trial. A word another book rests on (dedup gate) or that the account holds
+#: (`gate:held`) is still refused.
+WINDOW_SAY_BLOCK_PER_WORD = True
+
+
+def event_position_blocks(event_ticker: str | None) -> bool:
+    """§9.75: whether a live position elsewhere in this event blocks entries in all of it —
+    True, except for a window-say event under WINDOW_SAY_BLOCK_PER_WORD."""
+    series = (event_ticker or "").split("-", 1)[0]
+    return not (WINDOW_SAY_BLOCK_PER_WORD and is_window_say(series))
 #: The measured month ends at local midnight; 04:00Z is midnight US Eastern (daylight time) and
 #: earlier than midnight Pacific, so the cutoff is never after the window has closed.
 MONTH_WINDOW_END_HOUR_UTC = 4

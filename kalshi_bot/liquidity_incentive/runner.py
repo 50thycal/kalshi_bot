@@ -138,6 +138,17 @@ def _pre_event_cutoff(row) -> datetime | None:
         program_end=_aware(row.end_date), close_time=_aware(row.close_time))
 
 
+def _account_holds(session, ticker: str | None) -> bool:
+    """§9.75: the newest position snapshot shows the account holding `ticker` (any book)."""
+    if not ticker:
+        return False
+    snap = repo.latest_position_snapshot(session, ticker)
+    if snap is None:
+        return False
+    qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
+    return qty is not None and abs(float(qty)) >= limm.EVENT_BLOCK_MIN_CONTRACTS
+
+
 def _hours_for(program, now: datetime) -> dict:
     """The two horizons `earning_hours` reads, for a programme row without a fetched book."""
     end = _aware(program.end_date)
@@ -496,11 +507,18 @@ class IncentiveLiveRunner:
         for p in candidates:
             ev = p.event_ticker or ""
             if ev and ev not in capped and ev not in position_blocked:
-                position_blocked[ev] = repo.event_has_open_live_position(
-                    session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS)
-        if any(position_blocked.values()):
+                position_blocked[ev] = limm.event_position_blocks(ev) \
+                    and repo.event_has_open_live_position(
+                        session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS)
+        # §9.75: a window-say event is blocked per word instead — drop only the words the
+        # account already holds (any book), before spending a fetch on them.
+        held_words = {p.market_ticker for p in candidates
+                      if not limm.event_position_blocks(p.event_ticker)
+                      and _account_holds(session, p.market_ticker)}
+        if any(position_blocked.values()) or held_words:
             n_before = len(candidates)
-            candidates = [p for p in candidates if not position_blocked.get(p.event_ticker or "")]
+            candidates = [p for p in candidates if not position_blocked.get(p.event_ticker or "")
+                          and p.market_ticker not in held_words]
             if len(candidates) < n_before:
                 summary["outcomes"][limm.REFUSE_EVENT_CAP] = \
                     summary["outcomes"].get(limm.REFUSE_EVENT_CAP, 0) + n_before - len(candidates)
@@ -529,8 +547,9 @@ class IncentiveLiveRunner:
                           if n >= limm.max_markets_per_event(ev)}
         for c in built:
             ev = c.get("event_ticker")
-            if ev and ev not in blocked_events and repo.event_has_open_live_position(
-                    session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS):
+            if ev and ev not in blocked_events and limm.event_position_blocks(ev) \
+                    and repo.event_has_open_live_position(
+                        session, ev, min_quantity=limm.EVENT_BLOCK_MIN_CONTRACTS):
                 blocked_events.add(ev)
         ranked = limm.rank_candidates(built, excluded_series=excluded,
                                       blocked_event_tickers=frozenset(blocked_events))

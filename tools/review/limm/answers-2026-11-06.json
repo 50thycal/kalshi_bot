@@ -2,16 +2,53 @@
   "read_at": "2026-11-06T05:05Z",
   "page": "https://claude.ai/artifact/EpuauwQqwNNoAitmxqNZNf",
   "answers": {
-    "r1-windows": {"choice": 0, "means": "start the small live trial: cheap YES, $10, behind touch, 48h step-aside, inside $100/10 cap", "at": "2026-11-06T04:58:19.904Z"},
-    "r1-grocsafe": {"choice": 0, "means": "keep the crowding filter", "at": "2026-11-06T04:58:12.241Z"},
-    "r1-409": {"choice": 0, "means": "fix: check the exchange right away on 409", "at": "2026-11-06T04:57:31.906Z"},
-    "r1-stepaside": {"choice": 0, "means": "try 24h step-aside on the next two mention events, then compare", "at": "2026-11-06T04:57:20.781Z"},
-    "r1-small": {"choice": 0, "means": "skip mention events expected to pay under $5", "at": "2026-11-06T04:56:49.482Z"},
-    "r1-youtube": {"choice": 0, "means": "hold the leftovers, sells stay up", "at": "2026-11-06T04:56:58.965Z"},
-    "r1-tz": {"choice": 0, "means": "Central time is right", "at": "2026-11-06T04:57:14.181Z"}
+    "r1-windows": {
+      "choice": 0,
+      "means": "start the small live trial: cheap YES, $10, behind touch, 48h step-aside, inside $100/10 cap",
+      "at": "2026-11-06T04:58:19.904Z"
+    },
+    "r1-grocsafe": {
+      "choice": 0,
+      "means": "keep the crowding filter",
+      "at": "2026-11-06T04:58:12.241Z"
+    },
+    "r1-409": {
+      "choice": 0,
+      "means": "fix: check the exchange right away on 409",
+      "at": "2026-11-06T04:57:31.906Z"
+    },
+    "r1-stepaside": {
+      "choice": 0,
+      "means": "try 24h step-aside on the next two mention events, then compare",
+      "at": "2026-11-06T04:57:20.781Z"
+    },
+    "r1-small": {
+      "choice": 0,
+      "means": "skip mention events expected to pay under $5",
+      "at": "2026-11-06T04:56:49.482Z"
+    },
+    "r1-youtube": {
+      "choice": 0,
+      "means": "hold the leftovers, sells stay up",
+      "at": "2026-11-06T04:56:58.965Z"
+    },
+    "r1-tz": {
+      "choice": 0,
+      "means": "Central time is right",
+      "at": "2026-11-06T04:57:14.181Z"
+    },
+    "r2-window-event-block": {
+      "choice": 0,
+      "means": "block window-say markets per word, not per week",
+      "at": "2026-11-06T11:40Z",
+      "source": "chat: \"Yeah let's set that up so we can still open up those resting order for the incentive program\""
+    }
   },
   "reviews": {
-    "win-say": {"verdict": "go", "at": "2026-11-06T05:02:29.282Z"},
+    "win-say": {
+      "verdict": "go",
+      "at": "2026-11-06T05:02:29.282Z"
+    },
     "win-month": null,
     "win-company": null
   }
