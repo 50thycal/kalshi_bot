@@ -25,6 +25,7 @@ Stdlib only, so it runs on the ops runner beside the scripts that import it
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import sys
 import time
@@ -202,6 +203,192 @@ def event_markets(event_ticker: str, tickers: Iterable[str] = (),
     if hist:
         return hist, HISTORICAL
     return [], NOT_FOUND
+
+
+# --- series scans -----------------------------------------------------------------------------
+
+def close_ts(m: dict) -> int | None:
+    """`close_time` as Unix seconds, or None when absent/unparseable."""
+    raw = str(m.get("close_time") or "")
+    if not raw:
+        return None
+    try:
+        return int(dt.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp())
+    except ValueError:
+        return None
+
+
+_CUTOFF_CACHE: dict[int, int | None] = {}
+
+
+def _as_unix(v) -> int | None:
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return int(v / 1000) if v > 1e12 else int(v)
+    if isinstance(v, str) and v:
+        if v.isdigit():
+            return _as_unix(int(v))
+        try:
+            return int(dt.datetime.fromisoformat(v.replace("Z", "+00:00")).timestamp())
+        except ValueError:
+            return None
+    return None
+
+
+def cutoff_settled_ts(get: Getter = http_get) -> int | None:
+    """`market_settled_ts` from `/historical/cutoff` as Unix seconds, read at runtime once per
+    getter and cached; None when unreadable (callers then read the historical tier anyway)."""
+    key = id(get)
+    if key not in _CUTOFF_CACHE:
+        _CUTOFF_CACHE[key] = _as_unix((cutoff(get) or {}).get("market_settled_ts"))
+    return _CUTOFF_CACHE[key]
+
+
+class ScanCount:
+    """What a series scan read, by tier, and how many tier reads FAILED.
+
+    A failed page stops that tier exactly as the scripts' own loops always stopped on an
+    unreadable page — but it is counted here and printed, so a failure can never read as
+    "the archive has nothing"."""
+
+    def __init__(self) -> None:
+        self.counts = {LIVE: 0, HISTORICAL: 0}
+        self.errors = {LIVE: 0, HISTORICAL: 0}
+        #: A tier that stopped at `max_pages` with a cursor still pending: it was NOT read to
+        #: exhaustion, so its coverage is partial (and, for the historical tier, of unverified
+        #: order — never treat a truncated historical scan as a contiguous date range).
+        self.truncated = {LIVE: False, HISTORICAL: False}
+
+    def line(self) -> str:
+        c, e, t = self.counts, self.errors, self.truncated
+        out = f"markets: live {c[LIVE]} / historical {c[HISTORICAL]}"
+        if e[LIVE] or e[HISTORICAL]:
+            out += f"  (tier read errors: live {e[LIVE]} / historical {e[HISTORICAL]})"
+        capped = [src for src in (LIVE, HISTORICAL) if t[src]]
+        if capped:
+            out += f"  (page cap hit: {', '.join(capped)})"
+        return out
+
+
+def iter_series_markets(series: str, *, status: str | None = "settled", max_pages: int = MAX_PAGES,
+                        get: Getter = http_get, count: ScanCount | None = None,
+                        min_close_ts: int | None = None, max_close_ts: int | None = None,
+                        limit: int = PAGE_LIMIT, tiers: tuple[str, ...] = (LIVE, HISTORICAL),
+                        **params):
+    """Yield one series' markets, live tier first, then the historical tier, each tagged
+    `_source`. Lazy, so a caller that stops at a count stops fetching too.
+
+    Live gets every filter (`status`, `min_close_ts`, `max_close_ts`, `**params`). The historical
+    tier is queried with `series_ticker` only — the one filter this repo has seen it honour
+    (kxrain_season_probe) — and the close-time bounds are applied client-side. It holds only
+    markets settled before the cutoff, so it is read for `status="settled"` or no status at all,
+    and skipped for any other status (an open or closed market is never in it). A ticker the live
+    tier already yielded is not yielded again. Each tier reads at most `max_pages` pages; one
+    that stops there with more pending is flagged in `count.truncated`. `tiers` restricts the
+    scan to one tier (a caller that needs to stop the live tier early, then read the archive).
+
+    With `min_close_ts` at or after the cutoff in force (`cutoff_settled_ts`, read at runtime),
+    the historical tier is skipped: a market that closed after the cutoff settled after it, so
+    it is still live. An unreadable cutoff never skips."""
+    count = count if count is not None else ScanCount()
+    seen: set[str] = set()
+    live_params = {"series_ticker": series, "status": status, "min_close_ts": min_close_ts,
+                   "max_close_ts": max_close_ts, **params}
+    plan = []
+    if LIVE in tiers:
+        plan.append(("/markets", LIVE, live_params))
+    if HISTORICAL in tiers and status in (None, "", "settled"):
+        cut = cutoff_settled_ts(get) if min_close_ts is not None else None
+        if cut is None or min_close_ts < cut:
+            plan.append(("/historical/markets", HISTORICAL, {"series_ticker": series}))
+    for path, source, base in plan:
+        cursor = ""
+        for page_no in range(max_pages):
+            try:
+                page = get(path, {**base, "limit": limit, "cursor": cursor}) or {}
+            except Exception:  # noqa: BLE001 - counted in ScanCount.errors and printed
+                count.errors[source] += 1
+                break
+            mkts = page.get("markets") or []
+            for m in mkts:
+                tk = m.get("ticker") or ""
+                if not tk or tk in seen:
+                    continue
+                if source == HISTORICAL and (min_close_ts is not None or max_close_ts is not None):
+                    ct = close_ts(m)
+                    if ct is None or (min_close_ts is not None and ct < min_close_ts) \
+                            or (max_close_ts is not None and ct > max_close_ts):
+                        continue
+                seen.add(tk)
+                m["_source"] = source
+                count.counts[source] += 1
+                yield m
+            cursor = page.get("cursor") or ""
+            if not cursor or not mkts:
+                break
+            if page_no == max_pages - 1:
+                count.truncated[source] = True
+            time.sleep(PAUSE_S)
+
+
+def series_markets(series: str, **kw) -> list[dict]:
+    """`list(iter_series_markets(...))`."""
+    return list(iter_series_markets(series, **kw))
+
+
+def source_line(markets: Iterable[dict]) -> str:
+    """`markets: live N / historical N` over a set a script KEPT (by each market's `_source`)."""
+    c = {LIVE: 0, HISTORICAL: 0}
+    for m in markets:
+        src = m.get("_source", LIVE)
+        c[src if src in c else LIVE] += 1
+    return f"markets: live {c[LIVE]} / historical {c[HISTORICAL]}"
+
+
+def report_scan(count: ScanCount, get: Getter = http_get, out=None) -> None:
+    """Print a series scan's source line and the cutoff in force."""
+    out = out or sys.stdout
+    print(count.line(), file=out)
+    cut = cutoff(get)
+    if cut:
+        print("historical cutoff: " + json.dumps(cut, sort_keys=True), file=out)
+
+
+def live_only_note(oldest_close: int | None, exhausted: bool, errors: int = 0,
+                   get: Getter = http_get) -> str:
+    """One line for a LIVE-ONLY scan that cannot read the historical tier (an all-series
+    `/events` scan: no archive scan of that shape is verified). Says whether Kalshi's
+    historical cutoff, read at runtime, can have dropped anything from it — never assumes.
+
+    `oldest_close`: the oldest close the scan reached. `exhausted`: it ran to the end of the
+    live feed (rather than a page cap). `errors`: pages that could not be read."""
+    cut = cutoff_settled_ts(get)
+    err = f"; {errors} page(s) could not be read, so the scan is PARTIAL" if errors else ""
+    if cut is None:
+        return ("historical tier not read: the cutoff is unreadable, so whether settled items "
+                "older than it are missing cannot be confirmed" + err)
+    cut_s = dt.datetime.fromtimestamp(cut, tz=dt.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
+    if exhausted:
+        return (f"historical tier not read: this scan ran to the end of the live feed, so items "
+                f"settled before the cutoff ({cut_s}) are ABSENT — no verified all-series "
+                f"archive scan exists" + err)
+    if oldest_close is not None and oldest_close > cut:
+        reached = dt.datetime.fromtimestamp(oldest_close, tz=dt.timezone.utc)
+        return (f"historical cutoff ({cut_s}) not reached: the scan stopped at its page cap at "
+                f"{reached:%Y-%m-%d}, so the cutoff dropped nothing from it" + err)
+    return (f"historical tier not read: the scan reached the cutoff ({cut_s}); items settled "
+            f"before it are ABSENT" + err)
+
+
+def result_gaps(events: Iterable[dict]) -> tuple[int, int]:
+    """(events with at least one nested market lacking a yes/no result, such markets)."""
+    n_ev = n_mk = 0
+    for ev in events:
+        bad = sum(1 for m in ev.get("markets") or [] if result_of(m) is None)
+        n_mk += bad
+        n_ev += bool(bad)
+    return n_ev, n_mk
 
 
 # --- the record -------------------------------------------------------------------------------

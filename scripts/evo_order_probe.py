@@ -277,9 +277,15 @@ def main(argv: list[str] | None = None) -> int:
               f"· created {o['created_at']} ===")
         if t not in books:
             mkt = (_get(f"/markets/{t}") or {}).get("market") or {}
+            tier = "live"
+            if not mkt:
+                # A market settled before Kalshi's historical cutoff is only served by the
+                # historical tier (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md).
+                mkt = (_get(f"/historical/markets/{t}") or {}).get("market") or {}
+                tier = "historical" if mkt else "not found"
             ob = _get(f"/markets/{t}/orderbook?depth={_DEPTH}") or {}
             raw = json.dumps(ob)
-            print(f"  market status={mkt.get('status')!r} result={mkt.get('result')!r} "
+            print(f"  market tier={tier} status={mkt.get('status')!r} result={mkt.get('result')!r} "
                   f"yes_bid={mkt.get('yes_bid_dollars') or mkt.get('yes_bid')} "
                   f"yes_ask={mkt.get('yes_ask_dollars') or mkt.get('yes_ask')} "
                   f"no_bid={mkt.get('no_bid_dollars') or mkt.get('no_bid')}")

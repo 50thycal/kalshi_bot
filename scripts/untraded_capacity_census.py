@@ -24,6 +24,7 @@ import urllib.parse
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kalshi_settled as ks  # noqa: E402
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 PAUSE_S = 0.08
@@ -105,6 +106,10 @@ def flags(category: str) -> str:
 
 
 def fetch_settled(now: int, max_pages: int) -> tuple[list[dict], int, bool]:
+    """Every settled non-parlay market closing in the window, from the live tier.
+
+    A page that cannot be read is NOT exhaustion: it stops the scan and leaves `exhausted`
+    False, so the run prints TRUNCATED rather than presenting a partial census as complete."""
     import xvenue_leadlag as xl
     out, cursor, pages = [], "", 0
     lo = now - WINDOW_DAYS * 86400
@@ -114,7 +119,10 @@ def fetch_settled(now: int, max_pages: int) -> tuple[list[dict], int, bool]:
              "max_close_ts": now, "limit": 1000}
         if cursor:
             q["cursor"] = cursor
-        page = xl._get(f"{KALSHI}/markets?{urllib.parse.urlencode(q)}") or {}
+        page = xl._get(f"{KALSHI}/markets?{urllib.parse.urlencode(q)}")
+        if page is None:
+            print(f"  settled-market page {pages + 1} could not be read; census TRUNCATED")
+            break
         mk = page.get("markets") or []
         out.extend(mk)
         pages += 1
@@ -124,6 +132,22 @@ def fetch_settled(now: int, max_pages: int) -> tuple[list[dict], int, bool]:
             break
         time.sleep(PAUSE_S)
     return out, pages, exhausted
+
+
+def cutoff_note(now: int, cutoff_ts: int | None) -> str:
+    """Whether the window lies inside Kalshi's live tier. This census reads ALL series at once,
+    and the historical tier has no all-series scan this repo has verified, so it reads live
+    only — which is complete exactly when the window starts after the historical cutoff
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). Said either way, never assumed."""
+    lo = now - WINDOW_DAYS * 86400
+    if cutoff_ts is None:
+        return ("historical cutoff unreadable: cannot confirm the window is inside the live tier; "
+                "historical tier not read")
+    if lo >= cutoff_ts:
+        return (f"window inside the live tier (starts {(lo - cutoff_ts) / 86400:.0f}d after the "
+                "historical cutoff): nothing settled in it is missing")
+    return (f"historical tier not read: the window starts {(cutoff_ts - lo) / 86400:.0f}d BEFORE "
+            "the historical cutoff, so markets settled in those days are MISSING from this census")
 
 
 def fetch_categories() -> dict[str, tuple[str, str]]:
@@ -169,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
     markets, pages, exhausted = fetch_settled(now, args.max_pages)
     print(f"settled non-parlay markets, last {WINDOW_DAYS} days: {len(markets)} in {pages} pages "
           f"({'complete' if exhausted else 'TRUNCATED at --max-pages'}) [{time.time() - t0:.0f}s]")
+    print(cutoff_note(now, ks.cutoff_settled_ts()))
     cats = fetch_categories()
     by_series: dict[str, list[dict]] = defaultdict(list)
     for m in markets:

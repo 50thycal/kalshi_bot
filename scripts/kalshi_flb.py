@@ -25,6 +25,7 @@ import calendar
 import math
 import time
 
+import kalshi_settled as ks  # live + historical tier reads
 import xvenue_leadlag as xl  # _get (browser-UA fetch), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -86,32 +87,35 @@ def discover_series(top_n: int, max_pages: int) -> list[str]:
     return sorted(vol_by_series, key=lambda s: -vol_by_series[s])[:top_n]
 
 
-def fetch_settled_for_series(series: str, per_series: int, min_vol: float) -> list[dict]:
-    """Settled single binaries for one series (newest first), with yes/no result + close."""
+def fetch_settled_for_series(series: str, per_series: int, min_vol: float,
+                             count: ks.ScanCount | None = None) -> list[dict]:
+    """Settled single binaries for one series (newest first), with yes/no result + close.
+
+    Live tier first, then Kalshi's historical tier (a settled market older than the historical
+    cutoff is only served there; docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). Each row
+    carries `source` (live/historical). Three pages per tier, as before."""
     out: list[dict] = []
-    cursor = ""
-    for _ in range(3):
-        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                       f"&limit=1000&cursor={cursor}")
-        mkts = (page or {}).get("markets") or []
-        for m in mkts:
-            res = (m.get("result") or "").lower()
-            tk = m.get("ticker") or ""
-            if res not in ("yes", "no") or tk.startswith("KXMVE"):
-                continue
-            vol = xl._num(m.get("volume_fp"))
-            if vol < min_vol:
-                continue
-            close = _close_unix(m.get("close_time"))
-            if not close:
-                continue
-            out.append({"ticker": tk, "series": series, "close": close, "result": res, "vol": vol})
-            if len(out) >= per_series:
-                return out
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not mkts:
-            break
+    for m in ks.iter_series_markets(series, max_pages=3, count=count):
+        res = (m.get("result") or "").lower()
+        tk = m.get("ticker") or ""
+        if res not in ("yes", "no") or tk.startswith("KXMVE"):
+            continue
+        vol = xl._num(m.get("volume_fp"))
+        if vol < min_vol:
+            continue
+        close = _close_unix(m.get("close_time"))
+        if not close:
+            continue
+        out.append({"ticker": tk, "series": series, "close": close, "result": res, "vol": vol,
+                    "source": m["_source"]})
+        if len(out) >= per_series:
+            return out
     return out
+
+
+def source_line(rows: list[dict]) -> str:
+    """`markets: live N / historical N` over collected rows (by their `source`)."""
+    return ks.source_line({"_source": r.get("source", ks.LIVE)} for r in rows)
 
 
 def fetch_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
@@ -120,8 +124,11 @@ def fetch_candles(series: str, ticker: str, start: int, end: int) -> dict[int, t
     s = start
     while s < end:
         e = min(s + 4800 * 60, end)
-        data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-                       f"?start_ts={s}&end_ts={e}&period_interval=1")
+        q = f"?start_ts={s}&end_ts={e}&period_interval=1"
+        data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks{q}")
+        if not (data or {}).get("candlesticks"):
+            # A market past the historical cutoff has its candles in the historical tier.
+            data = xl._get(f"{KALSHI}/historical/markets/{ticker}/candlesticks{q}")
         for c in (data or {}).get("candlesticks") or []:
             ts = c.get("end_period_ts")
             yb = (c.get("yes_bid") or {}).get("close_dollars")
@@ -205,10 +212,11 @@ def main(argv: list[str] | None = None) -> int:
 
     series_list = discover_series(args.top_series, args.max_pages)
     settled: list[dict] = []
+    scan = ks.ScanCount()
     for s in series_list:
         if args.no_sports and category(s) == "Sports":
             continue
-        settled.extend(fetch_settled_for_series(s, args.per_series, args.min_vol))
+        settled.extend(fetch_settled_for_series(s, args.per_series, args.min_vol, scan))
         if len(settled) >= args.max:
             break
     horizons = [int(x) for x in args.horizons.split(",") if x.strip()]
@@ -217,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
           f"{len(settled)} settled markets collected ===")
     step = max(1, len(settled) // args.sample)
     sample = settled[::step][:args.sample]
+    print(f"  collected {source_line(settled)}; scanned {scan.line()}")
     print(f"  pricing {len(sample)} markets at horizons {horizons} min-before-close "
           f"(one candle fetch each)\n")
 
@@ -224,10 +233,12 @@ def main(argv: list[str] | None = None) -> int:
     # rows_by_h[h] = list of (mid_c, pnl, result_yes, category)
     rows_by_h: dict[int, list] = {h: [] for h in horizons}
     fetched = 0
+    no_candles = {ks.LIVE: 0, ks.HISTORICAL: 0}
     for m in sample:
         candles = fetch_candles(m["series"], m["ticker"],
                                 m["close"] - (max_h + 45) * 60, m["close"] + 60)
         if not candles:
+            no_candles[m.get("source", ks.LIVE)] += 1
             continue
         fetched += 1
         cat = category(m["series"])
@@ -241,7 +252,8 @@ def main(argv: list[str] | None = None) -> int:
             mid, pnl = r
             rows_by_h[h].append((mid * 100.0, pnl, m["result"] == "yes", cat))
 
-    print(f"  fetched candles for {fetched} markets\n")
+    print(f"  fetched candles for {fetched} markets; no candles: live {no_candles[ks.LIVE]} / "
+          f"historical {no_candles[ks.HISTORICAL]}\n")
     fav_bands = [(50, 65), (65, 80), (80, 90), (90, 95), (95, 100)]
 
     for h in horizons:

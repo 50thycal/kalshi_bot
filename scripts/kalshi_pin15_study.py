@@ -44,6 +44,7 @@ import time
 import urllib.request
 from collections import defaultdict
 
+import kalshi_settled as ks  # live + historical tier market scans
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -76,36 +77,32 @@ def taker_fee_c(p_c: float) -> float:
 
 
 # ------------------------------------------------------------------ data sources
-def fetch_settled(series: str, pages: int, min_vol: float) -> list[dict]:
+def fetch_settled(series: str, pages: int, min_vol: float,
+                  count: ks.ScanCount | None = None) -> list[dict]:
     """Settled 15-min binaries for a series, newest first, keeping strike + time fields."""
     out: list[dict] = []
-    cursor = ""
-    for _ in range(pages):
-        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                       f"&limit=1000&cursor={cursor}")
-        mkts = (page or {}).get("markets") or []
-        for m in mkts:
-            res = (m.get("result") or "").lower()
-            if res not in ("yes", "no"):
-                continue
-            vol = xl._num(m.get("volume_fp")) or xl._num(m.get("volume"))
-            if vol < min_vol:
-                continue
-            close = _iso_to_unix(m.get("close_time"))
-            if not close:
-                continue
-            opent = _iso_to_unix(m.get("open_time")) or (close - WINDOW_SECS)
-            out.append({
-                "ticker": m.get("ticker") or "", "series": series,
-                "open": opent, "close": close, "result": res, "vol": vol,
-                "strike_type": (m.get("strike_type") or "").lower(),
-                "floor": m.get("floor_strike"), "cap": m.get("cap_strike"),
-                "sub": m.get("yes_sub_title") or m.get("subtitle") or "",
-                "settle": m.get("settlement_value") or m.get("expiration_value"),
-            })
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not mkts:
-            break
+    # Live tier, then Kalshi's historical tier (a window settled before the historical cutoff
+    # is only served there; docs/handoffs/HANDOFF-kalshi-historical-cutoff.md).
+    for m in ks.iter_series_markets(series, max_pages=pages, count=count):
+        res = (m.get("result") or "").lower()
+        if res not in ("yes", "no"):
+            continue
+        vol = xl._num(m.get("volume_fp")) or xl._num(m.get("volume"))
+        if vol < min_vol:
+            continue
+        close = _iso_to_unix(m.get("close_time"))
+        if not close:
+            continue
+        opent = _iso_to_unix(m.get("open_time")) or (close - WINDOW_SECS)
+        out.append({
+            "ticker": m.get("ticker") or "", "series": series,
+            "open": opent, "close": close, "result": res, "vol": vol,
+            "strike_type": (m.get("strike_type") or "").lower(),
+            "floor": m.get("floor_strike"), "cap": m.get("cap_strike"),
+            "sub": m.get("yes_sub_title") or m.get("subtitle") or "",
+            "settle": m.get("settlement_value") or m.get("expiration_value"),
+            "source": m["_source"],
+        })
     return out
 
 
@@ -164,8 +161,11 @@ def realized_vol_bps(ohlc: dict[int, tuple], start: int, end: int) -> float | No
 def fetch_kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
     """{minute_ts: (yes_bid_c, yes_ask_c)} from Kalshi 1-min candlesticks."""
     out: dict[int, tuple] = {}
-    data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-                   f"?start_ts={start}&end_ts={end}&period_interval=1")
+    q = f"?start_ts={start}&end_ts={end}&period_interval=1"
+    data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks{q}")
+    if not (data or {}).get("candlesticks"):
+        # A window past the historical cutoff has its candles in the historical tier.
+        data = xl._get(f"{KALSHI}/historical/markets/{ticker}/candlesticks{q}")
     for c in (data or {}).get("candlesticks") or []:
         ts = c.get("end_period_ts")
         yb = (c.get("yes_bid") or {}).get("close_dollars")
@@ -221,8 +221,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  (skip unknown asset {asset!r})")
             continue
         series, product = ASSET_MAP[asset]
-        mkts = fetch_settled(series, args.pages, args.min_vol)
+        scan = ks.ScanCount()
+        mkts = fetch_settled(series, args.pages, args.min_vol, scan)
         print(f"=== {asset} {series}: {len(mkts)} settled windows (vol>={args.min_vol:.0f}) ===")
+        print(f"  {ks.source_line({'_source': m['source']} for m in mkts)}; scanned {scan.line()}")
         if not mkts:
             continue
         struct_samples.extend({**m, "asset": asset} for m in mkts[:3])

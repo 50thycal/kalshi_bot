@@ -47,6 +47,7 @@ from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import kalshi_settled as ks  # live + historical tier reads
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -89,18 +90,46 @@ def _ts(iso: str | None) -> float:
         return 0.0
 
 
+#: The last settled_events() scan: page read errors, whether it reached the end of the feed,
+#: and the oldest market close it saw — what `report_event_scan` needs to say what it missed.
+EVENT_SCAN = {"errors": 0, "exhausted": False, "oldest_close": None}
+
+
 def settled_events(max_pages: int) -> list[dict]:
+    """Settled events with nested markets, LIVE tier only. Live /events stops serving events
+    settled before Kalshi's historical cutoff, and no all-series archive scan is verified, so
+    this cannot read the historical tier; `report_event_scan` says whether that lost anything
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). An unreadable page is counted, not
+    read as the end of the feed."""
     out, cursor = [], ""
+    EVENT_SCAN.update(errors=0, exhausted=False, oldest_close=None)
     for _ in range(max_pages):
         page = xl._get(f"{KALSHI}/events?status=settled&with_nested_markets=true"
                        f"&limit=200&cursor={cursor}")
-        evs = (page or {}).get("events") or []
+        if page is None:
+            EVENT_SCAN["errors"] += 1
+            break
+        evs = page.get("events") or []
         out.extend(evs)
-        cursor = (page or {}).get("cursor") or ""
+        for ev in evs:
+            for m in ev.get("markets") or []:
+                c = ks.close_ts(m)
+                if c is not None and (EVENT_SCAN["oldest_close"] is None
+                                      or c < EVENT_SCAN["oldest_close"]):
+                    EVENT_SCAN["oldest_close"] = c
+        cursor = page.get("cursor") or ""
         if not cursor or not evs:
+            EVENT_SCAN["exhausted"] = True
             break
         time.sleep(0.05)
     return out
+
+
+def report_event_scan(events: list[dict]) -> None:
+    n_ev, n_mk = ks.result_gaps(events)
+    print(f"  events with a market lacking a yes/no result: {n_ev} ({n_mk} markets)")
+    print("  " + ks.live_only_note(EVENT_SCAN["oldest_close"], EVENT_SCAN["exhausted"],
+                                   EVENT_SCAN["errors"]))
 
 
 def trades(ticker: str, max_pages: int = 5) -> list[dict]:
@@ -116,19 +145,15 @@ def trades(ticker: str, max_pages: int = 5) -> list[dict]:
     return out
 
 
+#: Per-series settled scans by tier (live / historical) — printed by main().
+SERIES_SCAN = ks.ScanCount()
+
+
 def series_settled_markets(series: str, max_pages: int = 10) -> list[dict]:
-    """Full settled-market history for one series via /markets (deeper than the event scan)."""
-    out, cursor = [], ""
-    for _ in range(max_pages):
-        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
-                       f"&limit=200&cursor={cursor}")
-        rows = (page or {}).get("markets") or []
-        out.extend(rows)
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not rows:
-            break
-        time.sleep(0.05)
-    return out
+    """Full settled-market history for one series via /markets (deeper than the event scan):
+    the live tier, then Kalshi's historical tier, where markets settled before the historical
+    cutoff live (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md). Each is tagged `_source`."""
+    return ks.series_markets(series, max_pages=max_pages, limit=200, count=SERIES_SCAN)
 
 
 def markets_to_events(markets: list[dict]) -> list[dict]:
@@ -283,6 +308,7 @@ def main(argv: list[str] | None = None) -> int:
     print("PINNED probe — post-pin discount study (pre-registered docs/IDEA_MODEL_20260710.md)")
     events = settled_events(args.max_event_pages)
     print(f"settled events scanned: {len(events)}")
+    report_event_scan(events)
 
     r_targets: list[tuple[dict, dict, tuple[int, int], str]] = []  # (event, market, hhmm, key)
     for ev in events:
@@ -317,7 +343,9 @@ def main(argv: list[str] | None = None) -> int:
                 g_pins[m["ticker"]] = hit
                 g_lookup[m["ticker"]] = (m, series)
                 n_pin += 1
-        print(f"  G-series {series}: {len(mkts)} settled markets, {n_pin} pinned")
+        print(f"  G-series {series}: {len(mkts)} settled markets, {n_pin} pinned  "
+              f"({ks.source_line(mkts)})")
+    print(f"  G-series settled scans read {SERIES_SCAN.line()}")
     print(f"R-family (release) settled markets: {len(r_targets)}; "
           f"G-family pinned markets: {len(g_pins)} across {len(G_TARGET_SERIES)} series")
 

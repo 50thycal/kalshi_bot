@@ -153,6 +153,40 @@ def test_detail_survives_a_finalized_market_with_no_live_book(monkeypatch):
     assert "no live book" in text
 
 
+def test_detail_reads_a_market_past_the_historical_cutoff(monkeypatch):
+    # docs/handoffs/HANDOFF-kalshi-historical-cutoff.md: live /markets/{t} stops serving a market
+    # settled before the cutoff; the detail view must fall through to the historical tier and
+    # say which tier answered, rather than report "not found".
+    market = _market(status="finalized", result="no", yes_bid=0, yes_ask=None, no_bid=0,
+                     no_ask=None, last_price=3, rules_primary="If X then Yes.")
+    calls = []
+
+    def fake_get(path, params=None):
+        calls.append(path)
+        if path.startswith("/historical/markets/"):
+            return {"market": market}
+        if path.startswith("/events/"):
+            return {"event": {"category": "Economics", "title": "Test event"}}
+        return {}
+
+    monkeypatch.setattr(board, "_get", fake_get)
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = board.main(["--ticker", "KXTEST-26JUL20-T1"])
+    assert rc == 0
+    text = out.getvalue()
+    assert "tier historical" in text and "result     no" in text
+    assert calls[0] == "/markets/KXTEST-26JUL20-T1"
+
+
+def test_detail_not_found_in_either_tier(monkeypatch):
+    monkeypatch.setattr(board, "_get", lambda path, params=None: {})
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = board.main(["--ticker", "KXGONE-1"])
+    assert rc == 1 and "live or historical tier" in out.getvalue()
+
+
 def test_book_levels_sort_best_first_and_tolerate_dollar_strings():
     book = {"yes": [[40, 10], [42, 5], ["0.41", "7"]], "no": [[56, 3]]}
     assert board._book_levels(book, "yes", 6) == [(42, 5), (41, 7), (40, 10)]

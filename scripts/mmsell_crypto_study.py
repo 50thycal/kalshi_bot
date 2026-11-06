@@ -224,6 +224,8 @@ def build_entries(series_list, per_series, min_vol, sample, band, htc, path_days
         if verbose:
             print(f"  {s}: {len(got)} settled markets")
         settled.extend(got)
+    # Settled markets past Kalshi's historical cutoff come from the historical tier.
+    print(f"  collected {flb.source_line(settled)}")
     if not settled:
         return [], 0
     step = max(1, len(settled) // sample)

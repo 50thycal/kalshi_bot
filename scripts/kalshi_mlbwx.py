@@ -51,6 +51,7 @@ import urllib.parse
 from collections import defaultdict
 from datetime import datetime, timezone
 
+import kalshi_settled as ks  # live + historical tier market scans
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -103,20 +104,15 @@ _MON = {m: i + 1 for i, m in enumerate(
 # --- Kalshi ------------------------------------------------------------------------
 
 
+#: What every Kalshi market scan read, by tier (live / historical) — printed by main().
+SCAN = ks.ScanCount()
+
+
 def kalshi_markets(series: str, status: str = "") -> list[dict]:
-    out: list[dict] = []
-    cursor = ""
-    for _ in range(30):
-        q = f"series_ticker={series}&limit=200&cursor={cursor}"
-        if status:
-            q += f"&status={status}"
-        page = xl._get(f"{KALSHI}/markets?{q}")
-        mkts = (page or {}).get("markets") or []
-        out.extend(mkts)
-        cursor = (page or {}).get("cursor") or ""
-        if not cursor or not mkts:
-            break
-    return out
+    """Live tier, then Kalshi's historical tier for settled (or any-status) scans: a market
+    settled before the historical cutoff is only served there
+    (docs/handoffs/HANDOFF-kalshi-historical-cutoff.md)."""
+    return ks.series_markets(series, status=status or None, max_pages=30, limit=200, count=SCAN)
 
 
 def series_exists(series: str) -> int:
@@ -131,9 +127,11 @@ def kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict[int, 
     s = start
     while s < end:
         e = min(s + 4800 * 60, end)
-        url = (f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
-               f"?start_ts={s}&end_ts={e}&period_interval=1")
-        data = xl._get(url)
+        q = f"?start_ts={s}&end_ts={e}&period_interval=1"
+        data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks{q}")
+        if not (data or {}).get("candlesticks"):
+            # A market past the historical cutoff has its candles in the historical tier.
+            data = xl._get(f"{KALSHI}/historical/markets/{ticker}/candlesticks{q}")
         for c in (data or {}).get("candlesticks") or []:
             ts = c.get("end_period_ts")
             if ts is None:
@@ -352,6 +350,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- group total markets by game, collect strikes ---
     markets = {m.get("ticker"): m for m in
                kalshi_markets(args.series) + kalshi_markets(args.series, status="settled")}
+    print(f"  {ks.source_line(markets.values())} (series {args.series}); scanned {SCAN.line()}")
     games: dict[tuple[str, str, str, int], list[dict]] = defaultdict(list)
     for tk, m in markets.items():
         info = parse_total_ticker(tk or "")

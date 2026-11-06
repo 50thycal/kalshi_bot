@@ -6,6 +6,7 @@ dropped; any other error is raised, not swallowed. No network: a fake getter pla
 
 from __future__ import annotations
 
+import datetime as dt
 import importlib.util
 import io
 import pathlib
@@ -72,6 +73,7 @@ def _m(ticker: str, result: str = "yes") -> dict:
 @pytest.fixture(autouse=True)
 def _fresh(monkeypatch):
     monkeypatch.setattr(ks, "_HIST_EVENT_FILTER", None)
+    monkeypatch.setattr(ks, "_CUTOFF_CACHE", {})
     monkeypatch.setattr(ks.time, "sleep", lambda s: None)
 
 
@@ -232,3 +234,187 @@ def test_no_cutoff_date_is_hardcoded():
     src = (_SCRIPTS / "kalshi_settled.py").read_text()
     assert not re.search(r"20\d\d-\d\d-\d\d", src)
     assert not re.search(r"\b1[6-9]\d{8}\b", src), "no epoch-seconds literal"
+
+
+# --- series scans -----------------------------------------------------------------------------
+
+class FakeSeries:
+    """`/markets` and `/historical/markets` filtered by series_ticker, paged by `page_size`.
+    Records every call so a test can see which filters reached which tier."""
+
+    def __init__(self, live=(), hist=(), *, page_size=2, fail=None):
+        self.tiers = {"/markets": list(live), "/historical/markets": list(hist)}
+        self.page_size = page_size
+        self.fail = fail or {}
+        self.calls: list[tuple[str, dict]] = []
+
+    def __call__(self, path, params):
+        self.calls.append((path, dict(params)))
+        if path == "/historical/cutoff":
+            return {"market_settled_ts": "runtime-value"}
+        if path in self.fail:
+            raise _err(self.fail[path])
+        rows = [m for m in self.tiers[path] if m["ticker"].startswith(params["series_ticker"] + "-")]
+        start = int(params.get("cursor") or 0)
+        chunk = rows[start:start + self.page_size]
+        nxt = start + self.page_size
+        return {"markets": [dict(m) for m in chunk], "cursor": str(nxt) if nxt < len(rows) else ""}
+
+
+def _sm(ticker, close="2026-01-01T00:00:00Z", result="yes"):
+    return {"ticker": ticker, "close_time": close, "result": result}
+
+
+def _iso(t: int) -> str:
+    return dt.datetime.fromtimestamp(t, tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_series_scan_reads_live_then_historical_and_tags_the_source():
+    k = FakeSeries(live=[_sm("S-1"), _sm("S-2"), _sm("S-3")], hist=[_sm("S-4"), _sm("S-5")])
+    count = ks.ScanCount()
+    ms = ks.series_markets("S", get=k, count=count)
+    assert [m["ticker"] for m in ms] == ["S-1", "S-2", "S-3", "S-4", "S-5"]
+    assert [m["_source"] for m in ms] == ["live"] * 3 + ["historical"] * 2
+    assert count.line() == "markets: live 3 / historical 2"
+    assert ks.source_line(ms[:4]) == "markets: live 3 / historical 1"
+
+
+def test_series_scan_sends_only_series_ticker_to_the_historical_tier():
+    k = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")])
+    ks.series_markets("S", get=k, min_close_ts=0, mve_filter="exclude")
+    live = [q for p, q in k.calls if p == "/markets"]
+    hist = [q for p, q in k.calls if p == "/historical/markets"]
+    assert live[0]["status"] == "settled" and live[0]["mve_filter"] == "exclude"
+    assert live[0]["min_close_ts"] == 0
+    assert hist and all(set(q) == {"series_ticker", "limit", "cursor"} for q in hist)
+
+
+def test_series_scan_dedups_a_ticker_in_both_tiers():
+    k = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-1", result="no"), _sm("S-2")])
+    ms = ks.series_markets("S", get=k)
+    assert [(m["ticker"], m["_source"]) for m in ms] == [("S-1", "live"), ("S-2", "historical")]
+
+
+def test_series_scan_applies_close_bounds_client_side_on_historical():
+    k = FakeSeries(hist=[_sm("S-old", _iso(500)), _sm("S-in", _iso(1_500)),
+                         _sm("S-new", _iso(2_500)), {"ticker": "S-noclose", "result": "yes"}])
+    ms = ks.series_markets("S", get=k, min_close_ts=1_000, max_close_ts=2_000)
+    assert [m["ticker"] for m in ms] == ["S-in"]
+
+
+def test_series_scan_skips_historical_for_a_non_settled_status():
+    k = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")])
+    ms = ks.series_markets("S", get=k, status="open")
+    assert [m["ticker"] for m in ms] == ["S-1"]
+    assert not any(p == "/historical/markets" for p, _ in k.calls)
+    k2 = FakeSeries(hist=[_sm("S-2")])
+    assert [m["ticker"] for m in ks.series_markets("S", get=k2, status=None)] == ["S-2"]
+
+
+def test_series_scan_is_lazy_so_a_count_stop_never_reaches_historical():
+    k = FakeSeries(live=[_sm("S-1"), _sm("S-2"), _sm("S-3")], hist=[_sm("S-4")])
+    it = ks.iter_series_markets("S", get=k)
+    assert [next(it)["ticker"] for _ in range(2)] == ["S-1", "S-2"]
+    assert not any(p == "/historical/markets" for p, _ in k.calls)
+
+
+def test_series_scan_respects_max_pages_per_tier_and_flags_truncation():
+    k = FakeSeries(live=[_sm(f"S-{i}") for i in range(10)], hist=[_sm(f"S-h{i}") for i in range(10)])
+    count = ks.ScanCount()
+    ms = ks.series_markets("S", get=k, max_pages=2, count=count)
+    assert len(ms) == 8   # 2 pages x 2 per page, per tier
+    assert count.truncated == {"live": True, "historical": True}
+    assert "page cap hit: live, historical" in count.line()
+    exhausted = ks.ScanCount()
+    ks.series_markets("S", get=FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")]), count=exhausted)
+    assert exhausted.truncated == {"live": False, "historical": False}
+
+
+class CutoffSeries(FakeSeries):
+    def __init__(self, cutoff, **kw):
+        super().__init__(**kw)
+        self.cutoff_value = cutoff
+
+    def __call__(self, path, params):
+        if path == "/historical/cutoff":
+            self.calls.append((path, dict(params)))
+            if isinstance(self.cutoff_value, Exception):
+                raise self.cutoff_value
+            return {"market_settled_ts": self.cutoff_value}
+        return super().__call__(path, params)
+
+
+def test_cutoff_parses_seconds_milliseconds_and_iso():
+    assert ks._as_unix(1_700_000_000) == 1_700_000_000
+    assert ks._as_unix(1_700_000_000_000) == 1_700_000_000
+    assert ks._as_unix("1700000000") == 1_700_000_000
+    assert ks._as_unix(_iso(1_700_000_000)) == 1_700_000_000
+    assert ks._as_unix("garbage") is None and ks._as_unix(None) is None
+
+
+@pytest.mark.parametrize("cut", [5_000, "5000", _iso(5_000)])
+def test_a_window_newer_than_the_runtime_cutoff_skips_the_archive(cut):
+    k = CutoffSeries(cut, live=[_sm("S-1", _iso(6_000))], hist=[_sm("S-2", _iso(6_000))])
+    ms = ks.series_markets("S", get=k, min_close_ts=5_500)
+    assert [m["ticker"] for m in ms] == ["S-1"]
+    assert not any(p == "/historical/markets" for p, _ in k.calls)
+
+
+def test_a_window_reaching_past_the_cutoff_reads_the_archive():
+    k = CutoffSeries(5_000, live=[_sm("S-1", _iso(6_000))], hist=[_sm("S-2", _iso(4_800))])
+    ms = ks.series_markets("S", get=k, min_close_ts=4_000)
+    assert [m["ticker"] for m in ms] == ["S-1", "S-2"]
+
+
+@pytest.mark.parametrize("cut", [None, "garbage", _err(500)])
+def test_an_unreadable_cutoff_never_skips_the_archive(cut):
+    k = CutoffSeries(cut, hist=[_sm("S-2", _iso(9_000))])
+    assert [m["ticker"] for m in ks.series_markets("S", get=k, min_close_ts=8_000)] == ["S-2"]
+
+
+def test_series_scan_can_read_one_tier():
+    k = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")])
+    assert [m["ticker"] for m in ks.series_markets("S", get=k, tiers=(ks.HISTORICAL,))] == ["S-2"]
+    assert not any(p == "/markets" for p, _ in k.calls)
+    k2 = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")])
+    assert [m["ticker"] for m in ks.series_markets("S", get=k2, tiers=(ks.LIVE,))] == ["S-1"]
+
+
+def test_a_failed_tier_read_is_counted_never_silent():
+    k = FakeSeries(live=[_sm("S-1")], hist=[_sm("S-2")], fail={"/historical/markets": 500})
+    count = ks.ScanCount()
+    ms = ks.series_markets("S", get=k, count=count)
+    assert [m["ticker"] for m in ms] == ["S-1"]
+    assert count.errors == {"live": 0, "historical": 1}
+    assert "tier read errors: live 0 / historical 1" in count.line()
+
+
+def test_report_scan_prints_the_line_and_the_cutoff():
+    out = io.StringIO()
+    count = ks.ScanCount()
+    ks.series_markets("S", get=FakeSeries(hist=[_sm("S-1")]), count=count)
+    ks.report_scan(count, get=FakeSeries(), out=out)
+    assert "markets: live 0 / historical 1" in out.getvalue()
+    assert "runtime-value" in out.getvalue()
+
+
+# --- live-only scans (all-series /events) ------------------------------------------------------
+
+def test_live_only_note_says_what_the_cutoff_cost():
+    k = CutoffSeries(5_000)
+    assert "ABSENT" in ks.live_only_note(6_000, exhausted=True, get=k)
+    assert "dropped nothing" in ks.live_only_note(6_000, exhausted=False, get=k)
+    assert "ABSENT" in ks.live_only_note(4_000, exhausted=False, get=k)
+    assert "PARTIAL" in ks.live_only_note(6_000, exhausted=False, errors=2, get=k)
+
+
+def test_live_only_note_with_an_unreadable_cutoff_never_claims_completeness():
+    note = ks.live_only_note(6_000, exhausted=False, get=CutoffSeries(_err(500)))
+    assert "cannot be confirmed" in note and "dropped nothing" not in note
+
+
+def test_result_gaps_counts_events_and_markets():
+    evs = [{"markets": [{"result": "yes"}, {"result": ""}]},
+           {"markets": [{"result": "no"}]},
+           {"markets": [{}, {"result": "void"}]}]
+    assert ks.result_gaps(evs) == (2, 3)
