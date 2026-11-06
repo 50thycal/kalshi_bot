@@ -1,12 +1,12 @@
 # ops request [READ]
-# type=xos  id=rl-ct-volclock-1106a
-# code 437cba0c3f436c04ad2b9f39c71e513f7165e5be · started 2026-11-06T05:16:16Z
+# type=xos  id=rl-ct-volclock-1106b
+# code 437cba0c3f436c04ad2b9f39c71e513f7165e5be · started 2026-11-06T05:21:12Z
 SESSION: Experiment Control Tower
 MODE: READ ONLY
 EXPERIMENT OS: experiment_os:pr4+metrics_engine:pr3_v1
 ENFORCEMENT: NEW_ONLY since 2026-08-16 14:34:42.892897+00:00 (cutover prod-new-only-20260816)
 PLATFORM SNAPSHOT: 55b51990e0492e4b…
-AS OF: 2026-11-05 23:16 CST
+AS OF: 2026-11-05 23:21 CST
 
 GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator result can authorize a transition.
 
@@ -30,9 +30,9 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     issue       severity  pri  classification  owner                   status           scope                                                              age    latest evidence                                             
     ----------  --------  ---  --------------  ----------------------  ---------------  -----------------------------------------------------------------  -----  ------------------------------------------------------------
     XOS-000020  HIGH      P1   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-capacity                                      61.7d  RESEARCH_DOCUMENT: NEGATIVE result recorded so it is not re-
-    XOS-000022  MEDIUM    P1   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  mmsell-price-ceiling · v2                                          61.0d  OPS_RESULT: First production run of the detector (post-merge
+    XOS-000022  MEDIUM    P1   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  mmsell-price-ceiling · v2                                          61.1d  OPS_RESULT: First production run of the detector (post-merge
     XOS-000038  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e2 · mmsell-sizesplit-live-1  32.6d  OPS_RESULT: 24h validation 2026-10-05T18Z (epoch 3, Jmmsell1
-    XOS-000040  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  27.6d  (no evidence recorded)                                      
+    XOS-000040  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  27.7d  (no evidence recorded)                                      
     XOS-000014  HIGH      P2   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1               67.6d  OPS_RESULT: THIS PROBLEM IS ALREADY GONE, AND NOT BY OUR HAN
     XOS-000015  HIGH      P2   OPS             LIVE_OPS                OPEN             system-wide                                                        66.7d  (no evidence recorded)                                      
     XOS-000031  HIGH      P2   DATA            LIVE_OPS                OPEN             system-wide                                                        56.6d  RESEARCH_DOCUMENT: Population-scale reproduction of this iss
@@ -55,7 +55,7 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     XOS-000009  LOW       P3   STRATEGY        RESEARCH_LAB            TRIAGE           system-wide                                                        73.6d  RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog stud
     XOS-000010  LOW       P3   OPS             LIVE_OPS                OPEN             system-wide                                                        73.3d  (no evidence recorded)                                      
     XOS-000017  LOW       P3   UNCLASSIFIED    OPERATOR                OPEN             system-wide                                                        64.7d  (no evidence recorded)                                      
-    XOS-000039  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  27.6d  RESEARCH_DOCUMENT: Proposed lift criterion for KXITFMATCH on
+    XOS-000039  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  27.7d  RESEARCH_DOCUMENT: Proposed lift criterion for KXITFMATCH on
     XOS-000041  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  27.0d  (no evidence recorded)                                      
     XOS-000043  LOW       P3   OPS             TASK_SPECIFIC           OPEN             system-wide                                                        25.5d  (no evidence recorded)                                      
     XOS-000046  LOW       P3   STRATEGY        RESEARCH_LAB            VALIDATING       system-wide                                                        24.1d  RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog stud
@@ -110,6 +110,8 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight                                 unresolved platform impact MARKET_TAXONOMY:football_cove
     platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                          pending revision EXECUTION_ENGINE:shared_primary_ownersh
     platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                          pending revision MARKET_TAXONOMY:football_coverage_2026_
+    ops.collector_health                  MEDIUM    P2   OPS             LIVE_OPS                system-wide                                       collector crypto_spot_candles is STALE                  
+    ops.collector_health                  MEDIUM    P2   OPS             LIVE_OPS                system-wide                                       collector crypto_ladder_snapshots is STALE              
     experiment.zero_evidence              LOW       P2   UNCLASSIFIED    LIVE_OPS                liquidity-incentive-mm                            liquidity-incentive-mm is deployed but has produced zero
     gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight · paper_keep                    paper_keep is BLOCKED_PLATFORM                          
     gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · live_canary_keep         live_canary_keep is BLOCKED_PLATFORM                    
@@ -133,6 +135,10 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
         adopt: issue open-candidate 37ab767067d625f5eb4ba73f0bfc60b8b1ef2c808382288943a9975a843982b2
     platform · platform.revision_unsafe_to_activate: unaccounted: ['mmsell-mentions-forward', 'mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-3']
         adopt: issue open-candidate 900af73b76a5b5217106c0c1f5ef0d31da03947f75ea23d93ddd2e4900d4d536
+    system-wide · ops.collector_health: starved evidence fails no gate
+        adopt: issue open-candidate ea72b8c3add8f2187d5494fb1235df9477b69bf7d2c17b080dcf7743f30282cf
+    system-wide · ops.collector_health: starved evidence fails no gate
+        adopt: issue open-candidate 974983f926be8069e5adb73c2691c6839411a41c54a8bcff50f6214decc8c587
     liquidity-incentive-mm · experiment.zero_evidence: cause unknown: broken runtime/config/wiring, enforcement rejection, filters eliminating every candidate, or genuinely no qualifying opportunities
         adopt: issue open-candidate 0e41bfcb4a65f3d264d43dc1a0e9657dc5851c1d6f298d8afd2241011249cd9a
     mmsell-type-tight · paper_keep · gate.blocked: MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
@@ -156,10 +162,10 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     mmsell-correlation-cap     v1/e1      contest_capped  4340  1.36     1.11             none/NOT_STARTED  2026-11-06 04:58:40.360903+00:00
     mmsell-mentions-forward    v1/e1      -               -     -        1.38             none/NOT_STARTED  2026-11-06 04:58:40.395217+00:00
     mmsell-rain-season         v1/e1      rain_adjacent   66    10.61    4.88             none/NOT_STARTED  2026-11-05 17:02:55.345171+00:00
-    mmsell-temperature-season  v1/e1      -               -     -        1.07             none/NOT_STARTED  2026-11-06 04:26:25.559789+00:00
-    mmsell-type-tight          v1/e3      Tmmsell6        467   1.32     -                BLOCKED_PLATFORM  2026-11-06 04:58:40.339056+00:00
-    mmsell-weather-bands       v1/e1      hight_ultra     1004  1.47     0.73             none/NOT_STARTED  2026-11-06 04:26:26.702018+00:00
-    mmsell-wide-control        v1/e1      -               -     -        1.90             no gate           2026-11-06 04:58:21.767757+00:00
+    mmsell-temperature-season  v1/e1      -               -     -        1.07             none/NOT_STARTED  2026-11-06 05:22:23.918497+00:00
+    mmsell-type-tight          v1/e3      Tmmsell6        467   1.32     -                BLOCKED_PLATFORM  2026-11-06 05:22:12.756202+00:00
+    mmsell-weather-bands       v1/e1      hight_ultra     1004  1.47     0.73             none/NOT_STARTED  2026-11-06 05:22:22.225974+00:00
+    mmsell-wide-control        v1/e1      -               -     -        1.90             no gate           2026-11-06 05:21:52.009384+00:00
 
 === LIVE_CANARY (3) ===
     experiment                        live                     twin                     boundary  resting  held  at risk  gate            
@@ -220,13 +226,13 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 === DATA COLLECTORS ===
     collector                 status  age_min  cadence
     ------------------------  ------  -------  -------
-    weather_forecasts         fresh   3.20     15     
-    weather_observations      fresh   16.90    15     
-    weather_ensembles         fresh   14.30    60     
-    weather_bucket_snapshots  fresh   3.20     5      
-    crypto_spot_candles       fresh   11.60    5      
-    crypto_ladder_snapshots   fresh   10.60    5      
-    mmsell_position_ticks     fresh   3.40     5      
+    weather_forecasts         fresh   7.80     15     
+    weather_observations      fresh   21.40    15     
+    weather_ensembles         fresh   18.90    60     
+    weather_bucket_snapshots  fresh   7.80     5      
+    crypto_spot_candles       STALE   16.20    5      
+    crypto_ladder_snapshots   STALE   15.20    5      
+    mmsell_position_ticks     fresh   8        5      
 
     NOT ACTIVE IN THIS DEPLOYMENT (no data for >7d) — informational, NOT an outage:
         market_snapshots: INACTIVE, last write 150.6d ago — scanner-mode table; the live worker does not write it
@@ -237,7 +243,7 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     own, the cause of a blocked gate — see BLOCKED EVIDENCE for the evaluator's actual reasons.
 
 === PORTFOLIO (north star: $100/month realized) ===
-    PAPER realized 30d: $4531.55  (all-time $10254.5)  → AHEAD by $4431.55
+    PAPER realized 30d: $4533.38  (all-time $10254.5)  → AHEAD by $4433.38
     Paper assumes fills it would not always get; the north star is REAL money. Live realized is per-canary — see `mmsell_live` / `live_paper_parity`.
 
 === READY / DUE ===
@@ -260,6 +266,7 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     5 retired record(s) carry NO retired_at — undated legacy history, not recent: live-shape-probe, origin-scanner-books, wcprop, weather-legacy-cells, xgame
 
 === RECOMMENDED NEXT ACTIONS ===
+    - collector health: crypto_spot_candles(STALE), crypto_ladder_snapshots(STALE) — Live Ops owns collector health; starved evidence fails no gate
     - blocked evidence — liquidity-incentive-mm·live_canary_keep, liquidity-incentive-mm·paper_to_live_smoke, liquidity-incentive-mm·shadow_instrument_ready, mmsell-type-tight·paper_keep → Platform Change Review — evidence comparability across a platform revision is what is blocking
     - unresolved platform-impact dispositions — Platform Change Review
     - liquidity-incentive-mm: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
@@ -271,6 +278,8 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     - mmsell-type-tight: unresolved platform impact MARKET_TAXONOMY:football_coverage_2026_10_12 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
     - platform: pending revision EXECUTION_ENGINE:shared_primary_ownership_20260921 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
     - platform: pending revision MARKET_TAXONOMY:football_coverage_2026_10_12 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
+    - system-wide: collector crypto_spot_candles is STALE — NO open issue covers this; recommended owner LIVE_OPS [OPS/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
+    - system-wide: collector crypto_ladder_snapshots is STALE — NO open issue covers this; recommended owner LIVE_OPS [OPS/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
     - liquidity-incentive-mm: liquidity-incentive-mm is deployed but has produced zero evidence — NO open issue covers this; recommended owner LIVE_OPS [UNCLASSIFIED/LOW/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
     - mmsell-type-tight · paper_keep: paper_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
     - liquidity-incentive-mm · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)

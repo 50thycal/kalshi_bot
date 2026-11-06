@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "437cba0c3f436c04ad2b9f39c71e513f7165e5be",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-06T05:28:41Z",
+  "id": "rl-ct-volclock-1106b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-ct-volclock-1106b.receipt.json",
+  "result_file": "ops/results/rl-ct-volclock-1106b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42167889098",
+  "service": null,
+  "started_at": "2026-11-06T05:21:12Z",
+  "targets": [],
+  "type": "xos"
+}
