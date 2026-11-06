@@ -1,4 +1,37 @@
 # ops request [READ]
-# type=noop
-# code 1958bc6595d054bbaecfd8b97fa234d780675a91 · started 2026-11-06T15:23:19Z
-(noop — nothing to do)
+# type=db  id=aud-1106a
+# code 7efde515b78359942e751012b5b6f4d7a0609d36 · started 2026-11-06T16:15:07Z
+market_ticker            at                                best_yes_bid  best_no_bid  trades_last_5m
+-----------------------  --------------------------------  ------------  -----------  --------------
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:42:53.227724+00:00  15            69           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:37:52.866478+00:00  13            67           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:35:43.290525+00:00  13            67                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:32:52.174028+00:00  10            63           6             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:27:51.808755+00:00  10            80           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:23:39.183371+00:00  10            79                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:21:13.015349+00:00  9             79           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:16:12.423791+00:00  10            79           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:13:09.376413+00:00  11            78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:11:08.935797+00:00  7             79           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:06:08.422730+00:00  10            79           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:01:55.299878+00:00  9             78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 15:01:08.117698+00:00  9             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:56:07.798101+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:51:07.291671+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:49:25.592866+00:00  8             78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:46:07.168330+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:41:06.757687+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:39:03.668102+00:00  8             78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:36:06.030695+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:31:05.386132+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:26:41.990882+00:00  8             78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:26:05.230472+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:21:05.195669+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:16:18.088162+00:00  8             78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:16:04.438964+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:11:01.074747+00:00  8             78           0             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:06:00.387973+00:00  11            78           2             
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:05:27.698494+00:00  10            78                         
+KXTRUMPSAY-26NOV09-AUTO  2026-11-06 14:01:00.077074+00:00  8             88           0             
+
+(30 rows)
