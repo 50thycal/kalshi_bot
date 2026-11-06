@@ -1,4 +1,38 @@
 # ops request [READ]
-# type=noop
-# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:16:42Z
-(noop — nothing to do)
+# type=script
+# code 9d9c674ebe3950a235827a12c3da17c3b53fba28 · started 2026-11-06T03:16:51Z
+LIMM window probe — say-X-before-date windows, cheap YES side (pre-registered docs/LIMM_WINDOW_PROBE.md)
+
+running programmes in KXTRUMPSAY, KXTRUMPSAYMONTH, KXTRUMPSAYCOMPANY: 114
+
+== A. NOW — running window programmes, $10 YES bid by the live rule
+  series                  mkts YEScheap NOcheap  qual $/day all
+  KXTRUMPSAY                39       12       1    11     14.47
+  KXTRUMPSAYCOMPANY         53        5       5     5      2.22
+  KXTRUMPSAYMONTH           22        0       2     0      0.00
+  top markets: $/day  ticker  yes_bid -> our price x qty  pool  days-left-before-step-aside
+      1.97  KXTRUMPSAY-26NOV09-HOUT                     8c ->  3c x333 $   90   1.5d
+      1.79  KXTRUMPSAY-26NOV09-PRED                     3c ->  2c x500 $   90   1.5d
+      1.56  KXTRUMPSAY-26NOV09-CYBE                     7c ->  2c x500 $   90   1.5d
+      1.49  KXTRUMPSAY-26NOV09-PEAC                     6c ->  2c x500 $   90   1.5d
+      1.45  KXTRUMPSAY-26NOV09-CRYP                     7c ->  2c x500 $   90   1.5d
+      1.42  KXTRUMPSAY-26NOV09-URAN                     5c ->  2c x500 $   90   1.5d
+      1.14  KXTRUMPSAY-26NOV09-UFO                      4c ->  3c x333 $   90   1.5d
+      1.07  KXTRUMPSAY-26NOV09-ANTI                     5c ->  2c x500 $   90   1.5d
+      0.97  KXTRUMPSAY-26NOV09-MARI                     7c ->  6c x166 $   90   1.5d
+      0.80  KXTRUMPSAY-26NOV09-MAKE                     1c ->  1c x500 $   90   1.5d
+      0.80  KXTRUMPSAY-26NOV09-ETHA                     8c ->  4c x250 $   90   1.5d
+      0.52  KXTRUMPSAYCOMPANY-26DEC01-MA                9c ->  8c x125 $   50  23.5d
+      0.52  KXTRUMPSAYCOMPANY-26DEC01-CAT               9c ->  5c x200 $   50  23.5d
+      0.42  KXTRUMPSAYCOMPANY-26DEC01-BLAC             10c ->  8c x125 $   50  23.5d
+      0.41  KXTRUMPSAYCOMPANY-26DEC01-VERI              6c ->  5c x200 $   50  23.5d
+  qualifying markets 16, mean $1.04/market-day, best 10 together $13.67/day
+
+== B. HISTORY — settled window markets, $10 YES bid, rest until close - 48h, conservative fill (trade low <= our price)
+  markets scanned 605; entered 238; filled 165 (69%); filled that won YES 11
+  fill P&L $-73.22 over 238 entries ($-0.308/entry); rested 1362 market-days -> reward at A's rate $1420.31
+  worst fills: $-10.00, $-10.00, $-10.00, $-10.00, $-10.00
+  net $+1347.09; fills cost 5% of the reward
+
+== VERDICT (pre-registered; authorizes nothing)
+  PROMISING: $1.04/market-day on 16 qualifying markets; 238 historical entries, net +1347.09, fills 5% of reward
