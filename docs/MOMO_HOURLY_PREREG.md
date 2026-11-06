@@ -49,6 +49,23 @@ date. That is roughly 24 events per day and about 8 captures per hour. ETH is no
 - Between KILL and P1 (1.5¢ ≤ |S| < 3¢ with the CI excluding 0) → **HOLD**, re-read on the native-telemetry
   window once it reaches 40 days (~2026-12-07).
 
+## Amendment A1 — 2026-11-06 ~03:05Z, before any statistic was computed
+
+A plumbing check on one day (`rl-momo-d1-1106g`, 2026-10-15, 101 decision rows) showed that the
+final-mid label is often **missing** (no capture with `minutes_to_close` ≤ 2), and a whole-month
+SQL read exceeds the ops channel's 30 s statement timeout. No momentum bucket, residual or EV was
+computed from that day. Two changes follow, both about the instrument and not the hypothesis:
+
+1. **Label:** the primary label is now the **official Kalshi settlement `result`** for each market
+   (public REST, `/markets?event_ticker=`). That is strictly better than a quote proxy. The final-mid rule
+   above is kept as a **sensitivity** read and reported beside the primary; it decides nothing.
+   P0's "≤ 10% exclusion" applies to the official label (unsettled or unreadable markets).
+2. **Instrument:** the read runs as an allowlisted probe, `scripts/momo_hourly_probe.py`, one day
+   per query. Decision rows, momentum construction, quintiles, thresholds, bootstrap and fee are
+   unchanged. As a reconstruction check, the probe also reports the correlation between the rebuilt m15
+   and the native `trailing_move_15m` column where both exist. A correlation below 0.9 marks the read
+   **HOLD (instrument)**.
+
 ## What a PASS would and would not authorize
 
 A PASS on P1 and P2 authorizes **writing a paper-book package** for review. It authorizes no

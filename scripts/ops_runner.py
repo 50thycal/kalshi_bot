@@ -176,6 +176,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_pinned_study",
     "kalshi_decay_study",
     "kalshi_pin15_study",
+    "momo_hourly_probe",            # docs/MOMO_HOURLY_PREREG.md (hourly BTC ladder vs price action)
     "kalshi_freeze_study",
     "kalshi_freeze_listing_check",
     "kalshi_compin_study",
