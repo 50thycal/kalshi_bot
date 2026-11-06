@@ -1,126 +1,37 @@
-# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
-# readiness reported a problem — read the block above
-========================================================================
-!! MUTATING OPS REQUEST — this changes the running system !!
-========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=ts-cutoff-open-1106a
-# code 437cba0c3f436c04ad2b9f39c71e513f7165e5be · started 2026-11-06T05:15:42Z
-# target service: main
-# BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1469 bytes, sha256:e55ebe0276b47bf5>
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
-# AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1469 bytes, sha256:e55ebe0276b47bf5>
-# VERDICT: VERIFIED
-
-# post-change canonical checks: enforcement, readiness
-# $ xos enforcement
-#   {
-#     "mode": "NEW_ONLY",
-#     "cutover_id": "prod-new-only-20260816",
-#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
-#     "resolver_degraded_alarms_24h": 0,
-#     "deployments": {
-#       "total": 78,
-#       "grandfathered": 13,
-#       "native": 65
-#     },
-#     "post_cutover_unstamped": {
-#       "paper_trades": [],
-#       "live_orders": []
-#     },
-#     "live_canaries": [
-#       {
-#         "deployment": "limm-smoke-live-1",
-#         "grandfathered": false,
-#         "twin": "limm-smoke-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-cellsize2-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-cellsize2-twin-1",
-#         "boundary_match": true
-#       },
-#       {
-#         "deployment": "mmsell-winset3-live-1",
-#         "grandfathered": false,
-#         "twin": "mmsell-winset3-twin-1",
-#         "boundary_match": true
-#       }
-#     ],
-#     "unresolved_integrity_events": 1,
-#     "recorded_state_events": 10,
-#     "unverifiable_live_config": 0,
-#     "unresolved_config_drift": 1,
-#     "session_counters": {
-#       "blocked": 0,
-#       "warned": 0,
-#       "resolver_degraded": false,
-#       "resolver_loaded_at": null
-#     }
-#   }
-# $ xos readiness
-#   {
-#     "ok": false,
-#     "checked_at": "2026-11-06 05:15:56.040020+00:00",
-#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
-#     "checks": {
-#       "import_ran": {
-#         "ok": true,
-#         "detail": "46 experiments recorded"
-#       },
-#       "coverage_complete": {
-#         "ok": true,
-#         "detail": {
-#           "unmapped_tags": []
-#         }
-#       },
-#       "live_books_represented": {
-#         "ok": true,
-#         "detail": {
-#           "registered_live_tags": [
-#             "Alimm1",
-#             "Xmmsell10",
-#             "Ymmsell10"
-#           ],
-#           "note": "no Settings supplied \u2014 presence-only check"
-#         }
-#       },
-#       "platform_snapshot_complete": {
-#         "ok": true,
-#         "detail": {
-#           "snapshot": "55b51990e0492e4b",
-#           "missing_components": []
-#         }
-#       },
-#       "grandfathered_identity": {
-#         "ok": true,
-#         "detail": {
-#           "deployments": 78,
-#           "grandfathered": 13,
-#           "native": 65
-#         }
-#       },
-#       "live_twin_links": {
-#         "ok": true,
-#         "detail": "all linked"
-#       },
-#       "no_unresolved_integrity": {
-#         "ok": false,
-#         "detail": "1 unresolved integrity events"
-#       },
-#       "no_unresolved_platform_impact": {
-#         "ok": false,
-#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
-#       },
-#       "lineage_columns_present": {
-#         "ok": true,
-#         "detail": {
-#           "paper_trades": "experiment_deployment_arm_id present",
-#           "live_orders": "experiment_deployment_arm_id present"
-#         }
-#       },
+# ops request [READ]
+# type=xos  id=ts-cutoff-rcpt-1106b
+# code 437cba0c3f436c04ad2b9f39c71e513f7165e5be · started 2026-11-06T05:20:35Z
+{
+  "command_id": "ts-cutoff-open-1106a",
+  "action": "OPEN_MANUAL",
+  "actor": "claude-code",
+  "actor_role": "TASK_SPECIFIC",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000048",
+  "schema_version": 1,
+  "payload_hash": "83fb525c914dbc61b1606665e8a8ff816ba57b57157644cf65290715b1a4f835",
+  "payload_fields": [
+    "classification",
+    "owner_role",
+    "priority",
+    "problem_statement",
+    "reason",
+    "severity",
+    "title"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-11-06 05:17:28.286327+00:00",
+  "started_at": "2026-11-06 05:17:28.286327+00:00",
+  "completed_at": "2026-11-06 05:17:32.813424+00:00",
+  "result": {
+    "kind": "issue",
+    "status": "OPEN",
+    "priority": "P2",
+    "severity": "MEDIUM",
+    "issue_key": "XOS-000048",
+    "owner_role": "TASK_SPECIFIC",
+    "disposition": null,
+    "classification": "DATA"
+  },
+  "error": null
+}
