@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=rl-momo-aug-1106e
-# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:58:17Z
+# type=db  id=rl-momo-aug0-1106f
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:59:13Z
 Traceback (most recent call last):
   File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 661, in <module>
     raise SystemExit(serve())
