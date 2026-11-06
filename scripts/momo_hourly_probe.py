@@ -47,7 +47,7 @@ with s as materialized (
   select event_ticker ev, market_ticker mk, captured_at t, minutes_to_close mtc, mid_cents mid,
          yes_ask_cents ask, yes_bid_cents bid, spot, trailing_move_15m tm15
   from crypto_ladder_snapshots
-  where event_ticker >= %(lo)s and event_ticker < %(hi)s and strike_type = 'greater'),
+  where event_ticker = any(%(evs)s) and strike_type = 'greater'),
 caps as (select ev, t, max(spot) spot from s where spot is not null group by ev, t),
 dec as (select distinct on (ev, mk) ev, mk, t, mtc, mid, ask, bid, tm15 from s
         where mtc between %(mtc_lo)s and %(mtc_hi)s and mid between %(mid_lo)s and %(mid_hi)s
@@ -70,11 +70,15 @@ def fee_cents(price_cents: float, qty: int = FEE_QTY) -> float:
     return math.ceil(round(0.07 * qty * p * (1 - p) * 100, 9)) / qty
 
 
-def event_prefix(series: str, day: dt.date) -> tuple[str, str]:
-    """Event-ticker range for one ET calendar date, e.g. KXBTCD-26OCT15 .. KXBTCD-26OCT16."""
+def day_event_tickers(series: str, day: dt.date) -> list[str]:
+    """The 24 hourly event tickers of one ET calendar date, e.g. KXBTCD-26OCT1500 .. KXBTCD-26OCT1523.
+
+    Exact tickers, never a string range: production Postgres collates `en_US.utf8`, which ignores
+    punctuation at the first comparison level, so `>= 'X-26OCT15' AND < 'X-26OCT15~'` matched
+    NOTHING there (the first ops run, `rl-momo-run-1106m`, read 0 rows on every day). Equality is
+    collation-independent and still uses the event_ticker index."""
     tag = f"{day:%y}{_MONTHS[day.month - 1]}{day:%d}"
-    lo = f"{series}-{tag}"
-    return lo, lo + "~"   # '~' sorts after digits: covers every hour suffix of that date
+    return [f"{series}-{tag}{h:02d}" for h in range(24)]
 
 
 def momentum_bp(spot_now: float | None, spot_then: float | None) -> float | None:
@@ -296,8 +300,7 @@ def _db_url() -> str:
 
 
 def load_day(cur, day: dt.date) -> list[dict]:
-    lo, hi = event_prefix(SERIES, day)
-    cur.execute(DAY_SQL, {"lo": lo, "hi": hi, "mtc_lo": MTC_LO, "mtc_hi": MTC_HI,
+    cur.execute(DAY_SQL, {"evs": day_event_tickers(SERIES, day), "mtc_lo": MTC_LO, "mtc_hi": MTC_HI,
                           "mid_lo": MID_LO, "mid_hi": MID_HI, "mtc_t": MTC_TARGET,
                           "lb_lo": LOOKBACK_LO_MIN, "lb_hi": LOOKBACK_HI_MIN})
     rows = []
