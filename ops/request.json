@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "logs", "filter": "409", "limit": 40, "id": "lg1106c"}
