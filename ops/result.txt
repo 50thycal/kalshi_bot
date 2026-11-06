@@ -1,44 +1,4 @@
 # ops request [READ]
-# type=script  id=po1106a
-# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:49:14Z
-LIMM programme outcomes — reward per market-day vs cheap-side settlement (pre-registered docs/LIMM_PROGRAMME_OUTCOMES.md)
-
-hourly snapshots since 2026-09-17T00:00:00+00:00: 114700
-qualifying cheap-side hours: 57713; markets: 980
-settled markets scored: 160; excluded {'unsettled/void': 820}
-
-== series (reward window 2026-10-16T00:00 -> now; settlement since 2026-09-17)
-  series                     live mkt-days    $/md  thin% settled  evts  G c/ct   ±se  label
-  KXGENERALCOUNTY                       77   $4.19      0       0     0     n/a   n/a  REWARD-ONLY
-  KXSTATEBALLOTMEASURE                  43   $4.19      1      19     5   -1.46  0.29  REWARD-ONLY
-  KXTRUMPMENTIONB             yes       26   $0.87      0       8     2  +18.54  5.46  REWARD-ONLY
-  KXTRUMPMENTION              yes       67   $0.42      0      32    11  +12.79  6.87  NO-CALL
-  KXAAAGASM                            139   $0.41      0       1     1  -10.00   n/a  NO-CALL
-  KXASPENMTNOPEN                        33   $0.40      0       0     0     n/a   n/a  NO-CALL
-  KXBIGSKYOPEN                          40   $0.31      0       0     0     n/a   n/a  NO-CALL
-  KXPJMEMERGENCY                        21   $0.28      0       1     1   -1.00   n/a  NO-CALL
-  KXYTVIEWSHIGH               yes       93   $0.26      0       8     5   -5.45  1.45  NO-CALL
-  KXTXOIL                               32   $0.16      0       0     0     n/a   n/a  NO-CALL
-  KXILNUCLEAR                           45   $0.13      0       0     0     n/a   n/a  NO-CALL
-  KXPAMFGEMP                            37   $0.12      0       0     0     n/a   n/a  NO-CALL
-  KXFLVISITORCOUNT                      32   $0.10      0       0     0     n/a   n/a  NO-CALL
-  KXNYNJPORTTEU                         37   $0.08      0       0     0     n/a   n/a  NO-CALL
-  KXNYCASKRENT                          38   $0.08      0       0     0     n/a   n/a  NO-CALL
-  KXWAAEROEMP                           77   $0.08      0       0     0     n/a   n/a  NO-CALL
-  KXCABUILDPERMITS                      27   $0.07      0       0     0     n/a   n/a  NO-CALL
-  KXTXERCOTPEAK                         51   $0.07      0       0     0     n/a   n/a  NO-CALL
-  KXWALLSTBONUS                         32   $0.07      0       0     0     n/a   n/a  NO-CALL
-  KXWATECHEMP                           59   $0.03      0       0     0     n/a   n/a  NO-CALL
-  ... 59 series below every floor not printed
-
-== live universe pooled
-  reward $0.38/market-day over 203 market-days; settlement G +10.71c ± 4.88 (48 markets, 18 events)
-
-== VERDICT (descriptive; authorizes nothing)
-  S1 universe is not the bottleneck: PASS (none)
-  S2 live-universe cheap side: not shown overpriced
-  ADD-CANDIDATE    0  
-  COSTLY-REWARD    0  
-  REWARD-ONLY      3  KXGENERALCOUNTY, KXSTATEBALLOTMEASURE, KXTRUMPMENTIONB*
-  AVOID            0  
-  (* = in the live universe)
+# type=noop
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:50:37Z
+(noop — nothing to do)
