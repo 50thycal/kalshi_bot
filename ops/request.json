@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gamma-api.polymarket.com/markets?limit=8&closed=true&order=endDate&ascending=false&tag_slug=15M","--max-chars","5000"],"id":"rl-pm15-1106j"}
+{"type":"script","name":"desk_fetch","args":["https://gamma-api.polymarket.com/public-search?q=bitcoin%20up%20or%20down&limit_per_type=20","--find","updown","--window","120","--max-chars","4000"],"id":"rl-pm15-1106k"}
