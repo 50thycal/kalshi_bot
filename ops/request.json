@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"rl-momo-census-1106c","max_rows":60,"sql":"select (select reltuples::bigint from pg_class where relname=$$crypto_ladder_snapshots$$) as est_total_rows, (select pg_size_pretty(pg_total_relation_size($$crypto_ladder_snapshots$$))) as size, (select min(event_ticker) from crypto_ladder_snapshots) as min_evt, (select max(event_ticker) from crypto_ladder_snapshots) as max_evt"}
