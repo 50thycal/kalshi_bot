@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_survey","args":["--max-pages","60","--top-series","70","--days","7"],"id":"rl-survey-1106h"}
+{"type":"script","name":"kalshi_gridpin_census","args":["--max-docs","75"],"id":"rl-gridpin-1106i"}
