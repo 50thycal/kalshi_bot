@@ -1,0 +1,20 @@
+# ops request [READ]
+# type=xos  id=ts-cutoff-cmdlist-1106g
+# code 0b893463c7c9fabec7973dda025dc28a8d459fda · started 2026-11-06T05:56:23Z
+command                    action        status     issue       actor                   role           completed                       
+-------------------------  ------------  ---------  ----------  ----------------------  -------------  --------------------------------
+ts-cutoff-xfer-1106d       TRANSFER      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.273281+00:00
+ts-cutoff-fix-1106d        PROPOSE_FIX   SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.238678+00:00
+ts-cutoff-link3-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.197323+00:00
+ts-cutoff-link2-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.159642+00:00
+ts-cutoff-link1-1106d      ADD_LINK      SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.119867+00:00
+ts-cutoff-ev4-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.073253+00:00
+ts-cutoff-ev3-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:34.009836+00:00
+ts-cutoff-ev2-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.968811+00:00
+ts-cutoff-ev1-1106d        ADD_EVIDENCE  SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.917987+00:00
+ts-cutoff-status-1106d     STATUS        SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.833995+00:00
+ts-cutoff-triage-1106d     TRIAGE        SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:52:33.755228+00:00
+ts-cutoff-open-1106a       OPEN_MANUAL   SUCCEEDED  XOS-000048  claude-code             TASK_SPECIFIC  2026-11-06 05:17:32.813424+00:00
+rl-sba-31-ev-20261029      ADD_EVIDENCE  SUCCEEDED  XOS-000031  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.305253+00:00
+rl-sba-47-ev-20261029      ADD_EVIDENCE  SUCCEEDED  XOS-000047  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.267126+00:00
+rl-sba-09-triage-20261029  TRIAGE        SUCCEEDED  XOS-000009  claude-code-for-calvin  RESEARCH_LAB   2026-10-29 14:57:40.219860+00:00
