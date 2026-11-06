@@ -126,6 +126,21 @@ Per the contract, do not spawn threshold variants. MOMO-15 (conditional on a sig
 A3's results-aware disclosure stands: run 2's pooled statistics (S = −0.44¢) had been seen, and they
 were in the KILL zone too.
 
+## Note — 2026-11-06 ~05:50Z: run 2's missing labels were Kalshi's historical cutoff (not a re-grade)
+
+Run 2's 29.6% unlabeled share had one cause. Kalshi's live `/markets` stops serving markets that
+settled before `GET /historical/cutoff` (`market_settled_ts`, 2026-09-06T00:00Z at this run), and the
+probe read live only. After PR #744 the probe reads the historical tier too. An **instrument check**
+on run 2's window (2026-08-01..11-05, ops `ts-momo-instr-1106c`) returned:
+
+- labels: live 6,209 / historical 2,602 / not found 4 (0.05%), with 0 fetch errors;
+- 8,152 usable decisions and the same pre-registered statistic: S = −1.32¢, 90% CI −6.62 to +3.59;
+- fade EV −1.47¢ (p5 −3.94).
+
+That is still in the KILL zone. **This is a check of the instrument, not a new reading.** The verdict
+stays **KILL** as recorded in run 3, and nothing above is amended. Issue: XOS-000048. Brief:
+`docs/handoffs/HANDOFF-kalshi-historical-cutoff.md`.
+
 ## What a PASS would and would not authorize
 
 A PASS on P1 and P2 authorizes **writing a paper-book package** for review. It authorizes no

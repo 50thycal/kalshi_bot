@@ -4,8 +4,14 @@
 **To:** a **task-specific** session for the research-script fix (Part A). The worker and desk paths
 (Part B) need a **Platform Change Review** decision before any code changes, and Live Ops must agree
 to anything in the live executor.
-**Status:** nothing fixed. Diagnosis, blast-radius inventory and one production read only. No
-Experiment OS issue opened yet (step 0 below).
+**Status (2026-11-06 ~05:50Z):**
+- Part A is done in code. The helper plus momo/theta are in PR #744 (merged). The sweep is PR #746.
+- The instrument check passed: not found 0.05% (ops `ts-momo-instr-1106c`). `/historical/markets`
+  honours `event_ticker`.
+- **XOS-000048** is open. Evidence, links and the Part B proposal are recorded on it, and it is
+  transferred to Platform Change Review.
+- Part B is untouched pending PCR, plus Live Ops for the executor and desk changes.
+- The original diagnosis follows unchanged.
 **Money at stake:** none today. **What is at stake:** silent data loss. Every affected path fails
 by *omission*: a missing label, a skipped row, a `continue`. Nothing errors, so nobody is told.
 
