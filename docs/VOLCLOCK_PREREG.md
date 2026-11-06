@@ -5,7 +5,7 @@
 result query was run**, so the windows, rows, thresholds and decision rule cannot be re-scoped after
 the numbers are seen.*
 
-**Status:** pre-registered; probe `scripts/volclock_probe.py`; not yet run.
+**Status:** run 1 (2026-11-06, `rl-volclock-run-1106`): **HOLD (instrument: P0 close-spot coverage)** under the contract. P3, which does not use the close spot, **fails**, so no instrument repair can produce a PASS. Recommended disposition: **close; do not amend or re-run** (see Run 1).
 
 ## One-liner
 
@@ -162,6 +162,58 @@ Same venue and series as theta's ladder research, opposite sign in spirit: a PAS
 crossing risk in three hours, which would also tell any tail-selling book to stand aside in exactly
 those hours. A KILL closes "scheduled-vol mispricing on the hourly crypto ladder" and, with MOMO-H,
 leaves no open calibration question on this ladder for a 1–3 minute bot.
+
+## Run 1: VERDICT HOLD (instrument), and P3 fails regardless (2026-11-06 13:51Z)
+
+`rl-volclock-run-1106`, code `eaa3700` (PR #745 merged), window 2026-09-01..11-05, as pre-registered.
+Labels: 2,703 live, 0 historical, 0 not found. Kalshi reported a settled-markets cutoff of 2026-09-07
+at run time. 1 row was dropped (spot on the strike).
+
+| measure | value | pre-registered bar | |
+|---|---|---|---|
+| trading days / rows WINDOW / CONTROL | 44 / 1,122 / 1,189 | ≥ 35 / ≥ 300 / ≥ 300 | pass |
+| label exclusion | 0.0% | ≤ 5% | pass |
+| ET hour match | 1.0000 | ≥ 0.99 | pass |
+| **close-spot coverage** | **0.860** | ≥ 0.90 | **FAIL → HOLD (instrument)** |
+| P1: R (WINDOW ÷ CONTROL realized move) | 1.386, 90% CI 1.105–1.725 | ≥ 1.15 with CI lower bound > 1.0 | would pass |
+| P2: D (crossing residual, WINDOW − CONTROL) | **+4.31¢**, 90% CI +0.86 to +7.65 | \|D\| ≥ 3 with CI excluding 0 | would signal |
+| **P3: WINDOW taker, buy crossing side** | **−1.96¢**, p5 −4.30 | ≥ +1.5¢ with p5 > 0 | **FAIL** |
+
+**The verdict is HOLD (instrument), as the contract requires.** Had P0 passed, the ladder would have read
+**P2 SIGNAL / P3 FAIL (real but not tradeable after cost)**. The P0 failure cannot change that. Close-spot
+coverage feeds only R (P1). P3 is computed from the decision quote and the official label alone, so any
+repair of the close-spot read leaves P3 exactly where it is. Hence the recommendation: close VOLCLOCK and
+do not write an instrument amendment. An amendment written now would be results-aware and could only
+move the verdict between HOLD and P3 FAIL.
+
+**What the numbers say (descriptive; decides nothing):**
+
+| slice | rows | events | avg move (bp) | crossing-side quote | crossing side won | won − quote | buy crossing | buy other side |
+|---|---|---|---|---|---|---|---|---|
+| WINDOW | 1,122 | 132 | 35.2 | 25.2¢ | 25.0% | −0.15¢ | −1.96¢ | −1.63¢ |
+| CONTROL | 1,189 | 132 | 25.4 | 25.0¢ | 20.5% | −4.45¢ | −6.23¢ | +2.71¢ |
+| weekend, window clock | 176 | 53 | 11.0 | 24.6¢ | 19.3% | −5.30¢ | −7.36¢ | +3.30¢ |
+| weekend, control clock | 215 | 53 | 13.1 | 25.1¢ | 24.2% | −0.95¢ | −2.74¢ | −0.80¢ |
+| WINDOW 09:00 / 10:00 / 16:00 | 338 / 472 / 312 | 44 each | 30.8 / 56.8 / 22.1 | ~25¢ | 24.3 / 28.0 / 21.5% | −0.89 / +2.71 / −3.67¢ | −2.74 / +0.92 / −5.47¢ | |
+
+- **The mechanism is half there.** BTC really is about 1.4× more volatile from T−40 to close in the
+  window hours, mostly at the 09:30 open (10:00 events move 57 bp against 21–33 bp at midday). The
+  crossing-side quote is flat across classes (25.2¢ vs 25.0¢), so the ladder looks **clock-blind**, as
+  the thesis guessed.
+- **The mispricing points the other way.** A clock-blind maker whose level is calibrated to the busy
+  hours is not cheap in the windows, where won − quote is −0.15¢. It is **dear in the quiet hours**, at
+  −4.45¢ for CONTROL and −5.30¢ on weekend mornings. D > 0 comes from the control side, not the window
+  side. Buying the crossing side in the windows loses after cost; only the 10:00 class is above zero
+  (+0.92¢, one of three pooled windows, post hoc).
+- **Not a new idea from this read.** "Sell the crossing side in quiet hours" (buy the other side for
+  +2.71¢ in CONTROL) is a different hypothesis. It sits in the tail-selling family (THETA was shelved
+  for a distribution-shape error, and `theta-tail-sell` exists in Experiment OS) and was found
+  post hoc on these rows. It is recorded here as an observation only. A test would need its own
+  pre-registration on data from 2026-11-06 onward.
+- **Close-spot gaps:** 14% of classed events had no `KXBTCD` capture within ±3 min of close. Likely
+  causes are collector gaps (the Control Tower showed the ladder collector briefly stale on 11-06) or
+  hours where the next event was not yet within the 90-minute capture window. Not diagnosed; it affects
+  only R.
 
 ## What a PASS would and would not authorize
 
