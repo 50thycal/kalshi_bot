@@ -1,0 +1,8 @@
+# latest deployment ec4630ff-3b02-42d4-ae72-98e4f46da747 (status=SUCCESS, created=2026-11-05T05:51:06.083Z)
+# ops request [READ]
+# type=logs  service=main  id=lg1106b
+# code e1a6094e8b2526dfc7cd6be8f6490659d4bd6302 · started 2026-11-06T02:44:45Z
+# target service: main
+2026-11-05T10:15:32.702229813Z WARN  incentive 409 order never landed -> not_landed: KXMAMDANIMENTION-26NOV18-GROC no coid=43b0f16f-187b-4bb7-8dd6-61a008349323
+2026-11-05T10:15:32.702234653Z WARN  incentive 409 order never landed -> not_landed: KXMAMDANIMENTION-26NOV18-SAFE no coid=d4ba37d6-dbf7-4fd1-85df-1a8f0b7392c8
+2026-11-05T16:16:46.604446118Z INFO  incentive book: sweep on KXMAMDANIMENTION-26NOV18-FREE no bids 89c -> 85c, 371 contracts gone (0 ours) — recorded, no action
