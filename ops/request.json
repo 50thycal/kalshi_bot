@@ -1,1 +1,1 @@
-{"type":"db","id":"rl-momo-coll-1106o","max_rows":10,"sql":"select (select datcollate from pg_database where datname = current_database()) as collate, (select count(*) from crypto_ladder_snapshots where event_ticker >= $$KXBTCD-26OCT15$$ and event_ticker < $$KXBTCD-26OCT15~$$) as tilde_range, (select count(*) from crypto_ladder_snapshots where event_ticker = any(array[$$KXBTCD-26OCT1500$$,$$KXBTCD-26OCT1512$$,$$KXBTCD-26OCT1523$$])) as any_3_hours"}
+{"type":"script","name":"momo_hourly_probe","args":["--start","2026-08-01","--end","2026-11-05"],"id":"rl-momo-run2-1106p"}
