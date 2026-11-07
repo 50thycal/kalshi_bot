@@ -1,8 +1,8 @@
 # ops request [READ]
-# type=db  id=rc-a1-1107-2313
-# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-07T23:13:45Z
-snaps_4h  mkts_4h  last_snap                         db_now                          
---------  -------  --------------------------------  --------------------------------
-7351      164      2026-11-07 23:13:26.984529+00:00  2026-11-07 23:13:45.567644+00:00
+# type=db  id=rc-a2-1107-2313
+# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-07T23:14:04Z
+trades_4h  trade_mkts_4h  last_trade                      
+---------  -------------  --------------------------------
+29         13             2026-11-07 22:49:22.902411+00:00
 
 (1 row)
