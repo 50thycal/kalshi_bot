@@ -1,8 +1,10 @@
 # ops request [READ]
-# type=db  id=rc-f-1107-2313
-# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-07T23:14:57Z
-strategy  orders  last_order                      
---------  ------  --------------------------------
-Alimm1    1       2026-11-07 21:14:02.979742+00:00
+# type=db  id=rc-f7-1107-2313
+# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-07T23:15:15Z
+strategy   orders_7d  last_order                      
+---------  ---------  --------------------------------
+Alimm1     91         2026-11-07 21:14:02.979742+00:00
+Ymmsell10  38         2026-11-07 07:04:49.019342+00:00
+Xmmsell10  39         2026-11-07 07:04:47.644383+00:00
 
-(1 row)
+(3 rows)
