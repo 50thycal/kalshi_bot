@@ -114,3 +114,7 @@ Ordered by expected value to the goal. A candidate is not work until a review st
   Screened 2026-11-04 and not built. There is no local history, and §12's outside-weather
   replays entered the cell only about 2–3% of the time. Revisit if a cheap count of settled
   markets shows more than about 800 across the family.
+- **BTC quiet-hour crossing-side selling:** VOLCLOCK found the hourly `KXBTCD` crossing side
+  dear outside the US event hours (+2.71¢ ungated, post hoc; `VOLCLOCK_PREREG.md`). This is
+  tail-selling, so it needs its own pre-registration on data after 2026-11-06. Earliest about
+  4 weeks of new data. Coordinate with the session that owns VOLCLOCK.
