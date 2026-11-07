@@ -43,7 +43,7 @@ own prompts and docs are canonical.
 | cadence | routine | owner doc |
 |---|---|---|
 | every 2 h | LIMM check-in (Alimm1 positions, fills, rewards) | `docs/liquidity_incentive/` |
-| every 72 h (from 2026-11-01) | Research review (72h): which experiments are done or need action, close-out candidates, and whether to start one new experiment per line (caps: 5 incentive, 20 MMSELL). Covers both lines. Latest: `research_reviews/2026-11-04.md`. Routine `trig_011bcVM8wWmtqMgLUoWGhLPg` | `docs/RESEARCH_REVIEW.md` |
+| every 72 h (from 2026-11-01) | Research review (72h): which experiments are done or need action, close-out candidates, and whether to start one new experiment per line (caps: 5 incentive, 20 MMSELL). Covers both lines. Latest: `research_reviews/2026-11-07.md`. Routine `trig_011bcVM8wWmtqMgLUoWGhLPg` | `docs/RESEARCH_REVIEW.md` |
 | every 4 h (01:13, 05:13, 09:13, 13:13, 17:13, 21:13 Central) | Research check-in (4h): read-only progress and health on the checks above (collector, LIMM and P-SLOW accrual counts, live tags, these routines). Counts only, never an early read. Routine `trig_013hWGXAquPc28pjj8AFu1jX` | `docs/handoffs/HANDOFF-research-checkin.md` |
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
