@@ -265,6 +265,7 @@ ALLOWED_SCRIPTS = (
     "limm_window_probe",
     "limm_programme_age",
     "limm_paper_strategies_read",
+    "limm_paper_strategies_backtest",
     "mmsell_scorecard",
 )
 
