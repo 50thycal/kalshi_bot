@@ -47,6 +47,9 @@ epoch. Run it any time:
     HIGH otherwise.
   - **Turnover** is contracts traded per market-day divided by the competing size on our side. It is
     a rough measure of flow fills.
+- **Market-level risk.** The top table grades each market on its own repricing episodes. A
+  far-from-the-money strike rarely moves even when its series is busy. Where the market has fewer
+  than 3 days of history, the series grade is shown, marked `*`.
 - **Repricing clock.** The commonest UTC hour (±1 h) at which episodes start, shown once there are 3
   or more episodes.
 - **Known releases.** Where the publisher's schedule is verified, the next release is shown and the
@@ -119,3 +122,24 @@ Each cycle tests the result against the goals in §1, records what was wrong, fi
     and clock use episodes.
   - Retest: the synthetic test showed a 24 h grouping would merge a daily release into one endless
     episode, so the gap is 12 h. The tests pin both cases.
+
+**Cycle 5: the owner's view (G5).**
+- Built a one-page board from the ranker's `--json` output and checked it at 1280 px (light) and
+  400 px (dark) with Playwright.
+- Problems found:
+  - The page scrolled sideways on a phone (459 px wide at 400). A long code sample did not wrap.
+  - Kalshi titles showed raw `**markdown**`.
+  - Numbers had no thousands separators.
+  - The tables were 25 and 30 rows deep, with step-aside text wrapping to 4 lines.
+  - The $/day column was off-screen on a phone.
+  - The "9 bids" fact needed "before fill losses".
+- Fixes: wrapped code; stripped `**` from titles; added separators; cut both tables to 15 rows;
+  hid secondary columns under 640 px; set a short "off Nov 20 15Z +48h" step-aside with no wrap.
+- Retest: no sideways scroll at either width and no console errors. Published as an artifact.
+
+**Cycle 6: per-market risk (G2), found in cycle 4's retest.**
+- Problem: risk was graded per series. A 1¢ NO bid on "gas above $3.20" with gas near $4.15 almost
+  never moves, but it inherited AAA's HIGH because other strikes reprice daily.
+- Fix: the top table now grades each market on its own episodes, falling back to the series grade
+  (marked `*`) below 3 days of history.
+- Tests pin the flat, short-history and daily-moving cases.
