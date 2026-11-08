@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT kind, count(*) AS n, max(at) AS last FROM incentive_collector_events WHERE at >= now() - interval '90 minutes' GROUP BY kind ORDER BY 3 DESC","max_rows":30,"id":"rl-ps-cev-1108a"}
+{"type":"db","sql":"SELECT at, kind, left(detail, 160) AS detail FROM incentive_collector_events WHERE at >= now() - interval '40 minutes' AND kind IN ('connected','disconnected','subscribed','market_cap_reached','thread_started','loop_error','ws_error') ORDER BY at","max_rows":60,"id":"rl-ps-cev-1108b"}
