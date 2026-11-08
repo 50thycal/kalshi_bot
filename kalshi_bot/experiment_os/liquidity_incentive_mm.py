@@ -142,16 +142,19 @@ RISK_ENVELOPE: dict = {
     # §9.73: no new entries in these series; held positions there are still managed.
     "entry_paused_series": sorted(limm.ENTRY_PAUSED_SERIES),
     # §9.74: window-say trial (cheap YES only, stepped aside before close), mention-event
-    # step-aside, and the per-event projected-reward floor.
+    # step-aside.
     "window_say_series": sorted(limm.WINDOW_SAY_SERIES),
     "window_say_side": limm.WINDOW_SAY_SIDE,
     "window_entry_step_aside_hours": limm.WINDOW_ENTRY_STEP_ASIDE_HOURS,
     "entry_step_aside_hours": limm.ENTRY_STEP_ASIDE_HOURS,
-    "min_event_projected_usd": limm.MIN_EVENT_PROJECTED_USD,
     # §9.75: window-say markets blocked per word (account-held word refused), not per event.
     "window_say_block_per_word": limm.WINDOW_SAY_BLOCK_PER_WORD,
-    # §9.76: resting bids audited against the same floor (per mention event / per window word).
-    "min_resting_projected_usd": limm.MIN_RESTING_PROJECTED_USD,
+    # §9.77: entry and resting audit judged per market by paid cents per resting hour
+    # (estimate x calibration), with a gap between the bars and a payout floor at entry.
+    "reward_calibration": limm.REWARD_CALIBRATION,
+    "entry_min_cents_per_hour": limm.ENTRY_MIN_CENTS_PER_HOUR,
+    "exit_below_cents_per_hour": limm.EXIT_BELOW_CENTS_PER_HOUR,
+    "min_market_projected_usd": limm.MIN_MARKET_PROJECTED_USD,
     "max_loss_per_clip_usd": round(limm.SIZE_UP_ORDER_DOLLARS, 2),
     "sides_quoted": 2,
     "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,

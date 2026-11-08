@@ -54,7 +54,10 @@ SKIP_NO_SLOTS = "no_slots"
 #: A placeable candidate whose projected programme payout is under limm.MIN_PROJECTED_PROGRAM_USD.
 SKIP_LOW_PROJECTED = "low_projected_payout"
 #: §9.74: a placeable mention-event candidate whose EVENT projects under MIN_EVENT_PROJECTED_USD.
-SKIP_SMALL_EVENT = "small_event"
+#: §9.77: a new entry earning under ENTRY_MIN_CENTS_PER_HOUR (paid cents per hour it rests).
+SKIP_LOW_RATE = "low_rate"
+#: §9.77: a new entry projected under MIN_MARKET_PROJECTED_USD to its step-aside.
+SKIP_UNDER_PAYOUT_FLOOR = "under_payout_floor"
 
 #: A market whose BOOK refused a pair is skipped for this long before its book is fetched again.
 #: Without it the bounded fetch budget is spent on the same first-ranked books every cycle: on
@@ -273,43 +276,29 @@ def earning_hours(c: dict) -> float:
     return max(0.0, min(hours)) if hours else 0.0
 
 
-def drop_small_events(ranked: list, *, held_usd_by_event: dict[str, float],
-                      held_n_by_event: dict[str, int],
-                      remembered_usd_by_event: dict[str, list[float]] | None = None,
-                      held_tickers: frozenset[str] = frozenset(),
-                      ) -> tuple[list, list]:
-    """§9.74 (operator, 2026-11-06, r1-small): drop every candidate of a MENTION event whose
-    projected reward to this book is under `MIN_EVENT_PROJECTED_USD`. The event's projection is
-    what this book already holds there plus the best new markets it may still add (up to its
-    per-event cap), each rate x `earning_hours`; markets not fetched this cycle count at their
-    remembered rate, so a bounded fetch budget does not make an event look small. Window and
-    month-window markets are not events and pass. A held market fetched again this cycle is
-    counted once, as held (`held_tickers`). Returns (kept, dropped)."""
-    fresh: dict[str, list[float]] = {}
-    small = set()
+def drop_below_rate(ranked: list, *, held_tickers: frozenset[str] = frozenset()
+                    ) -> tuple[list, list, list]:
+    """§9.77 (operator, 2026-11-08, r4-rule): keep a NEW entry only when its bid earns at least
+    `ENTRY_MIN_CENTS_PER_HOUR` paid cents per hour it rests and projects at least
+    `MIN_MARKET_PROJECTED_USD` paid dollars to its step-aside (rate x `earning_hours`), both
+    calibrated (`limm.paid_cents_per_hour`). Judged per market, for every market type: the same
+    yardstick the resting audit uses, so a bid is never placed only to be pulled. A market this
+    book already rests in is the audit's to judge and passes. Returns (kept, low_rate,
+    under_floor)."""
+    kept, low, small = [], [], []
     for cq in ranked:
         c = cq[0]
-        if c.get("window_say") and c.get("market_ticker") not in held_tickers \
-                and quote_rate(cq) * earning_hours(c) < limm.MIN_RESTING_PROJECTED_USD:
-            small.add(c.get("market_ticker"))   # §9.76: a window word stands alone
+        if c.get("market_ticker") in held_tickers:
+            kept.append(cq)
             continue
-        ev = c.get("event_ticker") or ""
-        if not (c.get("mention_event") and ev):
-            continue
-        vals = fresh.setdefault(ev, [])
-        if c.get("market_ticker") not in held_tickers:
-            vals.append(quote_rate(cq) * earning_hours(c))
-    for ev, vals in fresh.items():
-        pool = sorted(vals + list((remembered_usd_by_event or {}).get(ev, [])), reverse=True)
-        room = max(0, limm.max_markets_per_event(ev) - int(held_n_by_event.get(ev, 0)))
-        total = float(held_usd_by_event.get(ev, 0.0)) + sum(pool[:room])
-        if total < limm.MIN_EVENT_PROJECTED_USD:
-            small.add(ev)
-    def _small(cq) -> bool:
-        return (cq[0].get("event_ticker") or "") in small or cq[0].get("market_ticker") in small
-    kept = [cq for cq in ranked if not _small(cq)]
-    dropped = [cq for cq in ranked if _small(cq)]
-    return kept, dropped
+        cents = limm.paid_cents_per_hour(quote_rate(cq))
+        if cents < limm.ENTRY_MIN_CENTS_PER_HOUR:
+            low.append(cq)
+        elif cents / 100.0 * earning_hours(c) < limm.MIN_MARKET_PROJECTED_USD:
+            small.append(cq)
+        else:
+            kept.append(cq)
+    return kept, low, small
 
 
 def rank_by_projected_payout(ranked: list) -> tuple[list, list]:
@@ -459,7 +448,7 @@ class IncentiveLiveRunner:
             summary["outcomes"]["event_cap_trim"] = over_cap
         low = self._retire_low_projection(session, executor, now)
         if low:
-            summary["outcomes"]["low_projection"] = low
+            summary["outcomes"]["low_rate"] = low
         snapped = self._snapshot_own_books(session, now)
         if snapped:
             summary["book_snapshots"] = snapped
@@ -567,18 +556,13 @@ class IncentiveLiveRunner:
         ranked, dropped = rank_by_projected_payout(ranked)
         if dropped:
             summary["outcomes"][SKIP_LOW_PROJECTED] = len(dropped)
-        fetched = {c["market_ticker"] for c in built}
-        held_usd, held_n = self._held_projection_by_event(session, now)
         held_tickers = frozenset(repo.live_book_open_tickers(session, limm.LIVE_TAG))
-        ranked, small = drop_small_events(
-            ranked, held_usd_by_event=held_usd, held_n_by_event=held_n,
-            held_tickers=held_tickers,
-            remembered_usd_by_event=self._remembered_by_event(
-                [p for p in candidates
-                 if p.market_ticker not in fetched and p.market_ticker not in held_tickers], now))
+        ranked, low, small = drop_below_rate(ranked, held_tickers=held_tickers)
+        if low:
+            summary["outcomes"][SKIP_LOW_RATE] = len(low)
         if small:
-            summary["outcomes"][SKIP_SMALL_EVENT] = len(small)
-            dropped = dropped + small
+            summary["outcomes"][SKIP_UNDER_PAYOUT_FLOOR] = len(small)
+        dropped = dropped + low + small
         self._remember_rewards(built, ranked + dropped, now)
         # Every candidate that produced no pair is still reported, by its refusal code, so a
         # cycle that placed nothing says which cap or which book stopped it.
@@ -1000,12 +984,15 @@ class IncentiveLiveRunner:
         return n
 
     def _retire_low_projection(self, session, executor, now: datetime) -> int:
-        """§9.76: every RESTING_AUDIT_EVERY_SECONDS, re-read the book of each purely resting bid
-        that has rested STALE_PAIR_SECONDS and project its reward to step-aside (rate on the
-        current book x `earning_hours`). A mention event whose held bids together project under
-        MIN_RESTING_PROJECTED_USD loses them all; a window-say word under it is pulled alone;
-        other markets are not audited. A book that cannot be read is skipped (kept). A pulled
-        market cools down for BOOK_REFUSAL_COOLDOWN_SECONDS. Returns markets cancelled."""
+        """§9.77 (operator, 2026-11-08, r4-rule): every RESTING_AUDIT_EVERY_SECONDS, re-read the
+        book of each purely resting bid that has rested STALE_PAIR_SECONDS and pull it when it
+        now earns under `EXIT_BELOW_CENTS_PER_HOUR` paid cents per hour (`paid_cents_per_hour`
+        of its rate on the current book) — per market, every market type. The entry bar is
+        higher (`ENTRY_MIN_CENTS_PER_HOUR`), so a pulled market comes back only once it clears
+        that again. No payout floor here: what the programme has already accrued counts toward
+        Kalshi's $1 minimum, so a short horizon left is no reason to leave. A book that cannot
+        be read is kept. A pulled market cools down for BOOK_REFUSAL_COOLDOWN_SECONDS.
+        Replaces §9.76's $5-to-step-aside floor. Returns markets cancelled."""
         last = self._low_audit_at
         if last is not None and (now - last).total_seconds() < limm.RESTING_AUDIT_EVERY_SECONDS:
             return 0
@@ -1014,40 +1001,26 @@ class IncentiveLiveRunner:
         if not resting:
             return 0
         programs = {p.market_ticker: p for p in self._running_programs(session, now)}
-        groups: dict[str, list[tuple[str, float]]] = {}
-        for ticker, working in resting.items():
-            program = programs.get(ticker)
-            if program is None:
-                continue                # programme gone: `_retire_unpaid_pairs` owns it
-            series = _series(program)
-            if limm.is_window_say(series):
-                key = ticker
-            elif limm.is_event_mention(series, program.event_ticker, program.market_title):
-                key = program.event_ticker or ticker
-            else:
-                continue
-            rate = self._held_reward_per_hour(ticker, working, programs, now)
-            if rate is None:
-                groups.setdefault(key, []).append((ticker, float("inf")))   # unreadable: keep
-                continue
-            groups.setdefault(key, []).append(
-                (ticker, rate * earning_hours(_hours_for(program, now))))
         if not self._cooldown_loaded:
             self._load_cooldown(session, now)
         n = 0
-        for key, items in groups.items():
-            total = sum(v for _t, v in items)
-            if total >= limm.MIN_RESTING_PROJECTED_USD:
+        for ticker, working in sorted(resting.items()):
+            if ticker not in programs:
+                continue                # programme gone: `_retire_unpaid_pairs` owns it
+            rate = self._held_reward_per_hour(ticker, working, programs, now)
+            if rate is None:
+                continue                # unreadable book: keep
+            cents = limm.paid_cents_per_hour(rate)
+            if cents >= limm.EXIT_BELOW_CENTS_PER_HOUR:
                 continue
-            for ticker, _v in items:
-                if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
-                                                    ticker=ticker, reason="low_projection"):
-                    n += 1
-                    self._book_refused_until[ticker] = now + timedelta(
-                        seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
-                    logger.info(f"incentive book: low_projection: cancelled resting bid on "
-                                f"{ticker} ({key} projects ${total:.2f} to step-aside, under "
-                                f"${limm.MIN_RESTING_PROJECTED_USD:.2f})")
+            if executor.cancel_incentive_orders(session, strategy=limm.LIVE_TAG,
+                                                ticker=ticker, reason="low_rate"):
+                n += 1
+                self._book_refused_until[ticker] = now + timedelta(
+                    seconds=BOOK_REFUSAL_COOLDOWN_SECONDS)
+                logger.info(f"incentive book: low_rate: cancelled resting bid on {ticker} "
+                            f"(earns ~{cents:.1f}c/h paid, under "
+                            f"{limm.EXIT_BELOW_CENTS_PER_HOUR:g}c)")
         return n
 
     def _load_out_of_band(self, session, now: datetime) -> None:
@@ -1781,37 +1754,6 @@ class IncentiveLiveRunner:
         best = [p for _v, p in known]
         n_best = min(len(best), max(1, max_fetch // 2))
         return best[:n_best] + unknown + best[n_best:] + [p for _v, p in zero]
-
-    def _remembered_by_event(self, programs: list, now: datetime) -> dict[str, list[float]]:
-        """§9.74: remembered projected payouts (rate x earning hours) of markets not fetched this
-        cycle, by event, for `drop_small_events`."""
-        out: dict[str, list[float]] = {}
-        for p in programs:
-            seen = self._reward_seen.get(p.market_ticker)
-            if not seen or seen[0] <= 0 or not p.event_ticker:
-                continue
-            hrs = earning_hours(_hours_for(p, now))
-            if hrs > 0:
-                out.setdefault(p.event_ticker, []).append(seen[0] * hrs)
-        return out
-
-    def _held_projection_by_event(self, session, now: datetime
-                                  ) -> tuple[dict[str, float], dict[str, int]]:
-        """§9.74: per event, this book's working markets (count) and their projected payout to
-        step-aside at the last remembered rate (0 when not remembered)."""
-        programs = {p.market_ticker: p for p in self._running_programs(session, now)}
-        usd: dict[str, float] = {}
-        n: dict[str, int] = {}
-        for ticker in repo.live_book_open_tickers(session, limm.LIVE_TAG):
-            p = programs.get(ticker)
-            if p is None or not p.event_ticker:
-                continue
-            n[p.event_ticker] = n.get(p.event_ticker, 0) + 1
-            seen = self._reward_seen.get(ticker)
-            if seen:
-                usd[p.event_ticker] = usd.get(p.event_ticker, 0.0) \
-                    + seen[0] * earning_hours(_hours_for(p, now))
-        return usd, n
 
     def _remember_rewards(self, built: list[dict], quotable: list, now: datetime) -> None:
         """§9.69: record the estimated reward rate of every book fetched this cycle; a book that
