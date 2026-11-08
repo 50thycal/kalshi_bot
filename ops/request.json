@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT policy, count(*) AS quotes, count(DISTINCT market_ticker) AS mkts, max(placed_at) AS last FROM incentive_shadow_quotes WHERE placed_at >= '2026-11-08 15:00+00' AND policy IN ('S1','S2-best','S2-behind','S3-aside','S3-control','S4-burst','S4-flat') GROUP BY 1 ORDER BY 1", "id": "rc-arms-1108-2050"}
