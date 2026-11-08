@@ -326,6 +326,22 @@ def series_risk(hist: dict[str, list], vol: dict[str, list], series_of: dict[str
     return out
 
 
+MIN_MARKET_DAYS_FOR_OWN_RISK = 3
+
+
+def market_risk(hours: list, series_entry: dict | None) -> dict:
+    """The market's OWN repricing record. A far-from-the-money strike in a busy series rarely
+    moves itself, so the series grade overstates its risk. Falls back to the series grade when
+    the market has fewer than MIN_MARKET_DAYS_FOR_OWN_RISK observed days."""
+    days = len({h.date() for h, m in hours if m is not None})
+    if days < MIN_MARKET_DAYS_FOR_OWN_RISK:
+        return {"risk": (series_entry or {}).get("risk", "?"), "own": False, "episodes": None,
+                "days": days}
+    ep = episodes(find_jumps(hours))
+    rate = 30.0 * len(ep) / days
+    return {"risk": risk_grade(rate), "own": True, "episodes": len(ep), "days": days}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--now", default=None, help="ISO time to rank as of (default: now)")
@@ -364,6 +380,8 @@ def main(argv: list[str] | None = None) -> int:
     for tk, _d, contracts, _n in vol_raw:
         vol[tk].append(float(contracts or 0.0))
     risk = series_risk(hist, vol, series_of, now)
+    mrisk = {x["ticker"]: market_risk(hist.get(x["ticker"], []), risk.get(x["series"]))
+             for x in ranked}
 
     quotable = [x for x in ranked if not x["flags"]]
     total_pool = sum(x["pool_day"] or 0.0 for x in ranked)
@@ -374,13 +392,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"== top {args.top} markets: estimated reward per day for a $10 bid (at the best bid / "
           f"one tick behind), with the series' repricing risk")
     print(f"  {'#':>2} {'market':34s} {'side':4s} {'px':>3} {'$/day':>6} {'behind':>6} "
-          f"{'share':>6} {'days':>4} {'risk':4s} {'turn':>5}  step-aside")
+          f"{'share':>6} {'days':>4} {'risk':5s}{'turn':>5}  step-aside")
     for i, x in enumerate(quotable[:args.top], 1):
         r = risk.get(x["series"], {})
         print(f"  {i:2d} {x['ticker'][:34]:34s} {x['side']:4s} {x['price']:3d} "
               f"{_f(x['reward_day']):>6} {_f(x['reward_day_behind']):>6} "
               f"{_f(100 * x['share'], '{:.1f}%'):>6} {_f(x['days_left'], '{:.0f}'):>4} "
-              f"{r.get('risk', '?'):4s} {_f(turnover(r.get('contracts_per_md'), x['field']), '{:.2f}'):>5}  "
+              f"{mrisk[x['ticker']]['risk'] + ('' if mrisk[x['ticker']]['own'] else '*'):5s}"
+              f"{_f(turnover(r.get('contracts_per_md'), x['field']), '{:.2f}'):>5}  "
               f"{r.get('step_aside', '')}")
     print("\n== series: 3 x $10 bids (top 3 quotable markets) per day, and how the series reprices")
     print(f"  {'series':20s} {'quot':>4} {'pool/d':>6} {'top3':>5} {'days':>4} {'jumps':>5} "
@@ -405,6 +424,8 @@ def main(argv: list[str] | None = None) -> int:
         for f in x["flags"]:
             flagged[f] += 1
     print("\n  not ranked: " + (", ".join(f"{k} {v}" for k, v in sorted(flagged.items())) or "none"))
+    print("  risk (top table): the market's own repricing episodes per 30 days; * = too little "
+          "history, series grade shown.")
     print("  turn: contracts traded per market-day over the competing size on our side (rough fill "
           "pressure; 1.0 = the whole queue trades in a day).")
     print(f"  risk: repricing episodes (hourly mid moves >= {JUMP_CENTS}c; jumps within "
@@ -423,7 +444,9 @@ def main(argv: list[str] | None = None) -> int:
             "top": [{**{k: x.get(k) for k in ("ticker", "series", "side", "price", "reward_day",
                                                "reward_day_behind", "share", "days_left", "title",
                                                "field")},
-                     "risk": risk.get(x["series"], {}).get("risk"),
+                     "risk": mrisk[x["ticker"]]["risk"],
+                     "risk_own": mrisk[x["ticker"]]["own"],
+                     "risk_series": risk.get(x["series"], {}).get("risk"),
                      "step_aside": risk.get(x["series"], {}).get("step_aside"),
                      "turnover": turnover(risk.get(x["series"], {}).get("contracts_per_md"),
                                           x.get("field"))}

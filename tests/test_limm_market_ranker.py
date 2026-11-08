@@ -96,6 +96,17 @@ def test_episodes_and_known_releases():
     assert rk.known_release("KXASPENMTNOPEN") is None
 
 
+def test_market_risk_uses_own_history():
+    flat = [(NOW + dt.timedelta(hours=h), 2.0) for h in range(24 * 5)]
+    busy = {"risk": "HIGH"}
+    r = rk.market_risk(flat, busy)
+    assert r["own"] and r["risk"] == "LOW" and r["episodes"] == 0
+    short = rk.market_risk(flat[:30], busy)                  # 2 observed days: fall back
+    assert not short["own"] and short["risk"] == "HIGH"
+    moving = [(NOW + dt.timedelta(hours=h), 10.0 + 9 * (h // 24)) for h in range(24 * 5)]
+    assert rk.market_risk(moving, busy)["risk"] == "HIGH"   # 4 daily episodes in 5 days
+
+
 def test_risk_and_discount():
     assert rk.risk_grade(None) == "?" and rk.risk_grade(0.5) == "LOW"
     assert rk.risk_grade(2.0) == "MED" and rk.risk_grade(4.0) == "HIGH"
