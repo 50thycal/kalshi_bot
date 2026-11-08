@@ -64,6 +64,21 @@ SELECT DISTINCT ON (s.market_ticker)
 """
 
 
+UNWATCHED_SQL = """
+WITH live AS (
+  SELECT market_ticker, split_part(market_ticker, '-', 1) AS series, end_date,
+         period_reward_usd / greatest(extract(epoch FROM (end_date - start_date)) / 86400.0, 0.04)
+           AS pool_day
+    FROM incentive_programs
+   WHERE coalesce(incentive_type, '') ILIKE '%%liquid%%' AND superseded_at IS NULL
+     AND disappeared_at IS NULL AND end_date > %(now)s AND start_date <= %(now)s
+)
+SELECT series, count(*) AS markets, sum(pool_day) AS pool_day, max(pool_day) AS max_market_pool_day,
+       min(end_date) AS first_end
+  FROM live WHERE NOT (market_ticker = ANY(%(tickers)s))
+ GROUP BY 1 ORDER BY 3 DESC
+"""
+
 HIST_SQL = """
 SELECT DISTINCT ON (market_ticker, date_trunc('hour', at))
        market_ticker, date_trunc('hour', at) AS hr, best_yes_bid, best_no_bid
@@ -367,6 +382,10 @@ def main(argv: list[str] | None = None) -> int:
         hist_raw = cur.fetchall()
         cur.execute(VOL_SQL, {"tickers": tickers, "since": since, "now": now})
         vol_raw = cur.fetchall()
+        cur.execute(UNWATCHED_SQL, {"tickers": tickers, "now": now})
+        unwatched = [{"series": a, "markets": int(b), "pool_day": float(c or 0.0),
+                      "max_market_pool_day": float(d or 0.0), "first_end": e}
+                     for a, b, c, d, e in cur.fetchall()]
     rows = [{"ticker": t, "at": at, "yb": yb, "nb": nb, "fy": fy, "fn": fn, "my": my, "mn": mn,
              "series": s, "event": e, "pool": pool, "start": st, "end": en, "close": cl,
              "target": tg, "title": ti, "disc_bps": db}
@@ -419,6 +438,15 @@ def main(argv: list[str] | None = None) -> int:
         if jt:
             print(f"  {srow['series'][:20]:20s} " + ", ".join(
                 f"{WEEKDAYS[t.weekday()]} {t:%m-%d %H}Z" for t in jt))
+    uw_pool = sum(u["pool_day"] for u in unwatched)
+    uw_mk = sum(u["markets"] for u in unwatched)
+    print(f"\n== NOT WATCHED by the collector: {uw_mk} live markets in {len(unwatched)} series, "
+          f"pools ${uw_pool:,.0f}/day (watched: {len(ranked)} markets, ${total_pool:,.0f}/day).")
+    print("   No order-book data, so no share estimate: these are pools we cannot see the field for.")
+    print(f"  {'series':22s} {'mkts':>5} {'pool/d':>8} {'best mkt/d':>10}  ends")
+    for u in unwatched[:15]:
+        print(f"  {u['series'][:22]:22s} {u['markets']:5d} {u['pool_day']:8.0f} "
+              f"{u['max_market_pool_day']:10.1f}  {str(u['first_end'])[:10]}")
     flagged = defaultdict(int)
     for x in ranked:
         for f in x["flags"]:
@@ -440,6 +468,8 @@ def main(argv: list[str] | None = None) -> int:
         import json
         print("JSON " + json.dumps({
             "as_of": now.isoformat(), "pool_day": total_pool, "markets": len(ranked),
+            "unwatched": {"markets": uw_mk, "series": len(unwatched), "pool_day": uw_pool,
+                          "top": unwatched[:15]},
             "quotable": len(quotable),
             "top": [{**{k: x.get(k) for k in ("ticker", "series", "side", "price", "reward_day",
                                                "reward_day_behind", "share", "days_left", "title",
