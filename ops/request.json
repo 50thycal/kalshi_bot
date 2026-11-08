@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "WITH m AS (SELECT market_ticker, max(at) AS last_at FROM incentive_market_snapshots WHERE at > now() - interval '12 hours' GROUP BY 1) SELECT CASE WHEN last_at > now() - interval '30 minutes' THEN 'a <30m' WHEN last_at > now() - interval '3 hours' THEN 'b 30m-3h' WHEN last_at > now() - interval '6 hours' THEN 'c 3-6h' ELSE 'd 6-12h' END AS age, count(*) AS markets, min(last_at), max(last_at) FROM m GROUP BY 1 ORDER BY 1", "id": "rk-fresh-1108"}
