@@ -1,4 +1,9 @@
 # ops request [READ]
-# type=noop
-# code 673b1a8fb0e429fbdbd4fb3a7f3df00f2acf4c48 · started 2026-11-08T05:06:10Z
-(noop — nothing to do)
+# type=db  id=rk-cov-1108
+# code 673b1a8fb0e429fbdbd4fb3a7f3df00f2acf4c48 · started 2026-11-08T05:06:30Z
+watched  markets  series  pool_day  med_pool_day  max_pool_day
+-------  -------  ------  --------  ------------  ------------
+False    3459     265     55874     14.18         105.88      
+True     101      24      4429      35.71         142.86      
+
+(2 rows)
