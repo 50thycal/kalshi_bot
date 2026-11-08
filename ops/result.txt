@@ -1,8 +1,4 @@
 # ops request [READ]
-# type=db  id=rk-sq-1108
-# code fae614f00676219b9a24425f867ca40e20d4ceb6 · started 2026-11-08T03:51:04Z
-count  max                               min                             
------  --------------------------------  --------------------------------
-55155  2026-11-08 03:44:13.110849+00:00  2026-11-07 03:56:46.043447+00:00
-
-(1 row)
+# type=noop
+# code fae614f00676219b9a24425f867ca40e20d4ceb6 · started 2026-11-08T03:51:39Z
+(noop — nothing to do)
