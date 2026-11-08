@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT discount_factor_bps, count(*) AS programmes, round(sum(period_reward_usd)::numeric,0) AS pool_usd FROM incentive_programs WHERE coalesce(incentive_type,'') ILIKE '%liquid%' AND end_date > now() AND superseded_at IS NULL GROUP BY 1 ORDER BY 2 DESC", "id": "rk-disc-1108"}
+{"type":"noop"}
