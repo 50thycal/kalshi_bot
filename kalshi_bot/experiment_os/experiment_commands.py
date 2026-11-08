@@ -253,6 +253,7 @@ def _packages() -> dict[str, ExperimentPackage]:
     from . import (
         canary_mmsell10,
         correlation_cap,
+        limm_paper_strategies,
         liquidity_incentive_mm,
         marktangle,
         marktangle2,
@@ -368,6 +369,20 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=temperature_season.register,
             strategy_tags=(temperature_season.CELL_TAG,),
+        ),
+        "limm-paper-strategies": ExperimentPackage(
+            name="limm-paper-strategies",
+            experiment_key=limm_paper_strategies.EXPERIMENT_KEY,
+            description=(
+                "DEC-043/044: the incentive paper strategies S1-S4 (seven arms, three of them "
+                "controls), recorded by the GET-only shadow collector into incentive_* tables. "
+                "Freezes v1 with its arms and the pre-registered read rule "
+                "(docs/LIMM_PAPER_STRATEGIES.md), opens e1, registers a TAGLESS probe "
+                "deployment and stops at PROBE. No gates: evaluator metrics read paper_trades, "
+                "which these arms never write. Arms nothing, trades nothing, no real money; "
+                "the paper-only activation switch is a separate env act."
+            ),
+            register=limm_paper_strategies.register,
         ),
         "mmsell-mentions-forward": ExperimentPackage(
             name="mmsell-mentions-forward",

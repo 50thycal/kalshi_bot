@@ -149,7 +149,7 @@ def test_s4_takes_the_harvest_band_and_bursts_until_the_threshold():
     # $10 earns 0.01 $/h uncalibrated; 48 h to the step-aside x 1.34 = $0.64: in the band.
     inband = _cand("KXH-26-1", rate_yes=0.01, close=T0 + timedelta(hours=96), end=T0 + timedelta(days=9))
     rich = _cand("KXR-26-1", rate_yes=1.0)
-    sel = pa.ArmSelector()
+    sel = pa.ArmSelector(rules=pa.ArmRules(s4_after_burst="off"))
     sel.select({inband.ticker: inband, rich.ticker: rich}, T0)
     assert set(sel.selected[pa.S4]) == {inband.ticker}
     s = sel.selected[pa.S4][inband.ticker]
@@ -161,13 +161,18 @@ def test_s4_takes_the_harvest_band_and_bursts_until_the_threshold():
     sel.add_burst_reward(s.ticker, s.programme_start, 0.45)       # total 1.27 >= 1.25
     assert sel.desired(pa.ARM_S4_BURST, s, inband, T0).reason == pa.PULL_BURST_DONE
     assert sel.desired(pa.ARM_S4_FLAT, s, inband, T0).size_usd == 10
-    flat_after = pa.ArmSelector(rules=pa.ArmRules(s4_after_burst="flat"))
+    flat_after = pa.ArmSelector()                    # the pre-registered default (age study)
     flat_after.bursts = sel.bursts
     assert flat_after.desired(pa.ARM_S4_BURST, s, inband, T0).size_usd == 10
 
 
+def test_s4_rules_match_the_age_study_verdict():
+    r = pa.DEFAULT_RULES
+    assert (r.s4_burst_window_hours, r.s4_after_burst) == (None, "flat")
+
+
 def test_s4_burst_window_from_the_age_study():
-    r = pa.ArmRules(s4_burst_window_hours=24.0)
+    r = pa.ArmRules(s4_burst_window_hours=24.0, s4_after_burst="off")
     sel = pa.ArmSelector(rules=r)
     old = _cand("KXO-26-1", rate_yes=0.01, start=T0 - timedelta(hours=30),
                 close=T0 + timedelta(hours=96), end=T0 + timedelta(days=9))
@@ -326,3 +331,31 @@ def test_s4_burst_progress_survives_a_restart(settings):
     st._restore_burst(sel)
     b = st.arms.burst("KXT-26-A", start)
     assert round(b.accrued_calibrated_usd, 2) == 1.34 and b.done
+
+
+def test_arms_pin_their_universe_beyond_the_daily_pay_cap(settings):
+    def prog(pid, ticker, reward_cc, days=7.0):
+        return {"id": pid, "market_id": pid, "market_ticker": ticker, "incentive_type": "liquidity",
+                "incentive_description": "x", "start_date": (T0 - timedelta(hours=1)).isoformat(),
+                "end_date": (T0 + timedelta(days=days)).isoformat(), "period_reward": reward_cc,
+                "paid_out": False, "discount_factor_bps": 5000, "target_size_fp": "1000.00"}
+
+    client = _ReadClient()
+    client.programs = [prog("p1", "KXRICH-26-A", 50_000_000),                  # $5,000
+                       prog("p2", "KXWAAEROEMP-27FEB28-T1", 1_000_000),         # S3 universe
+                       prog("p3", "KXTHIN-26-A", 100_000),                      # $10: S4 funnel
+                       prog("p4", "KXMID-26-A", 2_000_000)]                     # $200: neither
+    db.init_engine(settings.database_url)
+    db.create_all()
+    settings.liquidity_incentive_max_markets = 1
+    off = c.ShadowState(client, settings, db.session_scope, clock=_Clock())
+    off.refresh_programs(force=True)
+    assert set(off.markets) == {"KXRICH-26-A"}
+    settings.liquidity_incentive_paper_arms_enabled = True
+    on = c.ShadowState(client, settings, db.session_scope, clock=_Clock())
+    on.refresh_programs(force=True)
+    assert set(on.markets) == {"KXRICH-26-A", "KXWAAEROEMP-27FEB28-T1", "KXTHIN-26-A"}
+    with db.session_scope() as s:
+        ev = s.scalars(select(m.IncentiveCollectorEvent).where(
+            m.IncentiveCollectorEvent.kind == c.EV_DISCOVERY).order_by(m.IncentiveCollectorEvent.id.desc())).first()
+    assert ev.detail_json["pinned_arms"] == 2

@@ -92,4 +92,28 @@ pre-registration says HOLD is likely. The band is not widened after seeing resul
 
 ## 9. Result
 
-*(Filled in once, after the single run. Never re-run to a different answer.)*
+**Run once: `rl-age-run1-1108`, 2026-11-08T14:51Z, code `22f3e15`. Verdict: NOT-EARLY.**
+
+| bucket | hours | programmes | thin hours | $ per 1,000 contract-hours | fill-hours (pre-10-30) | fills | fills per 100 h |
+|---|---|---|---|---|---|---|---|
+| 0–6 h | 3,404 | 876 | 2 | 0.565 | 2,165 | 13 | 0.60 |
+| 6–24 h | 8,714 | 958 | 0 | 0.264 | 5,577 | 8 | 0.14 |
+| 1–3 d | 17,873 | 904 | 11 | 0.142 | 11,635 | 45 | 0.39 |
+| 3 d+ | 33,447 | 463 | 0 | 0.040 | 23,349 | 44 | 0.19 |
+
+- **Primary (within programme):** 232 paired programmes in 36 events. R = early ÷ late =
+  **1.23**, 95% CI **0.85–1.63**. Below the 2.0 bar, and the interval includes 1.
+- **Fills:** early 0.27% of resting hours, late 0.19% (early is higher, so the fill clause
+  fails too).
+- **Late hours still pay:** $0.31 calibrated per $10 bid-day in the 3 d+ bucket (≥ $0.15).
+- **What it sets (§5):** no burst window (S4 bursts until the $1.25 threshold whenever it
+  enters); after the burst, **`flat`** ($10 for the rest of the programme).
+- **Reading the bucket table:** the unpaired buckets fall about 14× from 0–6 h to 3 d+, but
+  within the same programmes the drop is only 1.23×. The steep unpaired fall is mostly
+  composition: short programmes (which pay more per contract-hour) only ever have young hours.
+  That is why the bar was set within programmes.
+- **Paid ÷ estimated by age (descriptive, 18 paid events):** the three early-heavy mention
+  events paid 1.3×, 4.9× and 14.4× their estimate. The late-heavy events paid a median of
+  about 1.2×. Too few events to decide on, and not part of the verdict. If it holds, it
+  points at the estimator under-reading early mention hours (thesis §9.42), not at more
+  reward per contract in the book.
