@@ -135,10 +135,12 @@ def test_main_end_to_end(monkeypatch, capsys):
 
         def execute(self, sql, params):
             self.q = ("hist" if "date_trunc('hour'" in sql and "ANY" in sql
-                      else "vol" if "incentive_trade_events" in sql else "now")
+                      else "vol" if "incentive_trade_events" in sql
+                      else "uw" if "WITH live AS" in sql else "now")
 
         def fetchall(self):
-            return {"now": raw, "hist": hist, "vol": vol}[self.q]
+            return {"now": raw, "hist": hist, "vol": vol,
+                    "uw": [("KXBIG", 40, 4000.0, 101.2, NOW + dt.timedelta(days=2))]}[self.q]
 
         def __enter__(self):
             return self
@@ -165,6 +167,7 @@ def test_main_end_to_end(monkeypatch, capsys):
     s0 = [ln for ln in out.splitlines() if ln.strip().startswith("KXS0 ")][0]
     s1 = [ln for ln in out.splitlines() if ln.strip().startswith("KXS1 ")][0]
     assert "HIGH" in s0 and "15Z" in s0 and "LOW" in s1
+    assert "NOT WATCHED by the collector: 40 live markets in 1 series, pools $4,000/day" in out
     assert "JSON {" in out
 
 

@@ -75,6 +75,8 @@ rank by net.
 - **The reward estimate has never been checked against Kalshi's actual payouts** (thesis "day-one
   check 3"). It is internally consistent (§6, cycle 2), but external calibration is still open.
 - **Hourly snapshots** miss repricings that revert within the hour.
+- **Coverage.** Reward and risk exist only for the markets the collector watches (about 100–160).
+  Most live pool money is outside that set (cycle 7), and is listed but not ranked.
 - **History is short for monthly data.** The collector was down from 10-07 to 10-30, so a monthly
   release may appear only once or twice.
 
@@ -143,3 +145,19 @@ Each cycle tests the result against the goals in §1, records what was wrong, fi
 - Fix: the top table now grades each market on its own episodes, falling back to the series grade
   (marked `*`) below 3 days of history.
 - Tests pin the flat, short-history and daily-moving cases.
+- Retest (`rl-rank-run4-1108`): gas's far 1¢ strikes ($3.20, $3.50, $4.80) are now LOW, and the
+  near-the-money $4.00 and $4.10 strikes stay HIGH.
+
+**Cycle 7: coverage (G1), found in cycle 6's retest.**
+- Problem: between two runs 16 minutes apart, the ranked set fell from 164 to 102 markets.
+- Diagnosis (`rk-join-1108`, `rk-end-1108`): not a bug. 62 programmes ended at 05:00Z on Sun 11-08.
+- Bigger problem found while checking (`rk-cov-1108`): the collector watches only 101 live markets,
+  holding $4,429/day. It misses **3,459 live markets in 265 series, holding $55,874/day.**
+  - The cause is how the collector picks its markets (`collector._reconcile`). It keeps at most
+    150, ranked by **total** programme reward, which favours long-dated ladders.
+  - That misses short weekly programmes that pay about $100/day per market: shipping chokepoints,
+    Panama, "Trump act", and AP POTUS.
+- Fix in the ranker: a "not watched" section lists those pools by series. There is no book data,
+  so they get no share estimate.
+- Changing which markets the collector watches is a live-worker change. That is for the owner
+  and Live Ops, not this screen.
