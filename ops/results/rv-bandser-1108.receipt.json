@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-08T01:26:28Z",
+  "id": "rv-bandser-1108",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rv-bandser-1108.receipt.json",
+  "result_file": "ops/results/rv-bandser-1108.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42434247315",
+  "service": null,
+  "started_at": "2026-11-08T01:26:25Z",
+  "targets": [],
+  "type": "db"
+}
