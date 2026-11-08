@@ -45,6 +45,19 @@ KNOWN_RELEASES = {
             "https://www.bls.gov/schedule/2026/",
             "pull bids before the release; markets kept repricing for ~48 h after Sep 18"),
 }
+#: Cycle 8 (DEC-044.3): one yardstick. Calibration = paid / estimated (scripts/
+#: limm_estimate_calibration.py), per market type once the type has CAL_MIN_EVENTS well-covered
+#: paid events, else the global median (GLOBAL_CALIBRATION when the live read is unavailable).
+CAL_MIN_EVENTS = 10
+GLOBAL_CALIBRATION = 1.34
+#: Fill cost per resting market-hour, cents, by market type (limm_scorecard.category). Mention
+#: events and YouTube views come from the threshold study (tools/review/limm/study/,
+#: 2026-11-08: closed mention events 3.1, closed YouTube views 2.5). Every other type is
+#: "unknown" until study 5 (docs/LIMM_FILL_HAZARD.md) reads on 2026-11-13.
+TYPE_FILL_C_PER_H = {"mention_event": 3.1, "youtube_views": 2.5}
+FILL_COST_SOURCE = {"mention_event": "threshold study 2026-11-08",
+                    "youtube_views": "threshold study 2026-11-08"}
+KALSHI_MINIMUM_USD = 1.00
 AAA_NOTE = ("AAA daily national average; Kalshi gas contracts expire 10:15-11:00 ET (15-16Z), "
             "the hour these markets reprice")
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -260,6 +273,7 @@ def rank_rows(rows: list[dict], now: dt.datetime) -> list[dict]:
                         "field": float(field), "reward_day_behind": behind}
         close = _aware(r["close"])
         hours_left = (close - now).total_seconds() / 3600.0 if close else None
+        pay_h = hours_to_step_aside(r.get("end"), close, now)
         flags = []
         if not (r["my"] and r["mn"]):
             flags.append("not-qualifying")
@@ -269,8 +283,70 @@ def rank_rows(rows: list[dict], now: dt.datetime) -> list[dict]:
             flags.append("no-bid")
         out.append({"ticker": r["ticker"], "series": (r["series"] or r["ticker"].split("-")[0]).upper(),
                     "event": r["event"], "pool_day": pd, "days_left": None if hours_left is None
-                    else hours_left / 24.0, "flags": flags, "title": r.get("title"), **(best or {})})
+                    else hours_left / 24.0, "pay_days_left": None if pay_h is None else pay_h / 24.0,
+                    "flags": flags, "title": r.get("title"), **(best or {})})
     out.sort(key=lambda x: (bool(x["flags"]), -(x.get("reward_day") or 0.0)))
+    return out
+
+
+def hours_to_step_aside(end, close, now: dt.datetime) -> float | None:
+    """Hours a bid placed now can rest: to the programme's end or 48 h before close."""
+    end, close = _aware(end), _aware(close)
+    cuts = [t for t in (end, close - dt.timedelta(hours=STEP_ASIDE_HOURS) if close else None) if t]
+    if not cuts:
+        return None
+    return max(0.0, (min(cuts) - now).total_seconds() / 3600.0)
+
+
+def market_type(ticker: str) -> str:
+    from limm_scorecard import category  # the threshold study's types, so the costs line up
+
+    return category(ticker)
+
+
+def type_factors(events: list[dict], global_median: float | None) -> dict[str, dict]:
+    """Per market type: the calibration factor and where it came from. A type uses its own
+    median paid/est once it has CAL_MIN_EVENTS paid events with >= 70% snapshot coverage."""
+    g = global_median if global_median else GLOBAL_CALIBRATION
+    by: dict[str, list[float]] = defaultdict(list)
+    for e in events:
+        if not e.get("paid_recorded") or not e.get("rest_h") or e.get("ratio") is None:
+            continue
+        if e.get("covered_h", 0.0) / e["rest_h"] < 0.7:
+            continue
+        by[market_type(e["event"])].append(float(e["ratio"]))
+    out = {"_global": {"factor": g, "source": "global median" if global_median else
+                       "global median (fixed 1.34; live calibration unavailable)", "events": None}}
+    for t, ratios in by.items():
+        ratios.sort()
+        if len(ratios) >= CAL_MIN_EVENTS:
+            out[t] = {"factor": ratios[len(ratios) // 2], "source": f"{t} median", "events": len(ratios)}
+        else:
+            out[t] = {"factor": g, "source": f"global (only {len(ratios)} paid {t} events)",
+                      "events": len(ratios)}
+    return out
+
+
+def yardstick(ranked: list[dict], factors: dict[str, dict]) -> list[dict]:
+    """Cycle 8: calibrated paid c/h beside fill c/h, per quotable market, ranked by the net where
+    the type's fill cost is known. `under_1usd`: a $10 bid's projected calibrated reward to the
+    step-aside is under Kalshi's $1 minimum (S4's universe)."""
+    out = []
+    for x in ranked:
+        if x["flags"] or x.get("reward_day") is None:
+            continue
+        t = market_type(x["ticker"])
+        f = factors.get(t) or factors["_global"]
+        paid = 100.0 * x["reward_day"] / 24.0 * f["factor"]
+        fill = TYPE_FILL_C_PER_H.get(t)
+        proj = None if x.get("pay_days_left") is None else x["reward_day"] * x["pay_days_left"] * f["factor"]
+        out.append({"ticker": x["ticker"], "type": t, "side": x["side"], "price": x["price"],
+                    "factor": f["factor"], "factor_source": f["source"], "paid_c_h": paid,
+                    "fill_c_h": fill, "net_c_h": None if fill is None else paid - fill,
+                    "projected_usd": proj,
+                    "under_1usd": proj is not None and proj < KALSHI_MINIMUM_USD})
+    out.sort(key=lambda r: (r["net_c_h"] is None, -(r["net_c_h"] if r["net_c_h"] is not None
+                                                     else r["paid_c_h"])))
     return out
 
 
@@ -386,6 +462,15 @@ def main(argv: list[str] | None = None) -> int:
         unwatched = [{"series": a, "markets": int(b), "pool_day": float(c or 0.0),
                       "max_market_pool_day": float(d or 0.0), "first_end": e}
                      for a, b, c, d, e in cur.fetchall()]
+        try:
+            import limm_estimate_calibration as cal
+
+            o, pr, sn = cal.fetch(cur, cal.LIVE_TAG)
+            cal_s = cal.summarise(o, pr, sn, cal.load_payouts(), cal.load_scoring(), now)
+            factors = type_factors(cal_s["events"], cal_s.get("median_ratio_well_covered"))
+        except Exception as exc:  # noqa: BLE001 — the yardstick still prints, on the fixed 1.34
+            print(f"(calibration read failed: {type(exc).__name__}: {exc}; using {GLOBAL_CALIBRATION})")
+            factors = type_factors([], None)
     rows = [{"ticker": t, "at": at, "yb": yb, "nb": nb, "fy": fy, "fn": fn, "my": my, "mn": mn,
              "series": s, "event": e, "pool": pool, "start": st, "end": en, "close": cl,
              "target": tg, "title": ti, "disc_bps": db}
@@ -438,6 +523,21 @@ def main(argv: list[str] | None = None) -> int:
         if jt:
             print(f"  {srow['series'][:20]:20s} " + ", ".join(
                 f"{WEEKDAYS[t.weekday()]} {t:%m-%d %H}Z" for t in jt))
+    yard = yardstick(ranked, factors)
+    print("\n== cycle 8 yardstick: calibrated paid c/h against fill c/h for a $10 bid, by market type")
+    print("  calibration: " + "; ".join(f"{t} {v['factor']:.2f} ({v['source']})"
+                                        for t, v in sorted(factors.items())))
+    print("  fill c/h: " + ", ".join(f"{t} {c} ({FILL_COST_SOURCE[t]})" for t, c in TYPE_FILL_C_PER_H.items())
+          + "; other types unknown until study 5 reads on 2026-11-13")
+    print(f"  {'#':>2} {'market':34s} {'type':14s} {'px':>3} {'cal':>4} {'paid':>6} {'fill':>5} "
+          f"{'net':>6} {'proj$':>6}  <$1")
+    for i, y in enumerate(yard[:args.top], 1):
+        print(f"  {i:2d} {y['ticker'][:34]:34s} {y['type'][:14]:14s} {y['price']:3d} {y['factor']:4.2f} "
+              f"{y['paid_c_h']:6.2f} {_f(y['fill_c_h'], '{:.1f}'):>5} {_f(y['net_c_h'], '{:+.2f}'):>6} "
+              f"{_f(y['projected_usd']):>6}  {'YES' if y['under_1usd'] else ''}")
+    under = [y for y in yard if y["under_1usd"]]
+    print(f"  under $1 at $10 to the step-aside (S4's universe): {len(under)} of {len(yard)} quotable "
+          f"markets" + (": " + ", ".join(y["ticker"] for y in under[:10]) if under else ""))
     uw_pool = sum(u["pool_day"] for u in unwatched)
     uw_mk = sum(u["markets"] for u in unwatched)
     print(f"\n== NOT WATCHED by the collector: {uw_mk} live markets in {len(unwatched)} series, "
@@ -471,6 +571,8 @@ def main(argv: list[str] | None = None) -> int:
             "unwatched": {"markets": uw_mk, "series": len(unwatched), "pool_day": uw_pool,
                           "top": unwatched[:15]},
             "quotable": len(quotable),
+            "calibration": factors, "yardstick": yard[:args.top],
+            "under_1usd": [y["ticker"] for y in yard if y["under_1usd"]],
             "top": [{**{k: x.get(k) for k in ("ticker", "series", "side", "price", "reward_day",
                                                "reward_day_behind", "share", "days_left", "title",
                                                "field")},

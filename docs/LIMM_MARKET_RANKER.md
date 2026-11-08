@@ -59,10 +59,12 @@ epoch. Run it any time:
 
 ## 3. What decides, and what does not
 
-The ranker shows estimated **reward** and repricing **risk** side by side. It does not net them,
-because the per-series **fill cost** is exactly what study 5 (`LIMM_FILL_HAZARD.md`) measures and
-reads once on 2026-11-13. After that read, the ranker can take study 5's per-series fill cost and
-rank by net.
+The ranker shows estimated **reward** and repricing **risk** side by side. Since cycle 8 it also
+sets **calibrated paid ¢/h against fill ¢/h** per market type (the one yardstick, DEC-044.3) and
+nets them where the type's fill cost is measured: mention events and YouTube views (threshold
+study, 2026-11-08). Every other type's fill cost is **unknown** until study 5
+(`LIMM_FILL_HAZARD.md`) reads once on 2026-11-13; after that, its per-series cost fills the
+column. Study 5's result moves no paper-strategy bar.
 
 ## 4. No early reads
 
@@ -72,8 +74,14 @@ rank by net.
 
 ## 5. Known limits
 
-- **The reward estimate has never been checked against Kalshi's actual payouts** (thesis "day-one
-  check 3"). It is internally consistent (§6, cycle 2), but external calibration is still open.
+- **Calibration against payouts is now partly answered.** The stand-down session's study
+  (`scripts/limm_estimate_calibration.py`) found Kalshi paid 1.34× (median) and 1.83× (pooled)
+  the estimate over 17 well-covered paid events. Cycle 8 applies it. A market type gets its own
+  factor once it has 10 well-covered paid events. On 2026-11-08 none had (mention 9, YouTube 5),
+  so every type uses the global median. Mention events are wide (0.8–14×), so their calibrated
+  numbers are the least certain.
+- **Fill cost per type is measured only for mention events and YouTube views** (the live book's
+  own history). Other types read "unknown" until study 5.
 - **Hourly snapshots** miss repricings that revert within the hour.
 - **Coverage.** Reward and risk exist only for the markets the collector watches (about 100–160).
   Most live pool money is outside that set (cycle 7), and is listed but not ranked.
@@ -160,4 +168,22 @@ Each cycle tests the result against the goals in §1, records what was wrong, fi
 - Fix in the ranker: a "not watched" section lists those pools by series. There is no book data,
   so they get no share estimate.
 - Changing which markets the collector watches is a live-worker change. That is for the owner
-  and Live Ops, not this screen.
+  and Live Ops, not this screen. (Done after the owner's DEC-043.2: the collector now picks by
+  daily pay, PR #769.)
+
+**Cycle 8: one yardstick and per-type calibration (DEC-044.3, leads 3 and 4).**
+- Problem: the ranker showed estimated reward and fill risk side by side, but never in the same
+  unit. And the estimate is known to under-read what Kalshi pays.
+- Fix: a new section prints, per quotable market:
+  - **calibrated paid ¢/h**: the $10 estimate × the calibration factor, which is per type at
+    10 or more well-covered paid events, else the global median. The factor used is printed;
+  - **fill ¢/h** for the market type (mention 3.1, YouTube 2.5 from the threshold study; other
+    types unknown until study 5);
+  - **net ¢/h** where the fill cost is known, ranked by it. Unknown-cost markets are ranked
+    after them, by calibrated paid ¢/h;
+  - the **projected calibrated reward of a $10 bid to the step-aside**, flagged **<$1** when
+    it is under Kalshi's minimum. Those markets are S4's universe (`LIMM_PAPER_STRATEGIES.md`).
+- The paper-strategy read (`scripts/limm_paper_strategies_read.py`) uses the same measure: paid
+  ¢/h against fill ¢/h, with the $1 minimum per market per programme.
+- Tests pin the per-type rule (10 events, 70% coverage), the net and ranking, and the $1 flag.
+- Retest: one live run after merge (recorded in the PR that follows it).
