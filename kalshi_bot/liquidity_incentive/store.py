@@ -185,3 +185,16 @@ def record_balance_observation(session, *, at: datetime, balance_cents: int,
         row.presumed_transfer = reconciliation.presumed_transfer
     session.add(row)
     return row
+
+
+def arm_reward_sum(session, *, policy: str, ticker: str, since: datetime | None,
+                   fill_model: str) -> float:
+    """Estimated reward an arm already accrued in one market since `since` (a programme's
+    start), under one fill model — restores S4-burst's progress after a worker restart."""
+    q = select(func.coalesce(func.sum(m.IncentiveShadowOutcome.est_reward_usd), 0)).where(
+        m.IncentiveShadowOutcome.policy == policy,
+        m.IncentiveShadowOutcome.market_ticker == ticker,
+        m.IncentiveShadowOutcome.fill_model == fill_model)
+    if since is not None:
+        q = q.where(m.IncentiveShadowOutcome.placed_at >= since)
+    return float(session.scalar(q) or 0.0)
