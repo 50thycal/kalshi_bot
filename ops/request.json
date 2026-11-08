@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "env", "id": "env-limm-off", "action": "set", "values": {"LIQUIDITY_INCENTIVE_LIVE_ENABLED": "false"}}
