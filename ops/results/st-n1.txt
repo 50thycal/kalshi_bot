@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=st-n1
+# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-08T01:28:40Z
+n    first                             with_end_evt  with_ticks  statuses                           
+---  --------------------------------  ------------  ----------  -----------------------------------
+463  2026-09-17 16:00:46.645547+00:00  392           394         canceled,filled,not_landed,rejected
+
+(1 row)
