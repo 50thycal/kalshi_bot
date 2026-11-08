@@ -1,15 +1,43 @@
 # ops request [READ]
-# type=db  id=rl-ps-diag-1108a
-# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:26:39Z
-policy   reason                  n   avg_rest_s  max_rest_s  first_at                          last_at                           db_now                          
--------  ----------------------  --  ----------  ----------  --------------------------------  --------------------------------  --------------------------------
-S1       refresh_max_rest        72  3608        3613        2026-11-08 16:12:55.461499+00:00  2026-11-08 19:23:22.757821+00:00  2026-11-08 20:26:39.669321+00:00
-S1       (open)                  60                          2026-11-08 15:41:32.696543+00:00  2026-11-08 20:23:30.148935+00:00  2026-11-08 20:26:39.669321+00:00
-S1       arm_resized             6   3107        3613        2026-11-08 16:12:55.461499+00:00  2026-11-08 18:13:15.503190+00:00  2026-11-08 20:26:39.669321+00:00
-S1       pull_side_not_quotable  3   1404        2109        2026-11-08 16:12:55.461499+00:00  2026-11-08 18:13:15.503190+00:00  2026-11-08 20:26:39.669321+00:00
-S2-best  refresh_max_rest        36  3608        3613        2026-11-08 16:12:55.461499+00:00  2026-11-08 19:13:20.938975+00:00  2026-11-08 20:26:39.669321+00:00
-S2-best  (open)                  30                          2026-11-08 15:41:32.696543+00:00  2026-11-08 20:23:30.148935+00:00  2026-11-08 20:26:39.669321+00:00
-S2-best  arm_resized             6   1904        3607        2026-11-08 17:13:08.766245+00:00  2026-11-08 19:48:25.784024+00:00  2026-11-08 20:26:39.669321+00:00
-S2-best  pull_side_not_quotable  1   2705        2705        2026-11-08 18:13:15.503190+00:00  2026-11-08 18:13:15.503190+00:00  2026-11-08 20:26:39.669321+00:00
+# type=db  id=rl-ps-diag-1108b
+# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:26:59Z
+at                                kind            d                                                                                                                                                               
+--------------------------------  --------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+2026-11-08 15:41:33.710371+00:00  arm_select      {"dropped": {}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-2", "KXEOWEEK-26NOV14-3", "KXEOWEE
+2026-11-08 15:43:11.844536+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 15:44:05.610635+00:00  connected       connection 3                                                                                                                                                    
+2026-11-08 15:47:06.820746+00:00  thread_started  null                                                                                                                                                            
+2026-11-08 15:51:12.144500+00:00  connected       connection 1                                                                                                                                                    
+2026-11-08 15:52:05.835473+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 15:52:32.077576+00:00  connected       connection 2                                                                                                                                                    
+2026-11-08 15:56:14.415988+00:00  arm_select      {"dropped": {}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-2", "KXEOWEEK-26NOV14-3", "KXEOWEE
+2026-11-08 16:02:50.014264+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 16:03:15.073176+00:00  connected       connection 3                                                                                                                                                    
+2026-11-08 16:04:29.912548+00:00  thread_started  null                                                                                                                                                            
+2026-11-08 16:04:37.707710+00:00  disconnected    closed                                                                                                                                                          
+2026-11-08 16:07:53.318617+00:00  connected       connection 1                                                                                                                                                    
+2026-11-08 16:08:43.487352+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 16:09:09.004702+00:00  connected       connection 2                                                                                                                                                    
+2026-11-08 16:12:56.214627+00:00  arm_select      {"dropped": {}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-2", "KXEOWEEK-26NOV14-3", "KXEOWEE
+2026-11-08 16:14:19.065538+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 16:14:45.172781+00:00  connected       connection 3                                                                                                                                                    
+2026-11-08 17:09:09.032900+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 17:09:38.072438+00:00  connected       connection 4                                                                                                                                                    
+2026-11-08 17:12:55.899530+00:00  arm_select      {"dropped": {"S1": ["KXEOWEEK-26NOV14-2"]}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-0", "K
+2026-11-08 17:39:48.141133+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 17:40:19.713643+00:00  connected       connection 5                                                                                                                                                    
+2026-11-08 17:55:20.161413+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 17:55:57.748605+00:00  connected       connection 6                                                                                                                                                    
+2026-11-08 18:01:07.767897+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 18:01:58.348313+00:00  connected       connection 7                                                                                                                                                    
+2026-11-08 18:09:07.894899+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 18:10:29.192108+00:00  connected       connection 8                                                                                                                                                    
+2026-11-08 18:12:57.202524+00:00  arm_select      {"dropped": {}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-0", "KXEOWEEK-26NOV14-3", "KXEOWEE
+2026-11-08 19:09:19.510388+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 19:10:38.341479+00:00  connected       connection 9                                                                                                                                                    
+2026-11-08 19:12:56.961182+00:00  arm_select      {"dropped": {"S1": ["KXPANAMAWEEKLY-26NOV15-T205", "KXEOWEEK-26NOV14-0"], "S2": ["KXAAAGASM-26NOV30-3.20"], "S3": ["KXAAAGASM-26NOV30-3.20"], "S4": ["KXPANAMAWE
+2026-11-08 20:09:22.571235+00:00  disconnected    ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received                                                               
+2026-11-08 20:10:42.272187+00:00  connected       connection 10                                                                                                                                                   
+2026-11-08 20:12:57.389022+00:00  arm_select      {"dropped": {}, "selected": {"S1": ["KXBABELMANDEBWEEKLY-26NOV15-T220", "KXBABELMANDEBWEEKLY-26NOV15-T230", "KXEOWEEK-26NOV14-3", "KXEOWEEK-26NOV14-4", "KXHORMU
 
-(8 rows)
+(36 rows)
