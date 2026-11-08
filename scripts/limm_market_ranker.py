@@ -161,6 +161,24 @@ def step_aside_text(clock: dict) -> str:
     return f"pull {(h - 2) % 24:02d}-{(h + 2) % 24:02d}Z{wd_part}"
 
 
+def turnover(contracts_per_md: float | None, field: float | None) -> float | None:
+    """Contracts traded per market-day over the competing score on our side: a rough measure of
+    how fast the queue we would join is consumed (~1 = the whole field's size trades each day)."""
+    if contracts_per_md is None or field is None or field <= 0:
+        return None
+    return contracts_per_md / field
+
+
+def clock_text(clock: dict) -> str:
+    n = clock.get("n", 0)
+    if not n:
+        return "-"
+    if n < MIN_JUMPS_FOR_CLOCK:
+        return f"too few ({n} jump{'s' if n > 1 else ''})"
+    return (f"{clock['hour']:02d}Z±1 {100 * clock['hour_share']:.0f}%, "
+            f"{WEEKDAYS[clock['weekday']]} {100 * clock['weekday_share']:.0f}% of {n}")
+
+
 def risk_grade(jumps_per_30md: float | None) -> str:
     if jumps_per_30md is None:
         return "?"
@@ -263,7 +281,8 @@ def series_risk(hist: dict[str, list], vol: dict[str, list], series_of: dict[str
         out[s] = {"market_days": md, "jumps": len(j), "jumps_per_30md": rate,
                   "risk": risk_grade(rate), "clock": clock, "step_aside": step_aside_text(clock),
                   "contracts_per_md": (sum(v) / md) if md else None,
-                  "last_jump": max(j) if j else None}
+                  "last_jump": max(j) if j else None,
+                  "jump_times": sorted(set(j))[-6:]}
     return out
 
 
@@ -315,31 +334,39 @@ def main(argv: list[str] | None = None) -> int:
     print(f"== top {args.top} markets: estimated reward per day for a $10 bid (at the best bid / "
           f"one tick behind), with the series' repricing risk")
     print(f"  {'#':>2} {'market':34s} {'side':4s} {'px':>3} {'$/day':>6} {'behind':>6} "
-          f"{'share':>6} {'days':>4} {'risk':4s}  step-aside")
+          f"{'share':>6} {'days':>4} {'risk':4s} {'turn':>5}  step-aside")
     for i, x in enumerate(quotable[:args.top], 1):
         r = risk.get(x["series"], {})
         print(f"  {i:2d} {x['ticker'][:34]:34s} {x['side']:4s} {x['price']:3d} "
               f"{_f(x['reward_day']):>6} {_f(x['reward_day_behind']):>6} "
               f"{_f(100 * x['share'], '{:.1f}%'):>6} {_f(x['days_left'], '{:.0f}'):>4} "
-              f"{r.get('risk', '?'):4s}  {r.get('step_aside', '')}")
+              f"{r.get('risk', '?'):4s} {_f(turnover(r.get('contracts_per_md'), x['field']), '{:.2f}'):>5}  "
+              f"{r.get('step_aside', '')}")
     print("\n== series: 3 x $10 bids (top 3 quotable markets) per day, and how the series reprices")
     print(f"  {'series':20s} {'quot':>4} {'pool/d':>6} {'top3':>5} {'mkt-d':>5} {'jumps':>5} "
           f"{'/30md':>5} {'risk':4s} {'ct/md':>6}  clock")
     srows = by_series(ranked)
     for srow in srows[:30]:
         r = risk.get(srow["series"], {})
-        c = r.get("clock", {})
-        clock = (f"{c['hour']:02d}Z±1 {100 * c['hour_share']:.0f}%, {WEEKDAYS[c['weekday']]} "
-                 f"{100 * c['weekday_share']:.0f}%" if c.get("n") else "-")
+        clock = clock_text(r.get("clock", {}))
         print(f"  {srow['series'][:20]:20s} {srow['quotable']:4d} {srow['pool_day']:6.0f} "
               f"{srow['top3_sum']:5.2f} {r.get('market_days', 0):5d} {r.get('jumps', 0):5d} "
               f"{_f(r.get('jumps_per_30md'), '{:.1f}'):>5} {r.get('risk', '?'):4s} "
               f"{_f(r.get('contracts_per_md'), '{:.0f}'):>6}  {clock}")
+    print("\n== repricing history: the latest jumps per series (UTC; a jump = hourly mid move "
+          f">= {JUMP_CENTS}c)")
+    for srow in srows[:30]:
+        jt = risk.get(srow["series"], {}).get("jump_times") or []
+        if jt:
+            print(f"  {srow['series'][:20]:20s} " + ", ".join(
+                f"{WEEKDAYS[t.weekday()]} {t:%m-%d %H}Z" for t in jt))
     flagged = defaultdict(int)
     for x in ranked:
         for f in x["flags"]:
             flagged[f] += 1
     print("\n  not ranked: " + (", ".join(f"{k} {v}" for k, v in sorted(flagged.items())) or "none"))
+    print("  turn: contracts traded per market-day over the competing size on our side (rough fill "
+          "pressure; 1.0 = the whole queue trades in a day).")
     print(f"  risk: jumps (hourly mid moves >= {JUMP_CENTS}c) per 30 market-days — LOW < {RISK_JUMPS_MED}, MED < {RISK_JUMPS_HIGH}, HIGH."
           )
     if args.json:
@@ -347,11 +374,19 @@ def main(argv: list[str] | None = None) -> int:
         print("JSON " + json.dumps({
             "as_of": now.isoformat(), "pool_day": total_pool, "markets": len(ranked),
             "quotable": len(quotable),
-            "top": [{k: x.get(k) for k in ("ticker", "series", "side", "price", "reward_day",
-                                            "reward_day_behind", "share", "days_left", "title")}
+            "top": [{**{k: x.get(k) for k in ("ticker", "series", "side", "price", "reward_day",
+                                               "reward_day_behind", "share", "days_left", "title",
+                                               "field")},
+                     "risk": risk.get(x["series"], {}).get("risk"),
+                     "step_aside": risk.get(x["series"], {}).get("step_aside"),
+                     "turnover": turnover(risk.get(x["series"], {}).get("contracts_per_md"),
+                                          x.get("field"))}
                     for x in quotable[:args.top]],
             "series": [{**srow, **{k: v for k, v in risk.get(srow["series"], {}).items()
-                                   if k not in ("clock", "last_jump")},
+                                   if k not in ("clock", "last_jump", "jump_times")},
+                        "jump_times": [t.isoformat() for t in
+                                       risk.get(srow["series"], {}).get("jump_times") or []],
+                        "clock_text": clock_text(risk.get(srow["series"], {}).get("clock", {})),
                         "clock": risk.get(srow["series"], {}).get("clock")}
                        for srow in srows[:30]]}, default=str))
     return 0

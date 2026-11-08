@@ -73,6 +73,16 @@ def test_jumps_and_clock():
     assert not scattered["clear"] and rk.step_aside_text(scattered) == "no clear clock"
 
 
+def test_turnover_and_clock_text():
+    assert rk.turnover(500.0, 1000.0) == 0.5 and rk.turnover(None, 10) is None
+    assert rk.turnover(5.0, 0) is None
+    assert rk.clock_text({"n": 0}) == "-"
+    assert rk.clock_text({"n": 1}) == "too few (1 jump)"
+    assert rk.clock_text({"n": 2}) == "too few (2 jumps)"
+    c = rk.reprice_clock([dt.datetime(2026, 11, 6, 15, tzinfo=UTC)] * 3)
+    assert rk.clock_text(c) == "15Z±1 100%, Fri 100% of 3"
+
+
 def test_risk_and_discount():
     assert rk.risk_grade(None) == "?" and rk.risk_grade(0.5) == "LOW"
     assert rk.risk_grade(2.0) == "MED" and rk.risk_grade(4.0) == "HIGH"
