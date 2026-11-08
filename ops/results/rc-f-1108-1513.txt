@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=rc-f-1108-1513
+# code 0ba1dd79ae363cd0cc3a6737bb0b7c32535888bc · started 2026-11-08T15:17:15Z
+strategy   orders  last_order                      
+---------  ------  --------------------------------
+Ymmsell10  1       2026-11-08 12:02:05.664610+00:00
+Xmmsell10  1       2026-11-08 12:02:04.130671+00:00
+
+(2 rows)
