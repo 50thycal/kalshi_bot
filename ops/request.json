@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT count(*), max(placed_at), min(placed_at) FROM incentive_shadow_quotes WHERE placed_at > now() - interval '1 day'", "id": "rk-sq-1108"}
+{"type":"noop"}
