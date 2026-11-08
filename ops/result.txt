@@ -1,18 +1,38 @@
 # ops request [READ]
-# type=script  id=rl-age-census-1108
-# code 22f3e156a0f895b3858e98c40f51b28b1a15759a · started 2026-11-08T14:49:22Z
-LIMM $1-minimum band census (counts only; docs/LIMM_PROGRAMME_AGE.md §6) — as of 2026-11-08T14:49, last 28 days, band $0.30-1.00 projected calibrated reward of a $10 bid
+# type=script  id=rl-age-run1-1108
+# code 22f3e156a0f895b3858e98c40f51b28b1a15759a · started 2026-11-08T14:51:37Z
+LIMM programme age — reward per contract-hour by programme age (pre-registered docs/LIMM_PROGRAMME_AGE.md)
 
-week      all  short<72h  pool$2-50  observed  band  below  above  band-med-len-h  band series
-2026-W41   803        757        257         0     0      0      0 n/a  
-2026-W42 34082      28758      17220        78    15      1     62             336  KXFLVISITORCOUNT KXPAMFGEMP KXTXERCOTPEAK KXTXOIL KXWAAEROEMP KXWALLSTBONUS KXWATECHEMP
-2026-W43 39421      34523      22795        52     1      0     51             168  KXONIONACT
-2026-W44 19932      13751       9120       123    31     30     62             168  KXBIGSKYOPEN KXCABUILDPERMITS KXCITYCHAMPS KXFLVISITORCOUNT KXILHPIYOY KXILNUCLEAR KXMARATHONUSAWIN KXMLBTEAMSALE KXNYCASKRENT KXNYNJPORTTEU KXONIONACT KXORDPAX
-2026-W45 15131      10753       1714       232    45     40    147             168  KXBABELMANDEBWEEKLY KXCITYCHAMPS KXEOWEEK KXHORMUZPEAK KXHORMUZWEEKLY KXILHPIYOY KXILNUCLEAR KXNFLPLAYOFFC KXNYCASKRENT KXNYNJPORTTEU KXORDPAX KXPAMFGEMP
+window 2026-09-08T00:00 -> 2026-11-08T14:51; hourly snapshots 124543; qualifying cheap-side hours 63438; prints (fill window) 87177
 
-thin-pool ($2-50 per market) programmes by series, per week (S4's watch funnel):
-  2026-W41: KXCRYPTOLEAD15M:180, KXBIGGESTQUAKE:15, KXEURUSD15M:11, KXGBPUSD15M:11, KXUSDJPY15M:11, KXNATGAS15M:8, KXCOPPER15M:7, KXPALLADIUM15M:7
-  2026-W42: KXCRYPTOLEAD15M:3320, KXLIGAPROMATCH:2300, KX7YRRATEH:1241, KX10YRRATEH:1234, KX5YRRATEH:1181, KX30YRRATEH:1154, KX2YRRATEH:1109, KXNATGAS15M:496
-  2026-W43: KXLIGAPROMATCH:4027, KXCRYPTOLEAD15M:3320, KX7YRRATEH:1400, KX5YRRATEH:1394, KX10YRRATEH:1379, KX2YRRATEH:1365, KX30YRRATEH:1315, KXNATGAS15M:496
-  2026-W44: KXLIGAPROMATCH:1263, KXCRYPTOLEAD15M:1040, KX2YRRATEH:658, KX5YRRATEH:636, KX7YRRATEH:635, KX30YRRATEH:631, KX10YRRATEH:630, KXAUDUSD15M:208
-  2026-W45: KXDPRESPRIMARY:600, KXRPRESPRIMARY:240, KXNFLTRADE:60, KXMOVIECAST:58, KXFEDERALCHARGE:45, KXSBSETLISTS:45, KXTRUMPSAYCOMPANY:44, KXDKNG:30
+bucket   hours  progs  thin  $/1000 c-h  fill-hours  fills  fills/100h
+0-6h      3404    876     2      0.5648        2165     13        0.60
+6-24h     8714    958     0      0.2640        5577      8        0.14
+1-3d     17873    904    11      0.1424       11635     45        0.39
+3d+      33447    463     0      0.0398       23349     44        0.19
+
+paired programmes 232 in 36 events
+R = early (0-24h) / late (3d+) reward per contract-hour: 1.233  95% CI 0.848 .. 1.625
+fill rate per resting hour (pre-2026-10-30): early 0.0027  late 0.0019
+late calibrated $ per $10 bid-day: 0.314
+VERDICT: NOT-EARLY   S4 rule: {'s4_burst_window_hours': None, 's4_after_burst': 'flat'}
+
+paid / estimated by age (descriptive, the live book's paid events):
+  {"event": "KXANTHVREQ-28SEP26", "est": 1.82, "early_share": 0.1, "paid": 2.21, "paid_over_est": 1.22, "kind": "late"}
+  {"event": "KXTRUMPMENTION-26OCT09", "est": 0.43, "early_share": 1.0, "paid": 2.09, "paid_over_est": 4.85, "kind": "early"}
+  {"event": "KXTRUMPMENTION-26OCT13", "est": 0.23, "early_share": 1.0, "paid": 3.31, "paid_over_est": 14.44, "kind": "early"}
+  {"event": "KXTRUMPMENTION-26OCT17", "est": 1.74, "early_share": 0.08, "paid": 1.7, "paid_over_est": 0.98, "kind": "late"}
+  {"event": "KXTRUMPMENTION-26OCT19", "est": 1.25, "early_share": 0.44, "paid": 10.98, "paid_over_est": 8.78, "kind": "mixed"}
+  {"event": "KXTRUMPMENTION-26OCT20", "est": 1.06, "early_share": 0.0, "paid": 7.96, "paid_over_est": 7.54, "kind": "late"}
+  {"event": "KXTRUMPMENTION-26OCT22", "est": 4.54, "early_share": 0.28, "paid": 6.1, "paid_over_est": 1.34, "kind": "mixed"}
+  {"event": "KXTRUMPMENTION-26OCT24", "est": 2.23, "early_share": 0.0, "paid": 1.82, "paid_over_est": 0.81, "kind": "late"}
+  {"event": "KXTRUMPMENTION-26OCT25", "est": 4.29, "early_share": 0.29, "paid": 4.4, "paid_over_est": 1.03, "kind": "mixed"}
+  {"event": "KXTRUMPMENTION-26OCT27", "est": 2.15, "early_share": 0.11, "paid": 6.85, "paid_over_est": 3.19, "kind": "late"}
+  {"event": "KXTRUMPMENTIONB-26OCT19", "est": 13.74, "early_share": 0.22, "paid": 20.75, "paid_over_est": 1.51, "kind": "mixed"}
+  {"event": "KXTRUMPMENTIONB-26OCT27", "est": 2.65, "early_share": 0.25, "paid": 7.36, "paid_over_est": 2.78, "kind": "mixed"}
+  {"event": "KXTRUMPSAY-26OCT12", "est": 1.49, "early_share": 1.0, "paid": 1.99, "paid_over_est": 1.34, "kind": "early"}
+  {"event": "KXYTVIEWSHIGH-FUE26NOV", "est": 2.57, "early_share": 0.0, "paid": 2.97, "paid_over_est": 1.16, "kind": "late"}
+  {"event": "KXYTVIEWSHIGH-MOR26NOV", "est": 3.08, "early_share": 0.0, "paid": 4.74, "paid_over_est": 1.54, "kind": "late"}
+  {"event": "KXYTVIEWSHIGH-OLI26NOV", "est": 2.52, "early_share": 0.0, "paid": 3.31, "paid_over_est": 1.32, "kind": "late"}
+  {"event": "KXYTVIEWSHIGH-YE26NOV", "est": 4.5, "early_share": 0.0, "paid": 5.54, "paid_over_est": 1.23, "kind": "late"}
+  {"event": "KXYTVIEWSHIGH-YOU26NOV", "est": 1.23, "early_share": 0.0, "paid": 1.47, "paid_over_est": 1.19, "kind": "late"}
