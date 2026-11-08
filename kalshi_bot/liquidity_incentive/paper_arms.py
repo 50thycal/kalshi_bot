@@ -105,14 +105,24 @@ class ArmRules:
     #: S4-burst stops bursting once accrued calibrated reward >= $1 + this margin
     s4_margin_usd: float = 0.25
     #: None = burst whenever S4 enters; a number = burst only this many hours after the
-    #: programme starts (set from the programme-age study before S4 records)
+    #: programme starts. Set by the programme-age study (docs/LIMM_PROGRAMME_AGE.md §9,
+    #: rl-age-run1-1108: NOT-EARLY -> None).
     s4_burst_window_hours: float | None = None
-    #: after the burst: "off" (pull) or "flat" ($10 for the rest of the programme)
-    s4_after_burst: str = "off"
+    #: after the burst: "off" (pull) or "flat" ($10 for the rest of the programme). Late hours
+    #: still pay ($0.31 per $10 bid-day >= $0.15, same run) -> "flat".
+    s4_after_burst: str = "flat"
     bls_pre_hours: float = 2.0
     bls_post_hours: float = 48.0
     gas_pull_hours_utc: tuple[int, ...] = (12, 13, 14, 15)          # 12-16Z daily
     one_event_last_days: float = 3.0
+    #: Watch pins. The collector keeps ~150 markets by daily pay, which drops S3's ladders and
+    #: every thin programme S4 needs; while the arms are on it ALSO keeps these (beyond the cap):
+    #: every selected market, S3's universe by daily pay, and S4's thin-pool funnel, newest first.
+    s3_pins: int = 40
+    s4_pins: int = 30
+    s4_pin_pool_low_usd: float = 2.0
+    s4_pin_pool_high_usd: float = 50.0
+    s4_pin_min_pay_hours: float = 24.0
 
     def cap(self, strategy: str) -> int:
         return dict(self.max_markets).get(strategy, 0)

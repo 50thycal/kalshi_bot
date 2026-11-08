@@ -393,10 +393,12 @@ class ShadowState:
                 # book had ever quoted, leaving no `est_reward` to compare a payout against
                 # (thesis §9.13). Pinning them costs at most a handful of extra subscriptions.
                 pinned = repo.live_book_open_tickers(session, live_tags.LIVE_TAG)
+                arm_pins = self._arm_pins(terms, now)
                 summary = {"listed": len(result.current), "new": result.new_terms,
                            "changed": result.changed_terms, "gone": result.disappeared,
                            "errors": result.errors, "liquidity_current": len(terms),
-                           "pinned_live": len(pinned)}
+                           "pinned_live": len(pinned), "pinned_arms": len(arm_pins)}
+                pinned = set(pinned) | arm_pins
         except Exception as exc:  # noqa: BLE001
             self._record(EV_LOOP_ERROR, detail=f"refresh_programs: {type(exc).__name__}: {exc}")
             return []
@@ -875,6 +877,34 @@ class ShadowState:
                            our_no_price=None if yes else price, our_no_size=0.0 if yes else qty,
                            period_reward_usd_value=t.period_reward_usd,
                            period_seconds=t.period_seconds)
+
+    def _arm_pins(self, terms: dict[str, ProgramTerms], now: datetime) -> set[str]:
+        """Markets the paper arms need watched beyond the daily-pay cap (empty while off):
+        every selected market, S3's universe by daily pay, and S4's thin-pool funnel (newest
+        programmes first, so their first hours are observed)."""
+        if not self._arms_on():
+            return set()
+        r = self.arms.rules
+        pins: set[str] = set()
+        for chosen in self.arms.selected.values():
+            pins |= {t for t in chosen if t in terms}
+        live = [t for t in terms.values() if t.target_size
+                and (t.start_date is None or t.start_date <= now)]
+        s3 = [t for t in live if pa.s3_kind(pa.series_of(t.market_ticker, t.series_ticker))]
+        s3.sort(key=daily_pay_sort_key, reverse=True)
+        pins |= {t.market_ticker for t in s3[:r.s3_pins]}
+
+        def pay_hours(t: ProgramTerms) -> float:
+            cuts = [x for x in (t.end_date, t.close_time - timedelta(hours=r.step_aside_hours)
+                                if t.close_time else None) if x is not None]
+            return (min(cuts) - now).total_seconds() / 3600.0 if cuts else float("inf")
+
+        s4 = [t for t in live if t.period_reward_usd is not None
+              and r.s4_pin_pool_low_usd <= float(t.period_reward_usd) <= r.s4_pin_pool_high_usd
+              and pay_hours(t) >= r.s4_pin_min_pay_hours]
+        s4.sort(key=lambda t: (t.start_date or now, t.market_ticker), reverse=True)
+        pins |= {t.market_ticker for t in s4[:r.s4_pins]}
+        return pins
 
     def _maybe_select_arms(self, now: datetime) -> None:
         """Hourly, sticky re-selection over the latest fresh candidate of every tracked market.
