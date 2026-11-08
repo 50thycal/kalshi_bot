@@ -174,3 +174,44 @@ def test_main_end_to_end(monkeypatch, capsys):
 def test_ranker_is_ops_allowlisted():
     import ops_runner
     assert "limm_market_ranker" in ops_runner.ALLOWED_SCRIPTS
+
+
+# ------------------------------------------------------------------ cycle 8: one yardstick
+
+
+def test_type_factors_use_a_types_own_median_only_from_ten_paid_events():
+    ev = [{"event": f"KXTRUMPMENTION-26OCT{10 + i}", "paid_recorded": True, "rest_h": 10.0,
+           "covered_h": 9.0, "ratio": 1.0 + i / 10} for i in range(10)]
+    ev += [{"event": "KXYTVIEWSHIGH-FUE26NOV", "paid_recorded": True, "rest_h": 10.0,
+            "covered_h": 10.0, "ratio": 1.16}]
+    ev += [{"event": "KXTRUMPMENTION-26OCT09", "paid_recorded": True, "rest_h": 10.0,
+            "covered_h": 1.0, "ratio": 9.0}]                       # under 70% covered: ignored
+    f = rk.type_factors(ev, 1.34)
+    assert f["mention_event"]["events"] == 10 and f["mention_event"]["factor"] == 1.5
+    assert f["youtube_views"]["factor"] == 1.34 and "only 1" in f["youtube_views"]["source"]
+    assert rk.type_factors([], None)["_global"]["factor"] == rk.GLOBAL_CALIBRATION
+
+
+def test_yardstick_nets_known_fill_costs_and_flags_the_1usd_minimum():
+    factors = rk.type_factors([], 1.34)
+    ranked = [
+        {"ticker": "KXTRUMPMENTION-26NOV20-WORD", "flags": [], "reward_day": 0.48, "side": "yes",
+         "price": 2, "pay_days_left": 1.0},                   # 2c/h x1.34 = 2.68 paid, -3.1 fill
+        {"ticker": "KXAAAGASM-26NOV30-3.20", "flags": [], "reward_day": 1.2, "side": "no",
+         "price": 1, "pay_days_left": 20.0},
+        {"ticker": "KXX-26-A", "flags": ["not-qualifying"], "reward_day": 9.0, "side": "yes",
+         "price": 1, "pay_days_left": 5.0},
+    ]
+    y = rk.yardstick(ranked, factors)
+    assert [r["ticker"] for r in y] == ["KXTRUMPMENTION-26NOV20-WORD", "KXAAAGASM-26NOV30-3.20"]
+    m = y[0]
+    assert math.isclose(m["paid_c_h"], 2.0 * 1.34) and m["fill_c_h"] == 3.1
+    assert math.isclose(m["net_c_h"], 2.68 - 3.1) and m["under_1usd"]          # 0.48 x 1 x 1.34
+    gas = y[1]
+    assert gas["fill_c_h"] is None and gas["net_c_h"] is None and not gas["under_1usd"]
+
+
+def test_hours_to_step_aside():
+    assert rk.hours_to_step_aside(NOW + dt.timedelta(hours=10), NOW + dt.timedelta(days=30), NOW) == 10.0
+    assert rk.hours_to_step_aside(NOW + dt.timedelta(days=30), NOW + dt.timedelta(hours=60), NOW) == 12.0
+    assert rk.hours_to_step_aside(None, None, NOW) is None
