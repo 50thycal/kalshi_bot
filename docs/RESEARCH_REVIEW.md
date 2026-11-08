@@ -14,9 +14,9 @@ whether the research is still collecting data. This review asks what the researc
   cheaper fills and better exits, plus new features and data sources.
 - **MMSELL:** a better edge or universe, fill protection, and profit per contract.
 
-## The caps: running experiments per line (owner, 2026-11-01; MMSELL raised 2026-11-03)
+## The caps: running experiments per line (owner, 2026-11-01; MMSELL raised 2026-11-03; incentive raised 2026-11-08 to 8, then 10)
 
-There are two separate caps: **5 for the incentive programme** and **20 for MMSELL** (raised
+There are two separate caps: **10 for the incentive programme** (raised from 5 to 8 on 2026-11-08, DEC-043, then to 10 the same day, DEC-044) and **20 for MMSELL** (raised
 from 5 by the owner on 2026-11-03). Slots do not have to be used.
 
 - **Counts in its line:**

@@ -1708,3 +1708,57 @@ tied to this experiment".
 
 **Revisit when** the rules have been stable for a few weeks. That is the clean moment for option B.
 
+## DEC-043 — Incentive paper strategies, collector watches by daily pay, incentive cap 8
+
+**Date:** 2026-11-08 UTC. **Owner direction**, answering the brainstorm after the market ranker
+(`docs/LIMM_MARKET_RANKER.md`):
+> "1 yes all recommended there; 2) yes; 3) scale appropriately for each strategy; 4) agreed; 5) yes"
+
+- **Decision:**
+  1. **Three incentive paper strategies (five arms)** will be built and run on paper, all scored
+     by one measure. Spec and build plan: `docs/handoffs/HANDOFF-limm-paper-strategies.md`.
+     - S1, weekly money-finder.
+     - S2, at the best bid vs one tick behind (two arms).
+     - S3, release-aware data and event ladders, with a step-aside arm and a control arm.
+       Late-exit rules for one-event ladders are folded into S3's step-aside arm.
+  2. **The incentive collector picks its markets by daily pay** (pool per day), not by total
+     programme reward. This is a change to the live worker's paper-only instrument: no orders,
+     and no change to `Alimm1`'s quoting.
+  3. **Each strategy is sized for its own job.** The sizes are set in the build session's
+     pre-registration within the handoff's guardrails.
+  4. **Incentive line cap raised from 5 to 8.** Study 9 Part B (2026-12-03) is cancelled, because
+     Part A was NO-LEAD on all policies.
+  5. **Read date:** once, about 2026-11-24. More precisely, the later of 11-24 or 14 days after
+     the paper engine starts recording.
+- **Why:** the live pool has moved away from the markets `Alimm1` quotes. The collector misses
+  about $89k/day of live pools. And the 50% per-tick discount makes the behind-the-touch rule a
+  measurable trade-off. Paper is the cheapest honest test of all three.
+- **Not decided here:** any change to `Alimm1` (universe, price rule, step-aside). A strategy that
+  passes becomes a nomination, which is a separate owner decision and a new epoch.
+
+## DEC-044 — Stand-down leads folded into the paper strategies; S4 burst, programme-age study, incentive cap 10
+
+**Date:** 2026-11-08 UTC. **Owner direction**, after a second session stood `Alimm1` down (thesis
+§9.78) and left five research leads in `docs/liquidity_incentive/HANDOFF_2026-11-08.md`:
+> "Take a look at this. Some might overlap with others. If not, add these ideas to the build
+> handoff as well. Raise the cap as needed."
+
+- **Decision:**
+  1. **S4 burst sizing** joins DEC-043's paper strategies as two arms: `S4-burst` against
+     `S4-flat`.
+     - It merges lead 1 (burst) and lead 5 (the $1-minimum harvest).
+     - `S4-burst` bids $50, on paper only, in short or thin programmes that a $10 bid would leave
+       under Kalshi's $1 minimum.
+  2. **Programme-age study** (lead 2). One pre-registered read of existing history. It sets
+     S4's burst window before S4 records.
+  3. **Leads 3 and 4 are instrumentation, not experiments.** One paid-¢/h-against-fill-¢/h
+     yardstick and per-type calibration become ranker cycle 8, and the paper-strategy read uses
+     the same measure, with the $1 minimum applied per market per programme.
+  4. **Incentive line cap raised from 8 to 10.** The two new slots are S4 and the age study.
+- **Overlap found:** lead 3 is the ranker's fill-cost column, already planned for after study 5
+  reads on 11-13. Lead 4 answers part of the ranker's "never calibrated against payouts" limit.
+  Neither needs its own experiment.
+- **Not decided:** restarting `Alimm1`, or any live bid above $10. Both are hard stops and owner
+  decisions.
+- **Build plan:** `docs/handoffs/HANDOFF-limm-paper-strategies.md`.
+
