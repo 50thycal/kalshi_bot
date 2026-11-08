@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rk-disc-1108
-# code f228495a9568d8bff15dd529a1c5a4286c633dca · started 2026-11-08T04:12:39Z
-discount_factor_bps  programmes  pool_usd
--------------------  ----------  --------
-5000                 7154        596445  
-
-(1 row)
