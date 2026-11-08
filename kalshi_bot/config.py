@@ -1502,6 +1502,9 @@ class Settings(BaseSettings):
     liquidity_incentive_min_reward_usd: float = 0.0
     # Settlement pass cadence for single-leg outcomes (seconds).
     liquidity_incentive_settlement_seconds: float = 600.0
+    # Incentive paper strategies S1-S4 (DEC-043/044, docs/LIMM_PAPER_STRATEGIES.md): one-sided
+    # PAPER bids recorded by the shadow collector. No orders: the collector is GET-only.
+    liquidity_incentive_paper_arms_enabled: bool = False
     # Reward-ledger cadence (seconds). Slower than the settlement pass on purpose: each reading
     # costs a paged fills+settlements call, and a balance residual only means anything over a
     # window long enough for a reward to have been credited in. See

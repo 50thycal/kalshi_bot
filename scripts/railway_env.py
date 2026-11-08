@@ -146,6 +146,8 @@ ALLOWED_VARS = frozenset({
     "LIQUIDITY_INCENTIVE_SHADOW_ENABLED", "LIQUIDITY_INCENTIVE_DISCOVERY_SECONDS",
     "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS", "LIQUIDITY_INCENTIVE_MAX_MARKETS",
     "LIQUIDITY_INCENTIVE_BOOK_EVENTS_MAX_PER_MINUTE", "LIQUIDITY_INCENTIVE_MIN_REWARD_USD",
+    # The incentive paper strategies S1-S4 (paper only, docs/LIMM_PAPER_STRATEGIES.md).
+    "LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED",
     # Phase 1a, the one-sided LIVE smoke test (docs/LIQUIDITY_INCENTIVE_THESIS.md §10). ENABLED
     # turns the runner on; it still places nothing until `LIVE_STRATEGIES` names the book's tag,
     # which is a separate act. MAX_BOOK_FETCHES bounds API calls per cycle. EXCLUDED_SERIES keeps

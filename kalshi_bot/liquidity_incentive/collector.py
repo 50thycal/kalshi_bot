@@ -53,6 +53,7 @@ from ..kalshi.errors import AuthError
 from . import economics as econ
 from . import fills as fm
 from . import live as live_tags
+from . import paper_arms as pa
 from . import programs as pg
 from . import quotes as qp
 from . import scoring as sc
@@ -65,6 +66,8 @@ MARKET_CHANNELS = ("orderbook_delta", "trade")
 GLOBAL_CHANNELS = ("market_lifecycle_v2",)
 
 MARK_HORIZONS_SECONDS = (1, 5, 30, 60, 300)
+#: The paper arms add a 1 h and a 24 h markout (handoff §5 step 2); settlement is stamped too.
+ARM_MARK_HORIZONS_SECONDS = MARK_HORIZONS_SECONDS + (3600, 86400)
 
 # collector-event kinds (incentive_collector_events.kind)
 EV_THREAD_STARTED = "thread_started"
@@ -96,6 +99,15 @@ END_COLLECTOR_STOP = "collector_stop"
 END_FILLED_ALL = "filled_all_models"
 END_REFRESH = "refresh_max_rest"
 
+#: shadow-event kind written once per paper-arm quote when it ends (always, not gated by
+#: `persist_shadow_events`): the hour's share, qualification and thin-rule diagnostics.
+EV_ARM_HOUR = "arm_hour"
+EV_ARM_SELECT = "arm_select"          # incentive_collector_events: the hourly arm selection
+#: How often the arms re-select markets, and how stale a market's candidate may be.
+ARM_SELECT_SECONDS = 3600.0
+ARM_FIRST_SELECT_AFTER_SECONDS = 300.0
+ARM_CANDIDATE_MAX_AGE_SECONDS = 900.0
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -121,6 +133,8 @@ class ProgramTerms:
     end_date: datetime | None
     close_time: datetime | None
     fee_rule: FeeRule
+    event_ticker: str | None = None
+    series_ticker: str | None = None
 
     @classmethod
     def from_row(cls, row) -> ProgramTerms:
@@ -136,7 +150,9 @@ class ProgramTerms:
                    discount_factor_bps=row.discount_factor_bps,
                    period_reward_usd=float(row.period_reward_usd) if row.period_reward_usd is not None else None,
                    period_seconds=period, start_date=start, end_date=end,
-                   close_time=_aware(row.close_time), fee_rule=rule)
+                   close_time=_aware(row.close_time), fee_rule=rule,
+                   event_ticker=getattr(row, "event_ticker", None),
+                   series_ticker=getattr(row, "series_ticker", None))
 
 
 def daily_pay_usd(terms: ProgramTerms) -> float | None:
@@ -174,6 +190,16 @@ class LivePair:
     # (model, side) -> list of (horizon, bid_cents) marks taken so far
     marks: dict[tuple[str, str], list[tuple[int, int | None]]] = field(default_factory=dict)
     marks_scheduled: set[tuple[str, str]] = field(default_factory=set)
+    # --- one-sided paper arms only (None for the two-sided policy pairs) ---
+    arm: str | None = None
+    side: str | None = None              # the side the arm's bid rests on
+    programme_start: datetime | None = None
+    seconds_scored: float = 0.0
+    seconds_qualifying: float = 0.0
+    seconds_thin: float = 0.0
+    share_seconds: float = 0.0           # share x seconds, for the hour's mean share
+    max_share: float = 0.0
+    reward_uncredited_usd: float = 0.0   # thin hours: estimated but not credited (study 3)
 
 
 @dataclass
@@ -237,6 +263,10 @@ class ShadowState:
         self._last_discovery_at: datetime | None = None
         self._last_settlement_at: datetime | None = None
         self.tiers: tuple[int, ...] = self._tiers()
+        self.arms = pa.ArmSelector()
+        self.arm_candidates: dict[str, pa.Candidate] = {}
+        self._started_at: datetime | None = None
+        self._last_arm_select_at: datetime | None = None
 
     # -- config --------------------------------------------------------------------------
     def _tiers(self) -> tuple[int, ...]:
@@ -250,6 +280,9 @@ class ShadowState:
 
     def _cfg(self, name: str, default):
         return getattr(self.settings, f"liquidity_incentive_{name}", default)
+
+    def _arms_on(self) -> bool:
+        return bool(self._cfg("paper_arms_enabled", False))
 
     # -- helpers -------------------------------------------------------------------------
     def _cmd_id(self) -> int:
@@ -582,7 +615,7 @@ class ShadowState:
             for leg in (pair.yes_leg, pair.no_leg):
                 if not leg.trade_hits_us(yes_px, taker_out):
                     continue
-                before = {model: leg.queue_ahead(model) for model in fm.FILL_MODELS}
+                before = {model: leg.queue_ahead(model) for model in leg.models}
                 newly = leg.on_trade(yes_price_cents=yes_px, count=count,
                                      taker_outcome_side=taker_out, at=at)
                 native_price = pair.yes_bid if leg.side == "yes" else pair.no_bid
@@ -606,16 +639,17 @@ class ShadowState:
                             queue_ahead_before=before[model],
                             seconds_since_placed=(at - pair.placed_at).total_seconds(),
                             trade_id=trade_id, mid_at_fill=self._mid(mk.book))
+                horizons = ARM_MARK_HORIZONS_SECONDS if pair.arm else MARK_HORIZONS_SECONDS
                 for model in newly:
                     key = (model, leg.side)
                     if key not in pair.marks_scheduled:
                         pair.marks_scheduled.add(key)
-                        for h in MARK_HORIZONS_SECONDS:
+                        for h in horizons:
                             self.pending_marks.append(PendingMark(
                                 quote_id=pair.quote_id, ticker=mk.ticker, model=model,
                                 side=leg.side, horizon=h, due_at=at + timedelta(seconds=h),
                                 fill_price=native_price, filled_qty=leg.filled[model]))
-            if all(pair.yes_leg.is_full(mo) and pair.no_leg.is_full(mo) for mo in fm.FILL_MODELS):
+            if all(pair.yes_leg.is_full(mo) and pair.no_leg.is_full(mo) for mo in pair.yes_leg.models):
                 self._end_pair(mk, pair, END_FILLED_ALL, at)
 
     @staticmethod
@@ -645,7 +679,14 @@ class ShadowState:
     def tick(self, now: datetime | None = None) -> None:
         """Clock-driven work: requotes, reward accrual, due marks, settlement pass."""
         now = now or self.clock()
+        if self._started_at is None:
+            self._started_at = now
         every = float(self._cfg("requote_seconds", 60.0))
+        if self._arms_on():
+            try:
+                self._maybe_select_arms(now)
+            except Exception as exc:  # noqa: BLE001
+                self._record(EV_LOOP_ERROR, detail=f"arm select: {type(exc).__name__}: {exc}")
         for mk in list(self.markets.values()):
             try:
                 if mk.last_requote_at is None or (now - mk.last_requote_at).total_seconds() >= every:
@@ -704,7 +745,16 @@ class ShadowState:
                 scoring_version=sc.SCORING_VERSION, seq=mk.book.last_seq, market_status=mk.status)
         # Accrue reward on every resting pair, then maintain / place.
         for pair in list(mk.pairs.values()):
-            self._accrue(mk, pair, yes_lv, no_lv, now)
+            if pair.arm:
+                self._accrue_arm(mk, pair, yes_lv, no_lv, now)
+            else:
+                self._accrue(mk, pair, yes_lv, no_lv, now)
+        if self._arms_on():
+            try:
+                self._maintain_arms(mk, view, yes_lv, no_lv, now)
+            except Exception as exc:  # noqa: BLE001
+                self._record(EV_LOOP_ERROR, ticker=mk.ticker,
+                             detail=f"arms: {type(exc).__name__}: {exc}")
         max_rest = float(self._cfg("max_rest_seconds", 3600))
         move_ticks = int(self._cfg("move_ticks", 2))
         max_loss = float(self._cfg("max_pair_loss_cents", 1.0))
@@ -792,6 +842,199 @@ class ShadowState:
         pair.reward_yes_usd += total * (est.our_yes_share / denom)
         pair.reward_no_usd += total * (est.our_no_share / denom)
 
+    # -- one-sided paper arms (S1-S4, DEC-043/044) ------------------------------------------
+    def _arm_candidate(self, mk: TrackedMarket, view: qp.BookView, yes_lv: dict, no_lv: dict,
+                       now: datetime) -> pa.Candidate:
+        """The market as the arms see it: each side's best bid and what a $10 bid there earns,
+        scored by the same `scoring.estimate` the pairs use (the ranker's measure)."""
+        t = mk.terms
+
+        def side(name: str) -> pa.SideView:
+            price = view.best_yes_bid if name == "yes" else view.best_no_bid
+            if price is None or not (1 <= price <= 99):
+                return pa.SideView(price=price)
+            qty = pa.contracts(self.arms.rules.base_size_usd, price, 1000)
+            est = self._arm_estimate(t, yes_lv, no_lv, name, price, float(qty))
+            share = est.our_yes_share if name == "yes" else est.our_no_share
+            return pa.SideView(price=price, rate10_per_hour_usd=float(est.reward_per_hour_usd or 0.0),
+                               qualifies10=bool(est.snapshot_qualifies), share10=float(share))
+
+        return pa.Candidate(
+            ticker=mk.ticker, event=pa.event_of(mk.ticker, t.event_ticker),
+            series=pa.series_of(mk.ticker, t.series_ticker), at=now, start=t.start_date,
+            end=t.end_date, close_time=t.close_time, pool_day_usd=daily_pay_usd(t),
+            yes=side("yes"), no=side("no"))
+
+    @staticmethod
+    def _arm_estimate(t: ProgramTerms, yes_lv: dict, no_lv: dict, side: str, price: int,
+                      qty: float) -> sc.ScoreEstimate:
+        yes = side == "yes"
+        return sc.estimate(yes_levels=yes_lv, no_levels=no_lv, target_size=t.target_size,
+                           discount_factor_bps=t.discount_factor_bps,
+                           our_yes_price=price if yes else None, our_yes_size=qty if yes else 0.0,
+                           our_no_price=None if yes else price, our_no_size=0.0 if yes else qty,
+                           period_reward_usd_value=t.period_reward_usd,
+                           period_seconds=t.period_seconds)
+
+    def _maybe_select_arms(self, now: datetime) -> None:
+        """Hourly, sticky re-selection over the latest fresh candidate of every tracked market.
+        The first pass waits a few minutes so every market has requoted at least once."""
+        started = self._started_at or now
+        if self._last_arm_select_at is None:
+            if (now - started).total_seconds() < ARM_FIRST_SELECT_AFTER_SECONDS:
+                return
+        elif (now - self._last_arm_select_at).total_seconds() < ARM_SELECT_SECONDS:
+            return
+        self._last_arm_select_at = now
+        fresh = {t: cnd for t, cnd in self.arm_candidates.items()
+                 if t in self.markets and (now - cnd.at).total_seconds() <= ARM_CANDIDATE_MAX_AGE_SECONDS}
+        before = set(self.arms.selected[pa.S4])
+        dropped = self.arms.select(fresh, now)
+        for ticker, sel in self.arms.selected[pa.S4].items():
+            if ticker not in before:
+                self._restore_burst(sel)
+        self._record(EV_ARM_SELECT, detail_json={
+            "candidates": len(fresh),
+            "selected": {s: sorted(v) for s, v in self.arms.selected.items()},
+            "dropped": {s: v for s, v in dropped.items() if v}})
+
+    def _restore_burst(self, sel: pa.Selection) -> None:
+        """S4-burst's accrued reward lives in memory; a restart must not reset a programme's
+        progress toward the $1 threshold. Rebuild it from the arm's own outcome rows."""
+        key = self.arms.burst_key(sel.ticker, sel.programme_start)
+        if key in self.arms.bursts:
+            return
+        try:
+            with self.session_factory() as session:
+                prior = store.arm_reward_sum(session, policy=pa.ARM_S4_BURST, ticker=sel.ticker,
+                                             since=sel.programme_start,
+                                             fill_model=fm.MODEL_CONSERVATIVE)
+        except Exception:  # noqa: BLE001 — a failed read starts the burst from zero, logged
+            logger.exception("incentive shadow: could not restore S4 burst for %s", sel.ticker)
+            prior = 0.0
+        self.arms.burst(sel.ticker, sel.programme_start)
+        if prior > 0:
+            self.arms.add_burst_reward(sel.ticker, sel.programme_start, prior)
+
+    @staticmethod
+    def _arm_pair(mk: TrackedMarket, arm: str) -> LivePair | None:
+        for (policy, _tier), pair in mk.pairs.items():
+            if policy == arm:
+                return pair
+        return None
+
+    def _maintain_arms(self, mk: TrackedMarket, view: qp.BookView, yes_lv: dict, no_lv: dict,
+                       now: datetime) -> None:
+        cand = self._arm_candidate(mk, view, yes_lv, no_lv, now)
+        self.arm_candidates[mk.ticker] = cand
+        sels = self.arms.selections_for(mk.ticker)
+        max_rest = float(self._cfg("max_rest_seconds", 3600))
+        for strategy, arms in pa.ARMS_BY_STRATEGY.items():
+            sel = sels.get(strategy)
+            if sel is not None:
+                self.arms.observe(sel, cand)
+            for arm in arms:
+                cur = self._arm_pair(mk, arm)
+                want = (self.arms.desired(arm, sel, cand, now) if sel is not None
+                        else pa.Pull(pa.END_DESELECTED))
+                if isinstance(want, pa.Pull):
+                    if cur is not None:
+                        self._end_pair(mk, cur, want.reason, now)
+                    continue
+                if cur is not None:
+                    cur_price = cur.yes_bid if cur.side == "yes" else cur.no_bid
+                    if cur.side != want.side or cur.tier != want.size_usd or int(cur.qty) != want.qty:
+                        self._end_pair(mk, cur, pa.END_RESIZED, now)
+                    elif cur_price != want.price:
+                        self._end_pair(mk, cur, END_MARKET_MOVED, now)
+                    elif (now - cur.placed_at).total_seconds() >= max_rest:
+                        self._end_pair(mk, cur, END_REFRESH, now)
+                    else:
+                        continue
+                self._place_arm(mk, want, sel, cand, yes_lv, no_lv, now)
+
+    def _place_arm(self, mk: TrackedMarket, q: pa.ArmQuote, sel: pa.Selection, cand: pa.Candidate,
+                   yes_lv: dict, no_lv: dict, now: datetime) -> None:
+        t = mk.terms
+        yes = q.side == "yes"
+        est = self._arm_estimate(t, yes_lv, no_lv, q.side, q.price, float(q.qty))
+        share = est.our_yes_share if yes else est.our_no_share
+        price_ys = q.price if yes else 100 - q.price
+        ahead = float((mk.book.yes if yes else mk.book.no).get(price_ys, 0.0))
+        capital = round(q.price * q.qty / 100.0, 2)
+        joins = q.price == cand.side(q.side).price
+        ref = est.yes.reference_price if yes else est.no.reference_price
+        with self.session_factory() as session:
+            row = store.insert_quote(
+                session, program_row_id=t.row_id, market_ticker=mk.ticker, policy=q.arm,
+                capital_tier_usd=q.size_usd, placed_at=now,
+                # one-sided: the side we do not quote carries price 0 (no bid)
+                yes_bid=q.price if yes else 0, no_bid=0 if yes else q.price,
+                yes_bid_yes_scale=q.price if yes else 0, no_bid_yes_scale=100 if yes else price_ys,
+                qty_per_side=q.qty, pair_cost_cents=q.price, maker_fee_cents_per_pair=None,
+                pair_edge_cents=None, capital_required_usd=capital,
+                capital_unused_usd=round(q.size_usd - capital, 2),
+                reason=f"{q.arm}:{q.side}@{q.price}x{q.qty}"[:64],
+                yes_joins_best=joins if yes else None, no_joins_best=None if yes else joins,
+                yes_queue_ahead=ahead if yes else None, no_queue_ahead=None if yes else ahead,
+                book_json={"yes": sorted(yes_lv.items(), reverse=True)[:10],
+                           "no": sorted(no_lv.items(), reverse=True)[:10],
+                           "arm": {"arm": q.arm, "strategy": pa.STRATEGY_OF[q.arm],
+                                   "side": q.side, "size_usd": q.size_usd,
+                                   "best_bid": cand.side(q.side).price,
+                                   "event": cand.event, "series": cand.series,
+                                   "pool_day_usd": cand.pool_day_usd,
+                                   "qualifies": bool(est.snapshot_qualifies), "share": share,
+                                   "thin": share > self.arms.rules.thin_share,
+                                   "programme_start": (sel.programme_start.isoformat()
+                                                       if sel.programme_start else None)}},
+                est_reference_price=ref, est_yes_score=est.our_yes_raw, est_no_score=est.our_no_raw,
+                est_yes_share=est.our_yes_share, est_no_share=est.our_no_share,
+                est_reward_per_hour_usd=est.reward_per_hour_usd, scoring_version=sc.SCORING_VERSION)
+            quote_id = int(row.id)
+        other = "no" if yes else "yes"
+        leg = fm.ShadowLeg(q.side, price_ys, float(q.qty), now, ahead, models=fm.ARM_FILL_MODELS)
+        # The unquoted side: zero contracts at a level no print can reach (YES scale 0 / 100).
+        dummy = fm.ShadowLeg(other, 0 if other == "yes" else 100, 0.0, now, 0.0,
+                             models=fm.ARM_FILL_MODELS)
+        pair = LivePair(
+            quote_id=quote_id, policy=q.arm, tier=q.size_usd,
+            yes_bid=q.price if yes else 0, no_bid=0 if yes else q.price, qty=float(q.qty),
+            placed_at=now, capital_required=capital,
+            yes_leg=leg if yes else dummy, no_leg=dummy if yes else leg, last_accrual_at=now,
+            arm=q.arm, side=q.side, programme_start=sel.programme_start)
+        mk.pairs[(q.arm, q.size_usd)] = pair
+
+    def _accrue_arm(self, mk: TrackedMarket, pair: LivePair, yes_lv: dict, no_lv: dict,
+                    now: datetime) -> None:
+        """One-sided accrual with the hour's diagnostics. Study 3's thin rule: while we would
+        be more than `thin_share` of our side, the estimate is logged but NOT credited."""
+        last = pair.last_accrual_at or pair.placed_at
+        seconds = max(0.0, (now - last).total_seconds())
+        pair.last_accrual_at = now
+        if seconds <= 0:
+            return
+        price = pair.yes_bid if pair.side == "yes" else pair.no_bid
+        est = self._arm_estimate(mk.terms, yes_lv, no_lv, pair.side, price, pair.qty)
+        share = est.our_yes_share if pair.side == "yes" else est.our_no_share
+        pair.seconds_scored += seconds
+        pair.share_seconds += share * seconds
+        pair.max_share = max(pair.max_share, share)
+        if not est.snapshot_qualifies or est.reward_per_second_usd is None:
+            return
+        pair.seconds_qualifying += seconds
+        amount = est.reward_per_second_usd * seconds
+        if share > self.arms.rules.thin_share:
+            pair.seconds_thin += seconds
+            pair.reward_uncredited_usd += amount
+            return
+        if pair.side == "yes":
+            pair.reward_yes_usd += amount
+        else:
+            pair.reward_no_usd += amount
+        if pair.arm == pa.ARM_S4_BURST:
+            self.arms.add_burst_reward(mk.ticker, pair.programme_start, amount)
+
     def _process_marks(self, now: datetime) -> None:
         due = [pm for pm in self.pending_marks if pm.due_at <= now]
         if not due:
@@ -831,7 +1074,20 @@ class ShadowState:
             if self._cfg("persist_shadow_events", False):
                 store.insert_shadow_event(session, quote_id=pair.quote_id, market_ticker=mk.ticker,
                                           at=now, kind="end", detail_json={"reason": reason})
-            for model in fm.FILL_MODELS:
+            if pair.arm:
+                store.insert_shadow_event(
+                    session, quote_id=pair.quote_id, market_ticker=mk.ticker, at=now,
+                    kind=EV_ARM_HOUR, side=pair.side,
+                    detail_json={"arm": pair.arm, "reason": reason, "rest_seconds": rest,
+                                 "seconds_scored": pair.seconds_scored,
+                                 "seconds_qualifying": pair.seconds_qualifying,
+                                 "seconds_thin": pair.seconds_thin,
+                                 "mean_share": (pair.share_seconds / pair.seconds_scored
+                                                if pair.seconds_scored else None),
+                                 "max_share": pair.max_share,
+                                 "reward_credited_usd": pair.reward_yes_usd + pair.reward_no_usd,
+                                 "reward_uncredited_thin_usd": pair.reward_uncredited_usd})
+            for model in pair.yes_leg.models:
                 # A filled leg stops earning: prorate that side's accrual by its resting time.
                 ry = self._prorated(pair.reward_yes_usd, pair.yes_leg, model, pair.placed_at, now)
                 rn = self._prorated(pair.reward_no_usd, pair.no_leg, model, pair.placed_at, now)

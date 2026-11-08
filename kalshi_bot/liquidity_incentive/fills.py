@@ -12,6 +12,11 @@ under three models whose results are reported SEPARATELY and never averaged:
   queue_aware  — like conservative, but the contracts ahead of us shrink when the level's
                  resting quantity shrinks below them (a cancel or a fill ahead of us), as the
                  execution telemetry's local book reconstructs it. Partial fills allowed.
+  whole_order  — the paper strategies' stress model (DEC-044, lead 1), OPT-IN per leg: the
+                 queue-aware model's timing, but the first trade that reaches us fills the
+                 ENTIRE remaining order. Live evidence: 24 of 30 fills on orders of 50+
+                 contracts took 100% of the order, so a partial-fill model understates the
+                 cost of a large bid. Never applied to the two-sided policy pairs.
 
 Price convention: legs carry their level on the YES scale (`LocalBook` convention) so a trade
 frame — `yes_price_cents` + `taker_outcome_side` — can be matched without conversion:
@@ -35,7 +40,10 @@ from datetime import datetime
 MODEL_OPTIMISTIC = "optimistic"
 MODEL_CONSERVATIVE = "conservative"
 MODEL_QUEUE_AWARE = "queue_aware"
+MODEL_WHOLE_ORDER = "whole_order"
 FILL_MODELS = (MODEL_OPTIMISTIC, MODEL_CONSERVATIVE, MODEL_QUEUE_AWARE)
+#: The one-sided paper arms carry the whole-order stress model as well (DEC-044).
+ARM_FILL_MODELS = FILL_MODELS + (MODEL_WHOLE_ORDER,)
 
 SIDE_YES = "yes"
 SIDE_NO = "no"
@@ -50,6 +58,7 @@ class ShadowLeg:
     quantity: float                # contracts we would rest
     placed_at: datetime
     queue_ahead_at_placement: float   # resting contracts at our level when we would have joined
+    models: tuple[str, ...] = FILL_MODELS   # which fill models this leg is simulated under
     filled: dict[str, float] = field(default_factory=dict)   # model -> contracts filled so far
     first_fill_at: dict[str, datetime] = field(default_factory=dict)
     full_fill_at: dict[str, datetime] = field(default_factory=dict)
@@ -58,7 +67,7 @@ class ShadowLeg:
     _ahead_queue: float = field(default=0.0, init=False)
 
     def __post_init__(self) -> None:
-        for model in FILL_MODELS:
+        for model in self.models:
             self.filled.setdefault(model, 0.0)
         self._ahead_conservative = max(0.0, float(self.queue_ahead_at_placement))
         self._ahead_queue = max(0.0, float(self.queue_ahead_at_placement))
@@ -73,7 +82,7 @@ class ShadowLeg:
     def queue_ahead(self, model: str) -> float:
         if model == MODEL_CONSERVATIVE:
             return self._ahead_conservative
-        if model == MODEL_QUEUE_AWARE:
+        if model in (MODEL_QUEUE_AWARE, MODEL_WHOLE_ORDER):
             return self._ahead_queue
         return 0.0
 
@@ -102,6 +111,7 @@ class ShadowLeg:
         # is ahead first. A print THROUGH our level (deeper than us) means our level was already
         # exhausted by price priority — treat it as clearing the queue ahead entirely.
         through = yes_price_cents != self.price_yes_scale
+        reached = False          # did this print get past the queue-aware queue to us?
         for model in (MODEL_CONSERVATIVE, MODEL_QUEUE_AWARE):
             ahead = self.queue_ahead(model)
             if through:
@@ -110,10 +120,18 @@ class ShadowLeg:
                 consumed_ahead = min(ahead, count)
                 spill = count - consumed_ahead
             self._set_ahead(model, ahead - consumed_ahead)
+            if model == MODEL_QUEUE_AWARE:
+                reached = spill > 0
             if spill > 0:
                 got = self._fill(model, min(spill, self.remaining(model)), at)
                 if got:
                     newly[model] = got
+        # Whole order: same queue as queue-aware (it was just advanced), but reaching us at all
+        # takes everything left.
+        if MODEL_WHOLE_ORDER in self.models and reached:
+            got = self._fill(MODEL_WHOLE_ORDER, self.remaining(MODEL_WHOLE_ORDER), at)
+            if got:
+                newly[MODEL_WHOLE_ORDER] = got
         return newly
 
     def on_level_quantity(self, level_qty_after: float | None) -> None:
