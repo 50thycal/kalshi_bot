@@ -1,4 +1,11 @@
 # ops request [READ]
-# type=noop
-# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:44:25Z
-(noop — nothing to do)
+# type=script  id=rl-ps-counts-1108c
+# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:44:41Z
+LIMM paper strategies — COUNTS ONLY since 2026-11-09T00:00 (as of 2026-11-08T20:44)
+  S1          quotes      0  markets    0  bid-hours      0.0
+  S2-best     quotes      0  markets    0  bid-hours      0.0
+  S2-behind   quotes      0  markets    0  bid-hours      0.0
+  S3-aside    quotes      0  markets    0  bid-hours      0.0
+  S3-control  quotes      0  markets    0  bid-hours      0.0
+  S4-burst    quotes      0  markets    0  bid-hours      0.0
+  S4-flat     quotes      0  markets    0  bid-hours      0.0
