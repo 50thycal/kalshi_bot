@@ -54,6 +54,34 @@ export const GROC_STEPS = [
 
 export const QUESTIONS = [
   {
+    id: 'r4-rule',
+    q: 'Round 4: replace the $5-per-event rule with an earnings-per-hour test that entering and pulling both use?',
+    options: [
+      'Yes: rest a bid only while it earns at least 5c an hour; pull it below 3c an hour; skip a market that can’t reach $1.50 before it steps aside. A pulled market comes back once it clears 5c again (recommended)',
+      'Keep the $5 event total, but add a gap: enter at $6 or more, pull under $4',
+      'Drop the threshold: rest anything that qualifies',
+    ],
+    why: 'Fills cost about 3c per market-hour on mention events. Events that paid $5+ earned 5.5c an hour and netted +$31.25; events that paid $1–5 earned 3.3c and netted −$8.24. A $ total to step-aside shrinks as the clock runs, so the same bid passes on Monday and fails on Wednesday; a rate does not. The 2c gap stops a bid on the line flipping every hour. FREE earns about 1c an hour, so it stays out.',
+  },
+  {
+    id: 'r4-calibrate',
+    q: 'The new rule leans on the bot’s own reward estimate, which has never been checked against what Kalshi actually paid. Check it first?',
+    options: [
+      'Yes: a read-only check of the estimate against the 17 paid events, then build with the bars adjusted if it runs high or low (recommended)',
+      'No: build now and judge it on the first two weeks',
+    ],
+    why: 'This study used real payouts. The bot decides with an estimate. If the estimate runs 1.5× high, a 5c bar quietly lets in 3c markets, which is break-even at best.',
+  },
+  {
+    id: 'r4-mamdani',
+    q: 'Until the new rule is live, what should happen to the Mamdani FREE bid?',
+    options: [
+      'Pull it and keep the Mamdani Nov 18 event out until the new rule ships (recommended)',
+      'Leave the place-and-pull loop running',
+    ],
+    why: 'It earns about 1c an hour against about 3c an hour of fill risk, and the event is already −$16.25 from the BILL fill. Keeping it out lowers exposure; it is still a small change to the live bot, so it waits on this answer.',
+  },
+  {
     id: 'r2-window-event-block',
     q: 'Round 2: the window trial is live but blocked. The bot never enters an event where another live book holds a position, and the mmsell book holds positions in this week’s “Trump says X” set. Should window markets be blocked only on the same word instead of the whole week?',
     options: [
@@ -127,6 +155,7 @@ export const ASKED = {
   groc: { when: 'Nov 5, 9:10 PM CT', q: 'We tried GROC and SAFE yesterday around 10:00 UTC, but Kalshi rejected both. Why didn’t we try placing a resting order again? What happened?' },
   book: { when: 'Nov 5', q: 'What is my expected rewards? I only see one market we have a resting order on, is there more?' },
   decide: { when: 'Nov 5, 9:10 PM CT', q: 'Also can you change your settings to be in my time zone?' },
+  study: { when: 'Nov 7, 7:55 PM CT', q: 'I think we need to look at how we’re approaching this. Maybe we need to modify that $5 threshold… there should be some logic in there that it should be allowed to pull and re-enter if it is back above the threshold. I’m curious if we would even earn anything with all these enters and exits.' },
   built: { when: 'Nov 6, 7:45 AM CT', q: 'Yes change the bot to audit existing resting bids and pull them if they are earning below the 5 dollar threshold.' },
 };
 
@@ -142,3 +171,24 @@ export const BUILT = [
   { id: 'r1-youtube', title: 'YouTube leftovers', state: 'kept', what: 'No change: held, sells stay up at 2c.' },
   { id: 'r1-tz', title: 'Central time', state: 'kept', what: 'Confirmed. Reports and check-ins stay in CT.' },
 ];
+
+// Round 4 (2026-11-08): the threshold study. Figures are copied from
+// study/study-2026-11-08.json (study/threshold_study.py over two ops reads), not estimated here.
+// c/h = cents per market-hour of resting bid.
+export const STUDY = {
+  asOf: 'Nov 7, 7:30 PM CT',
+  bars: [
+    { k: 'Mention events that paid $5+', n: '6 events · 1,094 market-hours', rew: 5.5, fill: 2.6, net: 31.25 },
+    { k: 'Mention events that paid $1–5', n: '5 events · 408 market-hours', rew: 3.3, fill: 5.3, net: -8.24 },
+    { k: 'YouTube views (closed)', n: '9 events · 535 market-hours', rew: 4.3, fill: 2.5, net: 9.93 },
+    { k: 'Moving numbers (Sept, dropped)', n: '71 events · 419 market-hours', rew: 0.8, fill: 6.2, net: -22.80 },
+  ],
+  free: { rew: 1.0, note: 'Mamdani FREE now: the audit projects $2.42 over ~240 hours to step-aside' },
+  findings: [
+    { h: 'Break-even is about 3c an hour', d: 'Across all 17 finished mention events, bids earned 4.6c per market-hour and fills cost 3.1c: +$23.78 net over 1,590 hours. A bid earning under ~3c an hour loses money on average.' },
+    { h: 'The $5 line split the events, but only after the fact', d: 'Events that ended up paying $5+ netted +$31.25; those paying $1–5 netted −$8.24. The bot can’t know the final payout when it enters, so it needs a test it can apply up front: earnings per hour.' },
+    { h: 'Kalshi’s $1 minimum bites', d: 'Four mention events rested 85 market-hours and paid $0: each market stayed under Kalshi’s $1 minimum. A market that can’t reach $1 before it steps aside earns nothing at any rate.' },
+    { h: 'The FREE loop earns about nothing', d: 'FREE has been placed 7 times since Nov 6 and rested 48 hours in all. At ~1c an hour that’s roughly 50c, and the payout may not clear $1. The Mamdani event as a whole has rested 508 market-hours and lost $16.25 on one fill (BILL); its payout comes after Nov 18.' },
+    { h: 'Losses are lumpy', d: 'Most of the fill cost comes from a few single fills of $5–16. Seventeen events is a small sample, so 5c / 3c is a starting point to review after two weeks, not a final answer.' },
+  ],
+};

@@ -5,7 +5,7 @@
 // Store: `reviews/{itemId}` {verdict, note}; `answers/{questionId}` {choice, note}.
 // Usage: node tools/review/limm/page.mjs <out.html>
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { ROUND_DATE, TZ_NOTE, BOOK, SERIES, PRIOR, GROC_STEPS, QUESTIONS, ASKED, BUILT } from './round1.mjs';
+import { ROUND_DATE, TZ_NOTE, BOOK, SERIES, PRIOR, GROC_STEPS, QUESTIONS, ASKED, BUILT, STUDY } from './round1.mjs';
 
 const here = new URL('.', import.meta.url);
 const out = process.argv[2];
@@ -105,6 +105,26 @@ function seriesCard(s, k) {
     <div class="saved" aria-live="polite"></div>
   </div>
 </article>`;
+}
+// Reward earned vs fill cost per market-hour, cents, one pair of bars per group,
+// with FREE's current rate and the proposed 5c / 3c lines.
+function rateChart() {
+  const W = 340, L = 8, top = 22, rowH = 46, max = 7;
+  const x = (c) => L + (W - L - 8) * Math.min(c, max) / max;
+  const H = top + rowH * STUDY.bars.length + 30;
+  const bars = STUDY.bars.map((b, i) => {
+    const y = top + i * rowH;
+    return `<text x="${L}" y="${y + 9}" class="lbl">${esc(b.k)}</text>
+    <rect x="${L}" y="${y + 13}" width="${x(b.rew) - L}" height="10" rx="2" class="b-rew"/><text x="${x(b.rew) + 4}" y="${y + 22}" class="val">${b.rew.toFixed(1)}c</text>
+    <rect x="${L}" y="${y + 26}" width="${x(b.fill) - L}" height="10" rx="2" class="b-fill"/><text x="${Math.min(x(b.fill) + 4, W - 30)}" y="${y + 35}" class="val">${b.fill > max ? '' : ''}${b.fill.toFixed(1)}c</text>`;
+  }).join('');
+  const y0 = top - 6, y1 = top + rowH * STUDY.bars.length;
+  const line = (c, cls, t, dy) => `<line x1="${x(c)}" x2="${x(c)}" y1="${y0}" y2="${y1}" class="${cls}"/><text x="${x(c)}" y="${y1 + dy}" class="tick" text-anchor="middle">${t}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reward and fill cost per market-hour by market type, with the proposed 5c entry and 3c exit lines and FREE at 1c">
+    <style>.lbl{font:600 11px var(--body);fill:var(--ink)}.val{font:500 10px var(--mono);fill:var(--muted)}.tick{font:500 10px var(--mono);fill:var(--muted)}.b-rew{fill:var(--go)}.b-fill{fill:var(--no)}.ln-in{stroke:var(--go);stroke-dasharray:4 3}.ln-out{stroke:var(--accent);stroke-dasharray:4 3}.ln-free{stroke:var(--muted);stroke-dasharray:1 3}</style>
+    ${line(5, 'ln-in', 'enter 5c', 14)}${line(3, 'ln-out', 'pull 3c', 14)}${line(STUDY.free.rew, 'ln-free', 'FREE 1c', 26)}
+    ${bars}</svg>
+  <p class="pn"><span class="key k-rew"></span> reward earned · <span class="key k-fill"></span> fill cost, both in cents per hour a bid rests. ${esc(STUDY.free.note)}.</p>`;
 }
 function question(q) {
   return `<fieldset class="q" data-q="${q.id}"><legend>${esc(q.q)}</legend>
@@ -245,21 +265,28 @@ code { font: 13px var(--mono); }
 .built header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .built p { margin: 0; }
 .mono { font-family: var(--mono); font-size: 12px; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+.k-rew { background: var(--go); } .k-fill { background: var(--no); }
+.find { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.find li { background: var(--ticket); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+.find b { display: block; margin-bottom: 2px; }
+.find p { margin: 0; }
 @media (max-width: 600px) { .kv { grid-template-columns: repeat(3, minmax(0, 1fr)); } .steps li { grid-template-columns: 1fr; gap: 0; } .prior div { grid-template-columns: 1fr; gap: 0; } }
 @media (prefers-reduced-motion: no-preference) { .item { transition: border-color .2s, opacity .2s; } }
 </style>
 
 <main>
   <header class="intro">
-    <div class="eyebrow">Alimm1 · liquidity rewards · round 1 · ${ROUND_DATE}</div>
+    <div class="eyebrow">Alimm1 · liquidity rewards · round 4 · 2026-11-08</div>
     <h1>Alimm1 Review Desk</h1>
-    <p>Round 1 is answered and built: the <b>Built</b> tab shows what each answer changed. Your answers stay editable on <b>Decide</b>, and each section opens with the question you asked. ${esc(TZ_NOTE)}</p>
+    <p>New: the <b>Threshold study</b> you asked for, and three round-4 questions at the top of <b>Decide</b>. Earlier rounds are answered and built (see <b>Built</b>); each section opens with the question you asked. ${esc(TZ_NOTE)}</p>
     <p class="store" id="store">Connecting to the review store…</p>
   </header>
 
   <nav class="bar-sticky" aria-label="Sections">
     <div class="tabs" role="group" aria-label="Tab">
-      <button type="button" data-tab="built" aria-pressed="true">Built</button>
+      <button type="button" data-tab="study" aria-pressed="true">Threshold study</button>
+      <button type="button" data-tab="built" aria-pressed="false">Built</button>
       <button type="button" data-tab="decide" aria-pressed="false">Decide</button>
       <button type="button" data-tab="windows" aria-pressed="false">Window markets</button>
       <button type="button" data-tab="groc" aria-pressed="false">GROC &amp; SAFE</button>
@@ -268,7 +295,17 @@ code { font: 13px var(--mono); }
     <div class="tally" id="tally">0 of ${QUESTIONS.length} answered</div>
   </nav>
 
-  <section id="tab-built" aria-labelledby="h-built">
+  <section id="tab-study" aria-labelledby="h-study">
+    <h2 id="h-study">Threshold study: is the $5 rule right?</h2>
+    ${asked('study')}
+    <p class="lead">Every bid the book has rested since Sep 17 (464 orders), how long each rested, and what its fills and confirmed rewards came to, as of ${esc(STUDY.asOf)}. The question underneath: does a bid earn more per hour than its fills cost per hour? Answer on <b>Decide</b>.</p>
+    <div class="panel"><h3>Earned vs fill cost, per hour a bid rests</h3>${rateChart()}</div>
+    <ul class="find">${rows(STUDY.findings, (f) => `<li><b>${esc(f.h)}</b><p>${esc(f.d)}</p></li>`)}</ul>
+    <div class="panel scroll"><h3>By group</h3><table><thead><tr><th>Group</th><th>Earned / h</th><th>Fills / h</th><th>Net</th></tr></thead><tbody>${rows(STUDY.bars, (b) => `<tr><td>${esc(b.k)}<br><small class="pn">${esc(b.n)}</small></td><td class="n">${b.rew.toFixed(1)}c</td><td class="n">${b.fill.toFixed(1)}c</td><td class="n">${usd(b.net, true)}</td></tr>`)}</tbody></table>
+      <p class="pn">Source: <code>tools/review/limm/study/</code> (live_orders, order events and queue samples for resting time; <code>limm_scorecard</code> for fills and confirmed rewards). Events still open (Mamdani, December YouTube) are left out of the rates: their payouts haven’t landed.</p></div>
+  </section>
+
+  <section id="tab-built" class="hidden-tab" aria-labelledby="h-built">
     <h2 id="h-built">Built from your answers</h2>
     ${asked('built')}
     <p class="lead">All seven answers took the recommended option, and you marked the weekly series Go further. Round 1’s four changes are live since Nov 5, 11:37 PM CT (PR #743); three needed no change. Your round-2 answer (block window markets per word) is live since 6:57 AM CT (PR #749), and the window trial placed its first three bids.</p>
@@ -278,7 +315,7 @@ code { font: 13px var(--mono); }
   <section id="tab-decide" class="hidden-tab" aria-labelledby="h-decide">
     <h2 id="h-decide">Decide</h2>
     ${asked('decide')}
-    <p class="lead">One new question (round 2) on top, then round 1’s seven, already answered. The recommended option is first. Each carries the reason in one line; the tabs above carry the detail.</p>
+    <p class="lead">Three new questions (round 4, from the threshold study) on top, then rounds 1–2, already answered. The recommended option is first. Each carries the reason in one line; the tabs above carry the detail.</p>
     <div class="qs">${rows(QUESTIONS, question)}
       <fieldset class="q" data-q="r1-general"><legend>Anything else?</legend><label class="note"><span>Notes</span><textarea id="qn-r1-general" rows="3"></textarea></label><div class="saved" aria-live="polite"></div></fieldset>
     </div>
@@ -323,7 +360,7 @@ code { font: 13px var(--mono); }
   const LS = 'alimm1-review-r1';
   const lsGet = () => { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch { return {}; } };
   const lsSet = (v) => { try { localStorage.setItem(LS, JSON.stringify(v)); } catch {} };
-  let tab = 'built';
+  let tab = 'study';
 
   function paintItem(el) {
     const r = state[el.dataset.coll][el.dataset.id] || {};
@@ -389,10 +426,10 @@ code { font: 13px var(--mono); }
   });
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;
-    try { sessionStorage.setItem(LS + '-tab2', tab); } catch {}
+    try { sessionStorage.setItem(LS + '-tab3', tab); } catch {}
     paintTab();
   }));
-  try { tab = sessionStorage.getItem(LS + '-tab2') || 'built'; } catch {}
+  try { tab = sessionStorage.getItem(LS + '-tab3') || 'study'; } catch {}
 
   const local = lsGet();
   Object.assign(state.reviews, local.reviews || {});
