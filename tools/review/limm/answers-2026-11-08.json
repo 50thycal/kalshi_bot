@@ -1,0 +1,14 @@
+{
+  "read_at": "2026-11-08T03:47Z",
+  "source": "ArtifactData list answers on https://claude.ai/artifact/EpuauwQqwNNoAitmxqNZNf",
+  "round": "r4",
+  "answers": {
+    "r4-rule": {"choice": 0, "note": "", "at": "2026-11-08T03:40:42.420Z", "means": "per-hour test: enter >= 5c/h, pull < 3c/h, $1.50 per-market floor, re-entry when back above 5c"},
+    "r4-calibrate": {"choice": 0, "note": "", "at": "2026-11-08T03:41:27.958Z", "means": "read-only check of the estimate against paid events first, then build with bars adjusted"},
+    "r4-mamdani": {"choice": 0, "note": "", "at": "2026-11-08T03:41:37.927Z", "means": "pull FREE and keep the Mamdani Nov 18 event out until the rule ships"}
+  },
+  "acted": {
+    "r4-mamdani": "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE,KXMAMDANIMENTION via ops env (id env-mam1, VERIFIED, 2026-11-08T03:44Z)",
+    "r4-calibrate": "scripts/limm_estimate_calibration.py (this PR), run via ops after merge"
+  }
+}
