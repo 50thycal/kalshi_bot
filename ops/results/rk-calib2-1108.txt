@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rk-calib2-1108
-# code fae614f00676219b9a24425f867ca40e20d4ceb6 · started 2026-11-08T03:51:45Z
-n     n_yes_best  ratio_yes_collector_over_ranker  med_ratio_yes  med_ratio_no  p10_yes  p90_yes  mkts
-----  ----------  -------------------------------  -------------  ------------  -------  -------  ----
-2610  1795        1.003                            1.000          1.000         1.000    1.000    144 
-
-(1 row)
