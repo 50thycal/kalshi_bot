@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "script", "name": "limm_scorecard", "id": "sc1108j", "args": ["--json", "--days", "7"]}
