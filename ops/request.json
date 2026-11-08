@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT date_trunc('week', at)::date AS wk, count(DISTINCT (market_ticker, date_trunc('hour', at))) AS mid_hours, count(DISTINCT market_ticker) AS mid_mkts, count(DISTINCT split_part(market_ticker, '-', 1)) AS mid_series FROM incentive_market_snapshots WHERE at >= '2026-09-17' AND book_valid AND est_yes_meets_target AND est_no_meets_target AND LEAST(best_yes_bid, best_no_bid) BETWEEN 11 AND 50 GROUP BY 1 ORDER BY 1", "id": "rv-bandhist2-1108"}
+{"type":"noop"}
