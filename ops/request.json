@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT split_part(market_ticker,'-',1) AS series, count(*) AS programmes, min(start_date) AS start_min, min(end_date) AS ended, round(sum(period_reward_usd)::numeric,0) AS reward_usd, max(last_seen_at) AS last_seen FROM incentive_programs WHERE coalesce(incentive_type,'') ILIKE '%liquid%' AND superseded_at IS NULL AND end_date BETWEEN now() - interval '2 hours' AND now() GROUP BY 1 ORDER BY 5 DESC LIMIT 20", "id": "rk-end-1108"}
