@@ -40,12 +40,19 @@ epoch. Run it any time:
   - markets whose snapshot does not qualify (a side below target pays nobody);
   - markets inside the 48 h step-aside before close.
 - **Repricing risk (fills).** A resting bid gets filled when the market reprices.
-  - A **jump** is an hourly mid move of 8¢ or more. The risk grade is jumps per 30 market-days over
-    the last 60 days: LOW under 1.5, MED under 4, HIGH otherwise.
-  - Contracts traded per market-day are shown alongside.
-- **Repricing clock.** This is when jumps happen: the commonest UTC hour (±1 h), with the commonest
-  weekday. It counts as clear when at least 40% of 3 or more jumps fall in one hour window. The
-  suggested step-aside is to pull bids from 2 h before to 2 h after that hour.
+  - A **jump** is an hourly mid move of 8¢ or more.
+  - Jumps less than 12 h apart in a series are one **episode**: one release moves every strike, and
+    its effects drift over hours.
+  - The risk grade is episodes per 30 observed days over the last 60 days: LOW under 1, MED under 3,
+    HIGH otherwise.
+  - **Turnover** is contracts traded per market-day divided by the competing size on our side. It is
+    a rough measure of flow fills.
+- **Repricing clock.** The commonest UTC hour (±1 h) at which episodes start, shown once there are 3
+  or more episodes.
+- **Known releases.** Where the publisher's schedule is verified, the next release is shown and the
+  step-aside advice follows it rather than the clock:
+  - state employment ladders (`…EMP`): BLS, 10:00 ET;
+  - AAA gas: Kalshi's 10:15–11:00 ET expiry.
 
 ## 3. What decides, and what does not
 
@@ -70,4 +77,45 @@ rank by net.
 
 ## 6. Build log (cycles)
 
-*(filled in below as each cycle runs)*
+Each cycle tests the result against the goals in §1, records what was wrong, fixes it and retests.
+
+**Cycle 1: the core ranking (G1).**
+- Built v1 and ran it end to end on live rows pulled through the ops db channel (164 markets).
+- The total pool, $6,693/day, matches the independent census (`rv-band-1108`, $6.7k/day).
+- Share arithmetic was hand-checked. Example: KXAAAGASM 4.10 YES at 9¢ is 111 contracts against a
+  field of 2,860, a 3.7% share.
+- The top series were the Aspen and Big Sky opening-date ladders, then AAA gas.
+- Recorded problem: the measure ignored fill risk and release timing (G2, G3).
+
+**Cycle 2: trust in the reward number (G4).**
+- Cross-checked the ranker's share formula against the collector's full-book LIP scoring on 2,610
+  shadow quotes in 144 markets (`rk-calib2-1108`). Collector over ranker: median 1.000, 10th–90th
+  percentile 1.000–1.000.
+- Recorded problem: the estimator has never been checked against real payouts. That stays a limit.
+- Recorded problem: the live bot rests one tick behind the best bid, so the ranker now shows that
+  reward too.
+
+**Cycle 3: risk on real history (G2), run `rl-rank-run1-1108`.**
+- The run covered 69k hourly snapshots over 60 days.
+- Problems found:
+  - Single-jump series printed "100%" clocks, which was misleading. A clock now needs 3 or more.
+  - LOW jump risk hid heavy flow (Aspen trades about 5,000 contracts a day). Turnover was added.
+  - "Resolves on one event" ladders read LOW until their event. That is recorded as a limit.
+- Surprise: the "behind" reward is exactly half on every bid above 1¢. Every live programme has
+  `discount_factor_bps` = 5000 (`rk-disc-1108`). One tick behind a best bid that sets the reference
+  price therefore halves the score. That is the §9.72 rule's cost, now measured.
+
+**Cycle 4: release clock against real schedules (G3), run `rl-rank-run2-1108`.**
+- Validated:
+  - KXWAAEROEMP jumped on Fri 09-18 at 14Z. That is exactly BLS's State Employment release (Aug
+    data, 10:00 EDT).
+  - AAA gas reprices at 16Z ±1 (69% of jumps), inside Kalshi's 10:15–11:00 ET expiry window.
+- Problems found:
+  - After the Sep 18 release, other state ladders kept repricing for about 39 h, mostly in thin
+    overnight hours. An hour-of-day step-aside was therefore the wrong rule. It is replaced by
+    known-release advice: pull before the release and stay off for about 48 h. The next BLS release
+    is Fri 2026-11-20 15:00Z.
+  - One release counted as several jumps. Jumps are now grouped into episodes, and the risk grade
+    and clock use episodes.
+  - Retest: the synthetic test showed a 24 h grouping would merge a daily release into one endless
+    episode, so the gap is 12 h. The tests pin both cases.

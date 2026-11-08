@@ -34,9 +34,19 @@ TOP_N = 25
 HISTORY_DAYS = 60               # repricing clock and activity look-back
 JUMP_CENTS = 8                  # an hourly mid move this large is a "jump" (a repricing)
 MAX_GAP_HOURS = 2               # consecutive snapshots further apart than this are not compared
-CLOCK_SHARE = 0.4               # a clock is "clear" when this share of jumps share one UTC hour
-MIN_JUMPS_FOR_CLOCK = 3
-RISK_JUMPS_HIGH, RISK_JUMPS_MED = 4.0, 1.5      # jumps per 30 market-days
+CLOCK_SHARE = 0.4               # a clock is "clear" when this share of episodes start in one UTC hour
+MIN_JUMPS_FOR_CLOCK = 3         # episodes needed before a clock is shown
+EPISODE_GAP_HOURS = 12          # jumps closer than this (in a series) are one repricing episode
+RISK_EP_HIGH, RISK_EP_MED = 3.0, 1.0            # repricing episodes per 30 observed days
+#: Publication schedules verified against the publisher (cycle 4, 2026-11-08). A series matches
+#: when its ticker ends with the key. Each entry: (what, next release UTC, source, advice).
+KNOWN_RELEASES = {
+    "EMP": ("BLS State Employment (10:00 ET)", "2026-11-20T15:00:00+00:00",
+            "https://www.bls.gov/schedule/2026/",
+            "pull bids before the release; markets kept repricing for ~48 h after Sep 18"),
+}
+AAA_NOTE = ("AAA daily national average; Kalshi gas contracts expire 10:15-11:00 ET (15-16Z), "
+            "the hour these markets reprice")
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 NOW_SQL = """
@@ -129,6 +139,28 @@ def find_jumps(hours: list[tuple[dt.datetime, float | None]]) -> list[dt.datetim
     return out
 
 
+def episodes(jumps: list[dt.datetime]) -> list[dt.datetime]:
+    """Start times of repricing episodes: jumps (across a series' markets) closer than
+    EPISODE_GAP_HOURS belong to one episode — one release moves every strike, over hours."""
+    out: list[dt.datetime] = []
+    last = None
+    for j in sorted(set(jumps)):
+        if last is None or (j - last).total_seconds() > EPISODE_GAP_HOURS * 3600:
+            out.append(j)
+        last = j
+    return out
+
+
+def known_release(series: str) -> tuple | None:
+    s = (series or "").upper()
+    if s.startswith("KXAAAGAS"):
+        return ("AAA gas", None, "https://gasprices.aaa.com/", AAA_NOTE)
+    for key, val in KNOWN_RELEASES.items():
+        if s.endswith(key):
+            return val
+    return None
+
+
 def reprice_clock(jumps: list[dt.datetime]) -> dict:
     """When repricings happen: the commonest UTC hour, weekday and day of month, with shares.
     `clear` when >= CLOCK_SHARE of >= MIN_JUMPS_FOR_CLOCK jumps fall in one UTC hour (+-1 h)."""
@@ -174,17 +206,17 @@ def clock_text(clock: dict) -> str:
     if not n:
         return "-"
     if n < MIN_JUMPS_FOR_CLOCK:
-        return f"too few ({n} jump{'s' if n > 1 else ''})"
+        return f"too few ({n} episode{'s' if n > 1 else ''})"
     return (f"{clock['hour']:02d}Z±1 {100 * clock['hour_share']:.0f}%, "
             f"{WEEKDAYS[clock['weekday']]} {100 * clock['weekday_share']:.0f}% of {n}")
 
 
-def risk_grade(jumps_per_30md: float | None) -> str:
-    if jumps_per_30md is None:
+def risk_grade(episodes_per_30d: float | None) -> str:
+    if episodes_per_30d is None:
         return "?"
-    if jumps_per_30md >= RISK_JUMPS_HIGH:
+    if episodes_per_30d >= RISK_EP_HIGH:
         return "HIGH"
-    if jumps_per_30md >= RISK_JUMPS_MED:
+    if episodes_per_30d >= RISK_EP_MED:
         return "MED"
     return "LOW"
 
@@ -274,15 +306,23 @@ def series_risk(hist: dict[str, list], vol: dict[str, list], series_of: dict[str
     out = {}
     for s in set(series_of.values()):
         md = len(mdays.get(s, ()))
+        days = len({d for _tk, d in mdays.get(s, ())})
         j = jumps.get(s, [])
-        rate = 30.0 * len(j) / md if md else None
-        clock = reprice_clock(j)
+        ep = episodes(j)
+        rate = 30.0 * len(ep) / days if days else None
+        clock = reprice_clock(ep)
+        rel = known_release(s)
+        step = step_aside_text(clock)
+        if rel is not None and rel[1]:
+            step = f"pull before {rel[1][5:10]} {rel[1][11:13]}Z release (+48 h)"
         v = vols.get(s, [])
-        out[s] = {"market_days": md, "jumps": len(j), "jumps_per_30md": rate,
-                  "risk": risk_grade(rate), "clock": clock, "step_aside": step_aside_text(clock),
+        out[s] = {"market_days": md, "days": days, "jumps": len(j), "episodes": len(ep),
+                  "episodes_per_30d": rate, "jumps_per_30md": 30.0 * len(j) / md if md else None,
+                  "risk": risk_grade(rate), "clock": clock, "step_aside": step,
+                  "release": rel,
                   "contracts_per_md": (sum(v) / md) if md else None,
                   "last_jump": max(j) if j else None,
-                  "jump_times": sorted(set(j))[-6:]}
+                  "jump_times": sorted(set(j))[-6:], "episode_times": ep[-6:]}
     return out
 
 
@@ -343,20 +383,20 @@ def main(argv: list[str] | None = None) -> int:
               f"{r.get('risk', '?'):4s} {_f(turnover(r.get('contracts_per_md'), x['field']), '{:.2f}'):>5}  "
               f"{r.get('step_aside', '')}")
     print("\n== series: 3 x $10 bids (top 3 quotable markets) per day, and how the series reprices")
-    print(f"  {'series':20s} {'quot':>4} {'pool/d':>6} {'top3':>5} {'mkt-d':>5} {'jumps':>5} "
-          f"{'/30md':>5} {'risk':4s} {'ct/md':>6}  clock")
+    print(f"  {'series':20s} {'quot':>4} {'pool/d':>6} {'top3':>5} {'days':>4} {'jumps':>5} "
+          f"{'eps':>3} {'/30d':>4} {'risk':4s} {'ct/md':>6}  clock")
     srows = by_series(ranked)
     for srow in srows[:30]:
         r = risk.get(srow["series"], {})
         clock = clock_text(r.get("clock", {}))
         print(f"  {srow['series'][:20]:20s} {srow['quotable']:4d} {srow['pool_day']:6.0f} "
-              f"{srow['top3_sum']:5.2f} {r.get('market_days', 0):5d} {r.get('jumps', 0):5d} "
-              f"{_f(r.get('jumps_per_30md'), '{:.1f}'):>5} {r.get('risk', '?'):4s} "
+              f"{srow['top3_sum']:5.2f} {r.get('days', 0):4d} {r.get('jumps', 0):5d} "
+              f"{r.get('episodes', 0):3d} {_f(r.get('episodes_per_30d'), '{:.1f}'):>4} {r.get('risk', '?'):4s} "
               f"{_f(r.get('contracts_per_md'), '{:.0f}'):>6}  {clock}")
-    print("\n== repricing history: the latest jumps per series (UTC; a jump = hourly mid move "
-          f">= {JUMP_CENTS}c)")
+    print("\n== repricing history: the latest episode starts per series (UTC; a jump = hourly mid "
+          f"move >= {JUMP_CENTS}c; jumps within {EPISODE_GAP_HOURS} h are one episode)")
     for srow in srows[:30]:
-        jt = risk.get(srow["series"], {}).get("jump_times") or []
+        jt = risk.get(srow["series"], {}).get("episode_times") or []
         if jt:
             print(f"  {srow['series'][:20]:20s} " + ", ".join(
                 f"{WEEKDAYS[t.weekday()]} {t:%m-%d %H}Z" for t in jt))
@@ -367,8 +407,14 @@ def main(argv: list[str] | None = None) -> int:
     print("\n  not ranked: " + (", ".join(f"{k} {v}" for k, v in sorted(flagged.items())) or "none"))
     print("  turn: contracts traded per market-day over the competing size on our side (rough fill "
           "pressure; 1.0 = the whole queue trades in a day).")
-    print(f"  risk: jumps (hourly mid moves >= {JUMP_CENTS}c) per 30 market-days — LOW < {RISK_JUMPS_MED}, MED < {RISK_JUMPS_HIGH}, HIGH."
-          )
+    print(f"  risk: repricing episodes (hourly mid moves >= {JUMP_CENTS}c; jumps within "
+          f"{EPISODE_GAP_HOURS} h are one episode) per 30 observed days — LOW < {RISK_EP_MED}, "
+          f"MED < {RISK_EP_HIGH}, HIGH.")
+    for srow in srows[:30]:
+        rel = risk.get(srow["series"], {}).get("release")
+        if rel:
+            print(f"  release: {srow['series']}: {rel[0]}"
+                  + (f", next {rel[1][:16]}Z" if rel[1] else "") + f" — {rel[3]} ({rel[2]})")
     if args.json:
         import json
         print("JSON " + json.dumps({
@@ -383,9 +429,12 @@ def main(argv: list[str] | None = None) -> int:
                                           x.get("field"))}
                     for x in quotable[:args.top]],
             "series": [{**srow, **{k: v for k, v in risk.get(srow["series"], {}).items()
-                                   if k not in ("clock", "last_jump", "jump_times")},
+                                   if k not in ("clock", "last_jump", "jump_times",
+                                                "episode_times", "release")},
+                        "release": (list(risk.get(srow["series"], {}).get("release"))
+                                    if risk.get(srow["series"], {}).get("release") else None),
                         "jump_times": [t.isoformat() for t in
-                                       risk.get(srow["series"], {}).get("jump_times") or []],
+                                       risk.get(srow["series"], {}).get("episode_times") or []],
                         "clock_text": clock_text(risk.get(srow["series"], {}).get("clock", {})),
                         "clock": risk.get(srow["series"], {}).get("clock")}
                        for srow in srows[:30]]}, default=str))
