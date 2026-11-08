@@ -1,14 +1,136 @@
 # ops request [READ]
-# type=db  id=rl-ps-armcount-1108
-# code 1f74222c543836989a9b5eddb74cb154838a0041 · started 2026-11-08T15:44:11Z
-policy      quotes  mkts  resting  first                           
-----------  ------  ----  -------  --------------------------------
-S1          20      20    20       2026-11-08 15:41:32.696543+00:00
-S2-behind   10      10    10       2026-11-08 15:41:32.696543+00:00
-S2-best     10      10    10       2026-11-08 15:41:32.696543+00:00
-S3-aside    7       7     7        2026-11-08 15:41:32.696543+00:00
-S3-control  10      10    10       2026-11-08 15:41:32.696543+00:00
-S4-burst    10      10    10       2026-11-08 15:41:32.696543+00:00
-S4-flat     10      10    10       2026-11-08 15:41:32.696543+00:00
+# type=script  id=rl-rank-c8-1108
+# code 3e105b7979679a13cd97d9e5c0fb349842809632 · started 2026-11-08T15:45:23Z
+LIMM market ranker — as of 2026-11-08T15:45Z; live liquidity markets 381 (283 quotable), pools $27,070/day; history 60 d: 71128 hourly snapshots, 770 market-days of prints
 
-(7 rows)
+== top 25 markets: estimated reward per day for a $10 bid (at the best bid / one tick behind), with the series' repricing risk
+   # market                             side  px  $/day behind  share days risk  turn  step-aside
+   1 KXTRUMPNOMNUM-26NOV08-T1           no     2   4.67   2.34   9.3%    7 LOW*  0.00  no repricing seen
+   2 KXTRUMPENDORSEMENTS-26NOV13-A25    yes    1   3.59   3.59   7.1%    6 LOW*  0.00  no repricing seen
+   3 KXTRUMPENDORSEMENTS-26NOV13-A15    yes    2   3.56   1.78   7.0%    6 LOW*  0.00  no repricing seen
+   4 KXTRUMPENDORSEMENTS-26NOV13-A5     yes   12   2.67   1.34   5.3%    6 LOW*  0.00  no repricing seen
+   5 KXASPENMTNOPEN-27-15NOV26          yes    1   2.53   2.53   8.9%   13 LOW   0.49  no repricing seen
+   6 KXMAMDANIEO-26NOV14-T0             yes    4   2.37   1.18   4.7%    7 LOW*  0.09  no repricing seen
+   7 KXTRUMPENDORSEMENTS-26NOV13-A3     yes   21   2.08   1.04   4.1%    6 LOW*  0.00  no repricing seen
+   8 KXBABELMANDEBWEEKLY-26NOV15-T195   yes   52   1.64   0.82   3.2%    9 LOW*  0.00  no repricing seen
+   9 KXHORMUZWEEKLY-26NOV15-T27         no    59   1.42   0.71   2.8%    9 LOW*  0.00  no repricing seen
+  10 KXRT-IPL-87                        yes   35   1.40   0.70   2.8%   15 LOW*  0.06  no repricing seen
+  11 KXTRUMPENDORSEMENTS-26NOV13-A10    yes    4   1.36   0.68   2.7%    6 LOW*  0.00  no repricing seen
+  12 KXAAAGASM-26NOV30-3.20             no     1   1.34   1.34   6.2%   22 LOW   0.16  pull 12-16Z
+  13 KXEOWEEK-26NOV14-0                 no    11   1.29   0.65   2.6%   20 LOW*  0.00  no repricing seen
+  14 KXEOWEEK-26NOV14-2                 no    90   1.17   0.59   2.3%   20 LOW*  0.01  no repricing seen
+  15 KXBABELMANDEBWEEKLY-26NOV15-T185   yes   81   1.15   0.58   2.3%    9 LOW*  0.00  no repricing seen
+  16 KXHORMUZWEEKLY-26NOV15-T25         no    50   1.09   0.55   2.2%    9 LOW*  0.00  no repricing seen
+  17 KXHORMUZPEAK-26NOV15-T7            no    81   0.99   0.50   2.0%    9 LOW*  0.00  no repricing seen
+  18 KXASPENMTNOPEN-27-22NOV26          yes    6   0.99   0.49   3.5%   20 LOW   1.08  no repricing seen
+  19 KXTRUMPENDORSEMENTS-26NOV13-A1     yes   45   0.98   0.49   1.9%    6 LOW*  0.00  no repricing seen
+  20 KXBIGSKYOPEN-27-22NOV26            yes    5   0.95   0.47   3.3%   20 LOW   0.67  no repricing seen
+  21 KXASPENMTNOPEN-27-29NOV26          no     1   0.93   0.93   3.3%   27 LOW   0.17  no repricing seen
+  22 KXTRUMPSAYCOMPANY-26DEC01-UBER     no     1   0.89   0.89  24.8%   23 LOW*  0.00  no repricing seen
+  23 KXHORMUZWEEKLY-26NOV15-T30         no    73   0.84   0.42   1.7%    9 LOW*  0.00  no repricing seen
+  24 KXRT-HOWT-45                       yes   74   0.82   0.41   1.6%    8 LOW*  0.08  no repricing seen
+  25 KXAAAGASM-26NOV30-4.10             yes    8   0.81   0.40   3.8%   22 HIGH  0.76  pull 12-16Z
+
+== series: 3 x $10 bids (top 3 quotable markets) per day, and how the series reprices
+  series               quot pool/d  top3 days jumps eps /30d risk  ct/md  clock
+  KXTRUMPENDORSEMENTS     6    606  9.82    1     0   0  0.0 LOW       0  -
+  KXTRUMPNOMNUM           1    100  4.67    1     0   0  0.0 LOW       0  -
+  KXASPENMTNOPEN          3    286  4.45   11     0   0  0.0 LOW    5028  -
+  KXBABELMANDEBWEEKLY     9   1111  3.52    1     0   0  0.0 LOW       1  -
+  KXHORMUZWEEKLY          9   1011  3.35    1     0   0  0.0 LOW       0  -
+  KXEOWEEK                5    506  3.27    1     0   0  0.0 LOW       2  -
+  KXRT                   55  11777  3.01    1     0   0  0.0 LOW      59  -
+  KXAAAGASM              17   1115  2.86    9    16   4 13.3 HIGH   2412  14Z±1 75%, Sat 25% of 4
+  KXMAMDANIEO             1    101  2.37    1     0   0  0.0 LOW     474  -
+  KXTRUMPSAYCOMPANY       7     64  1.90    1     0   0  0.0 LOW       0  -
+  KXHORMUZPEAK            8   1010  1.41    1     0   0  0.0 LOW       0  -
+  KXBIGSKYOPEN            2    286  1.39   10     0   0  0.0 LOW    3905  -
+  KXTRUMPSAYMONTH        15    150  1.34    1     0   0  0.0 LOW       0  -
+  KXPANAMAWEEKLY          9   1820  1.05    1     0   0  0.0 LOW       0  -
+  KXFLVISITORCOUNT        7    250  0.71   31     0   0  0.0 LOW     447  -
+  KXSUEZWEEKLY            8   1110  0.71    1     0   0  0.0 LOW       0  -
+  KXNYCASKRENT            8    286  0.69   31     2   2  1.9 MED     129  too few (2 episodes)
+  KXTXINCOMETAX           3    214  0.68    3     0   0  0.0 LOW     694  -
+  KXWALLSTBONUS           7    250  0.66   31     1   1  1.0 LOW    1396  too few (1 episode)
+  KXPJMEMERGENCY          4    143  0.50   31     0   0  0.0 LOW     201  -
+  KXNYNJPORTTEU           9    321  0.50   31     5   2  1.9 MED     320  too few (2 episodes)
+  KXILNUCLEAR             7    250  0.48   31     1   1  1.0 LOW     116  too few (1 episode)
+  KXCABUILDPERMITS        6    214  0.46   31     0   0  0.0 LOW      22  -
+  KXWATECHEMP            10    357  0.41   31     1   1  1.0 LOW     202  too few (1 episode)
+  KXPAMFGEMP              6    214  0.41   31     3   3  2.9 MED     341  03Z±1 67%, Fri 33% of 3
+  KXTXERCOTPEAK           7    250  0.39   31     0   0  0.0 LOW     954  -
+  KXNYSECEEMP             1     36  0.39   30     1   1  1.0 MED     388  too few (1 episode)
+  KXWAAEROEMP            13    464  0.36   31     1   1  1.0 LOW     103  too few (1 episode)
+  KXHORMUZMAX             7    708  0.33    1     0   0  0.0 LOW       0  -
+  KXBAA                   2     71  0.32   10     0   0  0.0 LOW     756  -
+
+== repricing history: the latest episode starts per series (UTC; a jump = hourly mid move >= 8c; jumps within 12 h are one episode)
+  KXAAAGASM            Sat 10-31 15Z, Mon 11-02 16Z, Tue 11-03 13Z, Wed 11-04 13Z
+  KXNYCASKRENT         Fri 09-18 14Z, Sun 09-20 03Z
+  KXWALLSTBONUS        Fri 11-06 05Z
+  KXNYNJPORTTEU        Fri 09-18 21Z, Mon 09-28 12Z
+  KXILNUCLEAR          Sat 09-19 08Z
+  KXWATECHEMP          Fri 09-18 05Z
+  KXPAMFGEMP           Fri 09-18 23Z, Sun 09-20 04Z, Tue 11-03 03Z
+  KXNYSECEEMP          Sun 09-20 05Z
+  KXWAAEROEMP          Fri 09-18 14Z
+
+== cycle 8 yardstick: calibrated paid c/h against fill c/h for a $10 bid, by market type
+  calibration: _global 1.34 (global median); ai_share 1.34 (global (only 1 paid ai_share events)); mention_event 2.78 (mention_event median); mention_window 1.34 (global (only 1 paid mention_window events)); youtube_views 1.34 (global (only 5 paid youtube_views events))
+  fill c/h: mention_event 3.1 (threshold study 2026-11-08), youtube_views 2.5 (threshold study 2026-11-08); other types unknown until study 5 reads on 2026-11-13
+   # market                             type            px  cal   paid  fill    net  proj$  <$1
+   1 KXTRUMPNOMNUM-26NOV08-T1           moving_number    2 1.34  26.08   n/a    n/a   3.45  
+   2 KXTRUMPENDORSEMENTS-26NOV13-A25    moving_number    1 1.34  20.04   n/a    n/a   7.46  
+   3 KXTRUMPENDORSEMENTS-26NOV13-A15    moving_number    2 1.34  19.87   n/a    n/a   7.40  
+   4 KXTRUMPENDORSEMENTS-26NOV13-A5     moving_number   12 1.34  14.93   n/a    n/a   5.56  
+   5 KXASPENMTNOPEN-27-15NOV26          moving_number    1 1.34  14.13   n/a    n/a   8.65  
+   6 KXMAMDANIEO-26NOV14-T0             moving_number    4 1.34  13.21   n/a    n/a   4.92  
+   7 KXTRUMPENDORSEMENTS-26NOV13-A3     moving_number   21 1.34  11.62   n/a    n/a   4.33  
+   8 KXBABELMANDEBWEEKLY-26NOV15-T195   moving_number   52 1.34   9.18   n/a    n/a   1.22  
+   9 KXHORMUZWEEKLY-26NOV15-T27         moving_number   59 1.34   7.91   n/a    n/a   1.05  
+  10 KXRT-IPL-87                        moving_number   35 1.34   7.81   n/a    n/a   1.03  
+  11 KXTRUMPENDORSEMENTS-26NOV13-A10    moving_number    4 1.34   7.57   n/a    n/a   2.82  
+  12 KXAAAGASM-26NOV30-3.20             moving_number    1 1.34   7.47   n/a    n/a   9.95  
+  13 KXEOWEEK-26NOV14-0                 moving_number   11 1.34   7.23   n/a    n/a   0.96  YES
+  14 KXEOWEEK-26NOV14-2                 moving_number   90 1.34   6.55   n/a    n/a   0.87  YES
+  15 KXBABELMANDEBWEEKLY-26NOV15-T185   moving_number   81 1.34   6.45   n/a    n/a   0.85  YES
+  16 KXHORMUZWEEKLY-26NOV15-T25         moving_number   50 1.34   6.11   n/a    n/a   0.81  YES
+  17 KXHORMUZPEAK-26NOV15-T7            moving_number   81 1.34   5.54   n/a    n/a   0.73  YES
+  18 KXASPENMTNOPEN-27-22NOV26          moving_number    6 1.34   5.51   n/a    n/a   3.38  
+  19 KXTRUMPENDORSEMENTS-26NOV13-A1     moving_number   45 1.34   5.49   n/a    n/a   2.04  
+  20 KXBIGSKYOPEN-27-22NOV26            moving_number    5 1.34   5.30   n/a    n/a   3.25  
+  21 KXASPENMTNOPEN-27-29NOV26          moving_number    1 1.34   5.21   n/a    n/a   3.19  
+  22 KXTRUMPSAYCOMPANY-26DEC01-UBER     mention_window   1 1.34   4.94   n/a    n/a   7.73  
+  23 KXHORMUZWEEKLY-26NOV15-T30         moving_number   73 1.34   4.70   n/a    n/a   0.62  YES
+  24 KXRT-HOWT-45                       moving_number   74 1.34   4.58   n/a    n/a   0.61  YES
+  25 KXAAAGASM-26NOV30-4.10             moving_number    8 1.34   4.51   n/a    n/a   6.01  
+  under $1 at $10 to the step-aside (S4's universe): 201 of 283 quotable markets: KXEOWEEK-26NOV14-0, KXEOWEEK-26NOV14-2, KXBABELMANDEBWEEKLY-26NOV15-T185, KXHORMUZWEEKLY-26NOV15-T25, KXHORMUZPEAK-26NOV15-T7, KXHORMUZWEEKLY-26NOV15-T30, KXRT-HOWT-45, KXEOWEEK-26NOV14-4, KXRT-IPL-85, KXBABELMANDEBWEEKLY-26NOV15-T205
+
+== NOT WATCHED by the collector: 3935 live markets in 338 series, pools $67,712/day (watched: 381 markets, $27,070/day).
+   No order-book data, so no share estimate: these are pools we cannot see the field for.
+  series                  mkts   pool/d best mkt/d  ends
+  KXRT                      85     8500      100.0  2026-11-09
+  KXYTVIEWSW               194     2512       12.9  2026-11-10
+  KXFEATURE                129     1843       14.3  2026-11-12
+  KXYTVIEWSHIGH            232     1657        7.1  2026-11-08
+  KXGRAMMYNOMNAOTY          77     1095       14.2  2026-11-13
+  KXHEADLINE                75     1071       14.3  2026-11-15
+  KXEOWEEK                  10     1000      100.0  2026-11-09
+  KXBABELMANDEBWEEKLY        9      900      100.0  2026-11-09
+  KXGRAMMYNOM               60      854       14.2  2026-11-13
+  KXHORMUZWEEKLY             8      800      100.0  2026-11-09
+  KXAPRPOTUS                 8      800      100.0  2026-11-09
+  KXHORMUZMAX                7      700      100.0  2026-11-09
+  KXLLM1                    24      689       28.9  2026-11-09
+  KXART                     48      683       14.2  2026-11-13
+  KXVOICELIMINATION         28      677       24.2  2026-11-10
+
+  not ranked: inside-step-aside 71, not-qualifying 69
+  risk (top table): the market's own repricing episodes per 30 days; * = too little history, series grade shown.
+  turn: contracts traded per market-day over the competing size on our side (rough fill pressure; 1.0 = the whole queue trades in a day).
+  risk: repricing episodes (hourly mid moves >= 8c; jumps within 12 h are one episode) per 30 observed days — LOW < 1.0, MED < 3.0, HIGH.
+  release: KXAAAGASM: AAA gas — AAA daily national average; Kalshi gas contracts expire 10:15-11:00 ET (15-16Z), the hour these markets reprice (https://gasprices.aaa.com/)
+  release: KXWATECHEMP: BLS State Employment (10:00 ET), next 2026-11-20T15:00Z — pull bids before the release; markets kept repricing for ~48 h after Sep 18 (https://www.bls.gov/schedule/2026/)
+  release: KXPAMFGEMP: BLS State Employment (10:00 ET), next 2026-11-20T15:00Z — pull bids before the release; markets kept repricing for ~48 h after Sep 18 (https://www.bls.gov/schedule/2026/)
+  release: KXNYSECEEMP: BLS State Employment (10:00 ET), next 2026-11-20T15:00Z — pull bids before the release; markets kept repricing for ~48 h after Sep 18 (https://www.bls.gov/schedule/2026/)
+  release: KXWAAEROEMP: BLS State Employment (10:00 ET), next 2026-11-20T15:00Z — pull bids before the release; markets kept repricing for ~48 h after Sep 18 (https://www.bls.gov/schedule/2026/)
