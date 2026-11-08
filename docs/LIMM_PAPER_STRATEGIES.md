@@ -63,9 +63,16 @@ Late hours still pay $0.31 per $10 bid-day.
 ## 4. Calibration (fixed now)
 
 Reward = `scoring.estimate` × **1.34**, the global median paid ÷ estimated
-(`scripts/limm_estimate_calibration.py`, run `rl-ps-calib-1108`, 17 well-covered paid events).
-No market type had 10 well-covered paid events on 2026-11-08 (mention 9, YouTube 5), so no
-per-type factor applies. **It is never changed after data.**
+(`scripts/limm_estimate_calibration.py`, run `rl-ps-calib-1108`, 17 well-covered paid events),
+for **every arm**. **It is never changed after data.**
+
+*Correction, 2026-11-08 15:50Z (arms recording since 15:41Z, the read window opens 11-09; no
+outcome had been read).* This section first said no market type had 10 well-covered paid events
+("mention 9"). That miscount came from a truncated listing. Mention events have exactly 10, with
+a median of 2.78 (ranker run `rl-rank-c8-1108`). The pre-registered number does not change. The
+handoff allows "the global 1.34, or the per-type factor known on the day". The global factor is
+kept for every arm because it is the conservative reading: mention ratios run from 0.8 to 14.4×,
+and one figure for all arms keeps the arms comparable. Only the reason was wrong.
 
 ## 5. Read (once)
 

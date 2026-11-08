@@ -186,4 +186,13 @@ Each cycle tests the result against the goals in §1, records what was wrong, fi
 - The paper-strategy read (`scripts/limm_paper_strategies_read.py`) uses the same measure: paid
   ¢/h against fill ¢/h, with the $1 minimum per market per programme.
 - Tests pin the per-type rule (10 events, 70% coverage), the net and ranking, and the $1 flag.
-- Retest: one live run after merge (recorded in the PR that follows it).
+- Retest (`rl-rank-c8-1108`, 2026-11-08 15:45Z, live):
+  - 381 watched markets ($27,070/day), up from 161 ($6,572/day) before DEC-043.2 and the paper
+    arms' watch pins. NOT WATCHED fell from $88,846/day to $67,712/day.
+  - Mention events reached 10 well-covered paid events, so they get their own factor, **2.78**.
+    YouTube (5 events) and the rest use the global 1.34.
+  - 201 of 283 quotable markets are under $1 for a $10 bid to the step-aside. That is S4's
+    universe; the high count is mostly 52–90¢ sides on the weeklies.
+  - Problem recorded, not fixed here: the threshold study's market types put everything except
+    mention, YouTube and AI-share into `moving_number`, so gas, ski and the weeklies share one
+    type. Their fill cost stays "unknown" until study 5 measures it per series.
