@@ -263,6 +263,7 @@ ALLOWED_SCRIPTS = (
     "limm_scorecard",
     "limm_estimate_calibration",
     "limm_window_probe",
+    "limm_programme_age",
     "mmsell_scorecard",
 )
 
