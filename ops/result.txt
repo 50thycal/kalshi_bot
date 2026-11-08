@@ -1,4 +1,24 @@
 # ops request [READ]
-# type=noop
-# code 0ba1dd79ae363cd0cc3a6737bb0b7c32535888bc · started 2026-11-08T15:18:42Z
-(noop — nothing to do)
+# type=xos  id=rl-ps-pp2-1108
+# code 1f74222c543836989a9b5eddb74cb154838a0041 · started 2026-11-08T15:28:23Z
+PACKAGE PREFLIGHT — limm-paper-strategies  (2026-11-08T15:28:24.043180+00:00)
+
+  [ok  ] package_known: DEC-043/044: the incentive paper strategies S1-S4 (seven arms, three of them controls), recorded by the GET-only shadow collector into incentive_* tables. Freez
+  [ok  ] package_registers: has a `register` verb
+  [info] enforcement_mode: NEW_ONLY
+         a tag trades only under an active deployment arm
+  [ok  ] platform_snapshot_complete: active snapshot 55b51990e049
+  [ok  ] experiment: 'limm-paper-strategies' not registered — a fresh registration
+  [info] tag_collisions: package declares no strategy_tags; collision check skipped — the resolver still refuses two active arms on one tag at run time
+  [ok  ] transport_idle: no experiment command is mid-execution
+
+VERDICT: GO
+
+envelope (ops request, one line):
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"limm-paper-strategies-register-202611081528\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"limm-paper-strategies\"}, \"schema_version\": 1}"}, "id": "limm-paper-strategies-register-202611081528-send"}
+
+then:
+  1. send env_request as printed (record approved_by/reason from `audit` in the PR)
+  2. read the receipt: xos experiment-command-show limm-paper-strategies-register-202611081528
+  3. xos show limm-paper-strategies — every declared tag on an ACTIVE arm
+  4. xos control-tower after SILENT_ARM_HOURS — no silent arm
