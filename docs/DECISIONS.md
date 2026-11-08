@@ -1708,3 +1708,31 @@ tied to this experiment".
 
 **Revisit when** the rules have been stable for a few weeks. That is the clean moment for option B.
 
+## DEC-043 — Incentive paper strategies, collector watches by daily pay, incentive cap 8
+
+**Date:** 2026-11-08 UTC. **Owner direction**, answering the brainstorm after the market ranker
+(`docs/LIMM_MARKET_RANKER.md`):
+> "1 yes all recommended there; 2) yes; 3) scale appropriately for each strategy; 4) agreed; 5) yes"
+
+- **Decision:**
+  1. **Three incentive paper strategies (five arms)** will be built and run on paper, all scored
+     by one measure. Spec and build plan: `docs/handoffs/HANDOFF-limm-paper-strategies.md`.
+     - S1, weekly money-finder.
+     - S2, at the best bid vs one tick behind (two arms).
+     - S3, release-aware data and event ladders, with a step-aside arm and a control arm.
+       Late-exit rules for one-event ladders are folded into S3's step-aside arm.
+  2. **The incentive collector picks its markets by daily pay** (pool per day), not by total
+     programme reward. This is a change to the live worker's paper-only instrument: no orders,
+     and no change to `Alimm1`'s quoting.
+  3. **Each strategy is sized for its own job.** The sizes are set in the build session's
+     pre-registration within the handoff's guardrails.
+  4. **Incentive line cap raised from 5 to 8.** Study 9 Part B (2026-12-03) is cancelled, because
+     Part A was NO-LEAD on all policies.
+  5. **Read date:** once, about 2026-11-24. More precisely, the later of 11-24 or 14 days after
+     the paper engine starts recording.
+- **Why:** the live pool has moved away from the markets `Alimm1` quotes. The collector misses
+  about $89k/day of live pools. And the 50% per-tick discount makes the behind-the-touch rule a
+  measurable trade-off. Paper is the cheapest honest test of all three.
+- **Not decided here:** any change to `Alimm1` (universe, price rule, step-aside). A strategy that
+  passes becomes a nomination, which is a separate owner decision and a new epoch.
+
