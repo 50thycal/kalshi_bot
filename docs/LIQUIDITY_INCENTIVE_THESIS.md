@@ -3459,3 +3459,12 @@ live. Once it is live, the hold is lifted and the rule decides.
 
 **Review.** After two weeks, compare paid against estimated on the new entries, and fill cost
 per market-hour against 3c. 17 events is a small sample, and losses are lumpy.
+
+### 9.78 Stood down for an all-markets review (2026-11-08)
+
+The operator stood the live book down on 2026-11-08 at 3:00 AM CT
+(`LIQUIDITY_INCENTIVE_LIVE_ENABLED=false`, ops `env-limm-off`). The research moves to a session
+that surveys all available markets. The YouTube leftovers stay held, and their sells keep resting
+unmanaged. Payouts still to land need the operator's Rewards screenshot. The research leads are
+burst sizing, programme age, one paid-c/h yardstick across markets, per-type calibration and
+the $1-minimum harvest. They are in `docs/liquidity_incentive/HANDOFF_2026-11-08.md`.
