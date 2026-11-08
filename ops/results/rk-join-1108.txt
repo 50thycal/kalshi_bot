@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rk-join-1108
+# code 673b1a8fb0e429fbdbd4fb3a7f3df00f2acf4c48 · started 2026-11-08T05:04:50Z
+latest_snaps  row_join_found  row_join_live  row_superseded  ticker_join_live
+------------  --------------  -------------  --------------  ----------------
+164           164             102            0               102             
+
+(1 row)
