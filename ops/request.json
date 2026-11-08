@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT date_trunc('hour', at) AS hr, count(*) AS snaps, count(DISTINCT market_ticker) AS mkts FROM incentive_market_snapshots WHERE at > now() - interval '8 hours' GROUP BY 1 ORDER BY 1", "id": "rk-fresh2-1108"}
+{"type":"noop"}
