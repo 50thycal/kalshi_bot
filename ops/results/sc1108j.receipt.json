@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "153b1ac0b6bc3512a197952e37782c3d577bd180",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-08T23:58:41Z",
+  "id": "sc1108j",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/sc1108j.receipt.json",
+  "result_file": "ops/results/sc1108j.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42537704328",
+  "service": null,
+  "started_at": "2026-11-08T23:58:34Z",
+  "targets": [],
+  "type": "script"
+}
