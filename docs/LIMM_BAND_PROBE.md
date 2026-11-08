@@ -110,4 +110,82 @@ a new epoch on the live book. It is never automatic.
 
 ## 7. Results
 
-*(none yet)*
+### Part A — backtest, 2026-09-17 → 11-08 (`rl-s9-backtest-20261108`)
+
+```
+LIMM band probe — $10 incentive bids where both sides bid 11-50c (pre-registered docs/LIMM_BAND_PROBE.md)
+
+window 2026-09-17T00:00 -> 2026-11-08T12:00; hourly snapshots (band markets, incl. mark tail) 66134; band markets 792; prints 80778
+qualifying band hours 49242; markets 638; series 98; events 230; thin leg-hours (no reward) 0
+  by band: (11, 25) 26973h, (26, 40) 12752h, (41, 50) 9517h
+  by week: 2026-09-14 6175h, 2026-09-21 12232h, 2026-09-28 15913h, 2026-10-05 4379h, 2026-10-12 259h, 2026-10-19 246h, 2026-10-26 2933h, 2026-11-02 7105h
+
+== model `conservative` (DECIDES); 24 h markout decides, 6 h descriptive
+  policy  leg-d evts  rew/ld loss/ld    R/ld   ±se   R6/ld fills /100ld unmk  verdict
+  CHEAP    3551  230   +0.16   +0.09   +0.07  0.02   +0.07   140    3.9   47  NO-LEAD
+  DEAR     3551  230   +0.06   +0.11   -0.04  0.02   -0.03   156    4.4   83  NO-LEAD
+  BOTH     6888  230   +0.11   +0.10   +0.01  0.01   +0.02   269    3.9  127  NO-LEAD
+  BOTH markets where both legs filled: 71 of 638
+  by band (cheaper side's bid; descriptive):
+    CHEAP  11-25: 2337ld R +0.10 fills 91 | 26-40: 579ld R +0.02 fills 27 | 41-50: 635ld R -0.01 fills 22
+    DEAR   11-25: 2337ld R -0.07 fills 102 | 26-40: 579ld R -0.04 fills 28 | 41-50: 635ld R +0.04 fills 26
+    BOTH   11-25: 4612ld R +0.02 fills 189 | 26-40: 1146ld R -0.00 fills 49 | 41-50: 1130ld R +0.02 fills 31
+  by series, policy BOTH (descriptive), top 15 by leg-days:
+    KXNFLLADDERREC             526ld  18ev rew +0.21 loss +0.18 R +0.03 fills 26
+    KXNFLFFPTSLADDER           486ld  18ev rew +0.16 loss +0.14 R +0.02 fills 16
+    KXBWAYATTENDANCE           356ld   1ev rew +0.08 loss +0.06 R +0.02 fills 10
+    KXNFLLADDERRECYDS          338ld  18ev rew +0.15 loss +0.23 R -0.08 fills 23
+    KXNYNJPORTTEU              288ld   1ev rew +0.03 loss +0.04 R -0.01 fills 7
+    KXWAAEROEMP                248ld   1ev rew +0.05 loss +0.02 R +0.03 fills 4
+    KXPADATACENTERS            248ld   1ev rew +0.08 loss +0.02 R +0.06 fills 10
+    KXCITYCHAMPS               218ld   2ev rew +0.04 loss +0.00 R +0.04 fills 0
+    KXMLBSEASONGAMES           206ld   1ev rew +0.13 loss +0.04 R +0.09 fills 5
+    KXWALLSTBONUS              188ld   1ev rew +0.04 loss +0.03 R +0.01 fills 5
+    KXNYCASKRENT               184ld   1ev rew +0.05 loss +0.03 R +0.02 fills 2
+    KXNFLLADDERRSHYDS          182ld  17ev rew +0.17 loss +0.23 R -0.05 fills 12
+    KXFLVISITORCOUNT           178ld   1ev rew +0.07 loss +0.02 R +0.05 fills 4
+    KXBAA                      164ld   1ev rew +0.05 loss +0.03 R +0.02 fills 3
+    KXNFLESCALATORREC          132ld  20ev rew +0.30 loss +0.29 R +0.00 fills 8
+
+== VERDICT (decides: conservative, 24 h). PROMISING is an OWNER decision for a live trial, never automatic
+  CHEAP  NO-LEAD
+  DEAR   NO-LEAD
+  BOTH   NO-LEAD
+
+== model `optimistic` (sensitivity); 24 h markout decides, 6 h descriptive
+  policy  leg-d evts  rew/ld loss/ld    R/ld   ±se   R6/ld fills /100ld unmk  verdict
+  CHEAP    3551  230   +0.12   +0.19   -0.07  0.03   +0.02   233    6.6   97  NO-LEAD
+  DEAR     3551  230   +0.04   +0.20   -0.16  0.03   -0.05   287    8.1  135  NO-LEAD
+  BOTH     6888  230   +0.08   +0.19   -0.11  0.02   -0.01   473    6.9  224  NO-LEAD
+  BOTH markets where both legs filled: 170 of 638
+  by band (cheaper side's bid; descriptive):
+    CHEAP  11-25: 2337ld R -0.08 fills 158 | 26-40: 579ld R -0.04 fills 37 | 41-50: 635ld R -0.05 fills 38
+    DEAR   11-25: 2337ld R -0.21 fills 203 | 26-40: 579ld R -0.11 fills 44 | 41-50: 635ld R +0.01 fills 40
+    BOTH   11-25: 4612ld R -0.15 fills 354 | 26-40: 1146ld R -0.06 fills 72 | 41-50: 1130ld R -0.01 fills 47
+```
+
+- **Verdict: NO-LEAD for all three policies.** Under the deciding conservative model, R + 2.39·SE
+  stays below the $0.15 bar for each.
+  - **CHEAP** is the only positive policy: +$0.07 per leg-day ± 0.02. It is positive, but at about
+    half the bar.
+  - **DEAR:** −$0.04.
+  - **BOTH:** +$0.01.
+- **The sample is large.** It covers 49k qualifying hours in 638 markets, 98 series and 230 events.
+  Floors are met with room to spare.
+- **Fills eat most of the reward.**
+  - About 4 fills per 100 leg-days, costing about $2.30 each at the 24 h markout.
+  - CHEAP's gross reward is +$0.16 per leg-day. Fills take +$0.09 of it.
+  - The dearer side's reward is small (+$0.06), and its fills cost more (+$0.11).
+- **Two-sided quoting does not hedge.** Both legs filled in only 71 of 638 markets.
+- **Model-sensitive.** Under the `optimistic` fill model, which assumes more fills, every policy is
+  negative.
+- **Descriptive (cannot be re-scoped into the verdict):**
+  - The 11–25¢ cheaper side is the best cell, at +$0.10 per leg-day.
+  - The long-dated economic ladders net +$0.02 to +$0.09. They have low reward and few fills, and
+    each is a single event, so they cannot be clustered.
+  - The NFL ladders (shadow window) have high reward but high fill cost, netting about 0.
+- **What it means.** Moving the book above 10¢ is not a fix. At best it earns about $2 a month per
+  $10 bid, below the bar and dependent on the fill model. The incentive question that can still
+  move the book is **universe**: whether the cheap side pays on the economic ladders, where the
+  pool now is. Study 5 reads exactly that on 2026-11-13 (V1, outside-universe NET-LEAD series).
+- **Part B** still reads once on 2026-12-03, unchanged, unless the owner drops it.

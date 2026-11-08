@@ -1,5 +1,21 @@
 # Weather-markets research journal
 
+## LIMM mid-band probe 2026-11-08 — study 9 Part A: NO-LEAD (bids above 10¢ don't fix the incentive book)
+
+- **Why it ran:** the owner asked whether quoting above 10¢ would help. The live incentive pool, about
+  $6.7k/day, has moved from mentions (now about $3/day) to long-dated state and economic ladders.
+  Their ≤10¢ side is crowded; the 11–50¢ bands hold about $2.2k/day with thin fields
+  ([doc](LIMM_BAND_PROBE.md)).
+- **Result:** a $10 bid at the best bid, with the 24 h fill markout:
+  - CHEAP side +$0.07 per leg-day;
+  - DEAR −$0.04;
+  - BOTH sides +$0.01.
+  All three are NO-LEAD against the $0.15 bar, and all turn negative under the optimistic fill
+  model.
+- **Why:** fills, about 4 per 100 leg-days at about $2.30 each, eat most of the reward.
+- **Next:** universe, not band. Study 5 (11-13) reads whether the cheap side pays net on the
+  economic ladders. Part B still reads 12-03.
+
 ## VOLCLOCK run 1 2026-11-06 — HOLD (instrument); P3 fails regardless, recommend close
 
 - **Verdict per contract:** HOLD (instrument). Close-spot coverage was 0.86 against the 0.90 floor
