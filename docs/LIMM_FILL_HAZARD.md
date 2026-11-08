@@ -90,6 +90,11 @@ Floor per series: **≥ 20 market-days and ≥ 5 events**, else `THIN`.
   through the owner and the book's own fee accounting.
 - **The population is what the collector watches** (the top ~150 programmes by reward), not all
   of Kalshi.
+  - **Disclosed after registration, not a re-scope (2026-11-08):** DEC-043.2 changes the
+    collector to pick its ~150 markets by **daily pay** instead of total reward, from its deploy
+    (~2026-11-08/09) to the end of this window. Series that enter or leave the watched set then
+    contribute fewer hours; the per-series rules, bars and read date are unchanged. The read
+    should state each series' hour count, which it already does.
 - **The live universe's own hours count only when the collector snapshotted them.**
 
 ## 6. Cost
