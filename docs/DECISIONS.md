@@ -1736,3 +1736,29 @@ tied to this experiment".
 - **Not decided here:** any change to `Alimm1` (universe, price rule, step-aside). A strategy that
   passes becomes a nomination, which is a separate owner decision and a new epoch.
 
+## DEC-044 — Stand-down leads folded into the paper strategies; S4 burst, programme-age study, incentive cap 10
+
+**Date:** 2026-11-08 UTC. **Owner direction**, after a second session stood `Alimm1` down (thesis
+§9.78) and left five research leads in `docs/liquidity_incentive/HANDOFF_2026-11-08.md`:
+> "Take a look at this. Some might overlap with others. If not, add these ideas to the build
+> handoff as well. Raise the cap as needed."
+
+- **Decision:**
+  1. **S4 burst sizing** joins DEC-043's paper strategies as two arms: `S4-burst` against
+     `S4-flat`.
+     - It merges lead 1 (burst) and lead 5 (the $1-minimum harvest).
+     - `S4-burst` bids $50, on paper only, in short or thin programmes that a $10 bid would leave
+       under Kalshi's $1 minimum.
+  2. **Programme-age study** (lead 2). One pre-registered read of existing history. It sets
+     S4's burst window before S4 records.
+  3. **Leads 3 and 4 are instrumentation, not experiments.** One paid-¢/h-against-fill-¢/h
+     yardstick and per-type calibration become ranker cycle 8, and the paper-strategy read uses
+     the same measure, with the $1 minimum applied per market per programme.
+  4. **Incentive line cap raised from 8 to 10.** The two new slots are S4 and the age study.
+- **Overlap found:** lead 3 is the ranker's fill-cost column, already planned for after study 5
+  reads on 11-13. Lead 4 answers part of the ranker's "never calibrated against payouts" limit.
+  Neither needs its own experiment.
+- **Not decided:** restarting `Alimm1`, or any live bid above $10. Both are hard stops and owner
+  decisions.
+- **Build plan:** `docs/handoffs/HANDOFF-limm-paper-strategies.md`.
+
