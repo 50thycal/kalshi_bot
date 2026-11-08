@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT policy, count(*) AS rows_4h, count(DISTINCT market_ticker) AS mkts FROM incentive_shadow_quotes WHERE created_at >= now() - interval '4 hours' GROUP BY 1 ORDER BY 1", "id": "rc-arms-1108-1913"}
+{"type":"noop"}
