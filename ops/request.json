@@ -1,1 +1,1 @@
-{"type": "env", "id": "env-mam2", "action": "set", "values": {"LIQUIDITY_INCENTIVE_EXCLUDED_SERIES": "KXBIGGESTQUAKE"}}
+{"type":"noop"}
