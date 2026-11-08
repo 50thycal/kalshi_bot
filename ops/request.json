@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT at, kind, left(coalesce(detail, detail_json::text), 160) AS d FROM incentive_collector_events WHERE at >= '2026-11-08T15:40:00Z' AND kind IN ('thread_started','arm_select','connected','disconnected','loop_error','book_invalid') ORDER BY at","max_rows":40,"id":"rl-ps-diag-1108b"}
+{"type":"noop"}
