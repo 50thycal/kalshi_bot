@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=rk-cov2-1108
+# code 673b1a8fb0e429fbdbd4fb3a7f3df00f2acf4c48 · started 2026-11-08T05:07:03Z
+series               markets  pool_day  max_mkt_pool_day  ends      
+-------------------  -------  --------  ----------------  ----------
+KXYTVIEWSW           194      2512      12.9              2026-11-10
+KXFEATURE            129      1843      14.3              2026-11-12
+KXPANAMAWEEKLY       18       1820      101.2             2026-11-09
+KXYTVIEWSHIGH        232      1657      7.1               2026-11-08
+KXGRAMMYNOMNAOTY     77       1095      14.2              2026-11-13
+KXTRUMPACT           10       1059      105.9             2026-11-08
+KXHORMUZWEEKLY       9        911       101.2             2026-11-09
+KXBABELMANDEBWEEKLY  9        911       101.2             2026-11-09
+KXGRAMMYNOM          60       854       14.2              2026-11-13
+KXHORMUZPEAK         8        810       101.2             2026-11-09
+KXSUEZWEEKLY         8        810       101.2             2026-11-09
+KXAPRPOTUS           8        800       100.0             2026-11-09
+KXOPENSOURCESHARE    36       743       20.6              2026-11-08
+KXHORMUZMAX          7        708       101.2             2026-11-09
+KXART                48       683       14.2              2026-11-13
+
+(15 rows)
