@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "st-n1", "sql": "SELECT count(*) n, min(o.created_at) first, count(*) FILTER (WHERE EXISTS (SELECT 1 FROM execution_order_events e WHERE e.kalshi_order_id=o.kalshi_order_id AND e.status IN ('canceled','executed'))) with_end_evt, count(*) FILTER (WHERE EXISTS (SELECT 1 FROM live_order_queue_ticks q WHERE q.live_order_id=o.id)) with_ticks, string_agg(DISTINCT o.status, ',') statuses FROM live_orders o WHERE o.strategy='Alimm1' AND o.action='buy' AND o.client_order_id NOT LIKE 'limmexit%' AND o.client_order_id NOT LIKE 'limmsell:%'"}
