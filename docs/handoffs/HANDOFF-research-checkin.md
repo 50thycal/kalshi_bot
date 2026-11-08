@@ -11,7 +11,7 @@
 | # | item | why it matters | pre-registration |
 |---|---|---|---|
 | A | Incentive shadow collector | Order-book snapshots and public trades on the ~150 top-reward programmes. Turned back on 2026-10-30. It died silently once (2026-10-07). | `LIMM_PROGRAMME_OUTCOMES.md` §7–§10 |
-| B | LIMM exits vs holding, accrual | Settled `Alimm1` markets toward the floor of 30 markets and 15 events. The read is scheduled for 2026-11-13. | `LIMM_PROGRAMME_OUTCOMES.md` §9, §11 |
+| B | LIMM exits vs holding (**closed 2026-11-08, owner**; §12) | Skip it. The live book is stood down, and the test closed unread at 18 of 30. Report the paper strategies' `--counts` instead: `{"type":"script","name":"limm_paper_strategies_read","args":["--counts"]}`, read on 2026-11-24. | `LIMM_PROGRAMME_OUTCOMES.md` §9, §11 |
 | C | P-SLOW v2, accrual | Filled live buy-NO orders since 2026-10-30, by tag. The read is once, on 2026-12-04. | `MMSELL_FILL_FORWARD_READ.md` §6 |
 | D | State gas ladder screen | Nothing to accrue in the DB; the re-run is on 2026-12-07. | `MMSELL_LOOKALIKE_PROBE.md` §16–§17 |
 | E | The scheduled check-in routines | They must stay enabled and fire on their dates. | `docs/RESEARCH_CALENDAR.md` |

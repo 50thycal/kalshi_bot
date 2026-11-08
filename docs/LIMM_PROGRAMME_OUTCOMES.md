@@ -262,3 +262,20 @@ against a floor of 30, so **H1: HOLD (accrual)**.
   the markets the book actually exited. Re-read at 30 settled markets, same bars.
 - **Collector check** (`rl-limm-collect-chk2-20261030`): the public trade tape is writing again
   (15 prints in 30 minutes), with 147 markets snapshotted in 15 minutes.
+
+## 12. Exits vs holding closed unread (2026-11-08)
+
+The owner closed this test on 2026-11-08: "yes close it". The live book `Alimm1` was stood down
+that morning (thesis §9.78, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=false`). The test reads the book's
+own exits on real fills, so its sample cannot grow past **18 of 30 settled markets** (16 events)
+while the book is off. That count has not changed since 2026-11-03.
+
+- The 2026-11-13 read (routine `trig_01MtzLc4H1BoASXHY2AeePSJ`) is deleted. **Run 3 never ran,
+  and no result was read.** §11 (run 2) stays the last result.
+- **Restart path.** If `Alimm1` restarts, this question can be re-opened as a new
+  pre-registration with fresh dates, run on the post-restart sample. That is a new research slot
+  under the incentive cap. The stop/take rules also tend to change at a restart, which would make
+  the old and new samples non-poolable.
+- **Not affected:** the collector-replay studies (5, 6 and 8) and the paper strategies S1–S4 do
+  not depend on the live book.
+

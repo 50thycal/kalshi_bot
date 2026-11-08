@@ -19,7 +19,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 
 | date (UTC) | check | what it decides | pre-registration | routine | status |
 |---|---|---|---|---|---|
-| 2026-11-13 15:17 | LIMM exits vs holding, run 3 | Do the liquidity book's stop/take exits beat holding to settlement? Needs ≥ 30 settled markets and ≥ 15 events, else HOLD. A FAIL makes a looser stop an owner decision. Also checks the shadow collector is still writing. | `LIMM_PROGRAMME_OUTCOMES.md` §9 (results §11) | `trig_01MtzLc4H1BoASXHY2AeePSJ` | scheduled |
+| 2026-11-13 15:17 | LIMM exits vs holding, run 3 | Do the liquidity book's stop/take exits beat holding to settlement? Needs ≥ 30 settled markets and ≥ 15 events, else HOLD. A FAIL makes a looser stop an owner decision. Also checks the shadow collector is still writing. | `LIMM_PROGRAMME_OUTCOMES.md` §9 (results §11, close-out §12) | `trig_01MtzLc4H1BoASXHY2AeePSJ` (deleted) | CLOSED 2026-11-08 unread (owner): `Alimm1` is stood down (§9.78), so the sample cannot grow past 18 of 30 |
 | 2026-11-13 15:47 | LIMM fill hazard, study 5 (read once) | Which incentive series pay net of the fills a resting bid takes? Nominates series to add (net above the live universe) or remove (reward eaten by fills). Needs ≥ 3 series with ≥ 20 market-days and ≥ 5 events, else HOLD and one re-read on 2026-11-27. Nominations are owner decisions. | `LIMM_FILL_HAZARD.md` §4 | `trig_015Lh4zakJj9qZQ23Hbk45mM` | scheduled |
 | 2026-11-17 16:17 | LIMM step-aside, study 6, Part B (read once) | In the 48h→24h band before close, does a cheap-side bid earn more reward than its fills cost? NOMINATE 24H (owner decision), KEEP 48H, or HOLD. Needs ≥ 20 live-universe band markets in ≥ 8 events, else one re-read on 2026-12-01. Part A (backtest, 2026-11-03): live HOLD (accrual); `all` band +$1.48/md vs +$0.43 base, descriptive. | `LIMM_STEP_ASIDE.md` §4–§5 | `trig_01H9kxG5d74PesCBcfbyGYkw` | scheduled |
 | 2026-12-11 16:37 | LIMM fill early-warning, study 8, Part B (read once) | Did a snapshot signal (a print in the last 5 min, or depth at best halving) predict a fill in the next hour, and would pulling the bid then have saved more than it gave up? USEFUL nominates a pull-on-warning rule (owner decision). Needs ≥ 30 fills in ≥ 10 events. Part A (backtest, 2026-11-04): NO-SIGNAL — warning predicts fills (lift 37) but pulling bids loses more reward than it saves (−$330). | `LIMM_FILL_WARNING.md` §3–§4 | `trig_018fN69FNib5J6xZUihqbmE8` | scheduled |
@@ -35,7 +35,6 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 | when | follow-up | condition |
 |---|---|---|
 | 2027-01-08 | P-SLOW v2 extension, read once, same bars | the 2026-12-04 read has fewer than 100 cell fills |
-| +2 weeks after each LIMM read | LIMM exits vs holding, next run | the read is still under the 30-market / 15-event floor |
 | 2026-12-01 16:17 | LIMM step-aside, re-read once, same bars | the 2026-11-17 read is HOLD (accrual) |
 | 2026-11-27 16:07 | LIMM fill hazard, re-read once, same bars | the 2026-11-13 read is HOLD under V0 (fewer than 3 series at the floor) |
 
@@ -52,7 +51,7 @@ own prompts and docs are canonical.
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
 | daily 08:57 Central | Railway usage check (read-only) | WS-024 |
-| 2026-11-14 16:32 | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). Fresh-session routine `trig_01WsVZJfPKbYRDn9eFgVwMYn`; the original routine's session is archived | `MMSELL_LIVE_CANARY_PATTERNS.md` §6 |
+| 2026-11-14 16:32 | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). Fresh-session routine `trig_01WsVZJfPKbYRDn9eFgVwMYn`; the duplicate on the archived session was deleted 2026-11-08 (owner) | `MMSELL_LIVE_CANARY_PATTERNS.md` §6 |
 
 The operations routines above wake an existing session rather than starting a fresh one. They also
 run while that session is closed in the app, but stop if that session is archived.

@@ -1,5 +1,13 @@
 # Weather-markets research journal
 
+## LIMM exits vs holding — closed unread, 2026-11-08 (owner)
+
+- **Why:** the live incentive book is stood down (§9.78), so the test's sample of real exits is
+  frozen at 18 of 30 settled markets. The Nov 13 read is deleted, and run 2 (§11) stays the last
+  result ([doc](LIMM_PROGRAMME_OUTCOMES.md) §12).
+- **Also:** the duplicate Mentions routine on an archived session is deleted (owner). The
+  fresh-session Nov 14 routine is unchanged.
+
 ## LIMM mid-band probe 2026-11-08 — study 9 Part A: NO-LEAD (bids above 10¢ don't fix the incentive book)
 
 - **Why it ran:** the owner asked whether quoting above 10¢ would help. The live incentive pool, about
