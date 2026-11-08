@@ -1,1 +1,1 @@
-{"type":"env","set":{"LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED":"true"},"id":"rl-ps-arms-on-1108"}
+{"type":"db","sql":"SELECT at, kind, left(coalesce(detail, detail_json::text), 300) AS d FROM incentive_collector_events WHERE at >= now() - interval '15 minutes' AND kind IN ('thread_started','discovery','arm_select','connected','disconnected','loop_error','market_cap_reached') ORDER BY at","max_rows":40,"id":"rl-ps-armchk-1108a"}
