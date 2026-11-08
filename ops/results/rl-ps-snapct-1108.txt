@@ -1,0 +1,8 @@
+# ops request [READ]
+# type=db  id=rl-ps-snapct-1108
+# code 852d5af775f71852d0f37a0e7f42768eb448fa3d · started 2026-11-08T14:13:06Z
+count  count
+-----  -----
+42765  164  
+
+(1 row)
