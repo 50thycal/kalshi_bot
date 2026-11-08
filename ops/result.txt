@@ -1,14 +1,4 @@
 # ops request [READ]
-# type=db  id=rl-ps-counts-1108b
-# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:26:03Z
-policy      quotes  mkts  bid_hours  pulls
-----------  ------  ----  ---------  -----
-S1          141     23    267.3      3    
-S2-behind   73      15    134.3      1    
-S2-best     73      15    134.3      1    
-S3-aside    70      11    119.8      1    
-S3-control  73      11    134.2      1    
-S4-burst    67      12    126.4      1    
-S4-flat     67      12    126.4      1    
-
-(7 rows)
+# type=noop
+# code e3f558cd9ed624f94b3d8ecca4f8b97be6738f65 · started 2026-11-08T20:26:19Z
+(noop — nothing to do)
