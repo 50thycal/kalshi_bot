@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT policy, count(*) AS quotes, count(DISTINCT market_ticker) AS mkts, count(*) FILTER (WHERE ended_at IS NULL) AS resting, min(placed_at) AS first FROM incentive_shadow_quotes WHERE placed_at >= now() - interval '30 minutes' AND policy IN ('S1','S2-best','S2-behind','S3-aside','S3-control','S4-burst','S4-flat') GROUP BY 1 ORDER BY 1","max_rows":20,"id":"rl-ps-armcount-1108"}
+{"type":"script","name":"limm_market_ranker","args":[],"id":"rl-rank-c8-1108"}
