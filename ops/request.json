@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["limm-paper-strategies"],"id":"rl-ps-pp-1108"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"limm-paper-strategies-register-202611081511\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"limm-paper-strategies\"}, \"schema_version\": 1}"}, "id": "limm-paper-strategies-register-202611081511-send"}
