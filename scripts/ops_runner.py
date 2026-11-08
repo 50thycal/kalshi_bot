@@ -260,6 +260,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_gridpin_census",
     "kalshi_gridpin_study",
     "limm_scorecard",
+    "limm_estimate_calibration",
     "limm_window_probe",
     "mmsell_scorecard",
 )
