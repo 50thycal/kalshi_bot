@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT policy, count(*) AS quotes, count(DISTINCT market_ticker) AS mkts, round(sum(coalesce(rest_seconds, extract(epoch FROM now() - placed_at)))::numeric / 3600, 1) AS bid_hours, count(*) FILTER (WHERE end_reason LIKE 'pull_%') AS pulls FROM incentive_shadow_quotes WHERE placed_at >= '2026-11-08T15:40:00Z' AND policy IN ('S1','S2-best','S2-behind','S3-aside','S3-control','S4-burst','S4-flat') GROUP BY 1 ORDER BY 1","max_rows":20,"id":"rl-ps-counts-1108b"}
