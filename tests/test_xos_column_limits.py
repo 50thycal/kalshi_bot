@@ -25,6 +25,7 @@ has to reproduce the constraint, not the code path.
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import String
 from sqlalchemy import inspect as sa_inspect
 
@@ -73,6 +74,22 @@ def test_closing_out_perp_v1_writes_nothing_too_long_for_postgres(
     )
     xos_session.flush()
     assert _overlong(xos_session.identity_map.values()) == []
+
+
+#: Every package that registers from an empty Experiment OS. `limm-paper-strategies`'s first
+#: production registration (2026-11-08) died on execution_style="maker (simulated)" — 17 chars —
+#: because this guard covered perp-v1 alone. A new standalone package belongs here.
+STANDALONE_PACKAGES = ("perp-v1", "marktangle-reversion", "marktangle-2", "limm-paper-strategies")
+
+
+@pytest.mark.parametrize("name", STANDALONE_PACKAGES)
+def test_every_standalone_registration_fits_postgres(name, xos_session, xos_platform):
+    from kalshi_bot.experiment_os import experiment_commands as xc
+
+    produced = xc._packages()[name].register(xos_session, actor="t")
+    xos_session.flush()
+    assert _overlong(xos_session.identity_map.values()) == []
+    assert produced["version"].execution_style in {"maker", "taker", "mixed", None}
 
 
 def test_execution_style_uses_the_columns_vocabulary(xos_session, xos_platform):
