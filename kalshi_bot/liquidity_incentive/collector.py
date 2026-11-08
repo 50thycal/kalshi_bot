@@ -139,6 +139,23 @@ class ProgramTerms:
                    close_time=_aware(row.close_time), fee_rule=rule)
 
 
+def daily_pay_usd(terms: ProgramTerms) -> float | None:
+    """The programme's pool per day: period reward ÷ programme length in days (A2: the
+    reward accrues uniformly over [start, end]). None when the length is unknown."""
+    if terms.period_reward_usd is None or not terms.period_seconds or terms.period_seconds <= 0:
+        return None
+    return float(terms.period_reward_usd) / (terms.period_seconds / 86_400.0)
+
+
+def daily_pay_sort_key(terms: ProgramTerms) -> tuple[int, float]:
+    """Markets with a known daily pay rank first, by that pay; a programme with no usable
+    dates ranks after every dated one, by its total reward (the old key)."""
+    rate = daily_pay_usd(terms)
+    if rate is None:
+        return (0, float(terms.period_reward_usd or 0.0))
+    return (1, rate)
+
+
 @dataclass
 class LivePair:
     quote_id: int
@@ -337,8 +354,8 @@ class ShadowState:
                 result = pg.run_discovery(self.client, session, now=now)
                 current = [pg.current_programs(session, now=now)]
                 terms = {r.market_ticker: ProgramTerms.from_row(r) for r in current[0]}
-                # The markets the live book is actually trading. The shadow ranks by reward
-                # size and the live runner by soonest programme end, so the two sets were
+                # The markets the live book is actually trading. The shadow ranks by daily
+                # pay and the live runner by soonest programme end, so the two sets were
                 # disjoint: `incentive_shadow_outcomes` held ZERO rows for every ticker the live
                 # book had ever quoted, leaving no `est_reward` to compare a payout against
                 # (thesis §9.13). Pinning them costs at most a handful of extra subscriptions.
@@ -359,7 +376,10 @@ class ShadowState:
         cap = int(self._cfg("max_markets", 150))
         wanted = [t for t in terms.values()
                   if (t.period_reward_usd or 0.0) >= min_reward and t.target_size]
-        wanted.sort(key=lambda t: (t.period_reward_usd or 0.0), reverse=True)
+        # Rank by DAILY pay, not total programme reward (DEC-043.2). Total reward favours
+        # long-dated ladders and left ~$56k/day of short weekly pools unwatched (ranker
+        # cycle 7, docs/LIMM_MARKET_RANKER.md); pool per day is what a resting bid earns from.
+        wanted.sort(key=daily_pay_sort_key, reverse=True)
         if len(wanted) > cap:
             self._record(EV_MARKET_CAP, detail=f"{len(wanted)} eligible, tracking {cap}")
             wanted = wanted[:cap]

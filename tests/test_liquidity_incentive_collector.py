@@ -522,6 +522,36 @@ def test_market_cap_tracks_highest_reward_first(settings):
     assert set(st.markets) == {"KXT-B"}
 
 
+def test_market_cap_ranks_by_daily_pay_not_total_reward(settings):
+    """DEC-043.2: a short weekly paying $100/day outranks a month-long ladder paying $1,500
+    in total ($50/day); total-reward ranking would keep the ladder and drop the weekly."""
+    _db(settings)
+    weekly = _program("pw", "KXWEEK-A", reward=7_000_000, start=T0 - timedelta(hours=1),
+                      end=T0 + timedelta(days=7) - timedelta(hours=1))          # $700 over 7 d
+    ladder = _program("pl", "KXLADDER-A", reward=15_000_000, start=T0 - timedelta(hours=1),
+                      end=T0 + timedelta(days=30) - timedelta(hours=1))         # $1,500 over 30 d
+    client = _ReadClient(programs=[ladder, weekly])
+    st = _state(settings, client=client, liquidity_incentive_max_markets=1)
+    st.refresh_programs(force=True)
+    assert set(st.markets) == {"KXWEEK-A"}
+    assert c.daily_pay_usd(st.markets["KXWEEK-A"].terms) == 100.0
+
+
+def test_daily_pay_key_ranks_undated_programmes_last():
+    from kalshi_bot.liquidity_incentive.collector import ProgramTerms
+
+    def _t(reward, start, end):
+        return ProgramTerms.from_row(m.IncentiveProgram(
+            id=1, program_id="p", market_ticker="KXT", incentive_type="liquidity",
+            period_reward_usd=reward, target_size=1000.0, discount_factor_bps=5000,
+            terms_hash="h", first_seen_at=T0, last_seen_at=T0, start_date=start, end_date=end))
+
+    dated = _t(10.0, T0, T0 + timedelta(days=10))               # $1/day
+    undated = _t(10_000.0, None, None)
+    assert c.daily_pay_usd(undated) is None and c.daily_pay_usd(dated) == 1.0
+    assert sorted([undated, dated], key=c.daily_pay_sort_key, reverse=True)[0] is dated
+
+
 def test_start_shadow_is_off_by_default(settings):
     assert settings.liquidity_incentive_shadow_enabled is False
     assert c.start_shadow(object(), settings) is None
