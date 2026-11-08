@@ -1,1 +1,1 @@
-{"type":"script","name":"limm_market_ranker","args":[],"id":"rl-rank-c8-1108"}
+{"type":"db","sql":"SELECT date_trunc('hour', at) AS hr, count(*) FILTER (WHERE kind='disconnected') AS disc, count(*) FILTER (WHERE kind='arm_select') AS sel FROM incentive_collector_events WHERE at >= now() - interval '3 hours' GROUP BY 1 ORDER BY 1","max_rows":10,"id":"rl-ps-disc2-1108"}
