@@ -3413,3 +3413,49 @@ to be pulled at the next audit. Other markets (held positions, resting sells) ar
 QUAN ($0.00 — both words firmed: AUTO's best YES bid 5c → 15c by 15:42Z, leaving a 4c bid 11 ticks
 behind and unscored). The dashboard's per-bid "expected" figures were placement-time estimates.
 No KXTRUMPSAY re-entry this week: the 26NOV09 set is inside 24h of its 48h step-aside.
+
+### 9.77 Judged per hour, in and out; estimate calibrated to payouts (2026-11-08)
+
+**Why.** §9.74's entry floor ($5 per mention event, counting held bids plus the best new words)
+and §9.76's audit ($5 per event, counting only what rests) measured the same event two ways.
+Mamdani FREE passed the first and failed the second, so it was placed and pulled seven times
+from Nov 6 to Nov 8 at about 1c an hour. A dollar total to step-aside also shrinks as the clock
+runs. Operator, 2026-11-07: "maybe we need to modify that $5 threshold … there should be some
+logic … that it should be allowed to pull and re-enter if it is back above the threshold."
+
+**Evidence.** Threshold study (`tools/review/limm/study/`, 464 entry bids since Sep 17):
+- Finished mention events: 4.6c earned against 3.1c in fills per market-hour, +$23.78.
+- Events that paid $5+: 5.5c against 2.6c, +$31.25.
+- Events that paid $1–5: 3.3c against 5.3c, −$8.24.
+- Four events rested 85 market-hours and paid $0, because each market was under Kalshi's $1
+  minimum.
+
+Calibration (`scripts/limm_estimate_calibration.py`, run 2026-11-08) re-scores the book's own
+snapshots with the runner's estimator and compares the result with what Kalshi paid:
+- 17 well-covered paid events: paid/estimated is 1.83 pooled, 1.34 median.
+- YouTube ran 1.16–1.54; mention events varied (0.8–14).
+- 96 unpaid events summed $38.71 estimated and $0 paid, nearly all under $1 per market, which
+  is consistent with the $1 minimum.
+
+**Rule** (operator, review round 4: r4-rule option 1, r4-calibrate option 1). Rates are paid
+cents per hour a bid rests, which is the estimate × `REWARD_CALIBRATION` (1.34, the median).
+- **Entry:** at least `ENTRY_MIN_CENTS_PER_HOUR` (5c), and at least `MIN_MARKET_PROJECTED_USD`
+  ($1.50) projected to the step-aside. Judged per market, for every market type
+  (`runner.drop_below_rate`; outcomes `low_rate` and `under_payout_floor`).
+- **Audit:** every 15 minutes, a bid that has rested at least 1h is pulled below
+  `EXIT_BELOW_CENTS_PER_HOUR` (3c), per market, with cancel reason `low_rate` and a 1h cooldown.
+- **No payout floor on the way out:** what a programme has accrued already counts toward the
+  $1 minimum.
+- **Gap between the bars:** the 2c gap stops flipping. A pulled market re-enters once it clears
+  5c again.
+
+These replace `MIN_EVENT_PROJECTED_USD` and `MIN_RESTING_PROJECTED_USD`. Envelope fields:
+`reward_calibration`, `entry_min_cents_per_hour`, `exit_below_cents_per_hour`,
+`min_market_projected_usd`.
+
+**Interim.** Under r4-mamdani, the Mamdani series was held out through
+`LIQUIDITY_INCENTIVE_EXCLUDED_SERIES` (ops `env-mam1`, 2026-11-08 03:44Z) until this rule went
+live. Once it is live, the hold is lifted and the rule decides.
+
+**Review.** After two weeks, compare paid against estimated on the new entries, and fill cost
+per market-hour against 3c. 17 events is a small sample, and losses are lumpy.

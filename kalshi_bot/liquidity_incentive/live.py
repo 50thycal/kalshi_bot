@@ -155,18 +155,36 @@ DEAD_QUOTE_FRACTION = 0.10
 #: hour x hours remaining), and skip any whose projection is under this — a programme that cannot
 #: plausibly clear Kalshi's $1.00 minimum pays nothing however long we rest there (§9.49).
 MIN_PROJECTED_PROGRAM_USD = 1.00
-#: §9.74 (operator, 2026-11-06, review page r1-small): a MENTION event is entered only when this
-#: book's projected reward there — its held bids plus the best new ones it may add, each to its
-#: step-aside — is at least this. Oct 13 ($3.31), Oct 17 ($1.70) and Oct 24 ($1.82) each paid less
-#: than one typical fill loss.
-MIN_EVENT_PROJECTED_USD = 5.00
-#: §9.76 (operator, 2026-11-06: "change the bot to audit existing resting bids and pull them if
-#: they are earning below the 5 dollar threshold"): the same floor applied to bids ALREADY
-#: resting — per mention EVENT (its held bids together) and per WORD for a window-say market
-#: (§9.75: each word is its own bet). Window entries must clear it too, so a bid is never placed
-#: only to be pulled at the next audit. Mamdani FREE ($4.01) and KXTRUMPSAY REFI (re-priced to
-#: 8c, ~$0) were the first two.
-MIN_RESTING_PROJECTED_USD = MIN_EVENT_PROJECTED_USD
+#: §9.77 (operator, 2026-11-08, review round 4: r4-rule + r4-calibrate). A bid is judged by what
+#: it earns per hour it rests, the same way on the way in and on the way out — not by a dollar
+#: total to step-aside, which shrinks as the clock runs (the same bid passed on Monday and failed
+#: on Wednesday) and was measured one way at entry (held + best new words of the event) and
+#: another at the audit (only what rests). That disagreement placed and pulled Mamdani FREE seven
+#: times from Nov 6 to Nov 8 at ~1c an hour. The threshold study (tools/review/limm/study/) found fills
+#: cost ~3c per market-hour on mention events: events that paid $5+ earned 5.5c/h (+$31.25),
+#: those that paid $1-5 earned 3.3c/h (-$8.24).
+#:
+#: REWARD_CALIBRATION is what Kalshi paid over what this estimator said, median over the 17
+#: confirmed payouts with snapshot coverage >= 70% (scripts/limm_estimate_calibration.py,
+#: 2026-11-08: median 1.34, pooled 1.83, YouTube 1.16-1.54). The bars below are in PAID cents,
+#: so an estimate is scaled up by it before comparison. The median, not the pooled figure, so a
+#: few under-read early events do not loosen the bars.
+REWARD_CALIBRATION = 1.34
+#: Enter only at or above this (paid cents per hour the bid rests)...
+ENTRY_MIN_CENTS_PER_HOUR = 5.0
+#: ...and pull a resting bid below this. The 2c gap keeps a bid near one line from flipping at
+#: every audit; a pulled market comes back once it clears the entry bar again.
+EXIT_BELOW_CENTS_PER_HOUR = 3.0
+#: A NEW market must also project at least this (paid $) to its step-aside: Kalshi pays nothing
+#: under $1.00 a programme, and four mention events rested 85 market-hours for $0.
+MIN_MARKET_PROJECTED_USD = 1.50
+
+
+def paid_cents_per_hour(est_usd_per_hour: float) -> float:
+    """§9.77: the estimator's $/h as calibrated paid cents per hour."""
+    return 100.0 * REWARD_CALIBRATION * float(est_usd_per_hour or 0.0)
+
+
 #: How often the audit re-reads held books (one orderbook GET per resting market).
 RESTING_AUDIT_EVERY_SECONDS = 900.0
 

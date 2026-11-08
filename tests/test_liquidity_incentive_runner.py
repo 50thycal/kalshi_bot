@@ -69,8 +69,10 @@ def _generic_universe(monkeypatch):
     # §9.55–9.62 tests were written against the 15-minute cutoff; §9.63's 48h step-aside has
     # its own tests at the end of this file.
     monkeypatch.setattr(limm, "ENTRY_STEP_ASIDE_HOURS", 0.0)
-    # §9.76's $5 resting audit has its own tests at the end of this file.
-    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 0.0)
+    # §9.77's per-hour entry/exit bars have their own tests at the end of this file.
+    monkeypatch.setattr(limm, "ENTRY_MIN_CENTS_PER_HOUR", 0.0)
+    monkeypatch.setattr(limm, "EXIT_BELOW_CENTS_PER_HOUR", 0.0)
+    monkeypatch.setattr(limm, "MIN_MARKET_PROJECTED_USD", 0.0)
 
 
 def _book(yes, no):
@@ -2387,61 +2389,6 @@ def test_a_paused_series_gets_no_new_bid_and_its_resting_bids_are_cancelled(live
     assert {o["ticker"] for o in client.placed} == {other}
 
 
-# --- §9.74: mention events projected under $5 are skipped ---------------------------------
-
-def _cq(ticker, event, usd, *, mention=True):
-    c = {"market_ticker": ticker, "event_ticker": event, "mention_event": mention,
-         "program_hours_remaining": 10.0, "hours_to_step_aside": 10.0}
-    return (c, usd / 10.0)
-
-
-def _drop(ranked, **kw):
-    from kalshi_bot.liquidity_incentive import runner as rn
-    orig = rn.quote_rate
-    rn.quote_rate = lambda cq: cq[1]
-    try:
-        return rn.drop_small_events(ranked, **kw)
-    finally:
-        rn.quote_rate = orig
-
-
-def test_a_mention_event_projected_under_five_dollars_is_skipped(monkeypatch):
-    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
-    ranked = [_cq("E1-A", "E1", 1.5), _cq("E1-B", "E1", 1.5), _cq("E2-A", "E2", 6.0)]
-    kept, dropped = _drop(ranked, held_usd_by_event={}, held_n_by_event={})
-    assert [c["market_ticker"] for c, _ in kept] == ["E2-A"]
-    assert {c["market_ticker"] for c, _ in dropped} == {"E1-A", "E1-B"}
-
-
-def test_held_bids_and_remembered_markets_count_toward_the_event(monkeypatch):
-    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
-    ranked = [_cq("E1-A", "E1", 1.5)]
-    kept, _ = _drop(ranked, held_usd_by_event={"E1": 4.0}, held_n_by_event={"E1": 1})
-    assert len(kept) == 1
-    kept, _ = _drop(ranked, held_usd_by_event={}, held_n_by_event={},
-                    remembered_usd_by_event={"E1": [2.0, 2.0]})
-    assert len(kept) == 1
-
-
-def test_only_room_under_the_event_cap_counts_and_held_tickers_count_once(monkeypatch):
-    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
-    ranked = [_cq("E1-A", "E1", 2.0), _cq("E1-B", "E1", 2.0), _cq("E1-C", "E1", 2.0)]
-    # two already held (worth $0.50) leave room for one more: $2.50 < $5
-    kept, _ = _drop(ranked, held_usd_by_event={"E1": 0.5}, held_n_by_event={"E1": 2})
-    assert kept == []
-    ranked = [_cq("E1-H", "E1", 9.0)]
-    kept, _ = _drop(ranked, held_usd_by_event={"E1": 1.0}, held_n_by_event={"E1": 1},
-                    held_tickers=frozenset({"E1-H"}))
-    assert kept == []
-
-
-def test_window_markets_are_not_events_and_pass(monkeypatch):
-    monkeypatch.setattr(limm, "MAX_MARKETS_PER_EVENT", 3)
-    kept, _ = _drop([_cq("KXTRUMPSAY-26NOV09-HOUT", "KXTRUMPSAY-26NOV09", 1.0, mention=False)],
-                    held_usd_by_event={}, held_n_by_event={})
-    assert len(kept) == 1
-
-
 # --- §9.75: window-say markets are blocked per word, not per week -------------------------
 
 def _other_book_holds(s, ticker, event, *, qty=-30.0):
@@ -2496,7 +2443,7 @@ def test_window_say_per_word_block_can_be_switched_off(monkeypatch):
     assert limm.event_position_blocks("KXTRUMPSAY-26NOV09")
 
 
-# --- §9.76: resting bids audited against the $5 floor ----------------------------------------
+# --- §9.77: entry and resting audit judged per market, in paid cents per resting hour -------
 
 def _resting_yes(s, ticker, event, *, price=5, qty=200, hours_old=2):
     s.add(m.LiveOrder(market_ticker=ticker, event_ticker=event, strategy=limm.LIVE_TAG,
@@ -2506,50 +2453,98 @@ def _resting_yes(s, ticker, event, *, price=5, qty=200, hours_old=2):
     s.flush()
 
 
-def _audit(monkeypatch, s, client, settings, rates):
-    """Run only the audit, with each ticker's reward rate per hour stubbed."""
+def _bars(monkeypatch, *, cal=1.0):
+    monkeypatch.setattr(limm, "REWARD_CALIBRATION", cal)
+    monkeypatch.setattr(limm, "ENTRY_MIN_CENTS_PER_HOUR", 5.0)
+    monkeypatch.setattr(limm, "EXIT_BELOW_CENTS_PER_HOUR", 3.0)
+    monkeypatch.setattr(limm, "MIN_MARKET_PROJECTED_USD", 1.50)
+
+
+def _audit(monkeypatch, s, client, settings, rates, *, cal=1.0):
+    """Run only the audit, with each ticker's estimated reward $/h stubbed."""
     monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
-    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 5.0)
+    _bars(monkeypatch, cal=cal)
     runner = run.IncentiveLiveRunner(client, settings)
     monkeypatch.setattr(runner, "_held_reward_per_hour",
                         lambda t, w, p, now: rates.get(t))
     return runner._retire_low_projection(s, _exec(settings, client), NOW)
 
 
-def test_a_window_word_projected_under_five_dollars_is_pulled_alone(live_db, settings,
-                                                                    monkeypatch):
-    ev = "KXTRUMPSAY-26SEP25"
-    client = FakeClient({})
-    with db.session_scope() as s:
-        for w in ("REFI", "QUAN"):
-            _mention(s, f"{ev}-{w}", event=ev, series="KXTRUMPSAY", hours=100.0,
-                     close_hours=100.0, title=f'Will Trump say "{w}" before Sep 25, 2026?')
-            _resting_yes(s, f"{ev}-{w}", ev)
-        # 100h to close - 48h step-aside = 52 earning hours
-        n = _audit(monkeypatch, s, client, settings, {f"{ev}-REFI": 0.0, f"{ev}-QUAN": 0.15})
-    assert n == 1 and client.canceled == [f"K-{ev}-REFI"]       # QUAN: 0.15 x 52 = $7.80
+def _rq(ticker, usd_per_hour, *, hours=100.0):
+    return ({"market_ticker": ticker, "event_ticker": ticker.rsplit("-", 1)[0],
+             "program_hours_remaining": hours, "hours_to_step_aside": hours}, usd_per_hour)
 
 
-def test_a_mention_event_whose_resting_bids_project_under_five_dollars_loses_them(
+def _below(monkeypatch, ranked, **kw):
+    from kalshi_bot.liquidity_incentive import runner as rn
+    monkeypatch.setattr(rn, "quote_rate", lambda cq: cq[1])
+    return rn.drop_below_rate(ranked, **kw)
+
+
+def test_paid_cents_per_hour_scales_the_estimate_by_the_calibration(monkeypatch):
+    monkeypatch.setattr(limm, "REWARD_CALIBRATION", 1.34)
+    assert abs(limm.paid_cents_per_hour(0.05) - 6.7) < 1e-9
+    assert limm.paid_cents_per_hour(None) == 0.0
+
+
+def test_entry_needs_the_entry_rate_and_the_payout_floor(monkeypatch):
+    _bars(monkeypatch)
+    ranked = [_rq("E-SLOW", 0.04),                 # 4c/h: under the 5c entry bar
+              _rq("E-SHORT", 0.06, hours=20.0),    # 6c/h but only $1.20 to step-aside
+              _rq("E-GOOD", 0.06)]                 # 6c/h, $6 to step-aside
+    kept, low, small = _below(monkeypatch, ranked)
+    assert [c["market_ticker"] for c, _ in kept] == ["E-GOOD"]
+    assert [c["market_ticker"] for c, _ in low] == ["E-SLOW"]
+    assert [c["market_ticker"] for c, _ in small] == ["E-SHORT"]
+
+
+def test_entry_uses_the_calibrated_rate(monkeypatch):
+    _bars(monkeypatch, cal=1.34)
+    kept, low, _ = _below(monkeypatch, [_rq("E-A", 0.04)])     # 4c est = 5.36c paid
+    assert len(kept) == 1 and low == []
+
+
+def test_a_market_already_resting_is_left_to_the_audit(monkeypatch):
+    _bars(monkeypatch)
+    kept, low, _ = _below(monkeypatch, [_rq("E-HELD", 0.01)],
+                          held_tickers=frozenset({"E-HELD"}))
+    assert len(kept) == 1 and low == []
+
+
+def test_the_audit_pulls_a_bid_under_the_exit_rate_and_keeps_one_inside_the_gap(
         live_db, settings, monkeypatch):
+    """Mamdani FREE: ~1c/h is pulled; 4c/h sits between the 3c exit and 5c entry and stays."""
     ev = "KXMAMDANIMENTION-26SEP25"
     client = FakeClient({})
     with db.session_scope() as s:
-        _mention(s, f"{ev}-FREE", event=ev, series="KXMAMDANIMENTION", hours=100.0)
-        _resting_yes(s, f"{ev}-FREE", ev, price=9, qty=111)
-        n = _audit(monkeypatch, s, client, settings, {f"{ev}-FREE": 0.03})   # x ~100h = ~$3
+        for w in ("FREE", "BILL"):
+            _mention(s, f"{ev}-{w}", event=ev, series="KXMAMDANIMENTION", hours=100.0)
+            _resting_yes(s, f"{ev}-{w}", ev, price=8, qty=125)
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-FREE": 0.01, f"{ev}-BILL": 0.04})
     assert n == 1 and client.canceled == [f"K-{ev}-FREE"]
 
 
-def test_mention_bids_are_summed_per_event_before_the_floor(live_db, settings, monkeypatch):
+def test_the_audit_judges_each_market_alone_not_the_event_total(live_db, settings, monkeypatch):
     ev = "KXTRUMPMENTION-26SEP25"
     client = FakeClient({})
     with db.session_scope() as s:
         for w in ("A", "B"):
             _mention(s, f"{ev}-{w}", event=ev, hours=100.0)
             _resting_yes(s, f"{ev}-{w}", ev)
-        # ~$4 each (0.04/h x ~100h) is under $5 alone, but the event's ~$8 together is kept
-        n = _audit(monkeypatch, s, client, settings, {f"{ev}-A": 0.04, f"{ev}-B": 0.04})
+        # A strong word does not carry a weak one: B at 2c/h goes, A at 9c/h stays.
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-A": 0.09, f"{ev}-B": 0.02})
+    assert n == 1 and client.canceled == [f"K-{ev}-B"]
+
+
+def test_the_audit_keeps_a_good_rate_near_step_aside(live_db, settings, monkeypatch):
+    """No payout floor on the way out: accrued reward already counts toward Kalshi's $1."""
+    ev = "KXTRUMPSAY-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _mention(s, f"{ev}-W", event=ev, series="KXTRUMPSAY", hours=50.0, close_hours=50.0,
+                 title='Will Trump say "W" before Sep 25, 2026?')      # 2h to step-aside
+        _resting_yes(s, f"{ev}-W", ev)
+        n = _audit(monkeypatch, s, client, settings, {f"{ev}-W": 0.06})
     assert n == 0 and client.canceled == []
 
 
@@ -2567,13 +2562,15 @@ def test_an_unreadable_book_and_a_young_bid_are_kept(live_db, settings, monkeypa
     assert n == 0 and client.canceled == []
 
 
-def test_a_window_entry_under_five_dollars_is_not_placed(monkeypatch):
-    from kalshi_bot.liquidity_incentive import runner as rn
-    monkeypatch.setattr(limm, "MIN_RESTING_PROJECTED_USD", 5.0)
-    monkeypatch.setattr(rn, "quote_rate", lambda cq: cq[1])
-    mk = lambda t, r: ({"market_ticker": t, "event_ticker": "KXTRUMPSAY-26NOV09",  # noqa: E731
-                        "window_say": True, "program_hours_remaining": 50.0,
-                        "hours_to_step_aside": 10.0}, r)
-    kept, dropped = rn.drop_small_events([mk("W-A", 0.4), mk("W-B", 0.6)],
-                                         held_usd_by_event={}, held_n_by_event={})
-    assert [c["market_ticker"] for c, _ in kept] == ["W-B"]                  # $6 vs $4
+def test_a_pulled_market_cools_down_before_it_may_re_enter(live_db, settings, monkeypatch):
+    ev = "KXTRUMPMENTION-26SEP25"
+    client = FakeClient({})
+    with db.session_scope() as s:
+        _mention(s, f"{ev}-A", event=ev, hours=100.0)
+        _resting_yes(s, f"{ev}-A", ev)
+        monkeypatch.setattr(limm, "EVENT_MENTION_ONLY", True)
+        _bars(monkeypatch)
+        runner = run.IncentiveLiveRunner(client, settings)
+        monkeypatch.setattr(runner, "_held_reward_per_hour", lambda t, w, p, now: 0.01)
+        assert runner._retire_low_projection(s, _exec(settings, client), NOW) == 1
+    assert runner._book_refused_until[f"{ev}-A"] > NOW
