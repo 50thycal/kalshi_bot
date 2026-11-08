@@ -1,0 +1,38 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "1f74222c543836989a9b5eddb74cb154838a0041",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-08T15:30:47Z",
+  "id": "rl-ps-arms-on-1108",
+  "mutation": {
+    "changes": {
+      "LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED": {
+        "after": "true",
+        "before": "(unset)",
+        "requested": "true"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-ps-arms-on-1108.receipt.json",
+  "result_file": "ops/results/rl-ps-arms-on-1108.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42495148280",
+  "service": "main",
+  "started_at": "2026-11-08T15:30:43Z",
+  "targets": [
+    "LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED"
+  ],
+  "type": "env"
+}
