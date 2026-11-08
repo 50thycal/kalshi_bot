@@ -1,15 +1,4 @@
-# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
-========================================================================
-!! MUTATING OPS REQUEST — this changes the running system !!
-========================================================================
-# type=env  service=main  vars=LIQUIDITY_INCENTIVE_LIVE_ENABLED  id=env-limm-off
-# code 5efeb834973d26b07b3b992bb333c8efa244a5cc · started 2026-11-08T08:59:56Z
-# target service: main
-# BEFORE:
-  LIQUIDITY_INCENTIVE_LIVE_ENABLED=true
-  set LIQUIDITY_INCENTIVE_LIVE_ENABLED=false
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
-# AFTER:
-  LIQUIDITY_INCENTIVE_LIVE_ENABLED=false
-# VERDICT: VERIFIED
+# ops request [READ]
+# type=noop
+# code 5efeb834973d26b07b3b992bb333c8efa244a5cc · started 2026-11-08T09:00:29Z
+(noop — nothing to do)
