@@ -77,10 +77,23 @@ def test_turnover_and_clock_text():
     assert rk.turnover(500.0, 1000.0) == 0.5 and rk.turnover(None, 10) is None
     assert rk.turnover(5.0, 0) is None
     assert rk.clock_text({"n": 0}) == "-"
-    assert rk.clock_text({"n": 1}) == "too few (1 jump)"
-    assert rk.clock_text({"n": 2}) == "too few (2 jumps)"
+    assert rk.clock_text({"n": 1}) == "too few (1 episode)"
+    assert rk.clock_text({"n": 2}) == "too few (2 episodes)"
     c = rk.reprice_clock([dt.datetime(2026, 11, 6, 15, tzinfo=UTC)] * 3)
     assert rk.clock_text(c) == "15Z±1 100%, Fri 100% of 3"
+
+
+def test_episodes_and_known_releases():
+    t0 = dt.datetime(2026, 9, 18, 14, tzinfo=UTC)          # BLS release, then a slow drift
+    drift = [t0, t0 + dt.timedelta(hours=9), t0 + dt.timedelta(hours=18),
+             t0 + dt.timedelta(hours=37), t0 + dt.timedelta(days=7)]
+    assert rk.episodes(drift) == [t0, t0 + dt.timedelta(hours=37), t0 + dt.timedelta(days=7)]
+    daily = [t0 + dt.timedelta(days=d) for d in range(5)]
+    assert rk.episodes(daily) == daily                      # a daily release is 5 episodes
+    rel = rk.known_release("KXWAAEROEMP")
+    assert rel[0].startswith("BLS") and rel[1].startswith("2026-11-20T15")
+    assert rk.known_release("KXAAAGASM")[0] == "AAA gas"
+    assert rk.known_release("KXASPENMTNOPEN") is None
 
 
 def test_risk_and_discount():
