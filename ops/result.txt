@@ -1,4 +1,207 @@
 # ops request [READ]
-# type=noop
-# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-08T01:30:06Z
-(noop — nothing to do)
+# type=db  id=st-ord2
+# code eebfdbcdb8b01f5907fb1bfa08bd8fbddc08dbfe · started 2026-11-08T01:30:15Z
+id    t                              c                    s         sd   p   q    r                             ee                   lt                   fq 
+----  -----------------------------  -------------------  --------  ---  --  ---  ----------------------------  -------------------  -------------------  ---
+7556  KXTRUMPMENTION-26OCT17-DIVI    2026-10-13T20:23:02  rejected  no   3   333  Kalshi API error 400 on /tra                                            0  
+7559  KXTRUMPMENTION-26OCT17-OIL     2026-10-13T20:53:02  rejected  no   3   333  Kalshi API error 400 on /tra                                            0  
+7561  KXASPENMTNOPEN-27-15NOV26      2026-10-13T21:23:56  canceled  yes  2   500                                2026-10-13T22:05:58  2026-10-13T22:05:58  0  
+7565  KXTRUMPMENTION-26OCT17-MASS    2026-10-13T22:07:57  rejected  yes  3   333  Kalshi API error 400 on /tra                                            0  
+7566  KXTRUMPMENTION-26OCT17-SAVE    2026-10-13T22:39:35  rejected  no   2   500  Kalshi API error 400 on /tra                                            0  
+7567  KXTRUMPMENTION-26OCT17-MADE    2026-10-13T23:10:07  rejected  yes  7   142  Kalshi API error 400 on /tra                                            0  
+7569  KXASPENMTNOPEN-27-06DEC26      2026-10-13T23:41:40  rejected  no   7   142  Kalshi API error 400 on /tra                                            0  
+7571  KXTRUMPMENTION-26OCT17-CEAS    2026-10-14T00:12:10  canceled  yes  1   500                                2026-10-14T00:39:32  2026-10-14T00:39:32  0  
+7573  KXTRUMPMENTION-26OCT17-COAL    2026-10-14T00:41:53  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7574  KXTRUMPMENTION-26OCT17-AMER    2026-10-14T01:12:10  rejected  yes  3   333  Kalshi API error 400 on /tra                                            0  
+7576  KXTRUMPMENTION-26OCT17-SUPR    2026-10-14T01:43:20  rejected  yes  7   142  Kalshi API error 400 on /tra                                            0  
+7577  KXTRUMPMENTION-26OCT17-NQE     2026-10-14T02:14:32  canceled  yes  1   500                                2026-10-14T03:26:26  2026-10-14T03:41:43  0  
+7580  KXTRUMPMENTION-26OCT17-NQE     2026-10-14T03:42:28  rejected  yes  1   500  Kalshi API error 400 on /tra                                            0  
+7581  KXTRUMPMENTION-26OCT17-CEAS    2026-10-14T03:58:38  rejected  yes  2   500  Kalshi API error 400 on /tra                                            0  
+7582  KXTRUMPMENTION-26OCT17-DATA    2026-10-14T04:29:10  rejected  yes  7   142  Kalshi API error 400 on /tra                                            0  
+7583  KXTRUMPMENTION-26OCT17-CRYP    2026-10-14T05:00:12  rejected  yes  1   500  Kalshi API error 400 on /tra                                            0  
+7584  KXARMOMINF-26NOV12-T2.2        2026-10-14T05:30:52  rejected  yes  9   111  Kalshi API error 400 on /tra                                            0  
+7587  KXTRUMPMENTION-26OCT17-CHEA    2026-10-14T06:01:06  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7588  KXTRUMPMENTION-26OCT17-SLEE    2026-10-14T06:32:07  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7590  KXTRUMPMENTION-26OCT17-TRUM    2026-10-14T07:03:08  rejected  yes  7   142  Kalshi API error 400 on /tra                                            0  
+7591  KXARMOMINF-26NOV12-T2.4        2026-10-14T07:33:40  rejected  yes  3   333  Kalshi API error 400 on /tra                                            0  
+7593  KXTRUMPMENTION-26OCT17-FENT    2026-10-14T08:04:29  rejected  yes  7   142  Kalshi API error 400 on /tra                                            0  
+7594  KXTRUMPMENTION-26OCT17-HEAL    2026-10-14T08:35:29  rejected  no   5   200  Kalshi API error 400 on /tra                                            0  
+7596  KXTRUMPMENTION-26OCT17-AFFO    2026-10-14T09:06:54  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7597  KXTRUMPMENTION-26OCT17-CHIN    2026-10-14T09:37:12  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7599  KXTRUMPMENTION-26OCT17-DRIL    2026-10-14T10:08:04  rejected  yes  9   111  Kalshi API error 400 on /tra                                            0  
+7600  KXTRUMPMENTION-26OCT17-KAMA    2026-10-14T10:39:06  rejected  no   9   111  Kalshi API error 400 on /tra                                            0  
+7601  KXTRUMPMENTION-26OCT17-TRUMP   2026-10-14T11:09:15  rejected  yes  6   166  Kalshi API error 400 on /tra                                            0  
+7602  KXTRUMPMENTION-26OCT17-FRAU    2026-10-14T11:39:28  rejected  yes  8   125  Kalshi API error 400 on /tra                                            0  
+7604  KXTRUMPMENTION-26OCT17-HORM    2026-10-14T12:10:31  rejected  yes  9   111  Kalshi API error 400 on /tra                                            0  
+7606  KXCMGFT-26NOV08-T98            2026-10-14T12:40:50  rejected  no   10  100  Kalshi API error 400 on /tra                                            0  
+7610  KXTRUMPMENTION-26OCT17-AI      2026-10-14T13:12:25  rejected  yes  8   125  Kalshi API error 400 on /tra                                            0  
+7611  KXASPENMTNOPEN-27-15NOV26      2026-10-14T13:42:48  rejected  yes  4   250  Kalshi API error 400 on /tra                                            0  
+7613  KXARMOMINF-26NOV12-T1.2        2026-10-14T14:12:50  rejected  no   2   500  Kalshi API error 400 on /tra                                            0  
+7614  KXAAAGASM-26OCT31-4.90         2026-10-14T14:42:45  rejected  yes  3   333  Kalshi API error 400 on /tra                                            0  
+7615  KXAAAGASM-26OCT31-3.90         2026-10-14T15:14:07  rejected  no   5   200  Kalshi API error 400 on /tra                                            0  
+7616  KXAAAGASM-26OCT31-4.00         2026-10-14T15:44:41  rejected  no   7   142  Kalshi API error 400 on /tra                                            0  
+7619  KXAAAGASMINM-26OCT31-4.10      2026-10-14T15:52:55  canceled  yes  7   142  repriced                      2026-10-14T16:54:32  2026-10-14T16:54:32  0  
+7620  KXAAAGASMINM-26OCT31-4.10      2026-10-14T16:54:34  canceled  yes  8   125  repriced                      2026-10-14T18:12:42  2026-10-14T18:12:42  0  
+7624  KXAAAGASMINM-26OCT31-4.10      2026-10-14T18:12:44  canceled  yes  9   111  replaced                      2026-10-14T20:19:59  2026-10-14T20:19:59  0  
+7632  KXIASANDTUREK-26DEC07-R3       2026-10-14T20:20:02  canceled  yes  8   125  replaced                      2026-10-14T21:32:13  2026-10-14T21:32:13  0  
+7635  KXAAAGASMINM-26OCT31-3.90      2026-10-14T21:32:17  canceled  yes  2   500  out_of_universe               2026-10-15T10:20:38  2026-10-15T10:20:38  0  
+7656  KXTRUMPMENTION-26OCT17-PALE    2026-10-15T10:20:52  canceled  yes  8   125  repriced                      2026-10-15T11:47:30  2026-10-15T11:47:30  0  
+7658  KXTRUMPMENTION-26OCT17-PALE    2026-10-15T11:47:32  canceled  yes  9   111  repriced                      2026-10-15T12:49:22  2026-10-15T12:49:22  0  
+7659  KXTRUMPMENTION-26OCT17-PALE    2026-10-15T12:49:25  filled    yes  10  100                                2026-10-16T23:21:31  2026-10-16T23:21:31  100
+7664  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-15T16:10:10  canceled  yes  2   500  repriced                      2026-10-15T17:10:48  2026-10-15T17:10:48  0  
+7665  KXTRUMPMENTIONB-26OCT19-NQE    2026-10-15T16:10:14  canceled  yes  2   500  repriced                      2026-10-15T22:36:34  2026-10-15T22:36:34  0  
+7666  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-15T16:10:18  canceled  yes  3   333  repriced                      2026-10-15T17:10:51  2026-10-15T17:10:51  0  
+7668  KXTRUMPMENTION-26OCT20-FEMA    2026-10-15T16:25:04  canceled  yes  3   333  repriced                      2026-10-15T17:25:47  2026-10-15T17:25:47  0  
+7669  KXTRUMPMENTION-26OCT20-NUCL    2026-10-15T16:25:09  canceled  yes  3   333  repriced                      2026-10-15T17:27:55  2026-10-15T17:27:55  0  
+7670  KXTRUMPMENTION-26OCT20-VETE    2026-10-15T16:25:14  canceled  yes  3   333  repriced                      2026-10-15T17:29:42  2026-10-15T17:29:42  0  
+7671  KXTRUMPMENTION-26OCT19-MADE    2026-10-15T16:25:19  canceled  yes  2   500  repriced                      2026-10-15T17:25:40  2026-10-15T17:25:40  0  
+7672  KXTRUMPMENTION-26OCT19-CATT    2026-10-15T16:25:24  canceled  yes  2   500  repriced                      2026-10-15T17:25:36  2026-10-15T17:25:36  0  
+7674  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-15T17:10:51  canceled  yes  5   200  repriced                      2026-10-15T22:36:29  2026-10-15T22:36:29  0  
+7675  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-15T17:10:54  canceled  yes  5   200  repriced                      2026-10-15T21:29:33  2026-10-15T21:29:33  0  
+7676  KXTRUMPMENTION-26OCT19-CATT    2026-10-15T17:25:39  canceled  yes  3   333  repriced                      2026-10-15T21:29:29  2026-10-15T21:29:29  0  
+7677  KXTRUMPMENTION-26OCT19-MADE    2026-10-15T17:25:43  canceled  yes  5   200  out_of_band                   2026-10-16T04:41:43  2026-10-16T04:41:43  0  
+7678  KXTRUMPMENTION-26OCT20-FEMA    2026-10-15T17:25:47  canceled  yes  4   250  repriced                      2026-10-15T18:55:38  2026-10-15T18:55:38  0  
+7679  KXTRUMPMENTION-26OCT20-NUCL    2026-10-15T17:27:59  canceled  yes  7   142  repriced                      2026-10-15T18:47:46  2026-10-15T18:47:46  0  
+7680  KXTRUMPMENTION-26OCT20-VETE    2026-10-15T17:29:45  canceled  yes  4   250  repriced                      2026-10-15T21:33:39  2026-10-15T21:33:39  0  
+7683  KXTRUMPMENTION-26OCT20-NUCL    2026-10-15T18:47:49  canceled  yes  8   125  repriced                      2026-10-15T19:50:21  2026-10-15T19:50:21  0  
+7684  KXTRUMPMENTION-26OCT20-FEMA    2026-10-15T18:55:42  canceled  yes  5   200  repriced                      2026-10-15T20:35:21  2026-10-15T20:35:21  0  
+7687  KXTRUMPMENTION-26OCT20-NUCL    2026-10-15T19:50:24  canceled  yes  9   111  repriced                      2026-10-15T21:15:00  2026-10-15T21:15:00  0  
+7690  KXTRUMPMENTION-26OCT20-FEMA    2026-10-15T20:35:24  canceled  yes  7   142  out_of_band                   2026-10-16T04:41:43  2026-10-16T04:41:43  0  
+7692  KXTRUMPMENTION-26OCT20-NUCL    2026-10-15T21:15:04  canceled  yes  10  100  out_of_band                   2026-10-16T07:20:52  2026-10-16T07:20:52  0  
+7693  KXTRUMPMENTION-26OCT19-CATT    2026-10-15T21:29:33  canceled  yes  5   200  repriced                      2026-10-16T02:55:21  2026-10-16T02:55:21  0  
+7694  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-15T21:29:37  canceled  yes  6   166  repriced                      2026-10-15T22:36:30  2026-10-15T22:36:30  0  
+7695  KXTRUMPMENTION-26OCT20-VETE    2026-10-15T21:33:42  canceled  yes  9   111  out_of_band                   2026-10-16T04:41:43  2026-10-16T04:41:43  0  
+7698  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-15T22:36:29  canceled  yes  6   166  repriced                      2026-10-15T23:38:29  2026-10-15T23:38:29  0  
+7699  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-15T22:36:33  canceled  yes  7   142  repriced                      2026-10-16T03:41:37  2026-10-16T03:41:37  0  
+7700  KXTRUMPMENTIONB-26OCT19-NQE    2026-10-15T22:36:37  canceled  yes  3   333  repriced                      2026-10-15T23:45:28  2026-10-15T23:45:28  0  
+7702  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-15T23:38:32  canceled  yes  7   142  repriced                      2026-10-16T12:51:55  2026-10-16T12:51:55  0  
+7703  KXTRUMPMENTIONB-26OCT19-NQE    2026-10-15T23:45:31  canceled  yes  4   250  repriced                      2026-10-16T18:00:43  2026-10-16T18:00:43  0  
+7704  KXTRUMPMENTION-26OCT19-CATT    2026-10-16T02:55:27  canceled  yes  6   166  repriced                      2026-10-16T04:16:11  2026-10-16T04:16:11  0  
+7707  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-16T03:41:42  canceled  yes  8   125  repriced                      2026-10-16T04:46:56  2026-10-16T04:46:56  0  
+7708  KXTRUMPMENTION-26OCT19-CATT    2026-10-16T04:16:14  canceled  yes  8   125  repriced                      2026-10-16T05:17:47  2026-10-16T05:17:47  0  
+7709  KXTRUMPMENTION-26OCT19-CEAS    2026-10-16T04:41:51  filled    yes  5   200                                2026-10-17T02:03:12  2026-10-17T02:03:11  200
+7710  KXTRUMPMENTION-26OCT19-SOCI    2026-10-16T04:41:54  canceled  yes  7   142  repriced                      2026-10-16T15:57:11  2026-10-16T15:57:11  0  
+7711  KXTRUMPMENTION-26OCT20-WIND    2026-10-16T04:43:45  canceled  yes  9   111  repriced                      2026-10-16T15:04:52  2026-10-16T15:04:52  0  
+7712  KXTRUMPMENTIONB-26OCT19-CHIN   2026-10-16T04:46:59  canceled  yes  10  100  out_of_band                   2026-10-16T05:50:26  2026-10-16T05:50:26  0  
+7713  KXTRUMPMENTION-26OCT19-CATT    2026-10-16T05:17:50  canceled  yes  10  100  out_of_band                   2026-10-16T08:01:39  2026-10-16T08:01:39  0  
+7715  KXTRUMPMENTION-26OCT20-CEAS    2026-10-16T07:09:10  canceled  yes  5   200  replaced                      2026-10-17T09:57:10  2026-10-17T09:57:10  0  
+7716  KXTRUMPMENTION-26OCT20-FENT    2026-10-16T07:21:00  canceled  yes  10  100  out_of_band                   2026-10-16T21:21:31  2026-10-16T21:21:31  0  
+7717  KXTRUMPMENTION-26OCT19-FENT    2026-10-16T08:01:46  canceled  yes  10  100  replaced                      2026-10-17T19:32:50  2026-10-17T19:32:51  0  
+7723  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-16T12:51:59  canceled  yes  8   125  repriced                      2026-10-16T22:58:51  2026-10-16T22:58:51  0  
+7729  KXTRUMPMENTION-26OCT20-WIND    2026-10-16T15:04:56  canceled  yes  10  100  out_of_band                   2026-10-16T17:22:29  2026-10-16T17:22:29  0  
+7732  KXTRUMPMENTION-26OCT19-SOCI    2026-10-16T15:57:15  canceled  yes  8   125  repriced                      2026-10-17T04:09:58  2026-10-17T04:09:58  0  
+7736  KXTRUMPMENTION-26OCT20-HOTT    2026-10-16T17:22:37  canceled  no   5   200  replaced                      2026-10-19T04:15:05  2026-10-19T04:15:05  0  
+7737  KXTRUMPMENTIONB-26OCT19-NQE    2026-10-16T18:00:46  canceled  yes  5   200  repriced                      2026-10-18T15:04:05  2026-10-18T15:04:05  0  
+7744  KXTRUMPMENTION-26OCT20-AMER    2026-10-16T21:21:39  canceled  yes  9   111  repriced                      2026-10-16T22:23:10  2026-10-16T22:23:10  0  
+7745  KXTRUMPMENTION-26OCT20-AMER    2026-10-16T22:23:13  canceled  yes  10  100  out_of_band                   2026-10-17T08:05:13  2026-10-17T08:05:13  0  
+7747  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-16T22:58:54  canceled  yes  9   111  repriced                      2026-10-17T05:23:18  2026-10-17T05:23:18  0  
+7754  KXTRUMPMENTION-26OCT19-SOCI    2026-10-17T04:10:01  canceled  yes  9   111  repriced                      2026-10-17T05:17:40  2026-10-17T05:17:40  0  
+7756  KXTRUMPMENTION-26OCT19-SOCI    2026-10-17T05:17:42  canceled  yes  10  100  replaced                      2026-10-18T05:57:37  2026-10-18T05:57:37  0  
+7757  KXTRUMPMENTIONB-26OCT19-BEST   2026-10-17T05:23:21  canceled  yes  10  100  out_of_band                   2026-10-17T21:45:02  2026-10-17T21:45:02  0  
+7760  KXTRUMPMENTION-26OCT20-AI      2026-10-17T08:05:21  canceled  yes  8   125  repriced                      2026-10-18T06:23:25  2026-10-18T06:23:25  0  
+7763  KXTRUMPMENTIONB-26OCT19-FENT   2026-10-17T09:57:15  filled    yes  7   142                                2026-10-19T07:50:46  2026-10-19T04:55:56  142
+7779  KXTRUMPMENTION-26OCT25-SUPR    2026-10-17T17:54:19  canceled  yes  2   500  repriced                      2026-10-17T18:56:20  2026-10-17T18:56:20  0  
+7780  KXTRUMPMENTION-26OCT25-SUPR    2026-10-17T18:56:22  canceled  yes  5   200  out_of_band                   2026-10-17T20:33:05  2026-10-17T20:33:05  0  
+7782  KXTRUMPMENTION-26OCT25-CEAS    2026-10-17T19:32:54  canceled  yes  2   500  repriced                      2026-10-18T02:28:13  2026-10-18T02:28:13  0  
+7786  KXTRUMPMENTION-26OCT22-TRAN    2026-10-17T20:33:14  canceled  no   2   500  fill_contagion                2026-10-20T04:06:46  2026-10-20T04:06:46  0  
+7788  KXTRUMPMENTION-26OCT25-HOTT    2026-10-17T21:45:11  canceled  no   5   200  repriced                      2026-10-19T03:27:28  2026-10-19T03:27:28  0  
+7802  KXTRUMPMENTION-26OCT25-CEAS    2026-10-18T02:28:18  filled    yes  3   333                                2026-10-18T16:46:21  2026-10-18T16:46:21  333
+7811  KXTRUMPMENTION-26OCT22-DIVI    2026-10-18T05:57:44  canceled  no   5   200  repriced                      2026-10-19T04:00:30  2026-10-19T04:00:30  0  
+7812  KXTRUMPMENTION-26OCT20-AI      2026-10-18T06:23:28  canceled  yes  9   111  repriced                      2026-10-18T07:25:01  2026-10-18T07:25:01  0  
+7818  KXTRUMPMENTION-26OCT20-AI      2026-10-18T07:25:05  canceled  yes  10  100  out_of_band                   2026-10-18T09:28:32  2026-10-18T09:28:32  0  
+7825  KXTRUMPMENTION-26OCT25-CANA    2026-10-18T09:28:41  canceled  no   9   111  repriced                      2026-10-19T03:29:43  2026-10-19T03:29:43  0  
+7837  KXTRUMPMENTIONB-26OCT19-NQE    2026-10-18T15:04:08  filled    yes  6   166                                2026-10-19T00:59:03  2026-10-19T00:59:03  166
+7840  KXTRUMPMENTION-26OCT22-HEAL    2026-10-18T16:48:26  canceled  no   3   333  repriced                      2026-10-18T23:51:26  2026-10-18T23:51:26  0  
+7843  KXTRUMPMENTION-26OCT25-PEAC    2026-10-18T16:52:57  filled    yes  2   500                                2026-10-23T07:54:25  2026-10-20T04:08:48  500
+7865  KXTRUMPMENTION-26OCT22-HEAL    2026-10-18T23:51:30  canceled  no   5   200  fill_contagion                2026-10-20T04:06:46  2026-10-20T04:06:46  0  
+7874  KXTRUMPMENTION-26OCT25-HOTT    2026-10-19T03:27:31  canceled  no   6   166  repriced                      2026-10-19T14:44:32  2026-10-19T14:44:32  0  
+7875  KXTRUMPMENTION-26OCT25-CANA    2026-10-19T03:29:46  canceled  no   10  100  out_of_band                   2026-10-19T23:23:08  2026-10-19T23:23:08  0  
+7876  KXTRUMPMENTION-26OCT22-DIVI    2026-10-19T04:00:33  canceled  no   6   166  repriced                      2026-10-20T00:51:44  2026-10-20T00:51:44  0  
+7879  KXTRUMPMENTION-26OCT23-DATA    2026-10-19T04:15:09  canceled  yes  6   166  out_of_band                   2026-10-19T05:23:13  2026-10-19T05:23:13  0  
+7889  KXMAMDANIMENTION-26NOV18-TRUM  2026-10-19T05:23:22  canceled  no   7   142  repriced                      2026-10-19T06:25:03  2026-10-19T06:25:03  0  
+7890  KXMAMDANIMENTION-26NOV18-TRUM  2026-10-19T06:25:06  canceled  no   9   111  out_of_band                   2026-10-19T09:30:29  2026-10-19T09:30:29  0  
+7904  KXMAMDANIMENTION-26NOV18-NQE   2026-10-19T09:30:39  canceled  yes  1   500  repriced                      2026-10-20T13:14:56  2026-10-20T13:14:56  0  
+7910  KXTRUMPMENTION-26OCT25-HOTT    2026-10-19T14:44:37  canceled  no   9   111  out_of_band                   2026-10-19T23:23:08  2026-10-19T23:23:08  0  
+7911  KXTRUMPMENTION-26OCT20-FRAU    2026-10-19T14:52:05  canceled  yes  6   166  repriced                      2026-10-19T15:53:13  2026-10-19T15:53:13  0  
+7912  KXTRUMPMENTION-26OCT20-FRAU    2026-10-19T15:53:16  canceled  yes  8   125  pre_event                     2026-10-19T20:56:53  2026-10-19T20:56:53  0  
+7914  KXTRUMPMENTION-26OCT23-CHEA    2026-10-19T16:07:07  canceled  no   7   142  repriced                      2026-10-19T22:20:04  2026-10-19T22:20:04  0  
+7923  KXTRUMPMENTION-26OCT24-FENT    2026-10-19T20:57:08  canceled  yes  8   125  out_of_band                   2026-10-19T22:41:09  2026-10-19T22:41:09  0  
+7925  KXTRUMPMENTION-26OCT23-CHEA    2026-10-19T22:20:09  canceled  no   10  100  out_of_band                   2026-10-20T08:34:53  2026-10-20T08:34:53  0  
+7928  KXTRUMPMENTION-26OCT24-FRAU    2026-10-19T22:41:21  canceled  yes  8   125  out_of_band                   2026-10-20T20:20:15  2026-10-20T20:20:15  0  
+7932  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-20T00:28:09  canceled  no   9   111  out_of_band                   2026-10-20T01:32:54  2026-10-20T01:32:54  0  
+7933  KXMAMDANIMENTION-26NOV18-FREE  2026-10-20T00:28:13  canceled  yes  8   125  out_of_band                   2026-10-20T01:30:49  2026-10-20T01:30:49  0  
+7934  KXTRUMPMENTION-26OCT22-DIVI    2026-10-20T00:51:49  filled    no   7   142                                2026-10-20T04:58:54  2026-10-20T04:58:54  142
+7936  KXMAMDANIMENTION-26NOV18-FREE  2026-10-20T02:32:00  canceled  yes  10  100  out_of_band                   2026-10-20T05:28:52  2026-10-20T05:28:52  0  
+7940  KXTRUMPMENTIONB-26OCT27-SUPR   2026-10-20T03:32:44  canceled  yes  1   500  repriced                      2026-10-20T07:37:09  2026-10-20T07:37:09  0  
+7942  KXTRUMPMENTION-26OCT27-ICE     2026-10-20T04:06:58  canceled  yes  3   333  repriced                      2026-10-20T05:07:21  2026-10-20T05:07:21  0  
+7943  KXTRUMPMENTIONB-26OCT27-GULF   2026-10-20T04:07:01  canceled  yes  2   500  repriced                      2026-10-20T07:17:49  2026-10-20T07:17:49  0  
+7950  KXTRUMPMENTION-26OCT27-ICE     2026-10-20T05:07:25  canceled  yes  6   166  out_of_band                   2026-10-20T08:19:47  2026-10-20T08:19:47  0  
+7953  KXTRUMPMENTIONB-26OCT27-NQE    2026-10-20T05:29:07  filled    yes  2   500                                2026-10-22T21:33:14  2026-10-22T14:49:59  9  
+7954  KXTRUMPMENTIONB-26OCT27-GULF   2026-10-20T07:17:53  canceled  yes  5   200  out_of_band                   2026-10-20T08:30:55  2026-10-20T08:30:55  0  
+7955  KXTRUMPMENTIONB-26OCT27-SUPR   2026-10-20T07:37:14  canceled  yes  2   500  repriced                      2026-10-20T08:39:05  2026-10-20T08:39:05  0  
+7958  KXTRUMPMENTION-26OCT27-SAVE    2026-10-20T08:20:01  canceled  no   5   200  repriced                      2026-10-20T11:13:46  2026-10-20T11:13:46  0  
+7959  KXTRUMPMENTIONB-26OCT27-CRYP   2026-10-20T08:31:09  canceled  yes  1   500  fill_contagion                2026-10-21T00:11:55  2026-10-21T00:11:55  0  
+7960  KXTRUMPMENTION-26OCT27-CEAS    2026-10-20T08:35:07  canceled  yes  3   333  fill_contagion                2026-10-20T14:33:30  2026-10-20T14:33:30  0  
+7961  KXTRUMPMENTIONB-26OCT27-SUPR   2026-10-20T08:39:09  canceled  yes  6   166  repriced                      2026-10-20T11:13:51  2026-10-20T11:13:51  0  
+7964  KXTRUMPMENTION-26OCT27-SAVE    2026-10-20T11:13:51  filled    no   8   125                                2026-10-20T14:32:35  2026-10-20T14:32:35  125
+7965  KXTRUMPMENTIONB-26OCT27-SUPR   2026-10-20T11:13:56  canceled  yes  9   111  out_of_band                   2026-10-20T12:21:27  2026-10-20T12:21:27  0  
+7966  KXTRUMPMENTIONB-26OCT27-BLOC   2026-10-20T12:21:39  canceled  yes  4   250  repriced                      2026-10-20T13:23:50  2026-10-20T13:23:50  0  
+7969  KXMAMDANIMENTION-26NOV18-NQE   2026-10-20T13:14:59  canceled  yes  2   500  fill_contagion                2026-10-21T00:11:55  2026-10-21T00:11:55  0  
+7970  KXTRUMPMENTIONB-26OCT27-BLOC   2026-10-20T13:23:53  canceled  yes  10  100  fill_contagion                2026-10-21T00:11:55  2026-10-21T00:11:55  0  
+7976  KXMAMDANIMENTION-26NOV18-FREE  2026-10-20T16:38:00  canceled  yes  7   142  out_of_band                   2026-10-20T18:01:41  2026-10-20T18:01:41  0  
+7977  KXTRUMPMENTION-26OCT23-INSU    2026-10-20T16:40:20  canceled  no   10  100  out_of_band                   2026-10-20T23:17:55  2026-10-20T23:17:55  0  
+7982  KXMAMDANIMENTION-26NOV18-FREE  2026-10-20T18:01:45  canceled  yes  7   142  out_of_band                   2026-10-20T19:18:37  2026-10-20T19:18:37  0  
+7983  KXTRUMPMENTION-26OCT24-STOC    2026-10-20T18:27:30  canceled  no   8   125  incentive_exit                2026-10-22T19:31:02  2026-10-22T19:31:02  3  
+7986  KXTRUMPMENTION-26OCT23-DIVI    2026-10-20T19:19:00  canceled  no   6   166  pre_event                     2026-10-21T20:45:35  2026-10-21T20:45:35  0  
+7989  KXTRUMPMENTION-26OCT23-TRAN    2026-10-20T20:20:38  canceled  no   2   500  pre_event                     2026-10-21T20:45:35  2026-10-21T20:45:35  0  
+7992  KXTRUMPMENTION-26OCT24-FENT    2026-10-20T23:18:22  canceled  yes  9   111  out_of_band                   2026-10-21T08:37:08  2026-10-21T08:37:08  0  
+7994  KXTRUMPMENTION-26OCT24-CHEA    2026-10-21T00:12:15  canceled  no   9   111  repriced                      2026-10-21T04:19:56  2026-10-21T04:19:56  0  
+7995  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21T00:20:28  canceled  no   9   111  repriced                      2026-10-21T01:57:23  2026-10-21T01:57:23  0  
+7998  KXMAMDANIMENTION-26NOV18-AFFO  2026-10-21T01:57:28  canceled  no   10  100  out_of_band                   2026-10-22T18:01:55  2026-10-22T18:01:55  0  
+8000  KXTRUMPMENTION-26OCT27-PALE    2026-10-21T02:34:48  canceled  yes  5   200  repriced                      2026-10-21T07:42:44  2026-10-21T07:42:44  0  
+8009  KXTRUMPMENTION-26OCT24-CHEA    2026-10-21T04:20:00  canceled  no   10  100  out_of_band                   2026-10-21T08:37:08  2026-10-21T08:37:08  0  
+8012  KXTRUMPMENTION-26OCT27-PALE    2026-10-21T07:42:49  canceled  yes  6   166  repriced                      2026-10-21T08:43:57  2026-10-21T08:43:57  0  
+8013  KXTRUMPMENTION-26OCT27-PEAC    2026-10-21T08:37:25  canceled  yes  3   333  fill_contagion                2026-10-23T07:55:25  2026-10-23T07:55:25  0  
+8014  KXTRUMPMENTION-26OCT27-CEAS    2026-10-21T08:37:32  canceled  yes  3   333  repriced                      2026-10-23T15:01:19  2026-10-23T15:01:31  0  
+8015  KXTRUMPMENTION-26OCT27-PALE    2026-10-21T08:44:02  canceled  yes  10  100  out_of_band                   2026-10-21T12:33:23  2026-10-21T12:33:23  0  
+8021  KXTRUMPMENTION-26OCT27-FRAU    2026-10-21T12:33:50  canceled  yes  6   166  out_of_band                   2026-10-21T13:58:35  2026-10-21T13:58:35  0  
+8024  KXTRUMPMENTION-26OCT27-NQE     2026-10-21T14:01:20  canceled  yes  3   333  fill_contagion                2026-10-23T21:32:09  2026-10-23T21:32:09  0  
+8082  KXTRUMPMENTIONB-26OCT27-CRYP   2026-10-23T04:02:19  canceled  yes  1   500  pre_event                     2026-10-25T11:01:36  2026-10-25T11:01:36  0  
+8083  KXTRUMPMENTIONB-26OCT27-CHIN   2026-10-23T04:02:23  canceled  no   9   111  repriced                      2026-10-23T10:41:34  2026-10-23T10:41:34  0  
+8084  KXMAMDANIMENTION-26NOV18-NQE   2026-10-23T04:08:17  canceled  yes  2   500  repriced                      2026-10-24T01:19:02  2026-10-24T01:19:02  0  
+8089  KXTRUMPMENTION-26OCT27-CHEA    2026-10-23T07:55:39  canceled  no   7   142  repriced                      2026-10-23T10:49:08  2026-10-23T10:49:08  0  
+8091  KXTRUMPMENTIONB-26OCT27-CHIN   2026-10-23T10:41:38  canceled  no   10  100  out_of_band                   2026-10-23T12:38:57  2026-10-23T12:38:57  0  
+8092  KXTRUMPMENTION-26OCT27-CHEA    2026-10-23T10:49:12  filled    no   10  100                                2026-10-25T00:38:32  2026-10-25T00:38:32  101
+8100  KXTRUMPMENTIONB-26OCT27-CHIN   2026-10-23T12:39:13  canceled  no   10  100  out_of_band                   2026-10-23T14:48:26  2026-10-23T14:48:26  0  
+8104  KXTRUMPMENTIONB-26OCT27-WIND   2026-10-23T14:48:43  canceled  yes  9   111  out_of_band                   2026-10-24T22:12:42  2026-10-24T22:12:42  0  
+8105  KXTRUMPMENTION-26OCT27-CEAS    2026-10-23T15:01:28  canceled  yes  4   250  repriced                      2026-10-23T16:56:16  2026-10-23T16:56:16  0  
+8109  KXTRUMPMENTION-26OCT27-CEAS    2026-10-23T16:56:26  canceled  yes  5   200  fill_contagion                2026-10-23T21:32:09  2026-10-23T21:32:09  0  
+8119  KXMAMDANIMENTION-26NOV18-NQE   2026-10-24T01:19:06  canceled  yes  3   333  fill_contagion                2026-11-01T15:12:01  2026-11-01T15:12:01  0  
+8132  KXYTVIEWSHIGH-MOR26NOV-6.75M   2026-10-24T17:25:53  canceled  yes  5   400  repriced                      2026-10-25T06:57:15  2026-10-25T06:57:15  0  
+8133  KXYTVIEWSHIGH-MOR26NOV-7.0M    2026-10-24T17:25:57  canceled  yes  5   400  repriced                      2026-10-25T06:57:21  2026-10-25T06:57:21  0  
+8134  KXYTVIEWSHIGH-OLI26NOV-12.0M   2026-10-24T17:37:40  canceled  no   1   500  partial_fill                  2026-10-27T04:35:59  2026-10-27T04:35:03  488
+8153  KXYTVIEWSHIGH-YOU26NOV-12.0M   2026-10-24T22:41:31  canceled  yes  9   222  out_of_band                   2026-10-26T12:46:09  2026-10-26T12:46:09  0  
+8160  KXYTVIEWSHIGH-YE26NOV-5.0M     2026-10-25T01:07:33  canceled  no   1   500  repriced                      2026-10-25T02:07:56  2026-10-25T02:07:56  0  
+8162  KXYTVIEWSHIGH-YE26NOV-5.0M     2026-10-25T02:08:00  canceled  no   2   500  repriced                      2026-10-25T12:52:21  2026-10-25T12:52:21  0  
+8171  KXYTVIEWSHIGH-MOR26NOV-6.75M   2026-10-25T06:57:19  canceled  yes  8   250  out_of_band                   2026-10-25T12:52:15  2026-10-25T12:52:15  0  
+8172  KXYTVIEWSHIGH-MOR26NOV-7.0M    2026-10-25T06:57:26  canceled  yes  8   250  out_of_band                   2026-10-25T12:52:15  2026-10-25T12:52:15  0  
+8177  KXYTVIEWSHIGH-YE26NOV-5.0M     2026-10-25T12:52:26  canceled  no   5   400  repriced                      2026-10-25T13:54:06  2026-10-25T13:54:06  0  
+8178  KXYTVIEWSHIGH-YE26NOV-5.5M     2026-10-25T12:52:36  canceled  no   9   222  out_of_band                   2026-10-25T13:56:09  2026-10-25T13:56:09  0  
+8179  KXYTVIEWSHIGH-YE26NOV-5.0M     2026-10-25T13:54:11  canceled  no   8   250  out_of_band                   2026-10-26T12:46:09  2026-10-26T12:46:09  0  
+8180  KXYTVIEWSHIGH-MOR26NOV-7.75M   2026-10-25T13:56:27  canceled  yes  5   400  repriced                      2026-10-25T14:58:26  2026-10-25T14:58:26  0  
+8184  KXYTVIEWSHIGH-MOR26NOV-7.75M   2026-10-25T14:58:30  canceled  yes  8   250  out_of_band                   2026-10-26T20:35:58  2026-10-26T20:35:58  0  
+8185  KXYTVIEWSHIGH-DRA26DEC-14.25M  2026-10-25T16:04:33  canceled  no   1   500  repriced                      2026-10-26T12:46:17  2026-10-26T12:46:17  0  
+8186  KXYTVIEWSHIGH-BAD26DEC-30.0M   2026-10-25T16:04:38  canceled  no   1   500  out_of_band                   2026-10-26T13:55:15  2026-10-26T13:55:15  0  
+8187  KXYTVIEWSHIGH-JUS26DEC-15.5M   2026-10-25T16:04:42  canceled  no   1   500  repriced                      2026-10-26T12:52:29  2026-10-26T12:52:29  0  
+8232  KXYTVIEWSHIGH-DRA26DEC-14.25M  2026-10-26T12:46:22  canceled  no   9   222  out_of_band                   2026-10-26T13:55:15  2026-10-26T13:55:15  0  
+8233  KXYTVIEWSHIGH-WEE26DEC-25.0M   2026-10-26T12:46:32  canceled  no   6   333  out_of_band                   2026-10-26T14:44:04  2026-10-26T14:44:04  0  
+8234  KXYTVIEWSHIGH-JUS26DEC-15.5M   2026-10-26T12:52:34  canceled  no   2   500  repriced                      2026-10-26T13:55:21  2026-10-26T13:55:21  0  
+8237  KXYTVIEWSHIGH-JUS26DEC-15.5M   2026-10-26T13:55:25  canceled  no   6   333  out_of_band                   2026-10-26T15:15:14  2026-10-26T15:15:15  0  
+8241  KXYTVIEWSHIGH-YE26NOV-5.0M     2026-10-26T14:38:01  canceled  no   1   500  pre_event                     2026-10-30T04:00:20  2026-10-30T04:00:20  0  
+8242  KXMAMDANIMENTION-26NOV18-BILL  2026-10-26T14:38:07  canceled  yes  2   500  repriced                      2026-10-26T15:39:21  2026-10-26T15:39:21  0  
+8243  KXYTVIEWSHIGH-KAT26NOV-23.0M   2026-10-26T14:44:24  canceled  no   10  200  out_of_band                   2026-10-26T16:36:03  2026-10-26T16:36:03  0  
+8244  KXYTVIEWSHIGH-FUE26NOV-24.0M   2026-10-26T15:24:18  canceled  no   1   500  pre_event                     2026-10-30T04:00:20  2026-10-30T04:00:20  0  
+8245  KXMAMDANIMENTION-26NOV18-BILL  2026-10-26T15:39:26  canceled  yes  7   285  repriced                      2026-10-27T04:29:12  2026-10-27T04:29:12  0  
+8246  KXYTVIEWSHIGH-MOR26NOV-7.5M    2026-10-26T16:36:23  filled    yes  5   400                                2026-10-28T13:46:06  2026-10-28T13:46:06  400
+
+(200 rows)
