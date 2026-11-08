@@ -167,7 +167,7 @@ def register(session, *, actor: str, promotion_sample_floor: int | None = None,
         entry_rule="rest one bid per arm and market at the arm's price, refreshed hourly",
         exit_rule="pull per the arm's rule; a filled bid is held (cost = 24 h markout)",
         sizing_rule="$10 per bid; S1 $20 at pool >= $50/day; S4-burst $50 during the burst",
-        execution_style="maker (simulated)",
+        execution_style="maker",          # String(16), vocabulary maker|taker|mixed; simulated
         independent_variable="placement (S2), step-aside (S3), burst sizing (S4)",
         held_constant=HELD_CONSTANT, control_required=True,
         metrics={"primary": "calibrated net per $10 bid-day after Kalshi's $1 minimum",
