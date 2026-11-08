@@ -232,6 +232,7 @@ ALLOWED_SCRIPTS = (
     "limm_step_aside",
     "limm_volume_census",
     "limm_fill_warning",
+    "limm_band_probe",
     "untraded_capacity_census",
     "execution_telemetry",
     "liquidity_incentive_report",
