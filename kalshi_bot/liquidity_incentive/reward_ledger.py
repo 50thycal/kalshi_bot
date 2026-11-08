@@ -137,6 +137,10 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     ("2026-11-03", 248, "KXYTVIEWSHIGH-MOR26NOV"),
     ("2026-11-03", 226, "KXYTVIEWSHIGH-MOR26NOV"),
     ("2026-11-03", 147, "KXYTVIEWSHIGH-YOU26NOV"),
+    # Operator screenshot 2026-11-08 (lifetime $108.26, Nov 2026 $22.34): Olivia Rodrigo
+    # "Highest daily view count (November 2026)" -> the 26DEC-ticketed market, as October
+    # programs mapped to 26NOV above.
+    ("2026-11-08", 431, "KXYTVIEWSHIGH-OLI26DEC"),
 )
 
 
