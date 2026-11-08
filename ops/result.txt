@@ -1,4 +1,17 @@
-no experiment command 'limm-paper-strategies-register-202611081511'
 # ops request [READ]
-# type=xos  id=rl-ps-rcpt-1108-2
-# code 0ba1dd79ae363cd0cc3a6737bb0b7c32535888bc · started 2026-11-08T15:13:33Z
+# type=xos  id=rl-ps-rcpt-1108-3
+# code 0ba1dd79ae363cd0cc3a6737bb0b7c32535888bc · started 2026-11-08T15:14:07Z
+{
+  "command_id": "limm-paper-strategies-register-202611081511",
+  "action": "REGISTER_PACKAGE",
+  "actor": "claude-code",
+  "actor_role": "RESEARCH_LAB",
+  "status": "FAILED",
+  "payload_hash": "d2d295c83d2053b0f64763a16d895080d394555ec36b54ee1af4bd29991e8edc",
+  "completed_at": "2026-11-08 15:13:42.191530+00:00",
+  "result": null,
+  "error": "DataError: (psycopg.errors.StringDataRightTruncation) value too long for type character varying(16)\n[SQL: INSERT INTO experiment_versions (experiment_id, version, created_at, frozen_at, hypothesis, mechanism, counterparty, falsification, universe_selector, universe_exclusions, entry_rule, exit_rule, sizing_rule, execution_style, independent_variable, held_constant_json, control_required, control_e",
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
