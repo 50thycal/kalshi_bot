@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXWORLDNEWSMENTION-26NOV05-TALA","--trades","1000","--depth","2"],"id":"rl-mt-wn05-tala"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXWORLDNEWSMENTION-26NOV05-DOW","--trades","1000","--depth","2"],"id":"rl-mt-wn05-dow"}
