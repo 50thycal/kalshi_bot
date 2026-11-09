@@ -1,4 +1,176 @@
+day 2026-08-06: 53 decision rows
+day 2026-08-07: 68 decision rows
+day 2026-08-08: 32 decision rows
+day 2026-08-09: 43 decision rows
+day 2026-08-10: 58 decision rows
+day 2026-08-11: 56 decision rows
+day 2026-08-12: 62 decision rows
+day 2026-08-13: 54 decision rows
+day 2026-08-14: 57 decision rows
+day 2026-08-15: 25 decision rows
+day 2026-08-16: 35 decision rows
+day 2026-08-17: 65 decision rows
+day 2026-08-18: 58 decision rows
+day 2026-08-19: 137 decision rows
+day 2026-08-20: 158 decision rows
+day 2026-08-21: 238 decision rows
+day 2026-08-22: 132 decision rows
+day 2026-08-23: 120 decision rows
+day 2026-08-24: 166 decision rows
+day 2026-08-25: 157 decision rows
+day 2026-08-26: 135 decision rows
+day 2026-08-27: 131 decision rows
+day 2026-08-28: 124 decision rows
+day 2026-08-29: 53 decision rows
+day 2026-08-30: 44 decision rows
+day 2026-08-31: 79 decision rows
+day 2026-09-01: 129 decision rows
+day 2026-09-02: 127 decision rows
+day 2026-09-03: 105 decision rows
+day 2026-09-04: 21 decision rows
+day 2026-09-05: 36 decision rows
+day 2026-09-06: 74 decision rows
+day 2026-09-07: 89 decision rows
+day 2026-09-08: 107 decision rows
+day 2026-09-09: 121 decision rows
+day 2026-09-10: 84 decision rows
+day 2026-09-11: 115 decision rows
+day 2026-09-12: 40 decision rows
+day 2026-09-13: 72 decision rows
+day 2026-09-14: 114 decision rows
+day 2026-09-15: 131 decision rows
+day 2026-09-16: 117 decision rows
+day 2026-09-17: 80 decision rows
+day 2026-09-18: 122 decision rows
+day 2026-09-19: 65 decision rows
+day 2026-09-20: 104 decision rows
+day 2026-09-21: 160 decision rows
+day 2026-09-22: 16 decision rows
+day 2026-09-23: 5 decision rows
+day 2026-09-24: 99 decision rows
+day 2026-09-25: 105 decision rows
+day 2026-09-26: 52 decision rows
+day 2026-09-27: 60 decision rows
+day 2026-09-28: 88 decision rows
+day 2026-09-29: 112 decision rows
+day 2026-09-30: 126 decision rows
+day 2026-10-01: 97 decision rows
+day 2026-10-02: 132 decision rows
+day 2026-10-03: 43 decision rows
+day 2026-10-04: 75 decision rows
+day 2026-10-05: 114 decision rows
+day 2026-10-06: 97 decision rows
+day 2026-10-07: 99 decision rows
+day 2026-10-08: 100 decision rows
+day 2026-10-09: 95 decision rows
+day 2026-10-10: 41 decision rows
+day 2026-10-11: 63 decision rows
+day 2026-10-12: 108 decision rows
+day 2026-10-13: 118 decision rows
+day 2026-10-14: 118 decision rows
+day 2026-10-15: 101 decision rows
+day 2026-10-16: 106 decision rows
+day 2026-10-17: 54 decision rows
+day 2026-10-18: 92 decision rows
+day 2026-10-19: 102 decision rows
+day 2026-10-20: 110 decision rows
+day 2026-10-21: 109 decision rows
+day 2026-10-22: 85 decision rows
+day 2026-10-23: 96 decision rows
+day 2026-10-24: 69 decision rows
+day 2026-10-25: 76 decision rows
+day 2026-10-26: 109 decision rows
+day 2026-10-27: 97 decision rows
+day 2026-10-28: 101 decision rows
+day 2026-10-29: 125 decision rows
+day 2026-10-30: 131 decision rows
+day 2026-10-31: 52 decision rows
+day 2026-11-01: 65 decision rows
+day 2026-11-02: 102 decision rows
+day 2026-11-03: 113 decision rows
+day 2026-11-04: 130 decision rows
+day 2026-11-05: 133 decision rows
+day 2026-11-06: 102 decision rows
+day 2026-11-07: 43 decision rows
+day 2026-11-08: 86 decision rows
+candles 143997, 4h bars 601 (600 valid)
 # ops request [READ]
-# type=noop  id=rl-mention-noop
-# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T19:45:01Z
-(noop — nothing to do)
+# type=script  id=rl-levelhold-run-1109b
+# code 16cb98be5ab8dcd0c9d36d1d13893de680ede906 · started 2026-11-09T20:52:05Z
+# LEVELHOLD probe - series KXBTCD, 2026-08-06..2026-11-08 (docs/LEVELHOLD_PREREG.md)
+raw decisions 8705, no official label 4, no full lookback 39, usable 8654
+labels: live 6126 / historical 2575 / not found 4
+historical event_ticker filter honoured: True
+historical cutoff: {"market_positions_last_updated_ts": "2026-09-10T00:00:00Z", "market_settled_ts": "2026-09-10T00:00:00Z", "orders_updated_ts": "2026-10-26T00:00:00Z", "trades_created_ts": "2026-09-10T00:00:00Z"}
+events 2086, result fetch errors 0
+{
+ "n_days": 95,
+ "n_raw": 8705,
+ "n_usable": 8654,
+ "counts": {
+  "swing": 3538,
+  "flip": 2559,
+  "round": 894,
+  "control": 4626
+ },
+ "label_exclusion": 0.0005,
+ "full_lookback_share": 0.9955,
+ "control_raw_resid": 3.752,
+ "arms": {
+  "swing": {
+   "n": 3538,
+   "L": -0.634,
+   "ci": [
+    -2.266,
+    1.012
+   ],
+   "ci_level": 0.9,
+   "raw_resid": 3.186,
+   "trade": "buy break side",
+   "trade_ev": -5.188,
+   "trade_ev_p5": -6.421,
+   "call": "NO SIGNAL"
+  },
+  "flip": {
+   "n": 2559,
+   "L": -0.057,
+   "ci": [
+    -2.24,
+    2.087
+   ],
+   "ci_level": 0.95,
+   "raw_resid": 3.73,
+   "trade": "buy break side",
+   "trade_ev": -5.704,
+   "trade_ev_p5": -7.162,
+   "call": "NO SIGNAL"
+  },
+  "round": {
+   "n": 894,
+   "L": -1.205,
+   "ci": [
+    -3.995,
+    1.546
+   ],
+   "ci_level": 0.95,
+   "raw_resid": 2.596,
+   "trade": "buy break side",
+   "trade_ev": -4.7,
+   "trade_ev_p5": -6.854,
+   "call": "NO SIGNAL"
+  }
+ },
+ "verdict": "KILL (technical levels are priced; no ATR-band/pivot/grid variants)"
+}
+decile  n      mid_held  swing_resid  round_resid  ctl_resid
+D1      803        49.5         5.53         6.21       2.25
+D2      911        57.2        -2.84        -5.21       0.67
+D3      702        62.2         3.53         4.01       -0.5
+D4      992        66.5         3.36         6.26       4.82
+D5      678        70.6         3.59          4.5       6.48
+D6      1051       74.0         3.94        -1.17       3.42
+D7      618        77.1          5.3          4.8       4.51
+D8      1064       79.6         4.54         1.21       4.53
+D9      833        82.0         1.24         6.72        7.0
+D10     1002       84.1         4.34         2.23       4.44
+VERDICT: KILL (technical levels are priced; no ATR-band/pivot/grid variants)
