@@ -1,0 +1,218 @@
+{
+ "show_start_utc": "2026-11-06T23:30:00",
+ "summary": {
+  "markets": 17,
+  "contracts": 96882,
+  "in_show_share": 0.451,
+  "said_in_show": 10,
+  "stale_lift_edge_usd": 641.11,
+  "jump_s_all": [
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   2.0
+  ],
+  "truncated_tapes": 0
+ },
+ "markets": [
+  {
+   "word": "AI / Artificial Intelligence",
+   "result": "yes",
+   "contracts": 4330,
+   "in_show": 1334,
+   "in_show_share": 0.308,
+   "pre_show_c": 57,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:31:28",
+   "stale_lift_contracts": 201,
+   "stale_lift_edge_usd": 33.92,
+   "pre_jump_c": 62,
+   "jump_s": 1.0
+  },
+  {
+   "word": "Ballot",
+   "result": "no",
+   "contracts": 4505,
+   "in_show": 1364,
+   "in_show_share": 0.303,
+   "pre_show_c": 39,
+   "truncated_tape": false
+  },
+  {
+   "word": "Data Center",
+   "result": "yes",
+   "contracts": 8335,
+   "in_show": 5467,
+   "in_show_share": 0.656,
+   "pre_show_c": 45,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:31:30",
+   "stale_lift_contracts": 212,
+   "stale_lift_edge_usd": 55.7,
+   "pre_jump_c": 45,
+   "jump_s": 2.0
+  },
+  {
+   "word": "Dow",
+   "result": "yes",
+   "contracts": 5911,
+   "in_show": 2376,
+   "in_show_share": 0.402,
+   "pre_show_c": 41,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:42:37",
+   "stale_lift_contracts": 308,
+   "stale_lift_edge_usd": 89.22,
+   "pre_jump_c": 32,
+   "jump_s": 0.0
+  },
+  {
+   "word": "Europe / European",
+   "result": "yes",
+   "contracts": 5093,
+   "in_show": 2181,
+   "in_show_share": 0.428,
+   "pre_show_c": 79,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:31:42",
+   "stale_lift_contracts": 51,
+   "stale_lift_edge_usd": 5.3,
+   "pre_jump_c": 88
+  },
+  {
+   "word": "Flood / Flooding",
+   "result": "yes",
+   "contracts": 1750,
+   "in_show": 256,
+   "in_show_share": 0.146,
+   "pre_show_c": 94,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:30:57",
+   "stale_lift_contracts": 0,
+   "stale_lift_edge_usd": 0.0,
+   "pre_jump_c": 93
+  },
+  {
+   "word": "Hegseth",
+   "result": "yes",
+   "contracts": 5332,
+   "in_show": 1994,
+   "in_show_share": 0.374,
+   "pre_show_c": 65,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:35:18",
+   "stale_lift_contracts": 526,
+   "stale_lift_edge_usd": 74.51,
+   "pre_jump_c": 61,
+   "jump_s": 0.0
+  },
+  {
+   "word": "Iowa / Kansas",
+   "result": "no",
+   "contracts": 2588,
+   "in_show": 1011,
+   "in_show_share": 0.391,
+   "pre_show_c": 17,
+   "truncated_tape": false
+  },
+  {
+   "word": "Job / Unemployment",
+   "result": "yes",
+   "contracts": 2327,
+   "in_show": 755,
+   "in_show_share": 0.324,
+   "pre_show_c": 83,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:31:07",
+   "stale_lift_contracts": 0,
+   "stale_lift_edge_usd": 0.0,
+   "pre_jump_c": 83
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "result": "no",
+   "contracts": 6046,
+   "in_show": 1684,
+   "in_show_share": 0.279,
+   "pre_show_c": 60,
+   "truncated_tape": false
+  },
+  {
+   "word": "Measles",
+   "result": "yes",
+   "contracts": 10198,
+   "in_show": 4268,
+   "in_show_share": 0.419,
+   "pre_show_c": 60,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:52:45",
+   "stale_lift_contracts": 759,
+   "stale_lift_edge_usd": 382.46,
+   "pre_jump_c": 7,
+   "jump_s": 0.0
+  },
+  {
+   "word": "Midterm",
+   "result": "yes",
+   "contracts": 2296,
+   "in_show": 1058,
+   "in_show_share": 0.461,
+   "pre_show_c": 97,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:30:13",
+   "stale_lift_contracts": 0,
+   "stale_lift_edge_usd": 0.0,
+   "pre_jump_c": 96
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "result": "no",
+   "contracts": 11881,
+   "in_show": 1293,
+   "in_show_share": 0.109,
+   "pre_show_c": 65,
+   "truncated_tape": false
+  },
+  {
+   "word": "Oil / Gas / Gasoline",
+   "result": "no",
+   "contracts": 5218,
+   "in_show": 3299,
+   "in_show_share": 0.632,
+   "pre_show_c": 52,
+   "truncated_tape": false
+  },
+  {
+   "word": "Poll / Polling",
+   "result": "no",
+   "contracts": 3640,
+   "in_show": 1854,
+   "in_show_share": 0.509,
+   "pre_show_c": 20,
+   "truncated_tape": false
+  },
+  {
+   "word": "Russell Brand",
+   "result": "no",
+   "contracts": 6127,
+   "in_show": 3206,
+   "in_show_share": 0.523,
+   "pre_show_c": 10,
+   "truncated_tape": false
+  },
+  {
+   "word": "Trump (5+ times)",
+   "result": "yes",
+   "contracts": 11305,
+   "in_show": 10330,
+   "in_show_share": 0.914,
+   "pre_show_c": 85,
+   "truncated_tape": false,
+   "first_95_utc": "2026-11-06T23:30:18",
+   "stale_lift_contracts": 0,
+   "stale_lift_edge_usd": 0.0,
+   "pre_jump_c": 85
+  }
+ ]
+}

@@ -1,0 +1,745 @@
+{
+ "file": "4386541.mp3",
+ "audio_s": 1097.1,
+ "compute_s": 77.1,
+ "real_time_factor": 0.07,
+ "decoding": "modified_beam_search+hotwords",
+ "hotword_score": 4.0,
+ "ref_words": 2745,
+ "asr_words": 2876,
+ "market_level": {
+  "yes_true_pos": 10,
+  "false_yes": 1,
+  "missed_yes": 1,
+  "terms": 20,
+  "ref_yes_terms": 11
+ },
+ "median_provisional_latency_s": 0.82,
+ "median_confirmed_latency_s": 6.36,
+ "events_total": 65,
+ "events": [
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 98.8999997138977,
+   "detect_t": 99.7,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Liquidity",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 105.81999931335449,
+   "detect_t": 106.8,
+   "surface": "liquidity"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 98.8999997138977,
+   "detect_t": 111.2,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Liquidity",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 105.81999931335449,
+   "detect_t": 111.2,
+   "surface": "liquidity"
+  },
+  {
+   "term": "Debt",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 160.27999935150146,
+   "detect_t": 160.8,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 160.27999935150146,
+   "detect_t": 161.8,
+   "surface": "debt"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 208.5199998855591,
+   "detect_t": 209.2,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 212.07999935150147,
+   "detect_t": 213.0,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 220.0800003051758,
+   "detect_t": 221.0,
+   "surface": "political"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 208.5199998855591,
+   "detect_t": 223.6,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 212.07999935150147,
+   "detect_t": 223.6,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 220.0800003051758,
+   "detect_t": 223.6,
+   "surface": "political"
+  },
+  {
+   "term": "Election",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 227.32000002861022,
+   "detect_t": 228.7,
+   "surface": "election"
+  },
+  {
+   "term": "Streaming",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 244.43999977111815,
+   "detect_t": 245.3,
+   "surface": "streaming"
+  },
+  {
+   "term": "Digital",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 245.3599998474121,
+   "detect_t": 246.3,
+   "surface": "digital"
+  },
+  {
+   "term": "Podcast",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 254.99999923706054,
+   "detect_t": 255.6,
+   "surface": "podcast"
+  },
+  {
+   "term": "Digital",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 245.3599998474121,
+   "detect_t": 260.4,
+   "surface": "digital"
+  },
+  {
+   "term": "Streaming",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 244.43999977111815,
+   "detect_t": 260.4,
+   "surface": "streaming"
+  },
+  {
+   "term": "Audio",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 292.7799997329712,
+   "detect_t": 293.6,
+   "surface": "audio"
+  },
+  {
+   "term": "Audio",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 292.7799997329712,
+   "detect_t": 300.7,
+   "surface": "audio"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 3,
+   "audio_t": 329.2399996757507,
+   "detect_t": 330.1,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 3,
+   "audio_t": 329.2399996757507,
+   "detect_t": 337.8,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 4,
+   "audio_t": 341.04000000953675,
+   "detect_t": 342.0,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 4,
+   "audio_t": 341.04000000953675,
+   "detect_t": 358.0,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Streaming",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 364.7199999332428,
+   "detect_t": 366.0,
+   "surface": "streaming"
+  },
+  {
+   "term": "Streaming",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 364.7199999332428,
+   "detect_t": 370.1,
+   "surface": "streaming"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 5,
+   "audio_t": 379.1,
+   "detect_t": 380.7,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 5,
+   "audio_t": 379.1,
+   "detect_t": 390.3,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 3,
+   "audio_t": 414.4799997329712,
+   "detect_t": 415.6,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 3,
+   "audio_t": 414.4799997329712,
+   "detect_t": 421.0,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 4,
+   "audio_t": 424.6399998664856,
+   "detect_t": 425.8,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 4,
+   "audio_t": 424.6399998664856,
+   "detect_t": 441.2,
+   "surface": "political"
+  },
+  {
+   "term": "Liquidity",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 467.13999996185305,
+   "detect_t": 468.0,
+   "surface": "liquidity"
+  },
+  {
+   "term": "Liquidity",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 467.13999996185305,
+   "detect_t": 469.0,
+   "surface": "liquidity"
+  },
+  {
+   "term": "Network",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 521.2399999618531,
+   "detect_t": 522.1,
+   "surface": "network"
+  },
+  {
+   "term": "Network",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 521.2399999618531,
+   "detect_t": 527.6,
+   "surface": "network"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 5,
+   "audio_t": 542.6799999982119,
+   "detect_t": 543.9,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 5,
+   "audio_t": 542.6799999982119,
+   "detect_t": 556.0,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 6,
+   "audio_t": 557.8399999141693,
+   "detect_t": 559.2,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 6,
+   "audio_t": 557.9599999189377,
+   "detect_t": 562.8,
+   "surface": "political"
+  },
+  {
+   "term": "Recovery",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 609.9799998283386,
+   "detect_t": 610.8,
+   "surface": "recovery"
+  },
+  {
+   "term": "Recovery",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 609.9799998283386,
+   "detect_t": 612.7,
+   "surface": "recovery"
+  },
+  {
+   "term": "Debt",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 707.5999999046326,
+   "detect_t": 708.4,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 707.5999999046326,
+   "detect_t": 711.6,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "CONFIRMED",
+   "count": 3,
+   "audio_t": 789.4,
+   "detect_t": 790.9,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "PROVISIONAL",
+   "count": 4,
+   "audio_t": 810.4399999141693,
+   "detect_t": 811.1,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "CONFIRMED",
+   "count": 4,
+   "audio_t": 810.4399999141693,
+   "detect_t": 815.2,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "PROVISIONAL",
+   "count": 5,
+   "audio_t": 910.7199989318848,
+   "detect_t": 911.6,
+   "surface": "debt"
+  },
+  {
+   "term": "Debt",
+   "kind": "CONFIRMED",
+   "count": 5,
+   "audio_t": 910.7199989318848,
+   "detect_t": 913.8,
+   "surface": "debt"
+  },
+  {
+   "term": "Network",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 939.7199995040894,
+   "detect_t": 941.0,
+   "surface": "network"
+  },
+  {
+   "term": "Digital",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 941.6799995422364,
+   "detect_t": 942.9,
+   "surface": "digital"
+  },
+  {
+   "term": "Guidance",
+   "kind": "PROVISIONAL",
+   "count": 1,
+   "audio_t": 943.2799999237061,
+   "detect_t": 943.9,
+   "surface": "guidance"
+  },
+  {
+   "term": "Digital",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 941.6799995422364,
+   "detect_t": 948.4,
+   "surface": "digital"
+  },
+  {
+   "term": "Guidance",
+   "kind": "CONFIRMED",
+   "count": 1,
+   "audio_t": 943.2799999237061,
+   "detect_t": 948.4,
+   "surface": "guidance"
+  },
+  {
+   "term": "Network",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 939.7199995040894,
+   "detect_t": 948.4,
+   "surface": "network"
+  },
+  {
+   "term": "Recovery",
+   "kind": "PROVISIONAL",
+   "count": 2,
+   "audio_t": 959.6799997329712,
+   "detect_t": 960.5,
+   "surface": "recovery"
+  },
+  {
+   "term": "Recovery",
+   "kind": "CONFIRMED",
+   "count": 2,
+   "audio_t": 959.6799997329712,
+   "detect_t": 962.8,
+   "surface": "recovery"
+  },
+  {
+   "term": "Network",
+   "kind": "PROVISIONAL",
+   "count": 3,
+   "audio_t": 985.039999961853,
+   "detect_t": 986.4,
+   "surface": "network"
+  },
+  {
+   "term": "Network",
+   "kind": "CONFIRMED",
+   "count": 3,
+   "audio_t": 985.039999961853,
+   "detect_t": 989.6,
+   "surface": "network"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 7,
+   "audio_t": 999.0799998283386,
+   "detect_t": 999.9,
+   "surface": "political"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "PROVISIONAL",
+   "count": 6,
+   "audio_t": 1013.3200000762939,
+   "detect_t": 1014.3,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Pandemic",
+   "kind": "CONFIRMED",
+   "count": 6,
+   "audio_t": 1013.3200000762939,
+   "detect_t": 1015.6,
+   "surface": "pandemic"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 7,
+   "audio_t": 999.0799998283386,
+   "detect_t": 1015.6,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "PROVISIONAL",
+   "count": 8,
+   "audio_t": 1023.9199999809265,
+   "detect_t": 1024.8,
+   "surface": "political"
+  },
+  {
+   "term": "Political",
+   "kind": "CONFIRMED",
+   "count": 8,
+   "audio_t": 1023.9199999809265,
+   "detect_t": 1030.3,
+   "surface": "political"
+  }
+ ],
+ "asr_text": "WELCOME TO THE CUMULUS MEDIACCORDEDLY EARNING HIS COMFORTS CALL I WILL NOW TURN THE CALL OVER TO COLIN JONES SENIOR VICE PRESIDENT OF CORPORATE DEVELOPMENT AND STRATEGY SIR YOU MAY PROCEED BUT YOU OPERATOR WELCOME EVERY ONE TO OUR THIRD QUARTER TWENTY TWENTY EARNING'S CONFERENCE CALL I'M JOINED TO DAY OF OUR PRESIDENT C YO MARY BURNER AND OUR C FOE FRANK LOPEZ BALBOA BEFORE WE START PLEASE NOTE THAT CERTAIN STATEMENTS IN TO DAY'S PRESS RELEASE AND DISGUST ON THIS CALL MAY CONSTITUTE FOR LOOKING STATEMENTS UNDER FEDERAL SECURITIES LAWS ACTUAL RESULTS MAY DIFFER MATERIALLY FROM THE RESULTS EXPRESSED OR IMPLIED IN FORWARD LOOKING STATEMENTS THESE STATEMENTS ARE BASED UNMANAGEMENTS CURRENT ASSESSMENTS AND ASSUMPTIONS AND THEIR SUBJECT TO A NUMBER OF RISKS AND UNCERTAINTIES IN ADDITION WE WILL ALSO USE CERTAIN NON GAP FINANCIAL MEASURES WE BELIEVE THE SUPPLEMENTARY INFORMATION IS IT IS USEFUL TO INVESTORS ALTHOUGH IT SHOULD NOT BE CONSIDERED SUPERIOR TO THE MEASURES PRESENTED IN ACCORDANCE WITH GAP A FULL DESCRIPTION OF THESE RISKS AS WELL AS FINANCIAL RECONCILIATIONS TO NON GAP TERMS ARE INTERPRESS RELIEF AND AS YOU SEE VIOLENCE THE PRESS RELEASE CAN BE FOUND IN THE INDUSTRIAL RELATIONS PORTION OF OUR WEB SITE AND ARE FORMED TIN CUE WHICH WAS ALSO FI FILED WITH THE C C SHORTLY BEFORE THIS CALL A RECORDING OF TO DAY'S CALL WILL BE AVAILABLE FOR ABOUT A MONTH AND DETAILS FOR HOW TO ACCESS THAT REPLAY CAN ALSO BE FOUND ON OUR WEB SIDE WITH THAT I'LL NOW TURN IT OVER TO OUR PRESIDENT AND SEE YO MARY BURNER HARRY THANKS COLIN AND GOOD MORNING EVERYONE IN THE THIRD QUARTER WE CONTINUED TO DELIVER AGAINST THE GOALS WE ESTABLISHED AT THE START OF THE PANDEMIC CRISIS MAXIMIZING REVENUE OFFSETTING THE VIRUS'S IMPACTOR RIGOROUS COST MANAGEMENT AND LIQUIDITY ENHANCEMENT AND INSURING THAT WE EMERGE FROM THE PANAMIC WELL POSITIONED FOR LONG TERMS SUCCESS TO THOSE ENDS WE GREW REVENUE SEQUENTIALLY EACH MONTH IN THE QUARTER WITH SEPTEMBER FINISHING THIRTY FIVE PER CENT HIGHER THAN JUNE WE EXECUTED OUR EXPENSE REDUCTION PLAN REALIZING OVER TWENTY FIVE MILLION OF FIXED COST SAVINGS IN THE QUARTER WITH THE EXPECTATION OF DELIVERING MORE THAN EIGHTY FIVE MILLION IN TWO THOUSAND TWENTY WE GENERATED POSITIVE IBIDA AND CASH FROM OPERATIONS FOR THE QUARTER BRINGING YEAR TO DAY FREE CASH LOW EXCLUDING EMANAE AND THE AB L DRA TO OVER FORTY FIVE MILLION WE STRENGTHEN OUR BALANCE SHEET SIGNIFICANTLY COMPLETING THE INITIAL CLOSING OF OUR TOWER SAIL LEAF TRANSACTION FINISHING THE QUARTER WITH OVER THREE HUNDRED AND FIFTY MILLION OF CASH A SUBSTANTIAL PORTION OF WHICH WILL BE DEDICATED TO REINVESTMENT AND OR ADDITIONAL PIT DEBT PAID OUT WHILE THE ENVIRONMENT REMAINS UNCERTAIN WE NOW HAVE THE RESOURCES AND FLEXIBILITY TO RESPOND TO OPPORTUNITIES THAT MIGHT ARISE FROM THE DISRUPTION AND INVEST AN AREAS THAT WILL DERIVE GROWTH WHILE CONTINUING TO IMPROVE OUR BALANCE UNVERTUALLY ALL METRICS ARE THIRD QUARTER RESULTS REPRESENTED AS SIGNIFICANT IMPROVEMENT FROM HUTH TWO SAME STATION REVENUE FINISHED DOWN TWENTY NINE PER CENT YEAR OF A YEAR BUT AS I MENTIONED IMPROVES SEQUENTIALLY EACH MONTH IN TERMS OF TOTAL DOLLARS IN THE SPOT MARKET WHICH IS ARGUABLY THE BEST INDICATOR OF THE OVERALL HELT OF THE CORPS RADIO BUSINESS WE SAW YEAR OVER YOUR IMPROVEMENT EACH MONTH BOTH INCLUSIVE AND EXCLUSIVE OF POLITIC AL DOLLARS LIKE LAST QUARTER OUR DIE MARKETS WHICH WERE LESS AFFECTED BY THE PANDEMIC SHUT DOWNS OUT PERFORMED OUR P M MARKETS POLITICAL AS YOU MIGHT EXPECT WAS CLEARLY VERY STRONG AS OUR FOOTPRINT OVERLAPPED NICELY WITH SWING STATES WE HAD FIVE POINT EIGHT MILLION OF POLITICAL REVENUE IN THE QUARTER WHICH WAS A NEW HIGH WATER MARK FOR A THIRD QUARTER AND HAVE BENEFITED FROM THAT SPENDING PACE THROUGH THE ELECTION GOVERNMENT SPENDING ALSO CONTRIBUTED POSITIVELY IN THE QUARTER AND WHILE STILL NEGATIVE VERSES LAST YEAR FINANCIAL GENERAL SERVICES AND PROFESSIONAL SERVICES ALSO OUT PERFORMED OTHER CATEGORIES VIGIL AS A WHOLE POSTED ANOTHER QUARTER OF GROWTH WHILE STREAMING AND LOCAL DIGITAL MARKETING SURFACES REMAIN PRESSURED IN THE DIFFICULT MACRO CLIMATE PODCASTING MORE THAN OFFSET THOSE DECLINES UP NEARLY FIFTY PER CENT IN THE QUARTER PODCASTOR TO HAVE SEEN DELIVERED RECORD QUARTERLY REVENUE REFLECTING OUR PARTICULARLY STRO NG NEWS TALK PORTFOLIO AND OUR HIGHEST EVER DOWN LOVE COUNT OVER A HUNDRED AND TWO MILLION IN SEPTEMBER UP FORTY SEVEN PER CENT YEAR OF A YEAR ALSO IN THE QUARTER WE LODGED THE NEW MARKET PLACE MINUTE A SHORT FORM THREE TIMES A DAY BREATHING THE HIGH LIGHTS THE MOST IMPORTANT STORIES ABOUT MONEY BUSINESS ECONOMY DEVE LOPED IN PARTNERSHIP WITH AMERICAN PUBLIC MEDIA THE MARKET PLACE MINUTE IS DISTRIBUTED ACROSS SMART SPEAKERS BROADCASTING AT PODCASTING MARKING THE FIRST TIME ANY PUBLIC MEETING COMPANY HIS PARTNER WITH A COMMERCIAL AUDIO COMPANY TO EXTEND ITS REACH THE MEN AT MARKET PLACE MINUTE ALSO SERVES AS A GREAT EXAMPLE OF OUR EFFECTIVE USE OF PARTNERSHIPS TO CREATE EX CITING NEW CONTENT FOR POD GUESS AUDIENCES ON EXPENSE FRONT WE MENTION LAST QUARTER THAT WE WERE TARGETING APPROXIMATELY EIGHTY FIVE MILLION OF FIFTH FIXED COST REDUCTIONS FOR THE YEAR INCLUDING PERMANENT REDUCTIONS ON AN ANNUAL RUN RATE OF THIRTY SIX MILLION MORE THAN TWENTY FIVE MILLION OF THESE SIX COST SAVINGS WERE ACHIEVED IN TWO THREE AND WE ANTICIPATE REALIZING MORE THAN FIFTEEN MILLION IN TWO FOUR MANY OF THESE SAVINGS RESULTED FROM DIFFICULT DECISIONS MANDATED BY THE PANDEMIC INDUCED REVENUE DECLINED HOWEVER OTHERS REFLECTED CHANGES IN THE WAY WE EXPECT TO CONDUCT OUR BUSINESS IN THE FUTURE INFORMED BY NEW WAYS OF OPERATING DEVELOPED DURING THE PANDEMIC AND OR DEVELOPED A MEAT OF EVOLVING BUSINESS NEEDS FOR EXAMPLE WE CONSOLIDATED SOME SALES MANAGEMENT AND ARE IN THE PROCESS OF CENTRALIZING OUR SALES MARKETING RESEARCH AND INSIGHT'S EFFORTS INTO ONE GROUP THAT SERVICES THE ENTIRE ORGANIZATION AS OPPOSED TO THE MORE FRAGMENTED AD CHANNEL CONFIGURATION THAT WAS PREVIOUSLY PLACE LASTLY WE CONTINUED TO FIND NEW WAYS TO STREAMING BUSINESS PROCESSES PARTICULARLY IN NON REVENUE PRODUCING FUNCTIONS WITH THE BENEFIT OF THESE COSTS TAKE OUT SOME TIGHT WORKING CAPITAL MANAGEMENT WE DELIVER POSITIVE FREE CAST FLOW FOR THE SECOND STREET QUARTER DURING THE PANDEMIC WE FURTHER ADDED TO OUR CASH POSITION WITH PROCEEDS FROM THE INITIAL CLOSING OF OUR TOWER SAND LEAST BACK TRANSACTION WHICH BROUGHT OUR QUARTERLY AT QUARTER AND CASH BALANCE TO MORE THAN THREE HUNDRED FIFTY MILLION SE SIGNIFICANT CASH RESERVES NOT ONLY PROVIDE A SECURITY WITH WHICH TO NAVIGATE THE UNPREDICTABILITY OF THE MONTHS AHEAD BUT ALSO THE CAPABILITY AND FLEXIBILITY TO ACT AT A CREED OF OPPORTUNITIES THAT MAY COME OUR WAY LOOKING AHEAD AS WE MOVE INTO THE FOURTH QUARTER WE CONTINUE TO SEE POSITIVE MOMENTUM IN BOOKINGS OR EVEN LARGELY BY POLITICAL BUT ALSO REFLECTING UNDERLYING IMPROVEMENT ACROSS ALL REVENUE STREAM ENT PACING IS DOWN IN THE MID TEENS VERSES LAST YEAR WITH POLITICAL PROVIDING ABOUT A FOUR AND FIFTY BASIS POINT BENEFIT WE REMAIN GUARDED ABOUT THE FINISH TO THE YEAR GIVEN THE RECENT ACCELERATION OF CORONA VICE AND SECTIONS ACROSS THE COUNTRY BUT POTENTIALS SHUT DOWN MEASURES AND REACTION TO THAT AND THE GENERALLY UNCERTAIN MACKER ENVIR ONMENT SO FOR THE REMAINDER OF THE FOURTH QUARTER AND LUCKILY WELL INTO TWO THOUSAND TWENTY ONE WHILE WE HOPE FOR CONTINUED IMPROVEMENT OUR PERFORMANCE WILL REMAIN HIGHLY SENSITIVE TO THE SHAPE AND PACE OF EXTERNAL EVENTS HOWEVER IT GOES WITHOUT SAYING THAT WE REMAIN UNRELENTINGLY DISCIPLINED AND FOCUSSED ON CONTINUING TO RE ENGINEER THE BUSINESS TO MAXIMIZE REVENUE AND REDUCE OUR COST THAT SAID GIVEN OUR LIQUIDITY POSITION WORKS EFFICIENT EXPENSE PROFILE AND GROWTH INITIATIVES WE FEEL COMFORTABLE ABOUT OUR ABILITY TO THAT ONLY STAY THE COURSE BUT CAPITALIZE ON THE REBOUNDING ECONOMY WHERE AND WHEN IT OCCURS AND WITH THAT I'LL TURN THE CALL OVER TO FRANK FRANK BEGIN I WILL START BY PROVIDING SOME MORE DETAIL IN THE THIRD QUARTER SPEAKING IN THE SAME STATION BASIS AND FOLLOW THEM WITH SOME ADDITIONAL COLOR OR NON OPERATING ITEMS A HEAT THREE TOTAL REVENUE WAS A HUNDRED NINETY SIX POINT FOUR MILLION DOWN TWENTY NINE POINT FOUR PER CENT FROM PEW THREE TWO THOUSAND NINETEEN INCREASE OF THIRTY FOUR POINT FIVE PER CENT OVER TWO TOTAL REVENUE AS MANY NOTED ON A MONTHLY BASIS WE SAW TOTAL REVENUE IMPROVEMENT AS A QUARTER PER REST WITH SEPTEMBER REVUE THIRTY FIVE PER CENT HIGHER THAN JUNE SPOT AND NETWORK MARKET PERFORM COMPARABLY IN THE QUARTER FOUND IN THE LOW THIRTIES VERSES TWO THOUSAND NINETEEN WITH FIDGETAL SLIGHTLY OFFSETTING THOSE RESULTS UP TWO PER CENT DRIVEN BY OUR PODCASTING BUSINESS WHICH IS OF NEARLY FIFTY PER CENT ON AN ENTIRELY ORGANIC PASIS TASHIRE DOLLARS REPRESENTED OVER TEN PER CENT OF REVENUE IN THE QUARTER POLITICAL STAND ACCELERATED AS A QUARTER WENT ON FINISHING AT FIVE POINT EIGHT MILLION VERSES ONE POINT SET IN MILLION AND HUGH THREE TWO THOUSAND NINETEEN AND THREE POINT SIX MILLION KEEP THREE THOUSAND EIGHTEEN OF NOTE THIS WAS A RECORD CORD OF A POLITICAL AND WERE UNTRACKED FOR ANOTHER RECORDER IN KEY FORT MOVING DOWN THE PIANO EXPENSES TO CLIMBED A FORTY TWO MILLION FOR NINETEEN PER CENT TRIPM BY BOAT'S REDUCTIONS AND VARIABLE COSTS RELATED TO THE RETINUE DECLINES AN ACTIVE FIXED COST REDUCTIONS AS MURDER DIVESTIONS WE CONTAIN A SPECTULIA REALIZE MORE THAN EIGHTY FIVE MILLION ADVANTAGE OF THIS HOTEL THIS YEAR FROM OUR FIXED COST ACTIONS TO DAY OF THESE MOULDED TWENTY FIVE MINE WAR CHIEF AND CUT THREE AND MORE THAN FIFTEEN MILLION WILL BE ACHIEF IN TWO FOUR BROKEN DOWN BETWEEN TEMPORARY AND PERMANENT EFFECTS ABOUT NINETEEN MILLION OF THE EIGHTY FIVE MILLION RELATES OF PERMANENT ACTIONS WHICH HAVE ANNUALIZED EXPENSE BENEFIT OF A POSSANTLY THIRTY SIX MILLION THE AMOUNT OF THE TEMPORARY CAUSE THAT WILL RETURN OVER TIME WERE LARGELY DEPEND ON REVENUE RECOVERY IN TWO THOUSAND TWENTY ONE PUT EVENUES AND EXPENSIVE TOGETHER FOR THEIR QUARTER HE'VE ADOPTED TO ISSUE TWENTY POINT FOUR MILLION NORMALISING FOR EMANIA ACTIVITY WE WENT A GANGORA CASH BALANCE AT THREE POINT FIVE NINE AND A QUARTER BRINGING TOTAL FREE CASTLE GENERATION YEAR DATE EXCLUDING EMANAE AND THE ABIAL DRA TO MORE THAN FORTY FIVE MILLION OCCASION'S OUTCOME DESPITE CONDEMIC IS A RESULT OF POSITIVE EVEN DIRATION RIGOROUS MANAGEMENT WORKING CAPITAL AND REDUCE CAT BACKS AS WE SAT ON OUR LAST CALL WE CUT OUR TWO THOUSAND TWO THOUSAND TWENTY CATHOLIC SPEND PROJECTION TO SEVENTEEN MILLION WITH FOUR MILLIONS SPENT A FEW THREE WE ARE INTRACTED TO DILIP AT THAT OUR CASH TACT OF THIS YEAR HAVE ALSO BEEN MATURELY REDUCED FROM THE COMBINATION OF LOWER OPERATING PERFORMANCE AND KHARZAC BENEFICE SO WE HUGH THREE WE RECEIVED A POSSIBLY TWO POINT FIVE MINE OF TAX WE FUNDS RELATED THE TAX IS PAID AND TWO THOUSAND NINETEEN O'T ALSO NOTE THAT A HUE FOR WORKING CAPITAL REQUIREMENTS COMING FROM INCREASED REVENUES ARE DECEMBER BOND INTEREST PAYMENT AND THOSE SMALL THUS MAY ATTACH PAYMENT RELATED TO THE GAIN ON THE TOWERSALE WILL CAUSE US TO BURN SOME PORTION OF THE PRETACHED SLOPE GENERATED NEAR TO DATE WE WERE PLACED TO ANNOUNCE ABOUT A MONTH AGO THE INITIAL CLOSING OF THE TOWER TRANSACTION WHICH PROVIDED A CASH AND FLOW OF TWO HUNDRED TWO POINT THREE MILLION UNDER A DEAD AGREEMENTS SIXTY FOUR MILLION THE NET PROCEEDS ON THE ACIDS BEING SOLD AND NOT LEAST FACTS ARE REQUIRED TO PAY DOWN DEBT PROUDA SUBJECT TO A TWELVEMONTH WE INVESTMENT RIGHT NINETY SIX NINE OF THE PROCEEDS FROM ACIDS BEING SOLD AT LEAST FACT WERE REQUIRED AT PAIN DOWN THAT IMMEDIATELY AT SUCH CONCURRED WITH THE CLOSING WE PAID DOWN FORTY NINE NINE OF THE TERMON AT PAR AND ON MONDAY OCTOBER FIFTH WE LAUNCHED A TENDER OFFER BEFORE SEVEN TWENTY TWO MILLION OF SENIOR SITTER BONDS AT PAR THE TENDER AUTHOR WAS SUC CESSFULLY COMPLETED ON NOVEMBER THIRD WE DO EXPECT TO HAVE SUCH WORK CLOTHING FOR THE REMAINING PROCEEDS IN THE POWER TRANSACTION BY THE END OF THE FIRST HALF OF TWO THOUSAND TWENTY ONE ADDITIONALLY FOR TAX PURPOSES THE GAIN IN THE TRANSACTION WILL LARGELY BE OFFSET BY ANTICIPATED NET OPERATING LOSSUS HERE NETTE NOW HAS BEEN REDUCED BY MORE THAN THREE HUNDRED THIRTY MILLION SINCE IT BEGAN OF THE YEAR AND BY MORE THAN FIVE HUNDRED EIGHTY FIVE MILLION OR FORTY SIX PER CENT SINCE A QUARTER THAT WE EMERGED FROM BANKRUPTCY AS A REMINDER WE DO NOT HAVE THE NATION PATENTS COVENANTS NEITHER A TERMON NOR BONDS WE DO NOT MATURE UNTIL TWO THOUSAND TWENTY SIX AS MENTION ON PREVIOUS HALLS WE ARE ALSO STILL WORKING THROUGH THE POTENTIAL MONOTIZATION OF THE VALUABLE PRIESTS OF PROPERTY NATIONAL AND WE HOPE TO BRING THE MARKET ONCE COMMERCIAL REAL STATE ACTIVITY APPROACHES MORE TYPICAL LEVELS VASTLY I WANT TO NOTE SOME NEW DISCLOSURE OUR TANK UTILATED TO THE M C DEBT ESON THE CANCELLATION OF MARCH MADNESS IN TWO THOUSAND TWENTY WE BELIEVE THE RIGHT SPACE OF TWO PEASANT TWENTY SEASON ARE NOT PAYABLE TO CONCEI DEBLAY THE ANCI DOUBLES P HOWEVER TO TERMINATE THE CONTRACT BASE A NON PAYMENT OF THOSE PHASE ON SOME DEBER TWENTY EIGHTH TWO THOUSAND TWENTY WE THE NANCY DEBT LAY ALL COMPETING LAW SUITS WITH REGARD TO THE DISPUTES SURROUNDING THE AGREEMENT WHILE IS ALWAYS ENFORCED TO CONTRACT DISPUTES TO ESCULADES OF LITIGATION AND LITIGATION CAN BE UNPREDICTABLE WE BELIEVE IN A MERIT OF OUR POSITION AT THIS STAGE WE ARE UNABLE TO REASONABLY ESTIMATE THE IMPACT OF THE ABSOLUTE LITIGATION BUT WE'LL KEEP YOU INFORMED AS A PROGRESSORS WITH THAT WE CAN NOW OPEN THE LINE TO KIRENADE OPERATE UP THANK YOU TO ASK A QUESTION YOU WILL NEED TO PRESS STORE ONE ON YOUR TELEPHONE KEEP PAT THAT IS STORE ONE TO WITHDRAW YOUR QUESTION PRESS THE POUND OR THE HATCHKEY PLEASE THEN BUY WHILE WE COMPILE THE TWO AND A ROSTER IN YOUR FIRST QUESTION COMES FROM MICHAELPITSKI NOBLE CAPITAL MARKET FIGURE TAKING THE QUESTIONS ON FIRST OF ALL I AM I WAS WARNING YOU HAD MENTIONED THAT YOU HAVE OBVIOUSLY NOW A LARGE CASH POSITION OF IT AND YOU INDICATED THAT YOU MAY NOT USE ALL THAT CASH TO PEER DOWN DEAD SO I WAS WONDERING IF HE COULD JUST TALK A LITTLE BIT ABOUT USES OF CASH AND THEN ALSO IF THERE ARE EMANATE OPPORTUNITIES WHAT YOU MAY BE BE LOOKING AT SURE HIGH MIKE UM NO I I THINK WE CHARACTERIZE IT AS OUR HUGE CASH POSITION HAS PUT US AH IN A FANTASTIC SUPPOSITION TO BE DEFENSIVE ABOUT THE UNCERTAINTY THAT EXISTED AS YOU POINT OUT ALSO OPPORTUNITY TAKEN WAYS THAT WE CAN USE A CAST TO DRY VALUE SO OBVIOUSLY PLAIN DOWN DEBT REMAINS A HUGE PRIORITY AND A WE KNOW THERE'S A GREAT RETURN TO USE OUR CAST THAT WAY HOWEVER YOU KNOW I SHOULD INTEREST AN OPPORTUNITIES COME OUR WAY WE'RE OPEN TO CONSIDERING THAT A WHETHER IN RADIO OR OTHERWISE A BUT WE DO RECOGNIZE THE HIGH BAR FOR EXPECTIVE RETURNS IN ARGUSTUS WARNING AS YOU WERE KINDLY GIVEN US SOME ON THOUGHTS ABOUT A KORN AND AND THE PACINGS THERE CAN YOU JUST COME TO GIVE US A LITTLE BIT OF A COLOR ON MAYBE A SPOT OR SER'S NETWORK ON WHAT YOU'RE SEEING AND DIGITAL I'M JUST KIND OF GUIDANCE A LITTLE BIT MORE COLOR ON THE A ON THE INDIVIDUAL LINE IRONS A INKHU FOR A ECHOED SO FRANK A PERSON YOU'VE GOT COMMON ABOUT TWO THREE THAT I'LL GIVE YOU A LITTLE MORE COLORED TWO FOUR SO KEITH'S THREE HEADER A VERY NICE RECOVERY IN BOTH A SPOT AND THE NECKLAKES AND AS YOU HEARD IN MY PREPARED REMARK SICKLE FORM COMPARABLY AH BUT I WILL SAY THAT IN THE THIRD QUARTER A THE NATIONAL SPOT IMPROVED CONSIDERABLY FROM THE SECOND QUARTER AS WE GET INTO A MORE A NOMALISED ENVIRONMENT SOME IN THE FOURTH QUARTER A BOTH CHANNELS ARE BUT RECOGNIAL AND BENEFITING IN THE NETWORK OUT FROM THE RETURN OF THE HANIFAL WHICH WILL PLEASE WITH AH THE OF THE NATIONAL MARKETS ARE STRONGER ADVER SO A PART OF THE BENEFITS WE'RE GETTING IN THE LOCAL MARKETS CLEAR POLITICAL WHICH DISPLACES TO SOME EXTENT US FROM THE LOCAL BUSINESS AS FOR THE TRAINS I'M AT THIS POINT WE ARE SEEING AS FAIRLY STRONG BUT AS MARY TUT AND SCRAPS AND WERE CAUTIOUS AU REGARD TO THE PANDEMIC END AND THE SPREAD AND CLIFF AND MAY BE SEEN HOW LITTLE INCAP THE REST OF THE QUARTER AND HOW DOES THE BOOKINGS LOOK AS YOU GO INTO DECEMBER WHICH IS OUTSIDE OF THE POLITICAL REALM OF YOU KNOW WHAT YOU MAY HAVE GOTTEN FOR IN AND A IN OCTOBER NOVEMBER AT THIS POINT THE VALLEY THIS COMMENTS ON PACING A PASIT ESTATE A HAVE MORE COLOR OBVIOUSLY AND OUR EARNEST CALL NOW NEXT YEAR O K FAIR ENOUGH THAT'S ALL I HAVE THANK YOU ANSWER REMINDER TO ASK A QUESTION YOU WILL NEED TO PRESS STORE ONE ON YOUR TELEPHONE TEAPED THAT IS STORE ONE TO WHICH ALL YOUR QUESTION PRESS THE POUND OR THE HASH KEY PLEASE STAND BY WHILE WE COMPILE THE CUB AND A ROSTER AND THERE ARE NO QUESTIONS AT THIS TIME HOWEVER THANKS EVERYBODY THANKS LADIES AND GENTLEMEN THIS CONCLUDES TO DAY'S COMFORTS CALL THANK YOU FOR PARTICIPATING YOU MAY NOW DISCONNECT",
+ "rows": [
+  {
+   "term": "Podcast",
+   "ref_count": 2,
+   "asr_count": 0,
+   "ref_yes": true,
+   "asr_yes": false,
+   "first_provisional_latency_s": 0.6,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": 255.0
+  },
+  {
+   "term": "Advertising",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Digital",
+   "ref_count": 5,
+   "asr_count": 2,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.94,
+   "first_confirmed_latency_s": 15.04,
+   "first_word_audio_t": 245.4
+  },
+  {
+   "term": "Pandemic",
+   "ref_count": 8,
+   "asr_count": 6,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.8,
+   "first_confirmed_latency_s": 12.3,
+   "first_word_audio_t": 98.9
+  },
+  {
+   "term": "COVID",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Political",
+   "ref_count": 9,
+   "asr_count": 8,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.92,
+   "first_confirmed_latency_s": 11.52,
+   "first_word_audio_t": 212.1
+  },
+  {
+   "term": "Streaming",
+   "ref_count": 1,
+   "asr_count": 2,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.86,
+   "first_confirmed_latency_s": 15.96,
+   "first_word_audio_t": 244.4
+  },
+  {
+   "term": "Debt",
+   "ref_count": 7,
+   "asr_count": 5,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.52,
+   "first_confirmed_latency_s": 1.52,
+   "first_word_audio_t": 160.3
+  },
+  {
+   "term": "Recovery",
+   "ref_count": 2,
+   "asr_count": 2,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.82,
+   "first_confirmed_latency_s": 2.72,
+   "first_word_audio_t": 610.0
+  },
+  {
+   "term": "Election",
+   "ref_count": 1,
+   "asr_count": 1,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": 1.38,
+   "first_word_audio_t": 227.3
+  },
+  {
+   "term": "Sports",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Westwood One",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Nielsen",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Spotify",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Liquidity",
+   "ref_count": 2,
+   "asr_count": 2,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.98,
+   "first_confirmed_latency_s": 5.38,
+   "first_word_audio_t": 105.8
+  },
+  {
+   "term": "Layoff",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Vaccine",
+   "ref_count": 0,
+   "asr_count": 0,
+   "ref_yes": false,
+   "asr_yes": false,
+   "first_provisional_latency_s": null,
+   "first_confirmed_latency_s": null,
+   "first_word_audio_t": null
+  },
+  {
+   "term": "Guidance",
+   "ref_count": 0,
+   "asr_count": 1,
+   "ref_yes": false,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.62,
+   "first_confirmed_latency_s": 5.12,
+   "first_word_audio_t": 943.3
+  },
+  {
+   "term": "Audio",
+   "ref_count": 1,
+   "asr_count": 1,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.82,
+   "first_confirmed_latency_s": 7.92,
+   "first_word_audio_t": 292.8
+  },
+  {
+   "term": "Network",
+   "ref_count": 4,
+   "asr_count": 3,
+   "ref_yes": true,
+   "asr_yes": true,
+   "first_provisional_latency_s": 0.86,
+   "first_confirmed_latency_s": 6.36,
+   "first_word_audio_t": 521.2
+  }
+ ]
+}

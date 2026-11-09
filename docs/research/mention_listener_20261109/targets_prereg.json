@@ -1,0 +1,11 @@
+{
+  "purpose": "Target words for the end-to-end ASR test, fixed BEFORE any recognizer output or reference-transcript word count was inspected. Chosen as a plausible Kalshi earnings-mention slate for a US radio broadcaster's 2020 quarterly call (earnings21 file 4386541, Cumulus Media). Mix of likely and unlikely words, as a real slate has.",
+  "fixed_at_utc": "2026-11-09T19:20:00Z",
+  "file_id": "4386541",
+  "terms": [
+    "Podcast", "Advertising", "Digital", "Pandemic", "COVID", "Political",
+    "Streaming", "Debt", "Recovery", "Election", "Sports", "Westwood One",
+    "Nielsen", "Spotify", "Liquidity", "Layoff", "Vaccine", "Guidance",
+    "Audio", "Network"
+  ]
+}
