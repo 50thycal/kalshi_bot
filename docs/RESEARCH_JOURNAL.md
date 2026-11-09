@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## IDEA-MODEL 2026-11-09 — tube_bot trading videos: 16 transplants, 1 promoted (LEVELHOLD, unrun)
+
+- **What:** four AI Pathways videos analyzed by tube_bot (price action, ICT, trading styles,
+  trading psychology) were screened for Kalshi transplants ([run](IDEA_MODEL_20261109_TUBE.md)).
+- **Result:** most of the content is already in this record, learned on Kalshi's own tape: MOMO-H,
+  VOLCLOCK, OFLOW, MARKTANGLE, the early TA books, TYPE-RANK and the caps. The calls were 5 kills by argument,
+  7 restatements, 1 park, 1 new hold (desk conviction sizing, at ≥ 200 picks) and 1 owner-decision note
+  (the daily-loss stop is a safeguard, not an edge lever).
+- **Promoted:** [LEVELHOLD](LEVELHOLD_PREREG.md). Does the hourly `KXBTCD` ladder misprice strikes
+  sitting on a 4h swing level, flip zone or round $1,000? It is new (MOMO-H conditioned on recent movement;
+  ROUNDPIN's kill was specific to the 15-minute venue) and gradeable now. The probe is built and tested, not run:
+  its allowlist merge touches `ops_runner.py`, which is an operator hard stop.
+
 ## Live mention listener 2026-11-09 — CLOSED by owner: buildable, but a speed race we'd likely lose
 
 - **Why:** the operator sketched a live mention bot: rules → live streams → LLM predicts next
