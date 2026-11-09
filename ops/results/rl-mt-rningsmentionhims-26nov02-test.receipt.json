@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "4ff5e18c518e50acc2d7967c44792938aca30312",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-09T19:01:59Z",
+  "id": "rl-mt-rningsmentionhims-26nov02-test",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-mt-rningsmentionhims-26nov02-test.receipt.json",
+  "result_file": "ops/results/rl-mt-rningsmentionhims-26nov02-test.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42679398748",
+  "service": null,
+  "started_at": "2026-11-09T19:01:59Z",
+  "targets": [],
+  "type": "script"
+}
