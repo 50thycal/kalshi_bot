@@ -1,283 +1,161 @@
 # ops request [READ]
-# type=xos  id=rl-mention-ct-1
-# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T18:50:01Z
-SESSION: Experiment Control Tower
-MODE: READ ONLY
-EXPERIMENT OS: experiment_os:pr4+metrics_engine:pr3_v1
-ENFORCEMENT: NEW_ONLY since 2026-08-16 14:34:42.892897+00:00 (cutover prod-new-only-20260816)
-PLATFORM SNAPSHOT: 55b51990e0492e4b…
-AS OF: 2026-11-09 12:50 CST
+# type=script  id=rl-mention-inv-1
+# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T18:58:57Z
+# desk board — 2026-11-09T18:58:57+00:00 — events scanned 18541, markets kept 455, shown 150
+# filters: hours<=2000.0 min_volume>=0 category~'' series^'' search~'MENTION' max_spread=None
+# prices in cents; 'fee' = taker fee (cents) for ONE contract bought at the yes ask;
+# a maker order pays ~0. break-even win% = (ask + fee) for YES, (no_ask + fee) for NO.
+ticker                           close yes b/a   spr  fee    vol24        oi category       title
+KXALTMANMENTION-26NOV18-ELON      23d   62/ 66 sp  4 f  2 v   3753 oi    595 Mentions       What will Sam Altman say during NYT DealBook Summit? | Elon / Grok
+KXPOLITICSMENTION-26NOV10-OIL     15d   80/ 81 sp  1 f  2 v   3268 oi   2500 Mentions       What will Doug Burgum say during Daily Caller Live? | Oil / Gas / Gaso
+KXPOLITICSMENTION-26NOV10-PERM    15d   78/ 86 sp  8 f  1 v   2944 oi   1953 Mentions       What will Doug Burgum say during Daily Caller Live? | Permit / Permitt
+KXPOLITICSMENTION-26NOV10-ALAS    15d   47/ 56 sp  9 f  2 v   1906 oi   1704 Mentions       What will Doug Burgum say during Daily Caller Live? | Alaska
+KXPOLITICSMENTION-26NOV10-CHIN    15d   49/ 55 sp  6 f  2 v    821 oi    761 Mentions       What will Doug Burgum say during Daily Caller Live? | China / Chinese
+KXEARNINGSMENTIONHIMS-26NOV02-WE   7d   54/ 65 sp 11 f  2 v    766 oi   1129 Mentions       What will Hims say during their next earnings call? | Wearable
+KXPOLITICSMENTION-26NOV10-NQE     15d    0/  1 sp  1 f  1 v    750 oi    750 Mentions       What will Doug Burgum say during Daily Caller Live? | Event does not q
+KXWORLDNEWSMENTION-26NOV09-POLA   14d   46/ 54 sp  8 f  2 v    727 oi    701 Mentions       What will the reporters say during ABC World News Tonight? | Poland / 
+KXADBEMENTION-26NOV10-NQE         15d    4/  5 sp  1 f  1 v    719 oi    117 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Eve
+KXNVDAMENTION-26DEC01-CHIN        36d   31/ 34 sp  3 f  2 v    695 oi    271 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXTHEWEEKNIGHTMENTION-26NOV09-TR  14d   49/ 55 sp  6 f  2 v    539 oi    557 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Trump
+KXBARRMENTION-26NOV12-AI          17d   83/ 86 sp  3 f  1 v    521 oi    506 Mentions       What will Fed Gov Barr say during his remarks at Yale? | AI / Artifici
+KXPOLITICSMENTION-26NOV10-AI      15d   42/ 51 sp  9 f  2 v    497 oi    379 Mentions       What will Doug Burgum say during Daily Caller Live? | AI / Artificial 
+KXMAMDANIMENTION-26NOV18-CHIL     23d   53/ 56 sp  3 f  2 v    486 oi   1473 Mentions       What will Mamdani say during NYT DealBook Summit? | Childcare / Child 
+KXMAMDANIMENTION-26NOV18-HOME     23d   72/ 74 sp  2 f  2 v    465 oi    697 Mentions       What will Mamdani say during NYT DealBook Summit? | Home / Housing
+KXMAMDANIMENTION-26NOV18-TRUM     23d   63/ 67 sp  4 f  2 v    444 oi    587 Mentions       What will Mamdani say during NYT DealBook Summit? | Trump / President
+KXWORLDNEWSMENTION-26NOV09-NVID   14d   79/ 93 sp 14 f  1 v    439 oi    439 Mentions       What will the reporters say during ABC World News Tonight? | Nvidia
+KXELLISONMENTION-26NOV18-AI       23d   53/ 61 sp  8 f  2 v    406 oi    131 Mentions       What will David Ellison say during NYT DealBook Summit? | AI / Artific
+KXTHEWEEKNIGHTMENTION-26NOV09-TA  14d   55/ 59 sp  4 f  2 v    400 oi    432 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Tariff
+KXEARNINGSMENTIONHIMS-26NOV02-AU   7d   84/ 90 sp  6 f  1 v    393 oi   1560 Mentions       What will Hims say during their next earnings call? | Australia
+KXMAMDANIMENTION-26NOV18-SAFE     23d   68/ 76 sp  8 f  2 v    378 oi    430 Mentions       What will Mamdani say during NYT DealBook Summit? | Safe / Safer / Saf
+KXTHEWEEKNIGHTMENTION-26NOV09-BA  14d   63/ 66 sp  3 f  2 v    348 oi    350 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Ballot
+KXNVDAMENTION-26DEC01-NQE         36d   33/ 38 sp  5 f  2 v    268 oi    238 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXNVDAMENTION-26DEC01-PHYS        36d   58/ 65 sp  7 f  2 v    267 oi    306 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXTHEWEEKNIGHTMENTION-26NOV09-RE  14d   57/ 61 sp  4 f  2 v    260 oi    281 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Republican
+KXWORLDNEWSMENTION-26NOV09-BIDE   14d   47/ 49 sp  2 f  2 v    260 oi    260 Mentions       What will the reporters say during ABC World News Tonight? | Biden
+KXMAMDANIMENTION-26NOV18-AI       23d   24/ 26 sp  2 f  2 v    254 oi    519 Mentions       What will Mamdani say during NYT DealBook Summit? | AI / Artificial In
+KXEARNINGSMENTIONHIMS-26NOV02-RE   7d    7/ 10 sp  3 f  1 v    253 oi    862 Mentions       What will Hims say during their next earnings call? | Regulation
+KXEARNINGSMENTIONNVDA-26NOV18-AU  23d   18/ 20 sp  2 f  2 v    253 oi    662 Mentions       What will NVIDIA say during their next earnings call? | Automation
+KXEARNINGSMENTIONHIMS-26NOV02-EU   7d   60/ 72 sp 12 f  2 v    235 oi    275 Mentions       What will Hims say during their next earnings call? | Europe
+KXMAMDANIMENTION-26NOV18-TAX      23d   52/ 58 sp  6 f  2 v    214 oi    819 Mentions       What will Mamdani say during NYT DealBook Summit? | Tax
+KXEARNINGSMENTIONHIMS-26NOV02-WE   7d   72/ 83 sp 11 f  1 v    207 oi    324 Mentions       What will Hims say during their next earnings call? | Wegovy
+KXVANCEMENTION-26NOV18-AI         23d   59/ 70 sp 11 f  2 v    203 oi    357 Mentions       What will JD Vance say during NYT DealBook Summit? | AI / Artificial I
+KXLASTWORDMENTION-26NOV09-UNCO    14d   29/ 38 sp  9 f  2 v    190 oi    187 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXMAMDANIMENTION-26NOV18-BILL     23d   14/ 17 sp  3 f  1 v    172 oi   2442 Mentions       What will Mamdani say during NYT DealBook Summit? | Billionaire
+KXELONMENTION-26NOV18-TRUM        23d   44/ 55 sp 11 f  2 v    172 oi   2362 Mentions       What will Elon Musk say during NYT DealBook Summit? | Trump
+KXTHEWEEKNIGHTMENTION-26NOV09-CO  14d   28/ 32 sp  4 f  2 v    166 oi    166 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Corrupt / Co
+KXEARNINGSMENTIONHIMS-26NOV02-ZA   7d   29/ 41 sp 12 f  2 v    162 oi    780 Mentions       What will Hims say during their next earnings call? | Zava
+KXMAMDANIMENTION-26NOV18-MIDT     23d   52/ 61 sp  9 f  2 v    158 oi    905 Mentions       What will Mamdani say during NYT DealBook Summit? | Midterm / Election
+KXMAMDANIMENTION-26NOV18-FREE     23d   12/ 17 sp  5 f  1 v    155 oi    335 Mentions       What will Mamdani say during NYT DealBook Summit? | Free Bus / Fast & 
+KXNVDAMENTION-26DEC01-BLUE        36d   12/ 24 sp 12 f  2 v    154 oi    210 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXEARNINGSMENTIONHIMS-26NOV02-PE   7d   95/100 sp  5 f  0 v    153 oi   2545 Mentions       What will Hims say during their next earnings call? | Peptide
+KXNVDAMENTION-26DEC01-OMNI        36d   56/ 61 sp  5 f  2 v    150 oi    323 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXEARNINGSMENTIONHIMS-26NOV02-TE   7d   98/100 sp  2 f  0 v    149 oi   4525 Mentions       What will Hims say during their next earnings call? | Testosterone
+KXPOLITICSMENTION-26NOV10-VENE    15d   24/ 25 sp  1 f  2 v    148 oi    148 Mentions       What will Doug Burgum say during Daily Caller Live? | Venezuela / Vene
+KXTHEWEEKNIGHTMENTION-26NOV09-SU  14d   15/ 19 sp  4 f  2 v    145 oi    145 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Supreme Cour
+KXNVDAMENTION-26DEC01-OPEN        36d   36/ 40 sp  4 f  2 v    143 oi    210 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXTHEWEEKNIGHTMENTION-26NOV09-BE  14d   17/ 19 sp  2 f  2 v    142 oi    139 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Beef / Prote
+KXLASTWORDMENTION-26NOV09-TARI    14d   34/ 38 sp  4 f  2 v    142 oi    142 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXEARNINGSMENTIONHIMS-26NOV02-MI   7d    2/  5 sp  3 f  1 v    139 oi    231 Mentions       What will Hims say during their next earnings call? | Microdose / Micr
+KXLASTWORDMENTION-26NOV09-ICE     14d   16/ 17 sp  1 f  1 v    135 oi    149 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXWORLDNEWSMENTION-26NOV09-POPE   14d   39/ 40 sp  1 f  2 v    133 oi    154 Mentions       What will the reporters say during ABC World News Tonight? | Pope Leo
+KXTHEWEEKNIGHTMENTION-26NOV09-GR  14d   24/ 28 sp  4 f  2 v    129 oi    129 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Grocery
+KXTHEWEEKNIGHTMENTION-26NOV09-HO  14d   18/ 22 sp  4 f  2 v    123 oi    130 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Hospital
+KXBURNHAMMENTION-26NOV04-TRUM      9d   24/ 36 sp 12 f  2 v    120 oi    654 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Trump
+KXVANCEMENTION-26NOV18-BIDE       23d   31/ 40 sp  9 f  2 v    110 oi    215 Mentions       What will JD Vance say during NYT DealBook Summit? | Biden
+KXNVDAMENTION-26DEC01-HERM        36d   56/ 64 sp  8 f  2 v    107 oi    165 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXBURNHAMMENTION-26NOV04-NHS       9d   49/ 61 sp 12 f  2 v    105 oi    727 Mentions       What will Andy Burnham say during Prime Minister's Questions? | NHS / 
+KXWORLDNEWSMENTION-26NOV09-IMPE   14d   70/ 71 sp  1 f  2 v    103 oi    104 Mentions       What will the reporters say during ABC World News Tonight? | Impeach /
+KXALTMANMENTION-26NOV18-CHIN      23d   37/ 48 sp 11 f  2 v    100 oi    200 Mentions       What will Sam Altman say during NYT DealBook Summit? | China / Chinese
+KXBARRMENTION-26NOV12-AFFO        17d   50/ 61 sp 11 f  2 v    100 oi    100 Mentions       What will Fed Gov Barr say during his remarks at Yale? | Afford / Affo
+KXEARNINGSMENTIONHIMS-26NOV02-EU   7d   87/ 96 sp  9 f  1 v     98 oi    401 Mentions       What will Hims say during their next earnings call? | Eucalyptus
+KXTHEWEEKNIGHTMENTION-26NOV09-SC  14d   13/ 17 sp  4 f  1 v     93 oi     93 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Schumer
+KXVANCEMENTION-26NOV18-HEAL       23d   29/ 40 sp 11 f  2 v     86 oi    128 Mentions       What will JD Vance say during NYT DealBook Summit? | Healthcare
+KXMAMDANIMENTION-26NOV18-IMMI     23d   19/ 23 sp  4 f  2 v     83 oi    183 Mentions       What will Mamdani say during NYT DealBook Summit? | Immigrant / Immigr
+KXVANCEMENTION-26NOV18-TARI       23d   29/ 40 sp 11 f  2 v     82 oi    228 Mentions       What will JD Vance say during NYT DealBook Summit? | Tariff
+KXTHEWEEKNIGHTMENTION-26NOV09-IR  14d   23/ 30 sp  7 f  2 v     82 oi    218 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Iran / Irani
+KXVANCEMENTION-26NOV18-TRUM       23d   65/ 76 sp 11 f  2 v     79 oi   1666 Mentions       What will JD Vance say during NYT DealBook Summit? | Trump (3+ times)
+KXMAMDANIMENTION-26NOV18-NYPD     23d   17/ 24 sp  7 f  2 v     77 oi    463 Mentions       What will Mamdani say during NYT DealBook Summit? | NYPD
+KXEARNINGSMENTIONNVDA-26NOV18-TA  23d    8/  9 sp  1 f  1 v     75 oi     88 Mentions       What will NVIDIA say during their next earnings call? | Tariff
+KXBURNHAMMENTION-26NOV04-BUDG      9d   59/ 70 sp 11 f  2 v     73 oi  10606 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Budget
+KXBURNHAMMENTION-26NOV04-NQE       9d    2/  3 sp  1 f  1 v     73 oi   2112 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Event 
+KXLASTWORDMENTION-26NOV09-OIL     14d   57/ 60 sp  3 f  2 v     71 oi     86 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXBURNHAMMENTION-26NOV04-EU        9d   55/ 64 sp  9 f  2 v     69 oi   4035 Mentions       What will Andy Burnham say during Prime Minister's Questions? | EU / E
+KXNVDAMENTION-26DEC01-TSMC        36d   38/ 50 sp 12 f  2 v     68 oi     60 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXBURNHAMMENTION-26NOV04-BENE      9d   55/ 65 sp 10 f  2 v     66 oi   7266 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Benefi
+KXNVDAMENTION-26DEC01-COSM        36d   39/ 52 sp 13 f  2 v     66 oi     72 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXVANCEMENTION-26NOV18-NUCL       23d   22/ 30 sp  8 f  2 v     65 oi    338 Mentions       What will JD Vance say during NYT DealBook Summit? | Nuclear
+KXVANCEMENTION-26NOV18-OIL        23d   55/ 70 sp 15 f  2 v     65 oi    259 Mentions       What will JD Vance say during NYT DealBook Summit? | Oil / Gas / Gasol
+KXNVDAMENTION-26DEC01-DSX         36d   12/ 28 sp 16 f  2 v     65 oi    108 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXLASTWORDMENTION-26NOV09-AFFO    14d   67/ 70 sp  3 f  2 v     65 oi     71 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXMAMDANIMENTION-26NOV18-NQE      23d    2/  3 sp  1 f  1 v     64 oi    490 Mentions       What will Mamdani say during NYT DealBook Summit? | Event does not qua
+KXVANCEMENTION-26NOV18-AMER       23d   33/ 42 sp  9 f  2 v     60 oi    204 Mentions       What will JD Vance say during NYT DealBook Summit? | America First
+KXADBEMENTION-26NOV10-ACRO        15d   48/ 49 sp  1 f  2 v     60 oi    139 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Acr
+KXWORLDNEWSMENTION-26NOV09-ICE    14d   19/ 30 sp 11 f  2 v     60 oi     63 Mentions       What will the reporters say during ABC World News Tonight? | ICE
+KXEARNINGSMENTIONHIMS-26NOV02-CA   7d   88/ 89 sp  1 f  1 v     58 oi    219 Mentions       What will Hims say during their next earnings call? | Canada / Canadia
+KXEARNINGSMENTIONHIMS-26NOV02-LA   7d   80/ 89 sp  9 f  1 v     57 oi   1885 Mentions       What will Hims say during their next earnings call? | Lab Testing
+KXEARNINGSMENTIONNVDA-26NOV18-RU  23d   92/ 95 sp  3 f  1 v     52 oi   2316 Mentions       What will NVIDIA say during their next earnings call? | Rubin (3+ time
+KXBURNHAMMENTION-26NOV04-IMMI      9d   35/ 47 sp 12 f  2 v     51 oi    850 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Immigr
+KXVANCEMENTION-26NOV18-WORK       23d   37/ 50 sp 13 f  2 v     51 oi    158 Mentions       What will JD Vance say during NYT DealBook Summit? | Working Class / M
+KXVANCEMENTION-26NOV18-DATA       23d   36/ 47 sp 11 f  2 v     50 oi    281 Mentions       What will JD Vance say during NYT DealBook Summit? | Data Center
+KXMSFTMENTION-26NOV17-OPEN        22d   36/ 45 sp  9 f  2 v     50 oi     79 Mentions       What will Satya Nadella say during Microsoft Ignite keynote? | OpenAI
+KXMSFTMENTION-26NOV17-ANTH        22d   34/ 45 sp 11 f  2 v     50 oi     50 Mentions       What will Satya Nadella say during Microsoft Ignite keynote? | Anthrop
+KXALTMANMENTION-26NOV18-AGI       23d   33/ 47 sp 14 f  2 v     49 oi    402 Mentions       What will Sam Altman say during NYT DealBook Summit? | AGI
+KXEARNINGSMENTIONNVDA-26NOV18-TR  23d    5/ 10 sp  5 f  1 v     48 oi    190 Mentions       What will NVIDIA say during their next earnings call? | Trump
+KXEARNINGSMENTIONNVDA-26NOV18-TS  23d   24/ 31 sp  7 f  2 v     48 oi    103 Mentions       What will NVIDIA say during their next earnings call? | TSMC
+KXVANCEMENTION-26NOV18-INFL       23d   42/ 53 sp 11 f  2 v     47 oi    173 Mentions       What will JD Vance say during NYT DealBook Summit? | Inflation
+KXLASTWORDMENTION-26NOV09-HEAL    14d   54/ 57 sp  3 f  2 v     47 oi     47 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXMAMDANIMENTION-26NOV18-BUDG     23d   39/ 48 sp  9 f  2 v     45 oi    271 Mentions       What will Mamdani say during NYT DealBook Summit? | Budget / Deficit
+KXBURNHAMMENTION-26NOV04-AI        9d   13/ 24 sp 11 f  2 v     43 oi    549 Mentions       What will Andy Burnham say during Prime Minister's Questions? | AI / A
+KXBURNHAMMENTION-26NOV04-TAX       9d   20/ 31 sp 11 f  2 v     43 oi    510 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Tax
+KXVANCEMENTION-26NOV18-FRAU       23d   58/ 62 sp  4 f  2 v     42 oi   2165 Mentions       What will JD Vance say during NYT DealBook Summit? | Fraud
+KXBURNHAMMENTION-26NOV04-BREX      9d   33/ 39 sp  6 f  2 v     42 oi    725 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Brexit
+KXVANCEMENTION-26NOV18-CHIN       23d   43/ 50 sp  7 f  2 v     42 oi    191 Mentions       What will JD Vance say during NYT DealBook Summit? | China / Chinese
+KXNVDAMENTION-26DEC01-TRUM        36d   38/ 49 sp 11 f  2 v     42 oi     55 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXLASTWORDMENTION-26NOV09-ISRA    14d   12/ 15 sp  3 f  1 v     40 oi     70 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXEARNINGSMENTIONNVDA-26NOV18-HY  23d   94/ 96 sp  2 f  1 v     37 oi   1875 Mentions       What will NVIDIA say during their next earnings call? | Hyperscaler
+KXEARNINGSMENTIONCOST-26DEC10-IN  45d   85/ 96 sp 11 f  1 v     37 oi    443 Mentions       What will Costco say during their next earnings call? | Inflation
+KXLASTWORDMENTION-26NOV09-CORR    14d   56/ 60 sp  4 f  2 v     37 oi     38 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXMAMDANIMENTION-26NOV18-WALL     23d   17/ 20 sp  3 f  2 v     36 oi    198 Mentions       What will Mamdani say during NYT DealBook Summit? | Wall Street
+KXWORLDNEWSMENTION-26NOV09-DOW    14d   29/ 39 sp 10 f  2 v     36 oi     65 Mentions       What will the reporters say during ABC World News Tonight? | Dow
+KXNVDAMENTION-26DEC01-HUMA        36d   34/ 36 sp  2 f  2 v     35 oi    777 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXWORLDNEWSMENTION-26NOV09-HEGS   14d   70/ 78 sp  8 f  2 v     35 oi     35 Mentions       What will the reporters say during ABC World News Tonight? | Hegseth
+KXLASTWORDMENTION-26NOV09-SUPR    14d   16/ 20 sp  4 f  2 v     34 oi     34 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXALTMANMENTION-26NOV18-DATA      23d   49/ 63 sp 14 f  2 v     33 oi   1119 Mentions       What will Sam Altman say during NYT DealBook Summit? | Data Center
+KXADBEMENTION-26NOV10-GENS        15d   28/ 35 sp  7 f  2 v     32 oi    118 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Gen
+KXADBEMENTION-26NOV10-GENER       15d   11/ 12 sp  1 f  1 v     32 oi     40 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Gen
+KXTHEWEEKNIGHTMENTION-26NOV09-EP  14d   11/ 15 sp  4 f  1 v     32 oi     32 Mentions       What will Scott Colom say during MS NOW: The Weeknight? | Epstein
+KXEARNINGSMENTIONNVDA-26NOV18-GA  23d   44/ 49 sp  5 f  2 v     31 oi   4280 Mentions       What will NVIDIA say during their next earnings call? | Gaming
+KXBURNHAMMENTION-26NOV04-REFO      9d   47/ 57 sp 10 f  2 v     31 oi    463 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Reform
+KXNVDAMENTION-26DEC01-TARI        36d    7/ 14 sp  7 f  1 v     31 oi     60 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXMAMDANIMENTION-26NOV18-LAND     23d   30/ 40 sp 10 f  2 v     31 oi     56 Mentions       What will Mamdani say during NYT DealBook Summit? | Landlord / Tenant
+KXNVDAMENTION-26DEC01-CROW        36d   19/ 33 sp 14 f  2 v     30 oi     93 Mentions       What will Jensen Huang say during NVIDIA GTC Washington, D.C. Keynote?
+KXLASTWORDMENTION-26NOV09-HEGS    14d   74/ 78 sp  4 f  2 v     30 oi     30 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXLASTWORDMENTION-26NOV09-STOC    14d   24/ 25 sp  1 f  2 v     29 oi     44 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXMAMDANIMENTION-26NOV18-AFFO     23d   81/ 86 sp  5 f  1 v     28 oi    758 Mentions       What will Mamdani say during NYT DealBook Summit? | Afford / Affordabl
+KXVANCEMENTION-26NOV18-2028       23d   53/ 63 sp 10 f  2 v     28 oi    208 Mentions       What will JD Vance say during NYT DealBook Summit? | 2028 / Campaign
+KXEARNINGSMENTIONHIMS-26NOV02-GA   7d    3/ 13 sp 10 f  1 v     28 oi    103 Mentions       What will Hims say during their next earnings call? | Galen
+KXBURNHAMMENTION-26NOV04-AFFO      9d   47/ 61 sp 14 f  2 v     27 oi    615 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Afford
+KXPOLITICSMENTION-26NOV10-LAWS    15d   24/ 35 sp 11 f  2 v     27 oi     27 Mentions       What will Doug Burgum say during Daily Caller Live? | Lawsuit / Litiga
+KXALTMANMENTION-26NOV18-SAFE      23d   89/ 91 sp  2 f  1 v     26 oi     54 Mentions       What will Sam Altman say during NYT DealBook Summit? | Safe / Safer / 
+KXADBEMENTION-26NOV10-DISN        15d    7/ 18 sp 11 f  2 v     26 oi     80 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Dis
+KXPOLITICSMENTION-26NOV10-AFFO    15d   51/ 64 sp 13 f  2 v     26 oi     26 Mentions       What will Doug Burgum say during Daily Caller Live? | Afford / Afforda
+KXVANCEMENTION-26NOV18-DEMO       23d   84/ 90 sp  6 f  1 v     25 oi   3949 Mentions       What will JD Vance say during NYT DealBook Summit? | Democrat
+KXLASTWORDMENTION-26NOV09-IRAN    14d   64/ 65 sp  1 f  2 v     25 oi     25 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXELONMENTION-26NOV18-MARS        23d   27/ 37 sp 10 f  2 v     24 oi     46 Mentions       What will Elon Musk say during NYT DealBook Summit? | Mars
+KXLASTWORDMENTION-26NOV09-NQE     14d    1/  2 sp  1 f  1 v     23 oi     23 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXELONMENTION-26NOV18-AI          23d   67/ 76 sp  9 f  2 v     21 oi   2569 Mentions       What will Elon Musk say during NYT DealBook Summit? | AI / Artificial 
+KXADBEMENTION-26NOV10-GENE        15d   58/ 67 sp  9 f  2 v     20 oi     28 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Gen
+KXBIEBERMENTION-26NOV18-ELF       23d   69/ 85 sp 16 f  1 v     18 oi   3276 Mentions       What will Hailey Bieber say during NYT DealBook Summit? | e.l.f. / Elf
+KXBURNHAMMENTION-26NOV04-RUSS      9d   55/ 66 sp 11 f  2 v     18 oi    205 Mentions       What will Andy Burnham say during Prime Minister's Questions? | Russia
+KXVLADTENEVMENTION-26NOV18-OPTI   23d   42/ 48 sp  6 f  2 v     18 oi     41 Mentions       What will Vlad Tenev say during NYT DealBook Summit? | Option
+KXLASTWORDMENTION-26NOV09-TRUM    14d   62/ 64 sp  2 f  2 v     18 oi     18 Mentions       What will Hakeem Jeffries say during The Last Word with Lawrence O'Don
+KXVANCEMENTION-26NOV18-IRAN       23d   61/ 62 sp  1 f  2 v     17 oi    178 Mentions       What will JD Vance say during NYT DealBook Summit? | Iran / Iranian
+KXELONMENTION-26NOV18-ROBO        23d   35/ 46 sp 11 f  2 v     17 oi     40 Mentions       What will Elon Musk say during NYT DealBook Summit? | Robotaxi / Cyber
+KXEARNINGSMENTIONHIMS-26NOV02-FD   7d   84/ 90 sp  6 f  1 v     16 oi    142 Mentions       What will Hims say during their next earnings call? | FDA
+KXADBEMENTION-26NOV10-PREM        15d   47/ 48 sp  1 f  2 v     16 oi     90 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | Pre
+KXMAMDANIMENTION-26NOV18-SOCI     23d   36/ 43 sp  7 f  2 v     15 oi    449 Mentions       What will Mamdani say during NYT DealBook Summit? | Socialist / Social
+KXADBEMENTION-26NOV10-NVID        15d    9/ 10 sp  1 f  1 v     15 oi     13 Mentions       What will Shantanu Narayen say during Adobe MAX Opening Keynote? | NVI
+KXLUCKEYMENTION-26NOV18-SUBM      23d   57/ 68 sp 11 f  2 v     14 oi    222 Mentions       What will Palmer Luckey say during NYT DealBook Summit? | Submarine
 
-GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator result can authorize a transition.
-
-=== SYSTEM / INTEGRITY ===
-    !! 1 unresolved integrity event(s) — affected experiments cannot be evaluated
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → liquidity-incentive-mm [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling-capacity [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: EXECUTION_ENGINE:shared_primary_ownership_20260921 → mmsell-price-ceiling-contest-cap [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:trumpmention_2026_10_27 → mmsell-price-ceiling-cell-size [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:trumpmention_2026_10_27 → mmsell-price-ceiling-size-split [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! UNRESOLVED PLATFORM IMPACT: MARKET_TAXONOMY:football_coverage_2026_10_12 → mmsell-type-tight [I2/NEW_EPOCH] status=accepted — its evidence is blocked until applied
-    !! PENDING REVISION EXECUTION_ENGINE:shared_primary_ownership_20260921 is NOT safe to activate — unaccounted: ['limm-paper-strategies', 'mmsell-mentions-forward', 'mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-3']
-    !! PENDING REVISION MARKET_TAXONOMY:football_coverage_2026_10_12 is NOT safe to activate — unaccounted: ['limm-paper-strategies', 'mmsell-mentions-forward', 'mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-3']
-    active deployments: 79 (grandfathered 13, native 66)
-
-=== OPEN INVESTIGATIONS ===
-    Durable Experiment OS issues. Ticket status is WORKFLOW state: it never changes a gate verdict,
-    a lifecycle state or a recorded result.
-    `recurring` = the anomaly is still being detected right now, not merely under investigation.
-    issue       severity  pri  classification  owner                   status           scope                                                              age    latest evidence                                             
-    ----------  --------  ---  --------------  ----------------------  ---------------  -----------------------------------------------------------------  -----  ------------------------------------------------------------
-    XOS-000020  HIGH      P1   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-capacity                                      65.3d  RESEARCH_DOCUMENT: NEGATIVE result recorded so it is not re-
-    XOS-000022  MEDIUM    P1   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  mmsell-price-ceiling · v2                                          64.6d  OPS_RESULT: First production run of the detector (post-merge
-    XOS-000038  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e2 · mmsell-sizesplit-live-1  36.2d  OPS_RESULT: 24h validation 2026-10-05T18Z (epoch 3, Jmmsell1
-    XOS-000040  MEDIUM    P1   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  31.2d  (no evidence recorded)                                      
-    XOS-000014  HIGH      P2   OPS             LIVE_OPS                OPEN             mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1               71.2d  OPS_RESULT: THIS PROBLEM IS ALREADY GONE, AND NOT BY OUR HAN
-    XOS-000015  HIGH      P2   OPS             LIVE_OPS                OPEN             system-wide                                                        70.3d  (no evidence recorded)                                      
-    XOS-000031  HIGH      P2   DATA            LIVE_OPS                OPEN             system-wide                                                        60.2d  RESEARCH_DOCUMENT: Population-scale reproduction of this iss
-    XOS-000008  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             revision:settlement_repair_2026_08_24                              77.2d  (no evidence recorded)                                      
-    XOS-000012  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        73.1d  (no evidence recorded)                                      
-    XOS-000013  MEDIUM    P2   DATA            LIVE_OPS                OPEN             mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1               72.9d  (no evidence recorded)                                      
-    XOS-000016  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-capacity                                      68.5d  (no evidence recorded)                                      
-    XOS-000019  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        67.0d  (no evidence recorded)                                      
-    XOS-000023  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN             mmsell-correlation-cap                                             64.6d  OPS_RESULT: False-positive check across all 30 active deploy
-    XOS-000024  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             mmsell-price-ceiling-contest-cap · v1 · live_canary_keep           64.3d  GATE_RESULT: CORRECTION - this ticket is NOT the same defect
-    XOS-000025  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             mmsell-scheduled-settle-live · v1 · live_canary_keep               64.3d  GATE_RESULT: VERIFIED against the recorded evaluator reasons
-    XOS-000026  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN             theta4-fat-tail · v1 · live_canary_keep                            64.3d  GATE_RESULT: VERIFIED against the recorded evaluator reasons
-    XOS-000027  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        64.2d  (no evidence recorded)                                      
-    XOS-000029  MEDIUM    P2   OPS             LIVE_OPS                OPEN             system-wide                                                        62.5d  (no evidence recorded)                                      
-    XOS-000032  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        59.9d  (no evidence recorded)                                      
-    XOS-000042  MEDIUM    P2   INTEGRITY       RESEARCH_LAB            OPEN             liquidity-incentive-mm                                             29.6d  (no evidence recorded)                                      
-    XOS-000045  MEDIUM    P2   DATA            LIVE_OPS                OPEN             system-wide                                                        28.8d  (no evidence recorded)                                      
-    XOS-000048  MEDIUM    P2   DATA            PLATFORM_CHANGE_REVIEW  ACTION_REQUIRED  system-wide                                                        3.6d   OPS_RESULT: Instrument check after PR #744 (acceptance check
-    XOS-000030  LOW       P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                                                        60.2d  OPS_RESULT: The defect is a FAMILY, not the two rows this is
-    XOS-000009  LOW       P3   STRATEGY        RESEARCH_LAB            TRIAGE           system-wide                                                        77.2d  RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog stud
-    XOS-000010  LOW       P3   OPS             LIVE_OPS                OPEN             system-wide                                                        76.8d  (no evidence recorded)                                      
-    XOS-000017  LOW       P3   UNCLASSIFIED    OPERATOR                OPEN             system-wide                                                        68.2d  (no evidence recorded)                                      
-    XOS-000039  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  31.2d  RESEARCH_DOCUMENT: Proposed lift criterion for KXITFMATCH on
-    XOS-000041  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             mmsell-price-ceiling-size-split · v1/e3 · mmsell-sizesplit-live-2  30.6d  (no evidence recorded)                                      
-    XOS-000043  LOW       P3   OPS             TASK_SPECIFIC           OPEN             system-wide                                                        29.1d  (no evidence recorded)                                      
-    XOS-000046  LOW       P3   STRATEGY        RESEARCH_LAB            VALIDATING       system-wide                                                        27.7d  RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog stud
-    XOS-000047  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN             system-wide                                                        26.7d  RESEARCH_DOCUMENT: MMSELL selection-bias audit (catalog stud
-    XOS-000020  Concentration caps key on event_ticker, but the unit of correlation is the GAME
-    XOS-000022  KXNFLSPREAD is a negative selection cell at the contest level, and it is graduated
-    XOS-000038  mmsell live mirror: paper-only position in a live-paused series consumes the contest cap
-    XOS-000040  mmsell successor cutover: new live tag stacks on markets the predecessor still holds
-    XOS-000014  31% of live entry orders rejected 'user_not_found' — 100% concentrated in MLB, ITF and BTCD series
-    XOS-000015  Worker crash-looped 16h51m on an invalid config set through the ops env transport
-    XOS-000031  paper_trades is not real-money P&L for a LIVE tag: never-filled orders inflate it
-    XOS-000008  Settlement-taxonomy coverage decays over a long-running experiment; there is no maintenance cadence
-    XOS-000012  Standing a live book down by naming a different one in LIVE_STRATEGIES is recorded as config drift, not stand-down
-    XOS-000013  live_fill_rate_pct reads 0% on a filling book: fills do not join to their live_orders row by kalshi_order_id
-    XOS-000016  A capacity-only successor is forced to re-prove a paper edge it does not change
-    XOS-000019  Evo service: LLM-provider payment failures (402) went unalerted for ~3 days
-    XOS-000023  An armed experiment collecting NOTHING was not a detectable condition
-    XOS-000024  live_canary_keep is BLOCKED_DATA
-    XOS-000025  live_canary_keep is BLOCKED_DATA
-    XOS-000026  live_canary_keep is BLOCKED_DATA
-    XOS-000027  A failing boot hook wedges the single-slot command transports with no receipt and no way to clear
-    XOS-000029  sync_twin_epoch cannot reopen a closed twin epoch, so any re-arm after any stand-down is invisible on the live dashboard
-    XOS-000032  Series with no manifest row inherit the nearest prefix row's state and sign-off
-    XOS-000042  Alimm1_pt3 twin P&L is invalid for the liquidity-incentive book
-    XOS-000045  Live held-position exposure never clears for a market whose settlement was not captured on its own UTC day
-    XOS-000048  Kalshi historical cutoff silently drops settled markets older than ~3 months from live /markets
-    XOS-000030  Two mmsell series are recorded under the wrong market taxonomy
-    XOS-000009  MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets
-    XOS-000010  Platform-command receipt metadata is invisible through the production ops logs channel
-    XOS-000017  Experiment OS cannot record an experiment that ran and finished outside it
-    XOS-000039  Size-split canary: real money paused on tennis (operator decision 2026-10-09)
-    XOS-000041  Size-split canary: real money paused on BTC daily price KXBTCD (operator decision 2026-10-10)
-    XOS-000043  kalshi_desk_board category-filter scan undersamples Economics-category markets
-    XOS-000046  Should MMSELL stop trading MLB totals and spreads? Live ledger negative across books
-    XOS-000047  Forward test: MMSELL tail edge on KXNFLTOTAL and KXITFMATCH (pre-registered 2026-10-14)
-
-=== UNTICKETED ANOMALIES ===
-    Anomalies above that NO open issue covers. Each is a ticket CANDIDATE — this report cannot open one
-    (it is read-only); hand off to the recommended owner, who ADOPTS it with `issue open-candidate <fingerprint>`.
-    Adoption, not `issue create`: only it carries the fingerprint printed under each anomaly, so the
-    ticket covers this anomaly instead of leaving it listed here forever.
-    The recommended owner is who looks FIRST. Where the classification reads UNCLASSIFIED, the cause is
-    genuinely not yet established — that is the honest state, not a gap to be filled in by guessing.
-    detector                              severity  pri  would-classify  recommended owner       scope                                             anomaly                                                 
-    ------------------------------------  --------  ---  --------------  ----------------------  ------------------------------------------------  --------------------------------------------------------
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm                            unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling                              unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-capacity                     unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-contest-cap                  unresolved platform impact EXECUTION_ENGINE:shared_prima
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-cell-size                    unresolved platform impact MARKET_TAXONOMY:trumpmention_
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-price-ceiling-size-split                   unresolved platform impact MARKET_TAXONOMY:trumpmention_
-    platform.unresolved_impact            HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight                                 unresolved platform impact MARKET_TAXONOMY:football_cove
-    platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                          pending revision EXECUTION_ENGINE:shared_primary_ownersh
-    platform.revision_unsafe_to_activate  HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  platform                                          pending revision MARKET_TAXONOMY:football_coverage_2026_
-    experiment.zero_evidence              LOW       P2   UNCLASSIFIED    LIVE_OPS                liquidity-incentive-mm                            liquidity-incentive-mm is deployed but has produced zero
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  mmsell-type-tight · paper_keep                    paper_keep is BLOCKED_PLATFORM                          
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · live_canary_keep         live_canary_keep is BLOCKED_PLATFORM                    
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · paper_to_live_smoke      paper_to_live_smoke is BLOCKED_PLATFORM                 
-    gate.blocked                          HIGH      P1   PLATFORM        PLATFORM_CHANGE_REVIEW  liquidity-incentive-mm · shadow_instrument_ready  shadow_instrument_ready is BLOCKED_PLATFORM             
-    liquidity-incentive-mm · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate d47a9ab01ade633efc6d327aa6bb84ed7a07ad276d95f19cbbad342be0d1164e
-    mmsell-price-ceiling · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate fffc2cf374b60c9f51fa5a88535a0009a4f9aa29e9da1f955df8837333a1d63d
-    mmsell-price-ceiling-capacity · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 55490bc2de37c5ad89fa2f928eaeafad3fba429e39db797c2c6e9938831c1bfc
-    mmsell-price-ceiling-contest-cap · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 4911378d3eada9ec00a49305aca26211a292fb167fdf24d501505683d36ba97d
-    mmsell-price-ceiling-cell-size · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate ef00fe2e174a2a763b62545b8e9165433c3c4d4cb6f0d8f2afc57f81e4154bdc
-    mmsell-price-ceiling-size-split · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 2238e5c4ac645cc2c41bc0f03fe98eb53544ecaf6786707f38efe0c4787371ea
-    mmsell-type-tight · platform.unresolved_impact: [I2/NEW_EPOCH] status=accepted — this experiment's evidence is blocked until it is applied
-        adopt: issue open-candidate 8886999aa6f5a61ee6a6e8fab62552faa019e4523111a287cfe0ad73c8e51734
-    platform · platform.revision_unsafe_to_activate: unaccounted: ['limm-paper-strategies', 'mmsell-mentions-forward', 'mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-3']
-        adopt: issue open-candidate 37ab767067d625f5eb4ba73f0bfc60b8b1ef2c808382288943a9975a843982b2
-    platform · platform.revision_unsafe_to_activate: unaccounted: ['limm-paper-strategies', 'mmsell-mentions-forward', 'mmsell-price-ceiling-cell-size-2', 'mmsell-win-set-3']
-        adopt: issue open-candidate 900af73b76a5b5217106c0c1f5ef0d31da03947f75ea23d93ddd2e4900d4d536
-    liquidity-incentive-mm · experiment.zero_evidence: cause unknown: broken runtime/config/wiring, enforcement rejection, filters eliminating every candidate, or genuinely no qualifying opportunities
-        adopt: issue open-candidate 0e41bfcb4a65f3d264d43dc1a0e9657dc5851c1d6f298d8afd2241011249cd9a
-    mmsell-type-tight · paper_keep · gate.blocked: MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 7392c28d0d65e74e9e405f0498da4cca1468c2e84f8efab675866a3da33ea3ed
-    liquidity-incentive-mm · live_canary_keep · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 9651f4a940296e2726757ad26b91e26887907fb323615a181135255cc8933790
-    liquidity-incentive-mm · paper_to_live_smoke · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 490b03042ad10396c6a912d125d9578e9b3bd54c5a298057b59849911132d3e3
-    liquidity-incentive-mm · shadow_instrument_ready · gate.blocked: EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        adopt: issue open-candidate 4425c49bedd08936d2d52c29f031af7a8962299f8883fe7830463bf2d7335a62
-
-=== IDEA (0) ===
-    (none)
-
-=== PROBE (1) ===
-    experiment             ver/epoch  treatment  n  c/trade  control c/trade  gate     last evidence
-    ---------------------  ---------  ---------  -  -------  ---------------  -------  -------------
-    limm-paper-strategies  v1/e1      S1         0  -        -                no gate  -            
-
-=== PAPER (7) ===
-    experiment                 ver/epoch  treatment       n     c/trade  control c/trade  gate              last evidence                   
-    -------------------------  ---------  --------------  ----  -------  ---------------  ----------------  --------------------------------
-    mmsell-correlation-cap     v1/e1      contest_capped  4509  1.29     1.10             none/NOT_STARTED  2026-11-09 18:02:06.946981+00:00
-    mmsell-mentions-forward    v1/e1      -               -     -        1.08             none/NOT_STARTED  2026-11-09 18:02:06.989222+00:00
-    mmsell-rain-season         v1/e1      rain_adjacent   78    8.03     3.84             none/NOT_STARTED  2026-11-09 10:49:58.543672+00:00
-    mmsell-temperature-season  v1/e1      -               -     -        0.75             none/NOT_STARTED  2026-11-09 18:32:33.648518+00:00
-    mmsell-type-tight          v1/e3      Tmmsell6        712   0.55     -                BLOCKED_PLATFORM  2026-11-09 18:01:52.154692+00:00
-    mmsell-weather-bands       v1/e1      hight_ultra     1196  1.46     0.80             none/NOT_STARTED  2026-11-09 18:32:30.655982+00:00
-    mmsell-wide-control        v1/e1      -               -     -        1.94             no gate           2026-11-09 18:31:47.288484+00:00
-
-=== LIVE_CANARY (3) ===
-    experiment                        live                     twin                     boundary  resting  held  at risk  gate            
-    --------------------------------  -----------------------  -----------------------  --------  -------  ----  -------  ----------------
-    liquidity-incentive-mm            limm-smoke-live-1        limm-smoke-twin-1        exact     8        6     $45.25   BLOCKED_PLATFORM
-    mmsell-price-ceiling-cell-size-2  mmsell-cellsize2-live-1  mmsell-cellsize2-twin-1  exact     0        4     $20.58   PASS            
-    mmsell-win-set-3                  mmsell-winset3-live-1    mmsell-winset3-twin-1    exact     0        4     $20.58   PASS            
-    `at risk` = resting-order notional + held-position exposure. A stood-down book drains its
-    resting orders within a cycle; its HELD positions do not go away and are still real money.
-
-=== PRODUCTION (0) ===
-    (none)
-
-=== PAUSED (1) ===
-    experiment       ver/epoch  treatment  n  c/trade  control c/trade  gate     last evidence
-    ---------------  ---------  ---------  -  -------  ---------------  -------  -------------
-    theta-tail-sell  -          -          -  -        -                no gate  -            
-
-=== BLOCKED EVIDENCE ===
-    An experiment can carry MORE THAN ONE blocker class. The evaluator's verdict and a proven contract
-    defect are independent: clearing one does not clear the other. Read every class listed for a book
-    before deciding what would unblock it.
-
-    EVALUATOR BLOCK — cause is the canonical evaluator's, not an inference. Do not attribute a block
-    to anything not named here.
-    mmsell-type-tight · paper_keep
-        BLOCKED_PLATFORM (recorded)
-            MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · pass_all clause 'delta.pnl_cents_per_trade': external control mmsell-price-ceiling/v2/e2/mmsell10 is pinned to a different platform snapshot and a cross-snapshot delta would pool incomparable evidence — MARKET_TAXONOMY differs (this epoch pins 'trumpmention_2026_10_27', the control pins 'settlement_repair_2026_08_24') and no APPLIED NO_ACTION/RECOMPUTE disposition licenses that transition for this epoch
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    liquidity-incentive-mm · live_canary_keep
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    liquidity-incentive-mm · paper_to_live_smoke
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-    liquidity-incentive-mm · shadow_instrument_ready
-        BLOCKED_PLATFORM (recorded)
-            EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        · EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale)
-        owner: Platform Change Review — evidence comparability across a platform revision is what is blocking
-
-=== REALIZABLE-PROJECTION CONTEXT ===
-    These gates decide on the live-fill projection, NOT on paper profitability. Both numbers are shown so the
-    verdict is read as the claim it is.
-    mmsell-price-ceiling-cell-size-2 · paper_to_live_canary  [promotion PAPER→LIVE_CANARY]
-        verdict: PASS (recorded)
-        mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10:  realizable projection +1.312c/trade  ·  observed paper +0.664c/trade  ·  calibration coverage 52/52 (calib 2026-08-11)
-        Interpretation: the gate is satisfied on the calibrated live-fill projection.
-        This is NOT a claim that observed paper P&L was positive.
-        Describe paper as: observed paper results are positive on every arm: +0.664c/trade on mmsell-price-ceiling-cell-size-2/v1/e2/mmsell10.
-
-=== DATA COLLECTORS ===
-    collector                 status  age_min  cadence
-    ------------------------  ------  -------  -------
-    weather_forecasts         fresh   0.30     15     
-    weather_observations      fresh   1.90     15     
-    weather_ensembles         fresh   23       60     
-    weather_bucket_snapshots  fresh   1.90     5      
-    crypto_spot_candles       fresh   6.20     5      
-    crypto_ladder_snapshots   fresh   5.10     5      
-    mmsell_position_ticks     fresh   0.30     5      
-
-    NOT ACTIVE IN THIS DEPLOYMENT (no data for >7d) — informational, NOT an outage:
-        market_snapshots: INACTIVE, last write 154.2d ago — scanner-mode table; the live worker does not write it
-
-    COLLECTOR LEGEND: fresh = running normally · STALE = overdue, may be stalled · EMPTY = no rows · UNAVAILABLE = table absent ·
-    INACTIVE = not expected to be active in the current deployment.
-    Only STALE / EMPTY / UNAVAILABLE warrant collector-health investigation (Live Ops). INACTIVE is informational and is never, on its
-    own, the cause of a blocked gate — see BLOCKED EVIDENCE for the evaluator's actual reasons.
-
-=== PORTFOLIO (north star: $100/month realized) ===
-    PAPER realized 30d: $4365.53  (all-time $10327.64)  → AHEAD by $4265.53
-    Paper assumes fills it would not always get; the north star is REAL money. Live realized is per-canary — see `mmsell_live` / `live_paper_parity`.
-
-=== READY / DUE ===
-    - BLOCKED_PLATFORM mmsell-type-tight · paper_keep — MARKET_TAXONOMY:football_coverage_2026_10_12 impact #19 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM liquidity-incentive-mm · live_canary_keep — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM liquidity-incentive-mm · paper_to_live_smoke — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - BLOCKED_PLATFORM liquidity-incentive-mm · shadow_instrument_ready — EXECUTION_ENGINE:shared_primary_ownership_20260921 impact #10 is ACCEPTED (I2/NEW_EPOCH) but not APPLIED — apply the disposition (or exempt it with rationale) — this experiment's numbers cannot be interpreted until it clears
-    - GATE PASS (RECORDED, system @ 2026-11-09 13:14:02.230200+00:00) mmsell-price-ceiling-cell-size-2 · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
-    - GATE PASS (RECORDED, system @ 2026-11-09 16:23:44.083944+00:00) mmsell-win-set-3 · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
-
-=== RECENTLY RETIRED — last 7 days ===
-    Dated by the experiment's retired_at (when the book actually died), not by when its record was written.
-    (none retired in the last 7 days)
-    5 retired record(s) carry NO retired_at — undated legacy history, not recent: live-shape-probe, origin-scanner-books, wcprop, weather-legacy-cells, xgame
-
-=== RECOMMENDED NEXT ACTIONS ===
-    - blocked evidence — liquidity-incentive-mm·live_canary_keep, liquidity-incentive-mm·paper_to_live_smoke, liquidity-incentive-mm·shadow_instrument_ready, mmsell-type-tight·paper_keep → Platform Change Review — evidence comparability across a platform revision is what is blocking
-    - unresolved platform-impact dispositions — Platform Change Review
-    - liquidity-incentive-mm: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-capacity: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-contest-cap: unresolved platform impact EXECUTION_ENGINE:shared_primary_ownership_20260921 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-cell-size: unresolved platform impact MARKET_TAXONOMY:trumpmention_2026_10_27 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-price-ceiling-size-split: unresolved platform impact MARKET_TAXONOMY:trumpmention_2026_10_27 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-type-tight: unresolved platform impact MARKET_TAXONOMY:football_coverage_2026_10_12 — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - platform: pending revision EXECUTION_ENGINE:shared_primary_ownership_20260921 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - platform: pending revision MARKET_TAXONOMY:football_coverage_2026_10_12 is not safe to activate — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm: liquidity-incentive-mm is deployed but has produced zero evidence — NO open issue covers this; recommended owner LIVE_OPS [UNCLASSIFIED/LOW/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - mmsell-type-tight · paper_keep: paper_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · live_canary_keep: live_canary_keep is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · paper_to_live_smoke: paper_to_live_smoke is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - liquidity-incentive-mm · shadow_instrument_ready: shadow_instrument_ready is BLOCKED_PLATFORM — NO open issue covers this; recommended owner PLATFORM_CHANGE_REVIEW [PLATFORM/HIGH/P1]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-
-Control Tower is READ ONLY. Route the write by what is actually blocking:
-    BLOCKED_DATA (missing metric provider / analysis / evidence transform) → Research Lab or task-specific Experiment OS metrics work.
-        This is NOT automatically a Platform Revision.
-    BLOCKED_PLATFORM → Platform Change Review (evidence comparability across a revision).
-    BLOCKED_INTEGRITY → by cause: runtime/live/collector → Live Ops; shared semantic or config → Platform Change Review;
-        experiment definition or evidence contract → Research Lab.
-    New hypothesis or successor experiment → Research Lab.
-    Recommend Platform Change Review only when shared platform semantics actually changed or need to change.
+# by category (kept markets, 24h volume)
+  Mentions                     n=455   vol24=32617
