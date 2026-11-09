@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "4ff5e18c518e50acc2d7967c44792938aca30312",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-09T19:39:46Z",
+  "id": "rl-mt-wn05-oil",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-mt-wn05-oil.receipt.json",
+  "result_file": "ops/results/rl-mt-wn05-oil.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42685461030",
+  "service": null,
+  "started_at": "2026-11-09T19:39:45Z",
+  "targets": [],
+  "type": "script"
+}
