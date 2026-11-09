@@ -141,6 +141,12 @@ CONFIRMED_REWARD_PAYOUTS: tuple[tuple[str, int, str], ...] = (
     # "Highest daily view count (November 2026)" -> the 26DEC-ticketed market, as October
     # programs mapped to 26NOV above.
     ("2026-11-08", 431, "KXYTVIEWSHIGH-OLI26DEC"),
+    # Operator screenshot 2026-11-09 (lifetime $113.86, Nov 2026 $27.94): four more
+    # "(November 2026)" programs on the 26DEC-ticketed markets.
+    ("2026-11-09", 131, "KXYTVIEWSHIGH-JUS26DEC"),
+    ("2026-11-09", 110, "KXYTVIEWSHIGH-BAD26DEC"),
+    ("2026-11-09", 218, "KXYTVIEWSHIGH-DRA26DEC"),
+    ("2026-11-09", 101, "KXYTVIEWSHIGH-TAY26DEC"),
 )
 
 
