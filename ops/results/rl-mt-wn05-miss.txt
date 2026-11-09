@@ -1,0 +1,313 @@
+# ops request [READ]
+# type=script  id=rl-mt-wn05-miss
+# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T19:42:56Z
+# market KXWORLDNEWSMENTION-26NOV05-MISS — 2026-11-09T19:42:56+00:00
+  title      What will the reporters say during ABC World News Tonight?
+  outcome    Mississippi / Alaska
+  category   Mentions   series KXWORLDNEWSMENTION   event KXWORLDNEWSMENTION-26NOV05
+  status     finalized   close 2026-11-06T00:10:04Z   (-91.5h)   tier live
+  result     yes
+  expiration 2026-11-19T15:00:00Z   strike custom floor=None cap=None
+  yes bid/ask   0/100   no bid/ask   0/100   spread 100   last  99
+  volume 3166   vol24 0   open interest 2008   liquidity -
+  YES ask is 100c (no live book) — market is closed/expired, not tradeable
+  NO  ask is 100c (no live book) — market is closed/expired, not tradeable
+
+  RULES (primary):
+    If 
+     any host or reporter says Mississippi / Alaska as part of ABC World News Tonight originally scheduled for November 5, 2026
+    , then the market resolves to Yes.
+  RULES (secondary):
+    Video of the ABC World News Tonight originally scheduled for November 5, 2026 will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, internal & external (official) transcripts of the ABC World News Tonight originally scheduled for November 5, 2026 will be used.
+    
+    Payout Criterion: 
+    The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included. 
+    Plural nouns occurring within proper nouns and noun phrases (e.g. names, titles, etc) are included.
+    For the purpose of this market, the live broadcast or stream will be used to resolve this event. 
+    Additional content not included in the original broadcast or stream will not count. 
+    Promotional content aired during the event will count, but advertisements will not. 
+    For the purpose of this market, the entirety of content within the original broadcast will be used for resolution.
+    Please see full rules for more details.
+    
+    Postponement:
+    If the event is postponed, and such a postponement is announced by the end of the following calendar day to be rescheduled to a time within 14 calendar days, the markets shall remain open.
+
+  BOOK (resting bids; a NO bid at p is a YES offer at 100-p)  depth 2
+    (empty — response keys: ['orderbook_fp']; book keys: ['no_dollars', 'yes_dollars'])
+    YES bids           NO bids
+
+  LAST 274 TRADES (newest first)
+    2026-11-05T23:56:20  yes  99c  x93    taker=no
+    2026-11-05T23:47:24  yes  99c  x29    taker=no
+    2026-11-05T23:41:56  yes  99c  x2     taker=no
+    2026-11-05T23:39:49  yes  99c  x84    taker=no
+    2026-11-05T23:39:49  yes  99c  x8     taker=no
+    2026-11-05T23:38:56  yes  99c  x9     taker=no
+    2026-11-05T23:38:56  yes  99c  x114   taker=no
+    2026-11-05T23:38:51  yes  99c  x3     taker=yes
+    2026-11-05T23:38:51  yes  99c  x7     taker=yes
+    2026-11-05T23:38:51  yes  99c  x1     taker=yes
+    2026-11-05T23:38:51  yes  99c  x2     taker=yes
+    2026-11-05T23:38:51  yes  99c  x1     taker=yes
+    2026-11-05T23:38:51  yes  98c  x15    taker=yes
+    2026-11-05T23:38:51  yes  99c  x9     taker=yes
+    2026-11-05T23:38:51  yes  98c  x15    taker=yes
+    2026-11-05T23:38:51  yes  97c  x1     taker=yes
+    2026-11-05T23:38:51  yes  98c  x1     taker=yes
+    2026-11-05T23:38:51  yes  99c  x82    taker=yes
+    2026-11-05T23:38:51  yes  97c  x15    taker=yes
+    2026-11-05T23:38:50  yes  97c  x16    taker=yes
+    2026-11-05T23:38:50  yes  97c  x0     taker=yes
+    2026-11-05T23:38:50  yes  92c  x15    taker=yes
+    2026-11-05T23:38:50  yes  41c  x3     taker=yes
+    2026-11-05T23:38:50  yes  93c  x10    taker=yes
+    2026-11-05T23:38:49  yes  79c  x48    taker=yes
+    2026-11-05T23:38:49  yes  83c  x38    taker=yes
+    2026-11-05T23:38:49  yes  90c  x40    taker=yes
+    2026-11-05T23:38:49  yes  85c  x15    taker=yes
+    2026-11-05T23:38:49  yes  92c  x1     taker=yes
+    2026-11-05T23:38:49  yes  83c  x1     taker=yes
+    2026-11-05T23:38:49  yes  44c  x15    taker=yes
+    2026-11-05T23:38:49  yes  79c  x1     taker=yes
+    2026-11-05T23:38:49  yes  43c  x20    taker=yes
+    2026-11-05T23:38:49  yes  79c  x1     taker=yes
+    2026-11-05T23:38:49  yes  50c  x10    taker=yes
+    2026-11-05T23:38:49  yes  58c  x10    taker=yes
+    2026-11-05T23:38:49  yes  43c  x14    taker=yes
+    2026-11-05T23:38:49  yes  80c  x9     taker=yes
+    2026-11-05T23:38:49  yes  82c  x9     taker=yes
+    2026-11-05T23:38:49  yes  81c  x9     taker=yes
+    2026-11-05T23:38:36  yes  15c  x5     taker=yes
+    2026-11-05T23:38:36  yes  16c  x1     taker=yes
+    2026-11-05T23:38:22  yes  26c  x1     taker=yes
+    2026-11-05T23:38:22  yes  25c  x5     taker=yes
+    2026-11-05T23:38:19  yes  28c  x1     taker=no
+    2026-11-05T23:38:19  yes  29c  x12    taker=no
+    2026-11-05T23:38:00  yes  45c  x5     taker=yes
+    2026-11-05T23:38:00  yes  45c  x20    taker=yes
+    2026-11-05T23:38:00  yes  49c  x4     taker=yes
+    2026-11-05T23:38:00  yes  46c  x1     taker=yes
+    2026-11-05T23:37:50  yes  57c  x1     taker=no
+    2026-11-05T23:37:44  yes  67c  x7     taker=yes
+    2026-11-05T23:37:43  yes  46c  x15    taker=no
+    2026-11-05T23:37:43  yes  47c  x10    taker=no
+    2026-11-05T23:37:35  yes  80c  x5     taker=yes
+    2026-11-05T23:37:35  yes  81c  x0     taker=yes
+    2026-11-05T23:37:35  yes  81c  x0     taker=yes
+    2026-11-05T23:37:21  yes  46c  x2     taker=yes
+    2026-11-05T23:37:21  yes  45c  x5     taker=yes
+    2026-11-05T23:37:17  yes  26c  x2     taker=yes
+    2026-11-05T23:37:17  yes  25c  x5     taker=yes
+    2026-11-05T23:37:08  yes  31c  x7     taker=no
+    2026-11-05T23:37:08  yes  30c  x2     taker=no
+    2026-11-05T23:36:14  yes  30c  x1     taker=no
+    2026-11-05T23:36:08  yes  51c  x3     taker=yes
+    2026-11-05T23:36:08  yes  28c  x5     taker=yes
+    2026-11-05T23:36:08  yes  29c  x5     taker=yes
+    2026-11-05T23:36:08  yes  30c  x16    taker=yes
+    2026-11-05T23:36:07  yes  29c  x1     taker=yes
+    2026-11-05T23:36:05  yes  30c  x3     taker=yes
+    2026-11-05T23:36:05  yes  30c  x12    taker=yes
+    2026-11-05T23:35:55  yes  21c  x27    taker=no
+    2026-11-05T23:35:53  yes  32c  x7     taker=yes
+    2026-11-05T23:35:53  yes  28c  x5     taker=yes
+    2026-11-05T23:35:53  yes  27c  x6     taker=yes
+    2026-11-05T23:35:53  yes  31c  x2     taker=yes
+    2026-11-05T23:35:42  yes  35c  x5     taker=yes
+    2026-11-05T23:35:09  yes  54c  x7     taker=yes
+    2026-11-05T23:35:08  yes  26c  x6     taker=no
+    2026-11-05T23:35:08  yes  25c  x44    taker=no
+    2026-11-05T23:35:04  yes  25c  x10    taker=no
+    2026-11-05T23:35:04  yes  27c  x8     taker=no
+    2026-11-05T23:35:04  yes  26c  x2     taker=no
+    2026-11-05T23:35:04  yes  27c  x7     taker=no
+    2026-11-05T23:35:04  yes  28c  x3     taker=no
+    2026-11-05T23:35:03  yes  25c  x10    taker=no
+    2026-11-05T23:35:03  yes  57c  x10    taker=no
+    2026-11-05T23:34:52  yes  77c  x4     taker=yes
+    2026-11-05T23:34:52  yes  78c  x2     taker=yes
+    2026-11-05T23:34:20  yes  72c  x1     taker=yes
+    2026-11-05T23:34:12  yes  75c  x0     taker=yes
+    2026-11-05T23:32:54  yes  39c  x3     taker=yes
+    2026-11-05T23:32:54  yes  43c  x5     taker=yes
+    2026-11-05T23:32:54  yes  38c  x5     taker=yes
+    2026-11-05T23:32:54  yes  67c  x10    taker=yes
+    2026-11-05T23:31:56  yes  26c  x0     taker=no
+    2026-11-05T23:31:56  yes  25c  x77    taker=no
+    2026-11-05T23:31:56  yes  86c  x10    taker=no
+    2026-11-05T23:31:56  yes  84c  x6     taker=no
+    2026-11-05T23:31:56  yes  85c  x5     taker=no
+    2026-11-05T23:31:56  yes  74c  x0     taker=no
+    2026-11-05T23:31:53  yes  92c  x10    taker=no
+    2026-11-05T23:30:56  yes  98c  x1     taker=yes
+    2026-11-05T23:30:56  yes  98c  x1     taker=yes
+    2026-11-05T23:30:56  yes  99c  x5     taker=yes
+    2026-11-05T23:30:44  yes  97c  x1     taker=yes
+    2026-11-05T23:30:24  yes  96c  x1     taker=yes
+    2026-11-05T23:29:08  yes  93c  x2     taker=no
+    2026-11-05T23:28:15  yes  96c  x1     taker=yes
+    2026-11-05T23:28:11  yes  93c  x0     taker=no
+    2026-11-05T23:28:06  yes  95c  x5     taker=yes
+    2026-11-05T23:27:39  yes  94c  x75    taker=no
+    2026-11-05T23:27:39  yes  93c  x44    taker=no
+    2026-11-05T23:27:39  yes  94c  x14    taker=no
+    2026-11-05T23:16:52  yes  96c  x25    taker=yes
+    2026-11-05T23:14:38  yes  93c  x6     taker=no
+    2026-11-05T23:13:53  yes  93c  x2     taker=no
+    2026-11-05T23:12:13  yes  96c  x5     taker=yes
+    2026-11-05T23:06:00  yes  95c  x0     taker=yes
+    2026-11-05T23:03:04  yes  96c  x0     taker=yes
+    2026-11-05T23:01:07  yes  96c  x5     taker=yes
+    2026-11-05T23:01:07  yes  96c  x5     taker=yes
+    2026-11-05T23:01:07  yes  96c  x2     taker=yes
+    2026-11-05T23:01:07  yes  96c  x5     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T23:01:07  yes  96c  x4     taker=yes
+    2026-11-05T22:55:42  yes  96c  x2     taker=yes
+    2026-11-05T22:51:28  yes  96c  x3     taker=yes
+    2026-11-05T22:51:02  yes  97c  x1     taker=yes
+    2026-11-05T22:49:33  yes  96c  x1     taker=yes
+    2026-11-05T22:49:01  yes  96c  x3     taker=yes
+    2026-11-05T22:42:51  yes  93c  x25    taker=no
+    2026-11-05T22:40:38  yes  92c  x111   taker=no
+    2026-11-05T22:40:38  yes  93c  x59    taker=no
+    2026-11-05T22:40:38  yes  94c  x95    taker=no
+    2026-11-05T22:34:41  yes  92c  x1     taker=no
+    2026-11-05T22:31:54  yes  97c  x15    taker=yes
+    2026-11-05T22:31:54  yes  94c  x2     taker=yes
+    2026-11-05T22:31:54  yes  97c  x1     taker=yes
+    2026-11-05T22:31:54  yes  97c  x2     taker=yes
+    2026-11-05T22:30:24  yes  92c  x23    taker=no
+    2026-11-05T22:27:30  yes  93c  x8     taker=yes
+    2026-11-05T22:23:39  yes  94c  x1     taker=yes
+    2026-11-05T22:23:00  yes  93c  x23    taker=no
+    2026-11-05T22:23:00  yes  92c  x3     taker=no
+    2026-11-05T22:21:55  yes  93c  x20    taker=no
+    2026-11-05T22:14:28  yes  93c  x6     taker=no
+    2026-11-05T22:14:08  yes  96c  x6     taker=no
+    2026-11-05T22:13:25  yes  97c  x1     taker=yes
+    2026-11-05T22:10:34  yes  92c  x19    taker=yes
+    2026-11-05T22:10:34  yes  96c  x116   taker=yes
+    2026-11-05T22:10:34  yes  96c  x9     taker=yes
+    2026-11-05T21:57:33  yes  94c  x5     taker=yes
+    2026-11-05T21:54:05  yes  97c  x15    taker=yes
+    2026-11-05T21:54:05  yes  97c  x258   taker=yes
+    2026-11-05T21:54:05  yes  97c  x50    taker=yes
+    2026-11-05T21:54:05  yes  96c  x25    taker=yes
+    2026-11-05T21:54:05  yes  96c  x2     taker=yes
+    2026-11-05T21:41:51  yes  95c  x2     taker=yes
+    2026-11-05T21:41:51  yes  95c  x100   taker=yes
+    2026-11-05T21:41:51  yes  95c  x1     taker=yes
+    2026-11-05T21:14:12  yes  93c  x1     taker=yes
+    2026-11-05T21:11:09  yes  94c  x9     taker=yes
+    2026-11-05T21:11:09  yes  93c  x5     taker=yes
+    2026-11-05T21:11:09  yes  94c  x2     taker=yes
+    2026-11-05T21:11:09  yes  94c  x12    taker=yes
+    2026-11-05T21:11:09  yes  95c  x3     taker=yes
+    2026-11-05T21:02:01  yes  94c  x0     taker=yes
+    2026-11-05T21:01:02  yes  94c  x1     taker=yes
+    2026-11-05T21:01:02  yes  94c  x2     taker=yes
+    2026-11-05T20:47:04  yes  89c  x1     taker=no
+    2026-11-05T20:35:40  yes  92c  x1     taker=yes
+    2026-11-05T20:21:50  yes  94c  x0     taker=yes
+    2026-11-05T20:21:50  yes  93c  x5     taker=yes
+    2026-11-05T20:21:28  yes  93c  x2     taker=yes
+    2026-11-05T20:19:43  yes  94c  x13    taker=yes
+    2026-11-05T20:19:43  yes  91c  x2     taker=yes
+    2026-11-05T20:19:43  yes  94c  x6     taker=yes
+    2026-11-05T20:19:43  yes  92c  x2     taker=yes
+    2026-11-05T20:19:43  yes  91c  x5     taker=yes
+    2026-11-05T20:19:43  yes  93c  x15    taker=yes
+    2026-11-05T20:19:43  yes  90c  x5     taker=yes
+    2026-11-05T20:14:23  yes  89c  x0     taker=yes
+    2026-11-05T20:13:07  yes  83c  x0     taker=no
+    2026-11-05T20:13:07  yes  83c  x27    taker=no
+    2026-11-05T20:13:07  yes  86c  x2     taker=no
+    2026-11-05T20:13:07  yes  90c  x1     taker=no
+    2026-11-05T20:10:31  yes  91c  x1     taker=yes
+    2026-11-05T20:04:25  yes  91c  x7     taker=yes
+    2026-11-05T20:02:59  yes  91c  x2     taker=yes
+    2026-11-05T20:02:59  yes  88c  x5     taker=yes
+    2026-11-05T19:53:41  yes  87c  x2     taker=yes
+    2026-11-05T19:53:41  yes  87c  x60    taker=yes
+    2026-11-05T19:50:43  yes  86c  x2     taker=yes
+    2026-11-05T19:50:07  yes  87c  x25    taker=yes
+    2026-11-05T19:50:07  yes  86c  x10    taker=yes
+    2026-11-05T19:49:24  yes  86c  x1     taker=yes
+    2026-11-05T19:46:46  yes  90c  x15    taker=yes
+    2026-11-05T19:46:46  yes  89c  x2     taker=yes
+    2026-11-05T19:46:46  yes  88c  x5     taker=yes
+    2026-11-05T19:43:53  yes  84c  x30    taker=yes
+    2026-11-05T19:43:34  yes  82c  x1     taker=no
+    2026-11-05T19:39:03  yes  93c  x0     taker=yes
+    2026-11-05T19:39:03  yes  92c  x5     taker=yes
+    2026-11-05T19:33:43  yes  93c  x1     taker=yes
+    2026-11-05T19:33:43  yes  92c  x1     taker=yes
+    2026-11-05T19:33:43  yes  91c  x1     taker=yes
+    2026-11-05T19:33:43  yes  93c  x2     taker=yes
+    2026-11-05T19:33:43  yes  94c  x0     taker=yes
+    2026-11-05T19:33:35  yes  91c  x0     taker=yes
+    2026-11-05T19:33:35  yes  90c  x5     taker=yes
+    2026-11-05T19:29:35  yes  92c  x5     taker=yes
+    2026-11-05T19:24:42  yes  87c  x0     taker=yes
+    2026-11-05T19:13:42  yes  86c  x5     taker=yes
+    2026-11-05T19:13:42  yes  87c  x2     taker=yes
+    2026-11-05T19:13:42  yes  90c  x2     taker=yes
+    2026-11-05T19:13:42  yes  91c  x11    taker=yes
+    2026-11-05T19:13:42  yes  94c  x0     taker=yes
+    2026-11-05T19:13:32  yes  86c  x3     taker=yes
+    2026-11-05T19:09:59  yes  86c  x2     taker=yes
+    2026-11-05T19:09:59  yes  91c  x1     taker=yes
+    2026-11-05T19:09:59  yes  85c  x5     taker=yes
+    2026-11-05T19:09:59  yes  90c  x2     taker=yes
+    2026-11-05T19:08:36  yes  78c  x2     taker=yes
+    2026-11-05T19:08:36  yes  76c  x0     taker=yes
+    2026-11-05T19:08:36  yes  86c  x3     taker=yes
+    2026-11-05T19:08:36  yes  81c  x5     taker=yes
+    2026-11-05T19:08:36  yes  80c  x1     taker=yes
+    2026-11-05T19:08:36  yes  78c  x19    taker=yes
+    2026-11-05T19:03:15  yes  76c  x2     taker=yes
+    2026-11-05T19:01:34  yes  77c  x2     taker=yes
+    2026-11-05T19:01:33  yes  76c  x5     taker=yes
+    2026-11-05T19:01:31  yes  76c  x5     taker=yes
+    2026-11-05T19:01:28  yes  74c  x10    taker=yes
+    2026-11-05T19:01:28  yes  75c  x4     taker=yes
+    2026-11-05T18:56:16  yes  93c  x0     taker=yes
+    2026-11-05T18:56:16  yes  80c  x5     taker=yes
+    2026-11-05T18:56:16  yes  89c  x2     taker=yes
+    2026-11-05T18:56:16  yes  88c  x1     taker=yes
+    2026-11-05T18:56:16  yes  91c  x15    taker=yes
+    2026-11-05T18:56:16  yes  90c  x1     taker=yes
+    2026-11-05T18:56:16  yes  90c  x24    taker=yes
+    2026-11-05T18:54:57  yes  88c  x5     taker=yes
+    2026-11-05T18:54:13  yes  88c  x7     taker=yes
+    2026-11-05T18:54:13  yes  83c  x9     taker=yes
+    2026-11-05T18:54:13  yes  87c  x1     taker=yes
+    2026-11-05T18:54:13  yes  85c  x10    taker=yes
+    2026-11-05T18:54:13  yes  84c  x2     taker=yes
+    2026-11-05T18:54:13  yes  81c  x5     taker=yes
+    2026-11-05T18:54:13  yes  82c  x5     taker=yes
+    2026-11-05T18:53:22  yes  83c  x8     taker=yes
+    2026-11-05T18:53:18  yes  78c  x5     taker=yes
+    2026-11-05T18:53:18  yes  79c  x5     taker=yes
+    2026-11-05T18:53:18  yes  83c  x13    taker=yes
+    2026-11-05T18:52:22  yes  80c  x5     taker=yes
+    2026-11-05T18:52:22  yes  81c  x2     taker=yes
+    2026-11-05T18:52:22  yes  82c  x12    taker=yes
+    2026-11-05T18:52:22  yes  83c  x19    taker=yes
+    2026-11-05T18:50:29  yes  75c  x1     taker=yes
+    2026-11-05T18:50:29  yes  74c  x5     taker=yes
+    2026-11-05T18:50:29  yes  81c  x0     taker=yes
+    2026-11-05T18:50:29  yes  82c  x11    taker=yes
+    2026-11-05T18:50:06  yes  75c  x5     taker=yes
+    2026-11-05T18:50:06  yes  81c  x3     taker=yes
+    2026-11-05T18:50:06  yes  76c  x10    taker=yes
+    2026-11-05T18:49:34  yes  73c  x18    taker=yes
+    2026-11-05T18:49:34  yes  75c  x10    taker=yes
+    2026-11-05T18:49:34  yes  72c  x5     taker=yes
+    2026-11-05T18:49:30  yes  55c  x5     taker=yes
+    2026-11-05T18:49:30  yes  56c  x5     taker=yes
