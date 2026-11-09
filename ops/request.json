@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_probe","args":["KXEARNINGSMENTIONHIMS-26NOV02","KXBURNHAMMENTION-26NOV04"],"id":"rl-mention-ev-1"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXBURNHAMMENTION-26NOV04-BUDG","--trades","1000","--depth","4"],"id":"rl-mt-kxburnhammention-26nov04-budg"}
