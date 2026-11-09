@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"rl-ct-1109tube"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXWORLDNEWSMENTION-26NOV06-JOB","--trades","1000","--depth","2"],"id":"rl-mt-wn06-job"}
