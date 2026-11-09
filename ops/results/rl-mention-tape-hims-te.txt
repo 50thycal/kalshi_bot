@@ -1,0 +1,6 @@
+  HTTP 404 for /markets/KXEARNINGSMENTIONHIMS-26NOV02-TE: {"error":{"code":"not_found","message":"not found"}}
+  HTTP 404 for /historical/markets/KXEARNINGSMENTIONHIMS-26NOV02-TE: {"error":{"code":"failed_to_get_market_by_ticker:_not_found","message":"failed to get market by ticker: not found"}}
+# ops request [READ]
+# type=script  id=rl-mention-tape-hims-te
+# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T19:00:27Z
+market 'KXEARNINGSMENTIONHIMS-26NOV02-TE' not found (live or historical tier)
