@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXWORLDNEWSMENTION-26NOV05-EURO","--trades","1000","--depth","2"],"id":"rl-mt-wn05-euro"}
+{"type":"noop","id":"rl-mention-noop"}
