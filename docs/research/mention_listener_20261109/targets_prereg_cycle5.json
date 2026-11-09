@@ -1,0 +1,12 @@
+{
+  "purpose": "Cycle 5 test of the fuzzy near-miss tier on a THIRD untouched call. Targets AND the fuzzy rule were fixed BEFORE this file's audio was downloaded or its reference opened. Plausible slate for an apparel/e-commerce retailer's 2020 call (earnings21 file 4392809, Lands' End). Decoding frozen at hotword score 2.0.",
+  "fixed_at_utc": "2026-11-09T20:05:00Z",
+  "file_id": "4392809",
+  "frozen_setting": {"decoding": "modified_beam_search+hotwords", "hotword_score": 2.0},
+  "fuzzy_rule": {"min_ratio": 0.80, "min_len": 5, "single_token_terms_only": true, "adjacent_pair_merge": true, "label": "fuzzy"},
+  "terms": [
+    "Pandemic", "E-commerce", "Uniform", "Outerwear", "Swimwear", "Inventory", "Promotion",
+    "Holiday", "Kohl's", "Amazon", "Digital", "Catalog", "Margin", "Mask", "School",
+    "Tariff", "Liquidity", "Debt", "Customer", "Marketplace"
+  ]
+}

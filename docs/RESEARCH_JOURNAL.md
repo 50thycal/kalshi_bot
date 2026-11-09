@@ -1,5 +1,22 @@
 # Weather-markets research journal
 
+## Live mention listener 2026-11-09 — feasibility: buildable, don't build yet; first-mover probe is an owner decision
+
+- **Why:** the operator sketched a live mention bot: rules → live streams → LLM predicts next
+  words → Kalshi bot ([doc](MENTION_LIVE_LISTENER_FEASIBILITY_20261109.md)). Its detection half
+  is the held MENTIONLOCK; its prediction half was never screened.
+- **Measured:**
+  - On two ABC World News shows, 45–54% of contracts traded on air.
+  - 10 of 12 contested words went from halfway to 95¢ within 2 s (2 took 12–16 s); $464–641 of
+    stale quotes was lifted per show.
+  - A streaming CPU recognizer caught 36 of 46 said words on three real calls, with 0 false YES
+    on 14 unsaid. Confirmed text lags provisional by a 3 s median.
+  - The market beat a constant-hazard model.
+- **Context:** others sell or open-source this exact pipeline. The CFTC 09-22 advisory treats
+  mention contracts as presumptively manipulable.
+- **Next:** OWNER DECISION on a 10-broadcast, no-orders first-mover probe (PASS: we detect ≥ 1 s
+  before the market's mid-cross on ≥ 6 of 10). Nothing registered or started.
+
 ## LIMM exits vs holding — closed unread, 2026-11-08 (owner)
 
 - **Why:** the live incentive book is stood down (§9.78), so the test's sample of real exits is

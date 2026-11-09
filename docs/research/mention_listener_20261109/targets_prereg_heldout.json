@@ -1,0 +1,11 @@
+{
+  "purpose": "HELD-OUT test (cycle 4). Targets fixed BEFORE the audio was downloaded or the reference transcript opened. Plausible Kalshi earnings-mention slate for a phone-accessory maker's 2020 call (earnings21 file 4387332, ZAGG Inc). Decoding setting frozen from cycle 3 at hotword score 2.0; no tuning on this file.",
+  "fixed_at_utc": "2026-11-09T19:55:00Z",
+  "file_id": "4387332",
+  "frozen_setting": {"decoding": "modified_beam_search+hotwords", "hotword_score": 2.0},
+  "terms": [
+    "Mophie", "Screen Protector", "Apple", "iPhone", "5G", "Tariff", "Pandemic",
+    "Amazon", "Inventory", "Holiday", "Supply Chain", "China", "E-commerce", "Margin",
+    "Guidance", "Samsung", "Retail", "Debt", "Battery", "Wireless"
+  ]
+}

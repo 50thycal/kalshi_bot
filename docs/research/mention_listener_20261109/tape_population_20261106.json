@@ -1,0 +1,830 @@
+{
+ "summary": {
+  "event": "KXWORLDNEWSMENTION-26NOV06",
+  "rule": "|model-market|>=10c, +1c slip, taker fee",
+  "n_trades": 20,
+  "n_markets_traded": 8,
+  "pnl_c": 94,
+  "yes_side": -26,
+  "no_side": 120,
+  "market_below_model_share": 0.7
+ },
+ "markets": [
+  {
+   "word": "AI / Artificial Intelligence",
+   "result": "yes",
+   "pre_show_c": 57,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Ballot",
+   "result": "no",
+   "pre_show_c": 39,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 31,
+     "model_c": 34,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 27,
+     "model_c": 28,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 9,
+     "model_c": 22,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 7,
+     "model_c": 15,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 1,
+     "model_c": 8,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Data Center",
+   "result": "yes",
+   "pre_show_c": 45,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Dow",
+   "result": "yes",
+   "pre_show_c": 41,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 43,
+     "model_c": 36,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 47,
+     "model_c": 30,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Europe / European",
+   "result": "yes",
+   "pre_show_c": 79,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 82,
+     "model_c": 73,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Flood / Flooding",
+   "result": "yes",
+   "pre_show_c": 94,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 98,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Hegseth",
+   "result": "yes",
+   "pre_show_c": 65,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 50,
+     "model_c": 58,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Iowa / Kansas",
+   "result": "no",
+   "pre_show_c": 17,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 16,
+     "model_c": 14,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 11,
+     "model_c": 12,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 4,
+     "model_c": 9,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 3,
+     "model_c": 6,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 1,
+     "model_c": 3,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Job / Unemployment",
+   "result": "yes",
+   "pre_show_c": 83,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "result": "no",
+   "pre_show_c": 60,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 42,
+     "model_c": 53,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 27,
+     "model_c": 46,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 19,
+     "model_c": 37,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 2,
+     "model_c": 26,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 3,
+     "model_c": 14,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Measles",
+   "result": "yes",
+   "pre_show_c": 60,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 43,
+     "model_c": 53,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 38,
+     "model_c": 46,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 12,
+     "model_c": 37,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 9,
+     "model_c": 26,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  },
+  {
+   "word": "Midterm",
+   "result": "yes",
+   "pre_show_c": 97,
+   "skipped": true
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "result": "no",
+   "pre_show_c": 65,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 39,
+     "model_c": 58,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 29,
+     "model_c": 50,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 16,
+     "model_c": 41,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 18,
+     "model_c": 30,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 1,
+     "model_c": 16,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Oil / Gas / Gasoline",
+   "result": "no",
+   "pre_show_c": 50,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 54,
+     "model_c": 44,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 50,
+     "model_c": 37,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 19,
+     "model_c": 29,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 20,
+     "model_c": 21,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 7,
+     "model_c": 11,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Poll / Polling",
+   "result": "no",
+   "pre_show_c": 20,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 68,
+     "model_c": 17,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 13,
+     "model_c": 14,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 11,
+     "model_c": 11,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 7,
+     "model_c": 7,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 6,
+     "model_c": 4,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Russell Brand",
+   "result": "no",
+   "pre_show_c": 10,
+   "threshold": 1,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 7,
+     "model_c": 8,
+     "said_by_market": false
+    },
+    {
+     "min": 10,
+     "market_c": 10,
+     "model_c": 7,
+     "said_by_market": false
+    },
+    {
+     "min": 15,
+     "market_c": 1,
+     "model_c": 5,
+     "said_by_market": false
+    },
+    {
+     "min": 20,
+     "market_c": 15,
+     "model_c": 3,
+     "said_by_market": false
+    },
+    {
+     "min": 25,
+     "market_c": 2,
+     "model_c": 2,
+     "said_by_market": false
+    }
+   ]
+  },
+  {
+   "word": "Trump (5+ times)",
+   "result": "yes",
+   "pre_show_c": 85,
+   "threshold": 5,
+   "path": [
+    {
+     "min": 5,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 10,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 15,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 20,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    },
+    {
+     "min": 25,
+     "market_c": 99,
+     "model_c": null,
+     "said_by_market": true
+    }
+   ]
+  }
+ ],
+ "trades": [
+  {
+   "word": "Ballot",
+   "min": 15,
+   "side": "YES",
+   "price_c": 10,
+   "model_c": 22,
+   "market_c": 9,
+   "won": false,
+   "pnl_c": -11
+  },
+  {
+   "word": "Dow",
+   "min": 10,
+   "side": "NO",
+   "price_c": 54,
+   "model_c": 30,
+   "market_c": 47,
+   "won": false,
+   "pnl_c": -56
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "min": 5,
+   "side": "YES",
+   "price_c": 43,
+   "model_c": 53,
+   "market_c": 42,
+   "won": false,
+   "pnl_c": -45
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "min": 10,
+   "side": "YES",
+   "price_c": 28,
+   "model_c": 46,
+   "market_c": 27,
+   "won": false,
+   "pnl_c": -30
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "min": 15,
+   "side": "YES",
+   "price_c": 20,
+   "model_c": 37,
+   "market_c": 19,
+   "won": false,
+   "pnl_c": -22
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "min": 20,
+   "side": "YES",
+   "price_c": 3,
+   "model_c": 26,
+   "market_c": 2,
+   "won": false,
+   "pnl_c": -4
+  },
+  {
+   "word": "Justice Department / DOJ",
+   "min": 25,
+   "side": "YES",
+   "price_c": 4,
+   "model_c": 14,
+   "market_c": 3,
+   "won": false,
+   "pnl_c": -5
+  },
+  {
+   "word": "Measles",
+   "min": 5,
+   "side": "YES",
+   "price_c": 44,
+   "model_c": 53,
+   "market_c": 43,
+   "won": true,
+   "pnl_c": 54
+  },
+  {
+   "word": "Measles",
+   "min": 15,
+   "side": "YES",
+   "price_c": 13,
+   "model_c": 37,
+   "market_c": 12,
+   "won": true,
+   "pnl_c": 86
+  },
+  {
+   "word": "Measles",
+   "min": 20,
+   "side": "YES",
+   "price_c": 10,
+   "model_c": 26,
+   "market_c": 9,
+   "won": true,
+   "pnl_c": 89
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "min": 5,
+   "side": "YES",
+   "price_c": 40,
+   "model_c": 58,
+   "market_c": 39,
+   "won": false,
+   "pnl_c": -42
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "min": 10,
+   "side": "YES",
+   "price_c": 30,
+   "model_c": 50,
+   "market_c": 29,
+   "won": false,
+   "pnl_c": -32
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "min": 15,
+   "side": "YES",
+   "price_c": 17,
+   "model_c": 41,
+   "market_c": 16,
+   "won": false,
+   "pnl_c": -18
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "min": 20,
+   "side": "YES",
+   "price_c": 19,
+   "model_c": 30,
+   "market_c": 18,
+   "won": false,
+   "pnl_c": -21
+  },
+  {
+   "word": "Mississippi / Alaska",
+   "min": 25,
+   "side": "YES",
+   "price_c": 2,
+   "model_c": 16,
+   "market_c": 1,
+   "won": false,
+   "pnl_c": -3
+  },
+  {
+   "word": "Oil / Gas / Gasoline",
+   "min": 5,
+   "side": "NO",
+   "price_c": 47,
+   "model_c": 44,
+   "market_c": 54,
+   "won": true,
+   "pnl_c": 51
+  },
+  {
+   "word": "Oil / Gas / Gasoline",
+   "min": 10,
+   "side": "NO",
+   "price_c": 51,
+   "model_c": 37,
+   "market_c": 50,
+   "won": true,
+   "pnl_c": 47
+  },
+  {
+   "word": "Oil / Gas / Gasoline",
+   "min": 15,
+   "side": "YES",
+   "price_c": 20,
+   "model_c": 29,
+   "market_c": 19,
+   "won": false,
+   "pnl_c": -22
+  },
+  {
+   "word": "Poll / Polling",
+   "min": 5,
+   "side": "NO",
+   "price_c": 33,
+   "model_c": 17,
+   "market_c": 68,
+   "won": true,
+   "pnl_c": 65
+  },
+  {
+   "word": "Russell Brand",
+   "min": 20,
+   "side": "NO",
+   "price_c": 86,
+   "model_c": 3,
+   "market_c": 15,
+   "won": true,
+   "pnl_c": 13
+  }
+ ]
+}
