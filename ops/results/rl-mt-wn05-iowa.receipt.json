@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "4ff5e18c518e50acc2d7967c44792938aca30312",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-09T19:37:11Z",
+  "id": "rl-mt-wn05-iowa",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-mt-wn05-iowa.receipt.json",
+  "result_file": "ops/results/rl-mt-wn05-iowa.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42685053054",
+  "service": null,
+  "started_at": "2026-11-09T19:37:10Z",
+  "targets": [],
+  "type": "script"
+}
