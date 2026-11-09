@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"mmsell_scorecard","args":["--days","2"],"id":"msc-261109-chk"}
