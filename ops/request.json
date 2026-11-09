@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--search","MENTION","--hours","2000","--min-volume","0","--top","150","--max-pages","200"],"id":"rl-mention-inv-1"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXEARNINGSMENTIONHIMS-26NOV02-TE","--trades","1000","--depth","4"],"id":"rl-mention-tape-hims-te"}
