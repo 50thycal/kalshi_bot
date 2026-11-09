@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "153b1ac0b6bc3512a197952e37782c3d577bd180",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-09T11:21:56Z",
+  "id": "rc-f7-1109-1113",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rc-f7-1109-1113.receipt.json",
+  "result_file": "ops/results/rc-f7-1109-1113.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42608437760",
+  "service": null,
+  "started_at": "2026-11-09T11:21:55Z",
+  "targets": [],
+  "type": "db"
+}
