@@ -132,4 +132,33 @@ The probe needs an `ops_runner.py` allowlist entry, and a merge that touches the
 
 ## Results
 
-*(empty until the run; any amendment is written here with its timestamp, before or after results, and says which)*
+### Run 1: **KILL** (2026-11-09, ops `rl-levelhold-run-1109b`, code `16cb98b`, window 2026-08-06..11-08)
+
+No amendments. The run used the merged code exactly as pre-registered.
+
+- **P0 passes, with margin.** 95 days. 8,705 raw decisions → 8,654 usable: 4 had no official label
+  (exclusion 0.05%) and 39 had no full lookback (full-lookback share 99.55%). Labels: live 6,126 /
+  historical 2,575 / not found 4, with 0 fetch errors. 601 four-hour bars, 600 valid.
+- **Arm sizes:** SWING 3,538 (floor 600), FLIP 2,559, ROUND 894, control 4,626.
+
+| arm | n | L (¢) | CI | implied trade | net EV (¢) | p5 | call |
+|---|---|---|---|---|---|---|---|
+| SWING (primary) | 3,538 | **−0.63** | 90%: −2.27 .. +1.01 | buy break side | −5.19 | −6.42 | NO SIGNAL |
+| FLIP | 2,559 | −0.06 | 95%: −2.24 .. +2.09 | buy break side | −5.70 | −7.16 | NO SIGNAL |
+| ROUND | 894 | −1.21 | 95%: −4.00 .. +1.55 | buy break side | −4.70 | −6.85 | NO SIGNAL |
+
+**Verdict as printed:** `KILL (technical levels are priced; no ATR-band/pivot/grid variants)`.
+A strike on a swing level, flip zone or round $1,000 settles on its current side at the rate its quote implies,
+within ±2.3¢ at 90%. The futures "levels hold" effect does not reach the Kalshi hourly quote, or the quote
+already prices it. Per the KILL clause, technical-level conditioning on this venue is closed and no
+band, pivot, lookback or grid variant is to be run.
+
+**Observation only, not a finding (post hoc, not pre-registered).** Every arm *and the control* has a positive raw
+residual: control +3.75¢, SWING +3.19¢, FLIP +3.73¢, ROUND +2.60¢. So across all strikes 20–40 minutes
+before close, the side spot currently sits on settled about 3–4¢ more often than its mid implied
+(the per-decile control residual is positive in 8 of 10 deciles). This is the favourite side of the favourite-longshot
+pattern. **TFAV** (hourly favourite-buy, KILLED 2026-07 at −3.6¢, n = 210) tested it as a taker and found it accrues to
+makers. VOLCLOCK's quiet-hour "crossing side is dear" note (2026-11-06) is the same thing seen from the other side.
+Two post-hoc sightings make it a candidate for a fresh pre-registration **on post-2026-11-09 data only**,
+and only if the operator wants the favourite-buy family reopened. It is not a promotion. No taker EV for it is computed here.
+
