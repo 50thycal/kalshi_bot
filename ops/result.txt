@@ -1,22 +1,7 @@
 # ops request [READ]
-# type=db  id=rc-a3-1109-1513
-# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T15:19:22Z
-series                 mkts_24h
----------------------  --------
-KXRT                   156     
-KXYTVIEWSHIGH          33      
-KXAAAGASM              26      
-KXTRUMPSAYMONTH        21      
-KXBABELMANDEBWEEKLY    20      
-KXPANAMAWEEKLY         18      
-KXHORMUZWEEKLY         18      
-KXSUEZWEEKLY           16      
-KXHORMUZPEAK           16      
-KXHORMUZMAX            14      
-KXEOWEEK               12      
-KXWAAEROEMP            11      
-KXTRUMPSAYCOMPANY      9       
-KXTRUMPACT             7       
-KXDANCINGWITHTHESTARS  7       
+# type=db  id=rc-a4-1109-1513
+# code 4ff5e18c518e50acc2d7967c44792938aca30312 · started 2026-11-09T15:19:56Z
+series  live_progs
+------  ----------
 
-(15 rows)
+(0 rows)
