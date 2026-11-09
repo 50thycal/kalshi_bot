@@ -6,7 +6,7 @@ menu was skipped. Session role: Research Lab.
 
 **Result.** 16 transplants were screened from four videos. **One was promoted: LEVELHOLD**, technical
 levels on the hourly BTC ladder. It is pre-registered in `LEVELHOLD_PREREG.md`; the probe is built and tested
-but **has not run**. Allowlisting it touches `ops_runner.py`, and that merge is an operator hard stop.
+and **ran after the owner merged its allowlist PR (#782): KILL** (SWING L −0.63¢, 90% CI −2.27..+1.01, n = 3,538). See the update at the end.
 Five transplants are new kills by argument, one is a new hold, one is an owner-decision note, and seven are restatements of what the
 record already settled. **Most of what these videos teach is already in the Kalshi record,
 learned on Kalshi's own tape.**
@@ -107,7 +107,7 @@ Axes as in the 11-06 run: **Corr**, **Edge**, **Cost**, **Test** (gradeable now)
 
 | hold | trigger | state |
 |---|---|---|
-| **LEVELHOLD** (new, promoted) | operator merges the allowlist PR | **probe ready**; run `levelhold_probe --start 2026-08-06 --end 2026-11-08` |
+| ~~LEVELHOLD~~ | | **KILLED 2026-11-09** run 1 (`rl-levelhold-run-1109b`): SWING L −0.63¢, CI spans 0; see `LEVELHOLD_PREREG.md` Results |
 | **EARNBEAT** | Q3 reports settle | **due this week** (week of 2026-11-09) |
 | **TYPE-RANK** | leg F reaches 150 TOP / 100 REST fills | earliest decisive read late November (absorbs T12) |
 | **DESK-CONVICTION** (new) | ≥ 200 settled desk picks with confidence | not fired |
@@ -124,3 +124,9 @@ Axes as in the 11-06 run: **Corr**, **Edge**, **Cost**, **Test** (gradeable now)
 
 `rl-ct-1109tube` (control tower); `rl-levelhold-census-1109a` (one-day strike-grid count plus spot-candle
 coverage, no outcomes read).
+
+## Update 2026-11-09: LEVELHOLD verdict
+
+Run 1 (`rl-levelhold-run-1109b`) returned **KILL**: technical levels are priced on `KXBTCD`. **This run therefore
+promoted 1 and killed 1, leaving 0 open lines from the videos.** One post-hoc observation, the ladder-wide
+favourite-side residual, is recorded in `LEVELHOLD_PREREG.md` as an observation only.

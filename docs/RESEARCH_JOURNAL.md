@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## LEVELHOLD run 1 2026-11-09 — KILL: technical levels are priced on the hourly BTC ladder
+
+- **Verdict as printed:** `KILL (technical levels are priced; no ATR-band/pivot/grid variants)`
+  ([`LEVELHOLD_PREREG.md`](LEVELHOLD_PREREG.md) Results, ops `rl-levelhold-run-1109b`, code `16cb98b`).
+- **Numbers:** P0 was clean (95 days, 8,654 usable decisions, 0.05% unlabeled, 99.55% full lookback).
+  SWING L −0.63¢ (90% CI −2.27..+1.01, n = 3,538); FLIP −0.06¢ (n = 2,559); ROUND −1.21¢ (n = 894). Every
+  implied trade is about −5¢ net.
+- **Lesson:** the futures "levels hold more than random lines" effect does not reach the Kalshi hourly quote.
+  With MOMO-H (recent move) and VOLCLOCK (clock), **three conditioning features on this ladder have now been
+  priced**. The quote-calibration family on `KXBTCD` is 0-for-3 for a 1–3 minute taker.
+- **Observation only (post hoc):** the side spot sits on settles about 3–4¢ above its mid ladder-wide, control
+  included. That is the favourite side of the FLB, already TFAV's question (KILLED in July as a taker). It can be re-tested only
+  under a fresh pre-registration on post-11-09 data, if the operator reopens favourite-buy.
+
 ## IDEA-MODEL 2026-11-09 — tube_bot trading videos: 16 transplants, 1 promoted (LEVELHOLD, unrun)
 
 - **What:** four AI Pathways videos analyzed by tube_bot (price action, ICT, trading styles,
