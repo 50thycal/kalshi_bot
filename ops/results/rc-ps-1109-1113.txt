@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=script  id=rc-ps-1109-1113
+# code 153b1ac0b6bc3512a197952e37782c3d577bd180 · started 2026-11-09T11:22:18Z
+LIMM paper strategies — COUNTS ONLY since 2026-11-09T00:00 (as of 2026-11-09T11:22)
+  S1          quotes    249  markets   22  bid-hours    213.4
+  S2-best     quotes    131  markets   11  bid-hours    107.3
+  S2-behind   quotes    131  markets   11  bid-hours    107.3
+  S3-aside    quotes    123  markets   10  bid-hours    109.9
+  S3-control  quotes    123  markets   10  bid-hours    109.9
+  S4-burst    quotes     98  markets   11  bid-hours     87.9
+  S4-flat     quotes     98  markets   11  bid-hours     87.9
