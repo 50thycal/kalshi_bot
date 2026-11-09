@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXWORLDNEWSMENTION-26NOV06-JUST","--trades","1000","--depth","2"],"id":"rl-mt-wn06-just"}
+{"type": "db", "sql": "SELECT count(*) AS snaps_4h, count(DISTINCT market_ticker) AS mkts_4h, max(at) AS last_snap, now() AS db_now FROM incentive_market_snapshots WHERE at >= now() - interval '4 hours'", "id": "rc-a1-1109-1913"}
