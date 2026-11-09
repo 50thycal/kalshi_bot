@@ -1,6 +1,9 @@
 """Rescore saved ASR text under the CURRENT matcher (no re-decoding). Used to retest matcher
 fixes: the recognizer output in each e2e_*.json is unchanged, only the rules side moves."""
-import json, os, sys
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mention_listener as ml  # noqa: E402
 from asr_e2e import reference_text  # noqa: E402

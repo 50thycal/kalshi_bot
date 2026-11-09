@@ -27,8 +27,8 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Callable, Iterable
 
 # ---------------------------------------------------------------------------------------------
 # 1. Rules -> spec
@@ -282,7 +282,7 @@ class Matcher:
                     continue
                 idx = [w[1] for w in win]
                 # a phrase must walk forward through the original tokens
-                if any(b < a for a, b in zip(idx, idx[1:])):
+                if any(b < a for a, b in zip(idx, idx[1:], strict=False)):
                     continue
                 via = label or next((w[2] for w in win if w[2]), "") or (
                     "exact" if last == form[-1] else "inflected")

@@ -58,7 +58,7 @@ def words_from_tokens(tokens: list[str], times: list[float], offset: float):
     """BPE pieces -> (words, word start times). A piece starting with '▁' or ' ' starts a new
     word (sherpa-onnx 2.x returns ' WE', older builds return '▁WE' — handle both)."""
     words, wt = [], []
-    for tok, t in zip(tokens, times):
+    for tok, t in zip(tokens, times, strict=False):
         if tok[:1] in ("▁", " ") or not words:
             words.append(tok.lstrip("▁ "))
             wt.append(offset + t)
