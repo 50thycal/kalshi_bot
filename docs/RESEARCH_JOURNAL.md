@@ -1,6 +1,6 @@
 # Weather-markets research journal
 
-## Live mention listener 2026-11-09 — feasibility: buildable, don't build yet; first-mover probe is an owner decision
+## Live mention listener 2026-11-09 — CLOSED by owner: buildable, but a speed race we'd likely lose
 
 - **Why:** the operator sketched a live mention bot: rules → live streams → LLM predicts next
   words → Kalshi bot ([doc](MENTION_LIVE_LISTENER_FEASIBILITY_20261109.md)). Its detection half
@@ -14,8 +14,9 @@
   - The market beat a constant-hazard model.
 - **Context:** others sell or open-source this exact pipeline. The CFTC 09-22 advisory treats
   mention contracts as presumptively manipulable.
-- **Next:** OWNER DECISION on a 10-broadcast, no-orders first-mover probe (PASS: we detect ≥ 1 s
-  before the market's mid-cross on ≥ 6 of 10). Nothing registered or started.
+- **Decision (owner, 2026-11-09):** closed, not pursuing; the probe was not run. Reopen only with a
+  feed demonstrably faster than the market's repricing (e.g. an over-the-air tuner). Nothing was
+  registered or started.
 
 ## LIMM exits vs holding — closed unread, 2026-11-08 (owner)
 

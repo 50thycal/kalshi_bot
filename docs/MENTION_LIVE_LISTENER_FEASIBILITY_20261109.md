@@ -2,7 +2,13 @@
 
 SESSION: Research Lab / MODE: FEASIBILITY ANALYSIS + PROTOTYPE / ENFORCEMENT: NEW_ONLY / AS OF: 2026-11-09
 
-**Research verdict: do not build the full live bot now. Build only the cheap first-mover probe
+**Owner decision, 2026-11-09 (this session): CLOSED — not pursuing.** The edge is a pure speed
+race against incumbents with faster feeds, in a shrinking, tightening category. The §8 probe was
+not run. Do not re-propose the live listener (MENTIONLOCK / C9) without a mechanically new
+premise, such as a feed demonstrably earlier than the market's repricing (for example an
+over-the-air tuner the owner chooses to provide).
+
+**Research verdict (before the decision): do not build the full live bot now. Build only the cheap first-mover probe
 (§8) if the owner wants to continue.** The sketch is buildable: every box in it ran here on real
 inputs. But the detection half is a speed race that someone usually wins within one or two
 seconds, and the prediction half has to beat a market that already prices in-play decay better
@@ -175,7 +181,7 @@ authoritative feed, flawless rule reading, or forecasting the words still to com
 | Prediction | Hazard model with an LLM context hook exists; the real job is forecasting the rundown | Must beat a market that already decays faster than naive models | Small |
 | Execution | Kalshi IOC orders on provisional hits, with per-event caps | False triggers (revised partials, homophones, hot mic, replayed clips) | Under NEW_ONLY a book needs Experiment OS registration; live money is a hard stop |
 
-## 8. Recommendation and the probe that decides it
+## 8. Recommendation and the probe that would have decided it (not run: owner closed)
 
 Against the $100/month north star the prize is not the issue: one show held about $600 of
 lifted stale quotes, so winning even a small share of one daily show would clear the bar.
