@@ -1,5 +1,21 @@
 # Weather-markets research journal
 
+## BANDREV run 1 2026-11-10 — KILL on NFL; mentions HOLD (instrument), recommend close
+
+- **Verdict as printed** ([`BANDREV_PREREG.md`](BANDREV_PREREG.md) Results, ops `rl-bandrev-run-1`, code `b92ee1e`):
+  NFL **KILL**, MENTION **HOLD (instrument)**.
+- **NFL** (134 games, 94.6% quote coverage): the 5-minute snap-back after a ≥ 5¢ move is **+0.42¢**
+  (90% CI −0.11..+0.99, n = 667), against a 3.5¢ bar. Big moves revert only 0.51¢ more than small
+  ones. The taker fade nets −3.86¢. The operator's drawn design (5¢ band / 10¢ take-profit / 2¢ stop) lost
+  **−3.40¢ per round trip over 1,259 trips** (76% stopped out), the offline model's realistic
+  estimate almost exactly.
+- **MENTION** (398 markets): two-sided quotes cover only 42.7% of the window, so P0 fails. The
+  measured numbers cannot pass anyway: R5 −0.27¢ (n = 373), fade −7.86¢, design −4.80¢/trip (n = 818).
+  Recommended disposition: close, do not amend and re-run.
+- **Lesson:** in-play prices on these markets do not over-react enough to pay for a round trip. Most
+  of the band design's loss is the taker stop, which the model predicted. Band and over-reaction trading on NFL game
+  winners is closed. Two-sided resting without a stop remains LIMM's question.
+
 ## IDEA-MODEL 2026-11-10 — operator band strategy (BANDREV): drawn design discarded, 1 probe promoted (unrun)
 
 - **What:** the operator sketched a band strategy for near-50/50 binaries (NFL game winners, mentions):

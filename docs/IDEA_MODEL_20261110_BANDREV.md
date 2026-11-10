@@ -1,5 +1,7 @@
 # IDEA-MODEL 2026-11-10 — operator band-trading sketch (BANDREV): screened, 1 probe promoted
 
+**Probe verdict (2026-11-10, run 1):** NFL **KILL**; the drawn design lost −3.40¢/trip on real NFL tape (n = 1,259). MENTION **HOLD (instrument)**, recommended close. See [`BANDREV_PREREG.md`](BANDREV_PREREG.md) Results.
+
 *Research Lab screen of the operator's hand-drawn strategy (2026-11-09 chat). Persisted because chat
 is not durable state. Experiment truth stays in Experiment OS; this records the reasoning and the
 offline numbers. Pre-registration: [`BANDREV_PREREG.md`](BANDREV_PREREG.md).*
