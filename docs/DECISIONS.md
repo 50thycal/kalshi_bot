@@ -1078,6 +1078,8 @@ starts under the wider policy the ops runner remains the board read.
 
 ## DEC-018 — Two isolated autonomous research desks with equal small live envelopes (2026-09-20)
 
+**Status:** Superseded in operation by DEC-045 (desks retired 2026-11-10). Kept as history.
+
 **Authority:** Calvin approved the proposed two-desk plan, selected autonomous operation
 and filled-pick counting, then explicitly requested implementation and breakout sessions in
 the ChatGPT Build OS Design Room thread. This records plan/build authorization, not acceptance
@@ -1232,6 +1234,8 @@ fixed order ID and still needs fresh action-time confirmation before its sole PO
 v4 recovery: any visible prior order is reconciled, and any v3 ambiguity is a permanent hard stop.
 
 ## DEC-024 — Desk research v2: open market discovery, open internet evidence, fresh round (2026-10-01)
+
+**Status:** Superseded in operation by DEC-045 (desks retired 2026-11-10). Kept as history.
 
 Calvin decided on 2026-10-01 that the two autonomous desks (DEC-018) may find markets and
 gather evidence the way their theses need, and that both desks start a fresh round under those
@@ -1762,3 +1766,30 @@ tied to this experiment".
   decisions.
 - **Build plan:** `docs/handoffs/HANDOFF-limm-paper-strategies.md`.
 
+## DEC-045 — Autonomous desks retired
+
+**Date:** 2026-11-10 UTC. **Owner direction:** 2026-10-22 ("pause that desk") and 2026-11-10
+("end desk services"). The desks were not producing, they cost about $2–3 a month, and nothing
+in the kalshi-bot project depends on them.
+
+- **Decision:** the autonomous ChatGPT and Claude desks are retired. This supersedes the
+  operating parts of DEC-018 and DEC-024. Their supporting decisions lapse with them: DEC-019
+  to DEC-023 and DEC-032. Those entries stay as history.
+  - No new desk cycle, round, start or live order.
+  - The DEC-018 exception in `CLAUDE.md` no longer authorises any activity outside Experiment
+    OS.
+  - The legacy manual desk (DEC-017) is a separate thing and is unchanged.
+- **Shutdown, in Railway project `kalshi-desks`:**
+  - `desk-service` is disconnected from the repository first, and then its active deployment is
+    removed. The order matters: an earlier pause was undone when the next merge redeployed
+    the service.
+  - The two runners never ran and are deleted.
+- **Kept:** the desks' Postgres and its volume. They hold all desk history. Deleting them is a
+  separate owner decision and a hard stop.
+- **Open positions:** they are left to settle on Kalshi. Closing a live desk position is an
+  owner decision. Desk entries were price-limited IOC orders, so no orders were left resting.
+- **Code:** `kalshi_bot/desks/`, its tests and `scripts/desk_client.py` stay in the repository,
+  unused, until a separate clean-up is decided.
+- **Workstreams:** WS-021, WS-022 and WS-025 are Abandoned. WS-026 D2 (the desk diagnostic
+  secret) is moot.
+- **Experiment OS:** not involved. The desks ran outside it.

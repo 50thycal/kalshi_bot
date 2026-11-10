@@ -1,9 +1,9 @@
 # WS-022 — Desk research v2: open discovery, open evidence, fresh round
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Abandoned (2026-11-10). The desks were retired; see DEC-045 in `docs/DECISIONS.md`.
 **Created:** 2026-10-01
-**Updated:** 2026-10-01
+**Updated:** 2026-11-10
 **Build OS:** v0.12
 
 ## Goal

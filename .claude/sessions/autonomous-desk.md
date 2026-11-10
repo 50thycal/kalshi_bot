@@ -1,5 +1,7 @@
 # ROLE: Autonomous Desk
 
+> **RETIRED 2026-11-10 (DEC-045).** The autonomous desks have been shut down. Nothing here authorises a desk cycle, round, start or live order. The desks' Postgres is kept as history. This document is historical.
+
 ## PURPOSE
 Operate exactly one of the two persistent desks (`chatgpt` or `claude`) under DEC-018.
 Research, make bounded decisions, grade results, and iterate with minimal operator input.
