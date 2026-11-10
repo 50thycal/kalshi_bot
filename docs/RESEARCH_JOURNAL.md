@@ -1,5 +1,24 @@
 # Weather-markets research journal
 
+## IDEA-MODEL 2026-11-10 — operator band strategy (BANDREV): drawn design discarded, 1 probe promoted (unrun)
+
+- **What:** the operator sketched a band strategy for near-50/50 binaries (NFL game winners, mentions):
+  rest a YES bid below and a NO bid above, take profit at the far band, exit at the entry price if it
+  swings back, re-arm ([screen](IDEA_MODEL_20261110_BANDREV.md)).
+- **Findings:** the downside exit cannot rest on Kalshi (a sell at or below the bid executes at once),
+  so it is a taker stop. In a fair market every band rule has zero gross edge. The offline model
+  ([`research/bandrev_sim_20261110/`](research/bandrev_sim_20261110/)) puts the drawn design (5/10/2)
+  at **−4.83¢ per trip** (≈ −3.4¢ net of a sampling artifact): 9% winners, 91% stopped out. Even planted
+  10¢ over-reactions do not rescue the stop version; a no-stop fade needs ≥ 6¢ over-reactions reverting
+  within ~1 minute. Mention markets are structurally adverse: 11-09's listener study measured contested
+  words going from 50¢ to 95¢ in 2 s.
+- **Promoted:** [BANDREV](BANDREV_PREREG.md). It measures post-move reversion on real 1-minute candles,
+  and replays the drawn design, on `KXNFLGAME` and eight mention series (09-01..11-10). Bar: R5 ≥ 3.5¢
+  at n ≥ 500, beating small-move control by 2¢. Expected KILL. Built and tested, not run: its allowlist
+  entry touches `ops_runner.py`, an operator hard stop.
+- **Kept / parked:** two-sided resting without a stop is LIMM (already running). Dead-ball-window
+  quoting is PARKED (owner decision).
+
 ## LEVELHOLD run 1 2026-11-09 — KILL: technical levels are priced on the hourly BTC ladder
 
 - **Verdict as printed:** `KILL (technical levels are priced; no ATR-band/pivot/grid variants)`
