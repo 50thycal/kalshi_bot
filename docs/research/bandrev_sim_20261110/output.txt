@@ -1,0 +1,56 @@
+
+### SMOOTH (no jumps) control: median |30s move| 2.24c  p90 6.56c  p99 11.86c
+ frictionless (no fee, no spread):
+  d=5 tp=10 stop=2             trips/g 16.45  EV  -1.44c (se 0.03)  win  15%  TP  15% STOP  85% HOLD   0%  entry-gap -1.25c  stop-slip -1.53c  per-game  -23.7c
+  d=5 tp=5 stop=5              trips/g 14.75  EV  -1.75c (se 0.04)  win  40%  TP  40% STOP  60% HOLD   0%  entry-gap -1.26c  stop-slip -1.34c  per-game  -25.8c
+  d=8 tp=16 stop=3             trips/g  7.59  EV  -1.41c (se 0.07)  win  15%  TP  15% STOP  85% HOLD   0%  entry-gap -1.24c  stop-slip -1.43c  per-game  -10.7c
+  d=5 tp=10 no stop            trips/g  3.16  EV  -1.98c (se 0.34)  win  79%  TP  79% STOP   0% HOLD  21%  entry-gap -1.14c  stop-slip +0.00c  per-game   -6.3c
+ with fees (taker stop, clip 10, maker entry free) + 1c half-spread:
+  d=3 tp=3 stop=1              trips/g 43.03  EV  -3.73c (se 0.01)  win  15%  TP  15% STOP  85% HOLD   0%  entry-gap -1.22c  stop-slip -2.21c  per-game -160.7c
+  d=5 tp=10 stop=2             trips/g 18.63  EV  -3.80c (se 0.03)  win  11%  TP  11% STOP  89% HOLD   0%  entry-gap -1.24c  stop-slip -1.77c  per-game  -70.8c
+  d=5 tp=5 stop=5              trips/g 16.09  EV  -3.38c (se 0.04)  win  36%  TP  36% STOP  64% HOLD   0%  entry-gap -1.25c  stop-slip -1.35c  per-game  -54.3c
+  d=8 tp=16 stop=3             trips/g  8.46  EV  -3.70c (se 0.06)  win  11%  TP  11% STOP  89% HOLD   0%  entry-gap -1.23c  stop-slip -1.53c  per-game  -31.3c
+  d=10 tp=20 stop=5            trips/g  5.07  EV  -3.68c (se 0.12)  win  16%  TP  16% STOP  84% HOLD   0%  entry-gap -1.28c  stop-slip -1.38c  per-game  -18.7c
+  d=5 tp=10 NO stop            trips/g  3.16  EV  -1.98c (se 0.34)  win  79%  TP  79% STOP   0% HOLD  21%  entry-gap -1.14c  stop-slip +0.00c  per-game   -6.3c
+  d=5 tp=10 stop=2 maker.0175  trips/g 18.63  EV  -4.26c (se 0.03)  win  11%  TP  11% STOP  89% HOLD   0%  entry-gap -1.24c  stop-slip -1.77c  per-game  -79.4c
+
+### NFL-like (jumps): median |30s move| 1.25c  p90 3.97c  p99 20.84c
+ frictionless (no fee, no spread):
+  d=5 tp=10 stop=2             trips/g  7.14  EV  -2.72c (se 0.08)  win  15%  TP  15% STOP  85% HOLD   0%  entry-gap -2.20c  stop-slip -2.91c  per-game  -19.4c
+  d=5 tp=5 stop=5              trips/g  6.23  EV  -3.20c (se 0.09)  win  40%  TP  40% STOP  60% HOLD   0%  entry-gap -2.29c  stop-slip -3.56c  per-game  -19.9c
+  d=8 tp=16 stop=3             trips/g  3.47  EV  -3.73c (se 0.14)  win  14%  TP  14% STOP  86% HOLD   0%  entry-gap -3.19c  stop-slip -3.92c  per-game  -13.0c
+  d=5 tp=10 no stop            trips/g  1.96  EV  -6.13c (se 0.49)  win  72%  TP  72% STOP   0% HOLD  28%  entry-gap -2.24c  stop-slip +0.00c  per-game  -12.0c
+ with fees (taker stop, clip 10, maker entry free) + 1c half-spread:
+  d=3 tp=3 stop=1              trips/g 20.58  EV  -3.95c (se 0.03)  win  11%  TP  11% STOP  89% HOLD   0%  entry-gap -1.38c  stop-slip -2.09c  per-game  -81.4c
+  d=5 tp=10 stop=2             trips/g  8.24  EV  -4.83c (se 0.07)  win   9%  TP   9% STOP  91% HOLD   0%  entry-gap -2.10c  stop-slip -2.67c  per-game  -39.8c
+  d=5 tp=5 stop=5              trips/g  6.77  EV  -4.79c (se 0.09)  win  35%  TP  35% STOP  65% HOLD   0%  entry-gap -2.24c  stop-slip -3.33c  per-game  -32.4c
+  d=8 tp=16 stop=3             trips/g  3.86  EV  -5.84c (se 0.13)  win  10%  TP  10% STOP  90% HOLD   0%  entry-gap -2.99c  stop-slip -3.58c  per-game  -22.5c
+  d=10 tp=20 stop=5            trips/g  2.45  EV  -6.64c (se 0.21)  win  14%  TP  14% STOP  86% HOLD   0%  entry-gap -3.70c  stop-slip -4.49c  per-game  -16.3c
+  d=5 tp=10 NO stop            trips/g  1.96  EV  -6.13c (se 0.49)  win  72%  TP  72% STOP   0% HOLD  28%  entry-gap -2.24c  stop-slip +0.00c  per-game  -12.0c
+  d=5 tp=10 stop=2 maker.0175  trips/g  8.24  EV  -5.28c (se 0.06)  win   9%  TP   9% STOP  91% HOLD   0%  entry-gap -2.10c  stop-slip -2.67c  per-game  -43.5c
+
+### NFL-like + transient OVER-REACTION noise (amp = sd in c at 50c, hl in 30 s units)
+amp= 2c hl=2 d=5 tp=10 st=2    trips/g  9.86  EV  -4.70c (se 0.08)  win  10%  TP  10% STOP  90% HOLD   0%  entry-gap -1.36c  stop-slip -2.62c  per-game  -46.4c
+amp= 2c hl=2 d=5 tp=5 st=None  trips/g  3.12  EV  -3.72c (se 0.41)  win  84%  TP  84% STOP   0% HOLD  16%  entry-gap -0.90c  stop-slip +0.00c  per-game  -11.6c
+amp= 2c hl=2 d=5 tp=None st=None trips/g  0.97  EV  +2.60c (se 1.84)  win  49%  TP   0% STOP   0% HOLD 100%  entry-gap -0.15c  stop-slip +0.00c  per-game   +2.5c
+amp= 2c hl=8 d=5 tp=10 st=2    trips/g  8.53  EV  -4.92c (se 0.09)  win   9%  TP   9% STOP  91% HOLD   0%  entry-gap -1.98c  stop-slip -2.77c  per-game  -42.0c
+amp= 2c hl=8 d=5 tp=5 st=None  trips/g  2.77  EV  -5.47c (se 0.48)  win  80%  TP  80% STOP   0% HOLD  20%  entry-gap -1.62c  stop-slip +0.00c  per-game  -15.2c
+amp= 2c hl=8 d=5 tp=None st=None trips/g  0.96  EV  -3.13c (se 1.85)  win  43%  TP   0% STOP   0% HOLD 100%  entry-gap -0.78c  stop-slip +0.00c  per-game   -3.0c
+amp= 4c hl=2 d=5 tp=10 st=2    trips/g 15.03  EV  -4.29c (se 0.06)  win  12%  TP  12% STOP  88% HOLD   0%  entry-gap -0.18c  stop-slip -2.43c  per-game  -64.4c
+amp= 4c hl=2 d=5 tp=5 st=None  trips/g  4.76  EV  -1.08c (se 0.29)  win  88%  TP  88% STOP   0% HOLD  12%  entry-gap +0.53c  stop-slip +0.00c  per-game   -5.1c
+amp= 4c hl=2 d=5 tp=None st=None trips/g  0.99  EV  +0.63c (se 1.83)  win  46%  TP   0% STOP   0% HOLD 100%  entry-gap +2.13c  stop-slip +0.00c  per-game   +0.6c
+amp= 4c hl=8 d=5 tp=10 st=2    trips/g 10.50  EV  -4.61c (se 0.08)  win  10%  TP  10% STOP  90% HOLD   0%  entry-gap -1.34c  stop-slip -2.57c  per-game  -48.4c
+amp= 4c hl=8 d=5 tp=5 st=None  trips/g  3.25  EV  -4.38c (se 0.42)  win  83%  TP  83% STOP   0% HOLD  17%  entry-gap -0.86c  stop-slip +0.00c  per-game  -14.2c
+amp= 4c hl=8 d=5 tp=None st=None trips/g  0.97  EV  +1.22c (se 1.83)  win  48%  TP   0% STOP   0% HOLD 100%  entry-gap +0.62c  stop-slip +0.00c  per-game   +1.2c
+amp= 6c hl=2 d=5 tp=10 st=2    trips/g 22.56  EV  -4.31c (se 0.05)  win  12%  TP  12% STOP  88% HOLD   0%  entry-gap +0.25c  stop-slip -2.58c  per-game  -97.3c
+amp= 6c hl=2 d=5 tp=5 st=None  trips/g  6.52  EV  +0.47c (se 0.22)  win  92%  TP  92% STOP   0% HOLD   8%  entry-gap +1.19c  stop-slip +0.00c  per-game   +3.1c
+amp= 6c hl=2 d=5 tp=None st=None trips/g  1.00  EV  +2.86c (se 1.82)  win  49%  TP   0% STOP   0% HOLD 100%  entry-gap +3.33c  stop-slip +0.00c  per-game   +2.9c
+amp= 6c hl=8 d=5 tp=10 st=2    trips/g 13.31  EV  -4.63c (se 0.07)  win  10%  TP  10% STOP  90% HOLD   0%  entry-gap -0.70c  stop-slip -2.46c  per-game  -61.7c
+amp= 6c hl=8 d=5 tp=5 st=None  trips/g  4.09  EV  -2.24c (se 0.34)  win  86%  TP  86% STOP   0% HOLD  14%  entry-gap +0.18c  stop-slip +0.00c  per-game   -9.2c
+amp= 6c hl=8 d=5 tp=None st=None trips/g  0.99  EV  +3.55c (se 1.83)  win  50%  TP   0% STOP   0% HOLD 100%  entry-gap +1.73c  stop-slip +0.00c  per-game   +3.5c
+amp=10c hl=2 d=5 tp=10 st=2    trips/g 38.05  EV  -4.93c (se 0.04)  win  14%  TP  14% STOP  86% HOLD   0%  entry-gap -0.20c  stop-slip -3.59c  per-game -187.6c
+amp=10c hl=2 d=5 tp=5 st=None  trips/g  9.74  EV  +2.00c (se 0.15)  win  95%  TP  95% STOP   0% HOLD   5%  entry-gap +1.32c  stop-slip +0.00c  per-game  +19.5c
+amp=10c hl=2 d=5 tp=None st=None trips/g  1.00  EV  +2.66c (se 1.82)  win  48%  TP   0% STOP   0% HOLD 100%  entry-gap +4.24c  stop-slip +0.00c  per-game   +2.7c
+amp=10c hl=8 d=5 tp=10 st=2    trips/g 19.10  EV  -4.48c (se 0.05)  win  11%  TP  11% STOP  89% HOLD   0%  entry-gap -0.26c  stop-slip -2.55c  per-game  -85.6c
+amp=10c hl=8 d=5 tp=5 st=None  trips/g  5.48  EV  -0.44c (se 0.25)  win  90%  TP  89% STOP   0% HOLD  11%  entry-gap +1.37c  stop-slip +0.00c  per-game   -2.4c
+amp=10c hl=8 d=5 tp=None st=None trips/g  0.99  EV  +1.02c (se 1.82)  win  47%  TP   0% STOP   0% HOLD 100%  entry-gap +3.31c  stop-slip +0.00c  per-game   +1.0c

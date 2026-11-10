@@ -269,6 +269,7 @@ ALLOWED_SCRIPTS = (
     "limm_paper_strategies_read",
     "limm_paper_strategies_backtest",
     "mmsell_scorecard",
+    "bandrev_probe",  # BANDREV band/over-reaction probe (docs/BANDREV_PREREG.md), read-only REST
 )
 
 
