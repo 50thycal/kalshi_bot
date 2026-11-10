@@ -211,3 +211,10 @@ They arm after about a day of paper. Plan and sequence: `docs/MMSELL_WIN_SET_CAN
 - **Paper side:** the twin rows `Xmmsell10_pt4` / `Ymmsell10_pt4` are open and trading (14 and 12). `Smmsell10` / `Zmmsell10` paper have 9 each.
 - **Pair:** `gate:dedup` worked on both tags. `gate:held` fired 2 each, all on 2026-10-30 by 15:40Z, on markets the draining books held, and none since.
 - **Integrity:** no integrity events since the swap.
+
+**2026-11-10 — owner decision: drop politics from both live books** (scorecard
+`docs/mmsell/scorecards/2026-11-10.md`). The owner chose "politics only", with no market split.
+Built as `mmsell-cell-size-3-canary` (`Ummsell10`, paper `Immsell10`) and
+`mmsell-win-set-4-canary` (`Ommsell10`, paper `Mmmsell10`), with the pair
+`Ommsell10+Ummsell10:6:6.00` registered in both. They arm after about a day of paper, an owner
+hard stop. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §11.

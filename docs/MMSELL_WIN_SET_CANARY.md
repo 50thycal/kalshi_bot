@@ -183,3 +183,33 @@ contracts combined on each. Kmmsell10's sports (+$2.23) and other (−$1.32) res
 
 `Kmmsell10` and `Vmmsell10` drain on the record and keep their drift baselines. Kmmsell10's
 I2 impact record (#54) stays accepted and unapplied; that experiment is stood down.
+
+## 11. Restart without politics — `mmsell-price-ceiling-cell-size-3` + `mmsell-win-set-4` (2026-11-10)
+
+Owner decision (session `01D3m7Af5FnpLDG5eDQ6JJRL`), from the fifth 72h scorecard
+(`docs/mmsell/scorecards/2026-11-10.md`): drop politics from both live books. The owner chose
+"politics only": the books keep sharing markets under the same pair bound, with no split.
+
+| | new cell-size book | new WIN-set book |
+|---|---|---|
+| package | `mmsell-cell-size-3-canary` (`successor_mmsell10_cell_size_3.py`) | `mmsell-win-set-4-canary` (`mmsell_win_set_4.py`) |
+| live / twin / paper | `Ummsell10` / `Ummsell10_pt4` / `Immsell10` | `Ommsell10` / `Ommsell10_pt4` / `Mmmsell10` |
+| universe | `only=` loses KXTRUMP and KXTRUTHSOCIAL; KXTRUMPMENTION stays (MENTION) | the six series of `mmsell-win-set-3` less KXTRUMPSAY |
+| everything else | the predecessor's objects | the predecessor's objects |
+
+**Why.** Politics lost about one market in five across every mmsell book's own settled markets
+(K and N on EPST, X and Y on UFO). A 7¢ win against a 93¢ loss needs fewer than one loss in
+about 14. Weather ran about one in 42.
+
+**Sequence** (as §10):
+1. Merge; then `REGISTER_PACKAGE` each, one envelope per boot (paper scope).
+2. Paper env act: append `Immsell10` and `Mmmsell10` specs to `MMSELL_VARIANTS`.
+3. About a day later, `xos show mmsell-price-ceiling-cell-size-3` reads a promotion PASS.
+4. **Owner hard stop.** `ARM_CANARY` each (two sends), then one env act:
+   - append `Ummsell10` then `Ommsell10` to `MMSELL_VARIANTS`, keeping every old entry;
+   - `LIVE_STRATEGIES`: `Xmmsell10,Ymmsell10` → `Ummsell10,Ommsell10` (`Alimm1` kept);
+   - `MMSELL_LIVE_SHARED_MARKET_PAIRS=Ommsell10+Ummsell10:6:6.00`.
+5. Readback, then the 24h silent-arm check. Add the new books to the dashboard page.
+
+`Xmmsell10` and `Ymmsell10` drain on the record and keep their drift baselines. Each new
+experiment's keep gate starts its own loss budget (−$30 and −$15).
