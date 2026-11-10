@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "eee49fa28b6d530890c51e45a061557dee5fd943",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-10T04:10:57Z",
+  "id": "mmsell-win-set-4-canary-register-202611100410-send",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 219 bytes, sha256:0ab0e7349a3f4648>",
+        "before": "<redacted 223 bytes, sha256:97b001f53158c111>",
+        "requested": "<redacted 219 bytes, sha256:0ab0e7349a3f4648>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mmsell-win-set-4-canary-register-202611100410-send.receipt.json",
+  "result_file": "ops/results/mmsell-win-set-4-canary-register-202611100410-send.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42754147666",
+  "service": "main",
+  "started_at": "2026-11-10T04:10:44Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
