@@ -1,5 +1,7 @@
 # Autonomous ChatGPT and Claude desks
 
+> **RETIRED 2026-11-10 (DEC-045).** The autonomous desks have been shut down. Nothing here authorises a desk cycle, round, start or live order. The desks' Postgres is kept as history. This document is historical.
+
 **DEC-021 update:** the operator selected shared-primary accounting with separate virtual
 books. The non-primary account requirements below remain the isolated-mode alternative.
 See [shared-account controls and deployment](desks/SHARED_ACCOUNT.md); all research,

@@ -1,9 +1,9 @@
 # WS-021 — Autonomous ChatGPT and Claude research desks
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Abandoned (2026-11-10). The desks were retired; see DEC-045 in `docs/DECISIONS.md`.
 **Created:** 2026-09-20
-**Updated:** 2026-10-03
+**Updated:** 2026-11-10
 **Build OS:** v0.12
 
 ## Goal

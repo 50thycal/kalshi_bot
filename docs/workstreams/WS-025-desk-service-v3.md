@@ -1,9 +1,9 @@
 # WS-025 — Desk service 3.0: unattended desk agents
 
 **Phase:** BUILDING
-**Status:** Active
+**Status:** Abandoned (2026-11-10). The desks were retired; see DEC-045 in `docs/DECISIONS.md`.
 **Created:** 2026-10-11
-**Updated:** 2026-10-11
+**Updated:** 2026-11-10
 **Build OS:** v0.12
 
 ## Goal

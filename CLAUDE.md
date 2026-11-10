@@ -59,7 +59,7 @@ Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z*
   `docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md`.
 
 ## Session role — establish this first
-**Autonomous desk exception (`DEC-018`):** only the isolated `kalshi_bot/desks/` service runs the new ChatGPT/Claude desks outside XOS; existing workers and safeguards are unchanged, and the legacy manual desk retains DEC-017. Follow `.claude/sessions/autonomous-desk.md` and `docs/AUTONOMOUS_DESKS.md`; build approval is not live activation.
+**Autonomous desk exception (`DEC-018`). RETIRED 2026-11-10 (`DEC-045`):** the desks are shut down, so this exception now authorises nothing. History only: only the isolated `kalshi_bot/desks/` service runs the new ChatGPT/Claude desks outside XOS; existing workers and safeguards are unchanged, and the legacy manual desk retains DEC-017. Follow `.claude/sessions/autonomous-desk.md` and `docs/AUTONOMOUS_DESKS.md`; build approval is not live activation.
 **Infer the role from the request when it is unambiguous** (a paper tape, probe or
 thesis → Research Lab; an incident, collector or real money → Live Ops; a fee/fill/
 taxonomy/metric semantic → Platform Change Review; "what is running" → Experiment
