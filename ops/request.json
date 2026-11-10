@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mmsell-win-set-4-canary-register-202611100410"],"id":"rcpt-ws4-1110"}
+{"type":"env","get":["MMSELL_VARIANTS","LIVE_STRATEGIES","MMSELL_LIVE_SHARED_MARKET_PAIRS"],"id":"envget-1110"}
