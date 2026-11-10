@@ -1,35 +1,23 @@
 # ops request [READ]
-# type=db  id=tags-1110
-# code 675efd196af7e43f7a75b0950bc5d9a41ae3907b · started 2026-11-10T03:43:57Z
-p  n    eg             
--  ---  ---------------
-A  1    Alimm1_pt3     
-b  1    buy_favorite   
-B  1    Basemmsell10   
-C  2    Cmmsell10      
-D  2    Dmmsell10      
-E  2    Emmsell10      
-F  2    Fmmsell10      
-G  2    Gmmsell0       
-H  2    Hmmsell10      
-J  2    Jmmsell10      
-K  2    Kmmsell10      
-L  4    Lmmsell10      
-m  31   mmsell         
-N  2    Nmmsell10      
-p  1    pin15          
-P  1    Pmmsell10      
-Q  1    Qmmsell10      
-r  1    reversion      
-R  5    Rainmmsell1    
-S  1    Smmsell10      
-t  9    tfav           
-T  9    Tempmmsell1    
-V  2    Vmmsell10      
-w  135  weather_cal_h14
-W  8    Wmmsell1       
-X  2    Xmmsell10      
-Y  2    Ymmsell10      
-Z  1    Zmmsell10      
-
-(28 rows)
+# type=db  id=tags2-1110
+# code 675efd196af7e43f7a75b0950bc5d9a41ae3907b · started 2026-11-10T03:44:22Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 673, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 669, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 479, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 523, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.SyntaxError: syntax error at or near "^"
+LINE 1: ..._tag from experiment_deployment_arms) u where t ~ ^[IMOUBimo...
+                                                             ^

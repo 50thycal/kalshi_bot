@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "675efd196af7e43f7a75b0950bc5d9a41ae3907b",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-11-10T03:44:23Z",
+  "id": "tags2-1110",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/tags2-1110.receipt.json",
+  "result_file": "ops/results/tags2-1110.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/42751347309",
+  "service": null,
+  "started_at": "2026-11-10T03:44:22Z",
+  "targets": [],
+  "type": "db"
+}
