@@ -180,6 +180,7 @@ ALLOWED_SCRIPTS = (
     "short_window_census",          # docs/IDEA_MODEL_20261106.md (rolling 15m/hourly venues, recon)
     "volclock_probe",               # docs/VOLCLOCK_PREREG.md (hourly BTC ladder vs scheduled vol windows)
     "levelhold_probe",              # docs/LEVELHOLD_PREREG.md (hourly BTC ladder vs technical levels)
+    "favheld_probe",                # docs/FAVHELD_PREREG.md (hourly BTC ladder, held-side calibration; forward-only)
     "kalshi_freeze_study",
     "kalshi_freeze_listing_check",
     "kalshi_compin_study",
