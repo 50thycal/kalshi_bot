@@ -260,6 +260,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         mentions_forward,
         mmsell_win_set_2,
         mmsell_win_set_3,
+        mmsell_win_set_4,
         mmsell_win_set_canary,
         perp_v1,
         queue_aware_cancel,
@@ -276,6 +277,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         successor_mmsell10_capacity,
         successor_mmsell10_cell_size,
         successor_mmsell10_cell_size_2,
+        successor_mmsell10_cell_size_3,
         successor_mmsell10_contest_cap,
         successor_mmsell10_size_split,
         temperature_season,
@@ -787,6 +789,48 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=mmsell_win_set_3.ACTIVATION_VARS,
             strategy_tags=(mmsell_win_set_3.PAPER_TAG, mmsell_win_set_3.LIVE_TAG,
                            mmsell_win_set_3.TWIN_TAG),
+        ),
+        "mmsell-cell-size-3-canary": ExperimentPackage(
+            name="mmsell-cell-size-3-canary",
+            experiment_key=successor_mmsell10_cell_size_3.EXPERIMENT_KEY,
+            description=(
+                "Successor of mmsell-price-ceiling-cell-size-2 (owner decision 2026-11-10): the "
+                "Xmmsell10 book restarted WITHOUT politics — weather, index and mention series "
+                "only (`only=` drops KXTRUMP and KXTRUTHSOCIAL; KXTRUMPMENTION stays through "
+                "MENTION); sizing, contest semantics, promotion bar, keep gate and every dollar "
+                "bound unchanged. Fresh tags — paper Immsell10, live Ummsell10, twin "
+                "Ummsell10_pt4 — and the pair Ommsell10+Ummsell10:6:6.00 with "
+                "mmsell-win-set-4. Registering creates the experiment in PAPER and ends "
+                "nothing. Arming (ARM_CANARY) is an owner hard stop after ~1 day of Immsell10 "
+                "paper; the env act appends Ummsell10 then Ommsell10 to MMSELL_VARIANTS (old "
+                "entries kept), swaps Xmmsell10,Ymmsell10 for Ummsell10,Ommsell10 in "
+                "LIVE_STRATEGIES and sets the pair. Evidence: "
+                "docs/mmsell/scorecards/2026-11-10.md."
+            ),
+            register=successor_mmsell10_cell_size_3.register,
+            arm=successor_mmsell10_cell_size_3.arm,
+            activation_vars=successor_mmsell10_cell_size_3.ACTIVATION_VARS,
+            strategy_tags=(successor_mmsell10_cell_size_3.PAPER_TAG,
+                           successor_mmsell10_cell_size_3.LIVE_TAG,
+                           successor_mmsell10_cell_size_3.TWIN_TAG),
+        ),
+        "mmsell-win-set-4-canary": ExperimentPackage(
+            name="mmsell-win-set-4-canary",
+            experiment_key=mmsell_win_set_4.EXPERIMENT_KEY,
+            description=(
+                "Successor of mmsell-win-set-3 (owner decision 2026-11-10): KXTRUMPSAY dropped, "
+                "restarted with the cell-size book so the pair Ommsell10+Ummsell10:6:6.00 is "
+                "registered in both. Fresh tags — paper Mmmsell10, live Ommsell10, twin "
+                "Ommsell10_pt4. Band, contest semantics, 3-lot, risk envelope, keep gate and the "
+                "owner-waiver promotion bar are the predecessor's objects. Registering creates "
+                "the experiment in PAPER and ends nothing; arming is an owner hard stop, "
+                "together with mmsell-cell-size-3-canary."
+            ),
+            register=mmsell_win_set_4.register,
+            arm=mmsell_win_set_4.arm,
+            activation_vars=mmsell_win_set_4.ACTIVATION_VARS,
+            strategy_tags=(mmsell_win_set_4.PAPER_TAG, mmsell_win_set_4.LIVE_TAG,
+                           mmsell_win_set_4.TWIN_TAG),
         ),
         "mmsell-win-set-owner-waiver": ExperimentPackage(
             name="mmsell-win-set-owner-waiver",
