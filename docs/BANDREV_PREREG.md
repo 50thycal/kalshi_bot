@@ -5,9 +5,7 @@
 any BANDREV query was run against Kalshi**, so the classes, window, thresholds and decision rule cannot
 be re-scoped after the numbers are seen.*
 
-**Status:** pre-registered, probe built and tested (`scripts/bandrev_probe.py`), **not run**. The
-allowlist entry touches `scripts/ops_runner.py`, so the merge is an operator hard stop
-(`docs/STANDING_AUTHORIZATIONS.md`).
+**Status:** run 1 (2026-11-10, ops `rl-bandrev-run-1`, code `b92ee1e`): **NFL KILL** (P0 pass; P1, P2 fail; P4 closes the drawn design). **MENTION HOLD (instrument)** (P0 quote coverage 42.7% < 80%). Recommended disposition for MENTION: **close; do not amend or re-run** (see Results).
 
 ## One-liner
 
@@ -114,3 +112,39 @@ than reversion.
 
 `{"type":"script","name":"bandrev_probe","args":[],"id":"rl-bandrev-run-1"}` after the merge. Any run
 with a non-default `--max-markets` prints that it is descriptive and decides nothing.
+
+## Results — run 1, 2026-11-10 (as printed; nothing re-scoped)
+
+Ops `rl-bandrev-run-1`, code `b92ee1e`. Full output: [`research/bandrev_run1_20261110.txt`](research/bandrev_run1_20261110.txt).
+
+| | NFL (`KXNFLGAME`) | MENTION |
+|---|---|---|
+| markets (eligible → kept → usable) | 134 → 134 → 134 | 3,077 → 400 → 398 |
+| P0 quote coverage | 94.6% — **PASS** | 42.7% — **FAIL → HOLD (instrument)** |
+| triggers / control | 667 / 739 | 373 / 856 |
+| **R5** trigger (90% CI) | **+0.42¢** (−0.11..+0.99) | −0.27¢ (−1.09..+0.52) |
+| R5 control | −0.09¢ | −0.24¢ |
+| P1 (≥ 3.5¢, LB > 0, n ≥ 500) | **FAIL** | (n < 500; not reached) |
+| P2 (trigger − control ≥ 2¢) | **FAIL** (+0.51¢) | (−0.03¢) |
+| P3 taker fade, net | −3.86¢ | −7.86¢ |
+| **P4 drawn design 5/10/2, trade-through fill** | **−3.40¢/trip, n = 1,259 → CLOSED** | −4.80¢/trip, n = 818 |
+| same, touch fill / maker 0.0175 | −2.71¢ / −3.90¢ | −3.97¢ / −5.28¢ |
+
+**NFL: KILL.** Over-reaction exists only at the noise level: the best horizon (10 min) is +0.82¢,
+a quarter of one round trip, and big moves revert no more than small ones beyond 0.5¢. The drawn
+design lost −3.40¢ per trip at 9.4 trips per game, 76% stopped out. That lands on the offline model's
+"realistic" estimate (≈ −3.4¢), so the model's account of where the money goes (stop fees and spread,
+plus jump gaps) is the account on the real tape.
+
+**MENTION: HOLD (instrument), recommended close.** Mention markets are two-sided only around the
+live event, so most of each 7-hour window is unquoted and P0's 80% floor fails. Under the contract
+that is not a verdict. No instrument repair can produce a PASS, though: on the 373 triggers that
+were measured, R5 is −0.27¢ against a 3.5¢ bar, the taker fade loses 7.86¢, and the drawn design
+loses 4.80¢ per trip over 818 trips. Together with 11-09's listener measurements (contested words
+50¢ → 95¢ within 2 s), the recommended disposition is **close; do not amend the window and re-run.**
+
+**Observation only (decides nothing; the grid rows were descriptive by pre-registration):** both
+no-stop rows were less negative than the stop rows in both classes (NFL −2.10¢ / −1.93¢; MENTION
++0.65¢ / +0.50¢ with intervals spanning 0). That matches the offline model: the stop is the largest
+single cost. It is not a lead. The mention rows hold to settlement on fewer than one trip per market,
+their intervals include zero, and testing them would need a fresh pre-registration on post-11-10 data.
