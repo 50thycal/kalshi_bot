@@ -107,6 +107,7 @@ Axes as in the 11-06 run: **Corr**, **Edge**, **Cost**, **Test** (gradeable now)
 
 | hold | trigger | state |
 |---|---|---|
+| **FAVHELD** (new, from LEVELHOLD's observation) | look 1 data complete 2027-01-08 | **pre-registered 11-10, forward-only**; run on/after 2027-01-09 (`FAVHELD_PREREG.md`) |
 | ~~LEVELHOLD~~ | | **KILLED 2026-11-09** run 1 (`rl-levelhold-run-1109b`): SWING L −0.63¢, CI spans 0; see `LEVELHOLD_PREREG.md` Results |
 | **EARNBEAT** | Q3 reports settle | **due this week** (week of 2026-11-09) |
 | **TYPE-RANK** | leg F reaches 150 TOP / 100 REST fills | earliest decisive read late November (absorbs T12) |
