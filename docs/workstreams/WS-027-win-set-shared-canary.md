@@ -218,3 +218,11 @@ Built as `mmsell-cell-size-3-canary` (`Ummsell10`, paper `Immsell10`) and
 `mmsell-win-set-4-canary` (`Ommsell10`, paper `Mmmsell10`), with the pair
 `Ommsell10+Ummsell10:6:6.00` registered in both. They arm after about a day of paper, an owner
 hard stop. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §11.
+
+**2026-11-10 04:07–04:16Z — politics-free restart registered in PAPER.** PR #787 merged.
+- `REGISTER_PACKAGE` SUCCEEDED for both: `mmsell-cell-size-3-canary` (04:07Z) and
+  `mmsell-win-set-4-canary`. Both experiments are PAPER e1.
+- Paper env act `ui-paper-env-1` VERIFIED: `Immsell10` and `Mmmsell10` appended to
+  `MMSELL_VARIANTS`, computed from the live value. `LIVE_STRATEGIES` is unchanged
+  (`Xmmsell10,Alimm1,Ymmsell10`).
+- Next: about a day of paper, then the promotion read, then the owner's arming go (hard stop).
