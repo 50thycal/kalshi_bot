@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-cell-size-3-canary-register-202611100405\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-cell-size-3-canary\"}, \"schema_version\": 1}"}, "id": "mmsell-cell-size-3-canary-register-202611100405-send"}
+{"type":"xos","command":"experiment-command-show","args":["mmsell-cell-size-3-canary-register-202611100405"],"id":"rcpt-cs3-1110"}
