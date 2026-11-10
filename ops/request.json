@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"tags-1110","sql":"select left(strategy,1) as p, count(distinct strategy) as n, min(strategy) as eg from paper_trades where strategy is not null group by 1 order by 1"}
