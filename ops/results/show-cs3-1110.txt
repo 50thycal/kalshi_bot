@@ -1,6 +1,0 @@
-# ops request [READ]
-# type=xos  id=show-cs3-1110
-# code eee49fa28b6d530890c51e45a061557dee5fd943 · started 2026-11-10T04:17:59Z
-experiment                        state  ver  arm       role       epoch  deployment                stage  kind 
---------------------------------  -----  ---  --------  ---------  -----  ------------------------  -----  -----
-mmsell-price-ceiling-cell-size-3  PAPER  1    mmsell10  treatment  1      mmsell-cellsize3-paper-1  PAPER  paper
