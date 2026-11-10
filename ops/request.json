@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["mmsell-win-set-4-canary"],"id":"pf-ws4-1110"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"mmsell-win-set-4-canary-register-202611100410\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"mmsell-win-set-4-canary\"}, \"schema_version\": 1}"}, "id": "mmsell-win-set-4-canary-register-202611100410-send"}
