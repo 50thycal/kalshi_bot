@@ -1,33 +1,78 @@
 # ops request [READ]
-# type=db  id=tags3-1110
-# code e4a7a18b0cecfa4bedcc6bf4875edd35580ff821 · started 2026-11-10T03:44:46Z
-p  n  eg                                                                       
--  -  -------------------------------------------------------------------------
-A  2  Alimm1,Alimm1_pt3                                                        
-B  1  Basemmsell10                                                             
-C  2  Cmmsell10,Cmmsell10_pt3                                                  
-D  2  Dmmsell10,Dmmsell10_pt4                                                  
-E  2  Emmsell10_pt4,Emmsell10                                                  
-f  4  freeze1,freeze3,freeze2,freeze4                                          
-F  2  Fmmsell10,Fmmsell10_pt4                                                  
-G  2  Gmmsell1,Gmmsell0                                                        
-H  2  Hmmsell10_pt4,Hmmsell10                                                  
-J  2  Jmmsell10_pt4,Jmmsell10                                                  
-K  2  Kmmsell10,Kmmsell10_pt4                                                  
-l  1  limm1                                                                    
-L  4  Lmmsell8_pt3,Lmmsell10_pt3,Lmmsell8,Lmmsell10                            
-m  9  mmsell6,mmsell9,mmsellA4,mmsell10,mmsell,mmsell5,mmsell8,mmsellA5,mmsell7
-N  2  Nmmsell10,Nmmsell10_pt4                                                  
-P  1  Pmmsell10                                                                
-q  1  qacshadow1                                                               
-Q  1  Qmmsell10                                                                
-R  5  Rainmmsell3,Rmmsell1,Rmmsell2,Rainmmsell1,Rainmmsell2                    
-S  1  Smmsell10                                                                
-t  2  theta4_pt3,theta4                                                        
-T  7  Tmmsell1,Tmmsell5,Tmmsell6,Tempmmsell1,Tmmsell2,Tempmmsell3,Tempmmsell2  
-V  2  Vmmsell10,Vmmsell10_pt4                                                  
-X  2  Xmmsell10_pt4,Xmmsell10                                                  
-Y  2  Ymmsell10,Ymmsell10_pt4                                                  
-Z  1  Zmmsell10                                                                
+# type=script  id=rl-bandrev-run-1
+# code b92ee1ea90adabfdfc71396577f599b9c9806916 · started 2026-11-10T03:47:11Z
+BANDREV — over-reaction / band-reversion on near-50/50 binaries (read-only Kalshi REST)
+window close_time [2026-09-01T00:00:00Z, 2026-11-10T00:00:00Z); trigger |3m move| >= 5.0c, mid 30.0-70.0; primary H=5m; bar 3.5c at n>=500
+[NFL] markets: live 270 / historical 0
+[NFL] eligible by series: KXNFLGAME 134
 
-(26 rows)
+==== NFL ====
+markets fetched 134  usable (>=120 min) 134  fetch: {'ok': 134}
+raw two-sided quote coverage 94.6% of 40,457 window minutes (forward-filled between candles)
+
+A. trigger events (|3-min move| >= 5c from mid 30-70): n=667 over 123 markets   control (1-5c moves): n=739
+   reversion R_H = -sign(move) * (mid[t+H] - mid[t]); positive = snaps back
+   H= 1m  trigger  +0.25c (90% CI -0.01..+0.53)   control  -0.05c (90% CI -0.33..+0.23)
+   H= 3m  trigger  +0.65c (90% CI +0.17..+1.12)   control  +0.10c (90% CI -0.30..+0.48)
+   H= 5m  trigger  +0.42c (90% CI -0.11..+0.99)   control  -0.09c (90% CI -0.59..+0.41)  <- PRIMARY
+   H=10m  trigger  +0.82c (90% CI +0.10..+1.60)   control  -0.35c (90% CI -0.98..+0.30)
+   H=15m  trigger  +0.42c (90% CI -0.56..+1.40)   control  -0.47c (90% CI -1.36..+0.40)
+   descriptive: move 5-8c n=413 R5  +0.17c (90% CI -0.47..+0.81)
+   descriptive: move 8-12c n=162 R5  +1.03c (90% CI -0.26..+2.29)
+   descriptive: move 12-100c n=92 R5  +0.42c (90% CI -1.37..+2.19)
+
+B. taker fade (enter ask, exit bid at +5m, fee q=10 both legs):  -3.86c (90% CI -4.39..-3.28)
+
+D. operator band design replay (maker entry+TP fee 0, stop = taker sell at the bid)
+   design             fill   trips  /mkt   EV/trip (90% CI)                 win   TP  STOP SETTLE
+   d=5 tp=10 st=2     thru    1259   9.4    -3.40c (90% CI -3.82..-2.98)   23%  23%  76%   0%   <- PRE-REGISTERED DESIGN
+   d=5 tp=10 st=2     touch   1313   9.8    -2.71c (90% CI -3.14..-2.26)   27%  27%  73%   0%
+   d=5 tp=10 st=2 mk.0175 thru    1259   9.4    -3.90c (90% CI -4.32..-3.49)   23%  23%  76%   0%
+   d=3 tp=3 st=1      thru    1854  13.8    -4.04c (90% CI -4.27..-3.83)   28%  28%  72%   0%
+   d=5 tp=5 st=5      thru    1233   9.2    -3.40c (90% CI -3.82..-3.00)   45%  45%  55%   0%
+   d=8 tp=16 st=3     thru     841   6.3    -3.59c (90% CI -4.16..-3.02)   20%  20%  80%   0%
+   d=5 tp=10 st=None  thru     383   2.9    -2.10c (90% CI -4.00..-0.43)   77%  77%   0%  23%
+   d=5 tp=5 st=None   thru     601   4.5    -1.93c (90% CI -3.16..-0.97)   85%  85%   0%  15%
+[MENTION] markets: live 3069 / historical 59
+[MENTION] eligible by series: KXEARNINGSMENTIONMETA 13, KXEARNINGSMENTIONMSFT 12, KXFEDMENTION 94, KXMAMDANIMENTION 75, KXTRUMPMENTION 1578, KXTRUMPMENTIONB 536, KXWORLDNEWSMENTION 769
+[MENTION] 3077 eligible; keeping the top 400 by volume (pre-registered)
+
+==== MENTION ====
+markets fetched 400  usable (>=120 min) 398  fetch: {'ok': 400}
+raw two-sided quote coverage 42.7% of 145,408 window minutes (forward-filled between candles)
+
+A. trigger events (|3-min move| >= 5c from mid 30-70): n=373 over 152 markets   control (1-5c moves): n=856
+   reversion R_H = -sign(move) * (mid[t+H] - mid[t]); positive = snaps back
+   H= 1m  trigger  +0.52c (90% CI +0.03..+1.02)   control  -0.00c (90% CI -0.15..+0.15)
+   H= 3m  trigger  +0.68c (90% CI -0.05..+1.33)   control  -0.12c (90% CI -0.34..+0.11)
+   H= 5m  trigger  -0.27c (90% CI -1.09..+0.52)   control  -0.24c (90% CI -0.50..+0.03)  <- PRIMARY
+   H=10m  trigger  -0.70c (90% CI -1.72..+0.29)   control  -0.04c (90% CI -0.45..+0.38)
+   H=15m  trigger  -0.98c (90% CI -2.34..+0.35)   control  -0.36c (90% CI -0.88..+0.15)
+   descriptive: move 5-8c n=200 R5  -0.74c (90% CI -1.52..+0.09)
+   descriptive: move 8-12c n=81 R5  +0.19c (90% CI -1.88..+2.30)
+   descriptive: move 12-100c n=92 R5  +0.33c (90% CI -1.72..+2.41)
+
+B. taker fade (enter ask, exit bid at +5m, fee q=10 both legs):  -7.86c (90% CI -8.70..-7.07)
+
+D. operator band design replay (maker entry+TP fee 0, stop = taker sell at the bid)
+   design             fill   trips  /mkt   EV/trip (90% CI)                 win   TP  STOP SETTLE
+   d=5 tp=10 st=2     thru     818   2.1    -4.80c (90% CI -5.36..-4.25)   20%  20%  78%   1%   <- PRE-REGISTERED DESIGN
+   d=5 tp=10 st=2     touch    846   2.1    -3.97c (90% CI -4.55..-3.38)   24%  24%  75%   1%
+   d=5 tp=10 st=2 mk.0175 thru     818   2.1    -5.28c (90% CI -5.84..-4.75)   20%  20%  78%   1%
+   d=3 tp=3 st=1      thru    1293   3.2    -5.06c (90% CI -5.39..-4.75)   20%  20%  79%   1%
+   d=5 tp=5 st=5      thru     811   2.0    -3.91c (90% CI -4.50..-3.34)   48%  48%  50%   1%
+   d=8 tp=16 st=3     thru     538   1.4    -4.36c (90% CI -5.27..-3.42)   23%  23%  74%   2%
+   d=5 tp=10 st=None  thru     347   0.9    +0.65c (90% CI -1.05..+2.29)   81%  81%   0%  19%
+   d=5 tp=5 st=None   thru     516   1.3    +0.50c (90% CI -0.49..+1.45)   90%  90%   0%  10%
+
+== verdict ==
+[NFL]
+  P0 PASS: 134 markets, coverage 94.6%
+  P1 R5 +0.42c (LB -0.11) vs bar 3.5c at n=667 -> FAIL
+  P2 treatment - control = +0.51c (bar +2.0c) -> FAIL
+  P3 taker fade -3.86c (LB -4.39) -> FAIL (reported)
+  P4 operator design -3.40c/trip at n=1259 -> CLOSED (EV <= 0)
+  VERDICT NFL: KILL (no tradeable over-reaction in this class)
+[MENTION]
+  P0 FAIL: usable markets 398 (need 40), coverage 42.7% (need 80%) -> HOLD (instrument)
+historical cutoff: {'market_positions_last_updated_ts': '2026-09-11T00:00:00Z', 'market_settled_ts': '2026-09-11T00:00:00Z', 'orders_updated_ts': '2026-10-27T00:00:00Z', 'trades_created_ts': '2026-09-11T00:00:00Z'}
