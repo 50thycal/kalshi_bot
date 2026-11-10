@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## FAVHELD 2026-11-10 — pre-registered, forward-only (held-side favourite-buy on the hourly BTC ladder)
+
+- **What:** is the side spot already sits on underpriced 20–40 minutes before close? LEVELHOLD's control
+  (+3.75¢ raw) and VOLCLOCK's quiet hours (+2.71¢ net) both said yes, post hoc. Calvin asked for a proper test
+  ([`FAVHELD_PREREG.md`](FAVHELD_PREREG.md), probe `scripts/favheld_probe.py`).
+- **Design:** graded data is ET 2026-11-10 onward only, and the probe refuses an earlier start. There is one look at 60 days
+  (run on or after 2027-01-09) and, only if that is HOLD, a final look at 120 days. The pass bar is net ≥ +1¢ at the 97.5% one-sided level.
+- **Why sceptical:** favourite-buy is 0-for-1 (TFAV, July). The in-sample arithmetic gives only about +0.8–1.3¢ net, so
+  the honest expectation is HOLD and then "unproven". The difference from TFAV: no model filter, official-result labels,
+  and a 40× larger sample behind the prior.
+
 ## LEVELHOLD run 1 2026-11-09 — KILL: technical levels are priced on the hourly BTC ladder
 
 - **Verdict as printed:** `KILL (technical levels are priced; no ATR-band/pivot/grid variants)`
