@@ -1,1 +1,1 @@
-{"type":"db","id":"tags-1110","sql":"select left(strategy,1) as p, count(distinct strategy) as n, min(strategy) as eg from paper_trades where strategy is not null group by 1 order by 1"}
+{"type":"db","id":"tags2-1110","sql":"select t from (select strategy_tag t from experiment_arms union select strategy_tag from experiment_deployment_arms) u where t ~ ^[IMOUBimou] order by 1"}
