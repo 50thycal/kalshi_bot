@@ -1,1 +1,1 @@
-{"type": "db", "id": "ie2-1112", "sql": "select * from experiment_integrity_events where created_at > now() - interval '90 minutes' or resolved_at is null order by id desc limit 8"}
+{"type": "db", "id": "ie3-1112", "sql": "select id, kind, resolved_at, resolution, (select count(*) from live_orders lo where lo.strategy in ('Ummsell10','Ommsell10')) live_orders_new from experiment_integrity_events where id in (30,31,34,35) order by id"}
