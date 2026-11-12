@@ -1,0 +1,55 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "d482d857bd4413c7917c7aab79820dc42a6708d3",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-12T03:21:44Z",
+  "id": "ui-swap-1",
+  "mutation": {
+    "changes": {
+      "LIVE_STRATEGIES": {
+        "after": "Ummsell10,Alimm1,Ommsell10",
+        "before": "Xmmsell10,Alimm1,Ymmsell10",
+        "requested": "Ummsell10,Alimm1,Ommsell10"
+      },
+      "MMSELL_LIVE_SHARED_MARKET_PAIRS": {
+        "after": "Ommsell10+Ummsell10:6:6.00",
+        "before": "Xmmsell10+Ymmsell10:6:6.00",
+        "requested": "Ommsell10+Ummsell10:6:6.00"
+      },
+      "MMSELL_VARIANTS": {
+        "after": "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION",
+        "before": "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION",
+        "requested": "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 3,
+    "targets": [
+      "LIVE_STRATEGIES",
+      "MMSELL_LIVE_SHARED_MARKET_PAIRS",
+      "MMSELL_VARIANTS"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ui-swap-1.receipt.json",
+  "result_file": "ops/results/ui-swap-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/43147620857",
+  "service": "main",
+  "started_at": "2026-11-12T03:21:25Z",
+  "targets": [
+    "LIVE_STRATEGIES",
+    "MMSELL_LIVE_SHARED_MARKET_PAIRS",
+    "MMSELL_VARIANTS"
+  ],
+  "type": "env"
+}
