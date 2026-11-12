@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"rv-ct-1112-0310"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"ui-arm-cs3-20261112\", \"action\": \"ARM_CANARY\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"payload\": {\"package\": \"mmsell-cell-size-3-canary\", \"approved_by\": \"Calvin\"}, \"schema_version\": 1}"}, "id": "ui-arm-cs3-20261112-send"}
