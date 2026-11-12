@@ -226,3 +226,19 @@ hard stop. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §11.
   `MMSELL_VARIANTS`, computed from the live value. `LIVE_STRATEGIES` is unchanged
   (`Xmmsell10,Alimm1,Ymmsell10`).
 - Next: about a day of paper, then the promotion read, then the owner's arming go (hard stop).
+
+**2026-11-12 03:13–03:22Z — politics-free restart ARMED (owner confirmed in session).**
+- Day-1 paper since 11-10 04:07Z: `Immsell10` 11 settled, +$0.74, no loss; `Mmmsell10` 11
+  settled, +$0.74, no loss. Both promotion bars read PASS (cell-size-3 at 15:23Z on 11-10).
+- `ui-arm-cs3-20261112` SUCCEEDED: `mmsell-cellsize3-live-1` + `twin-1`, 03:13:32Z.
+- `ui-arm-ws4-20261112` SUCCEEDED: `mmsell-winset4-live-1` + `twin-1`, 03:17:47Z.
+- Env act `ui-swap-1` VERIFIED, computed from the live values:
+  - `Ummsell10` then `Ommsell10` appended to `MMSELL_VARIANTS`, every old entry kept;
+  - `LIVE_STRATEGIES=Ummsell10,Alimm1,Ommsell10`;
+  - `MMSELL_LIVE_SHARED_MARKET_PAIRS=Ommsell10+Ummsell10:6:6.00`.
+- Readback:
+  - the arming drift events #34/#35 resolved automatically at the swap;
+  - `Xmmsell10`/`Ymmsell10` are recorded EXPERIMENT_EXECUTION_STOOD_DOWN (#36/#37);
+  - `xos tag` shows both new books LIVE_CANARY e2;
+  - the first live order is on the new tags.
+- X/Y at the swap: X −$0.96 on 50 settled, Y −$2.67 on 45; their open positions drain.
