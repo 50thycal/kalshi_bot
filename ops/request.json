@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-win-set-4"],"id":"shw-ws4-1112"}
+{"type": "db", "sql": "SELECT count(*) AS trades_4h, count(DISTINCT market_ticker) AS trade_mkts_4h, max(received_at) AS last_trade FROM incentive_trade_events WHERE received_at >= now() - interval '4 hours'", "id": "rc-a2-1112-0310"}
