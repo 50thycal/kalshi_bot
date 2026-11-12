@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"ui-arm-ws4-20261112\", \"action\": \"ARM_CANARY\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"payload\": {\"package\": \"mmsell-win-set-4-canary\", \"approved_by\": \"Calvin\"}, \"schema_version\": 1}"}, "id": "ui-arm-ws4-20261112-send"}
+{"type":"xos","command":"experiment-command-show","args":["ui-arm-ws4-20261112"],"id":"rc-arm-ws4"}
