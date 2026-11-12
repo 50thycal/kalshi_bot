@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["ui-arm-ws4-20261112"],"id":"rc-arm-ws4"}
+{"type":"env","get":["MMSELL_VARIANTS","LIVE_STRATEGIES","MMSELL_LIVE_SHARED_MARKET_PAIRS"],"id":"envget-1112"}
