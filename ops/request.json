@@ -1,1 +1,1 @@
-{"type": "db", "id": "ie-1112", "sql": "select id, kind, severity, created_at, resolved_at, left(coalesce(detail::text,''),140) d from experiment_integrity_events where created_at > now() - interval '1 hour' or resolved_at is null order by id desc limit 10"}
+{"type": "db", "id": "ie2-1112", "sql": "select * from experiment_integrity_events where created_at > now() - interval '90 minutes' or resolved_at is null order by id desc limit 8"}
