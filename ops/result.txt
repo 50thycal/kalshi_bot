@@ -1,6 +1,23 @@
 # ops request [READ]
-# type=xos  id=tag-o-1112
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:25:58Z
-experiment        state        ver  arm     role       epoch  deployment             stage        kind
-----------------  -----------  ---  ------  ---------  -----  ---------------------  -----------  ----
-mmsell-win-set-4  LIVE_CANARY  1    winset  treatment  2      mmsell-winset4-live-1  LIVE_CANARY  live
+# type=db  id=ie-1112
+# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:26:25Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 675, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 671, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 481, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 525, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedColumn: column "detail" does not exist
+LINE 1: ... severity, created_at, resolved_at, left(coalesce(detail::te...
+                                                             ^
