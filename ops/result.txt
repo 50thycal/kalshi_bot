@@ -1,4 +1,8 @@
 # ops request [READ]
-# type=noop
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:27:57Z
-(noop — nothing to do)
+# type=db  id=rc-a1-1112-0713
+# code b885d4a8bd49a8560a473c48e1cf372753bd761e · started 2026-11-12T07:21:18Z
+snaps_4h  mkts_4h  last_snap                         db_now                          
+--------  -------  --------------------------------  --------------------------------
+9762      392      2026-11-12 07:21:07.221927+00:00  2026-11-12 07:21:19.668917+00:00
+
+(1 row)
