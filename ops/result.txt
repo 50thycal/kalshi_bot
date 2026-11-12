@@ -1,4 +1,28 @@
 # ops request [READ]
-# type=noop
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:14:16Z
-(noop — nothing to do)
+# type=xos  id=rc-arm-cs3
+# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:16:16Z
+{
+  "command_id": "ui-arm-cs3-20261112",
+  "action": "ARM_CANARY",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "d8bebc18aded6deb48e297f28f38c00f9d54d8f28215d7df95b8623c98345b7d",
+  "completed_at": "2026-11-12 03:13:32.989055+00:00",
+  "result": {
+    "kind": "arm",
+    "package": "mmsell-cell-size-3-canary",
+    "epoch_number": 2,
+    "impact_class": "I2",
+    "live_deployment": "mmsell-cellsize3-live-1",
+    "live_started_at": "2026-11-12 03:13:32.663396+00:00",
+    "twin_deployment": "mmsell-cellsize3-twin-1",
+    "twin_started_at": "2026-11-12 03:13:32.663396+00:00",
+    "epoch_started_at": "2026-11-12 03:13:32.663396+00:00"
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true,
+  "experiment": "mmsell-price-ceiling-cell-size-3"
+}
