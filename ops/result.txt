@@ -1,11 +1,4 @@
 # ops request [READ]
-# type=db  id=ie3-1112
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:27:22Z
-id  kind                     resolved_at                       resolution                                                                                                                                 live_orders_new
---  -----------------------  --------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------  ---------------
-30  EXPERIMENT_CONFIG_DRIFT  2026-10-30 13:43:47.517548+00:00  resolved automatically: the LIVE trading worker observed mmsell-cellsize2-live-1's runtime config matching its registered material config  1              
-31  EXPERIMENT_CONFIG_DRIFT  2026-10-30 13:43:47.528933+00:00  resolved automatically: the LIVE trading worker observed mmsell-winset3-live-1's runtime config matching its registered material config    1              
-34  EXPERIMENT_CONFIG_DRIFT  2026-11-12 03:22:08.233026+00:00  resolved automatically: the LIVE trading worker observed mmsell-cellsize3-live-1's runtime config matching its registered material config  1              
-35  EXPERIMENT_CONFIG_DRIFT  2026-11-12 03:22:08.244647+00:00  resolved automatically: the LIVE trading worker observed mmsell-winset4-live-1's runtime config matching its registered material config    1              
-
-(4 rows)
+# type=noop
+# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:27:57Z
+(noop — nothing to do)
