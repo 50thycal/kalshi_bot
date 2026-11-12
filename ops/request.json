@@ -1,1 +1,1 @@
-{"type":"xos","command":"tag","args":["Ommsell10"],"id":"tag-o-1112"}
+{"type": "db", "id": "ie-1112", "sql": "select id, kind, severity, created_at, resolved_at, left(coalesce(detail::text,''),140) d from experiment_integrity_events where created_at > now() - interval '1 hour' or resolved_at is null order by id desc limit 10"}
