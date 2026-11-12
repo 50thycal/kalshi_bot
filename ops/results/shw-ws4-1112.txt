@@ -1,72 +1,60 @@
 # ops request [READ]
-# type=xos  id=shw-cs3-1112
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:07:51Z
+# type=xos  id=shw-ws4-1112
+# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:08:39Z
 {
-  "key": "mmsell-price-ceiling-cell-size-3",
-  "title": "mmsell10 cell-size book on weather, index and mentions only",
+  "key": "mmsell-win-set-4",
+  "title": "mmsell WIN-set without politics, beside the restarted cell-size book",
   "state": "PAPER",
   "paused_from_state": null,
   "origin": "operator",
   "family": "maker",
-  "hypothesis": "The predecessor's question without politics: the cheap-cell price-ceiling rule, sized 3 on the slow-information cell and 1 elsewhere, earns a positive live per-contract return on weather, index and mention series.",
+  "hypothesis": "The predecessor's question without the Trump-says series: restricted to slow-information WIN categories (weather, index, mentions), the mmsell price-ceiling rule earns a positive per-contract live return.",
   "legacy_class": null,
   "migration_integrity": null,
   "platform_snapshot_id": 6,
-  "predecessor_experiment_id": 47,
+  "predecessor_experiment_id": 48,
   "retired_at": null,
   "docs": {
     "canary": "docs/MMSELL_WIN_SET_CANARY.md",
     "evidence": "docs/mmsell/scorecards/2026-11-10.md",
-    "predecessor_plan": "docs/MMSELL_CELL_SIZE_CANARY.md"
+    "predecessor_plan": "docs/MMSELL_WIN_SET_CANARY.md"
   },
   "versions": [
     {
       "version": 1,
-      "frozen_at": "2026-11-10 04:07:06.041731+00:00",
-      "fingerprint": "4064d556f5e71b561642daaa0cedb3a83046c024cddd6d09775234c58263d9c5",
-      "pre_registration_hash": "51febea3f5df625c7763e73921480c65dd84f8e95750f454ee5f29a5bac04fdc",
-      "independent_variable": "market universe: politics removed (weather, index, mentions)",
+      "frozen_at": "2026-11-10 04:12:29.153040+00:00",
+      "fingerprint": "3d828a8a1da85eadc25e530b5d546bd3c204595b681a309c5cf6f9ff027a2d3c",
+      "pre_registration_hash": "17f04169fd912a7efda7552cecce7e5d1558c82767b74394070c73a50b3b085f",
+      "independent_variable": "market universe: KXTRUMPSAY removed",
       "held_constant": [
         "band and ceiling (lo=5, hi=10, maxyes=7)",
-        "the slow-cell sizing rule (bigtypes/bigsize)",
         "contestcap=1, contestkey=split",
         "the 0c offset and the 4h order timeout",
         "hold-to-settlement exits",
         "the tier bar and the live series pauses",
         "the fee model",
-        "the predecessor's promotion bar, keep gate and every dollar bound",
+        "the predecessor's risk envelope, keep gate and owner-waiver promotion bar",
         "the combined per-market bound with the partner (6 contracts / $6.00)"
       ],
-      "change_reason": "successor of mmsell-price-ceiling-cell-size-2: politics removed (owner decision 2026-11-10, restart with mmsell-win-set-4)",
+      "change_reason": "successor of mmsell-win-set-3: KXTRUMPSAY dropped, restarted with the cell-size book (partner Ummsell10) (owner decision 2026-11-10)",
       "arms": [
         {
-          "arm_key": "mmsell10",
+          "arm_key": "winset",
           "role": "treatment",
-          "strategy_tag": "Immsell10",
+          "strategy_tag": "Mmmsell10",
           "params": {
             "hi": 10,
             "lo": 5,
-            "only": [
-              "KXRAIN",
-              "KXHIGH",
-              "KXLOW",
-              "KXSNOW",
+            "size": 3,
+            "onlyx": [
+              "KXFEDMENTION",
               "KXINX",
-              "KXNASDAQ",
-              "KXDOW",
-              "KXSPX",
-              "MENTION"
+              "KXINXU",
+              "KXNASDAQ100U",
+              "KXRAIN",
+              "KXTRUMPMENTION"
             ],
-            "size": 1,
             "maxyes": 7,
-            "bigsize": 3,
-            "bigtypes": [
-              "event_stat",
-              "mention",
-              "exact_score",
-              "outright",
-              "game_prop"
-            ],
             "universe": "graduated"
           }
         }
@@ -79,7 +67,7 @@
           "to_state": null,
           "spec": {
             "sample": {
-              "mmsell10": {
+              "winset": {
                 "op": ">=",
                 "value": 150,
                 "metric": "live_settled_contracts",
@@ -89,14 +77,14 @@
             "hold_if": [
               {
                 "op": "<",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 50.0,
                 "metric": "twin_mirror_coverage_pct",
                 "deployment_kind": "live"
               },
               {
                 "op": "<",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 25.0,
                 "metric": "live_fill_rate_pct",
                 "deployment_kind": "live"
@@ -105,8 +93,8 @@
             "fail_any": [
               {
                 "op": "<=",
-                "arm": "mmsell10",
-                "value": -30.0,
+                "arm": "winset",
+                "value": -15.0,
                 "metric": "live_realized_pnl_usd",
                 "min_evidence": {
                   "op": ">=",
@@ -117,7 +105,7 @@
               },
               {
                 "op": ">",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 0.5,
                 "metric": "twin_live_paired_gap_cents",
                 "min_evidence": {
@@ -129,7 +117,7 @@
               },
               {
                 "op": "<",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": -0.5,
                 "metric": "twin_live_paired_gap_cents",
                 "min_evidence": {
@@ -141,7 +129,7 @@
               },
               {
                 "op": ">",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 3.0,
                 "metric": "live_max_realized_loss_usd",
                 "min_evidence": {
@@ -153,7 +141,7 @@
               },
               {
                 "op": ">",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 5.0,
                 "metric": "twin_live_winrate_gap_pp",
                 "min_evidence": {
@@ -167,38 +155,38 @@
             "pass_all": [
               {
                 "op": ">",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 0.0,
                 "metric": "live_cents_per_contract",
                 "deployment_kind": "live"
               },
               {
                 "op": "<=",
-                "arm": "mmsell10",
+                "arm": "winset",
                 "value": 1.0,
                 "metric": "twin_live_winrate_gap_pp",
                 "deployment_kind": "live"
               }
             ],
-            "description": "Keep/stop for the mmsell10 cell-size canary restarted on weather, index and mentions (Ummsell10): the predecessor's contract unchanged \u2014 loss budget -$30, per-market loss bound $3.00 (one 3-lot clip). Every clause addresses deployment_kind='live'; twin comparisons resolve through the registered twin_of link.",
+            "description": "Keep/stop for the mmsell WIN-set canary (Nmmsell10): the incumbent's live contract with the canary loss budget at -$15 and the per-market loss bound at $3.00 (one 3-lot). Every clause addresses deployment_kind='live' and, once METRICS_ENGINE:live_fill_attribution_2026_10 is active, reads this tag's own fills on a market it shares with Kmmsell10.",
             "max_evidence_horizon": {
               "arms": [
-                "mmsell10"
+                "winset"
               ],
               "value": 600,
               "metric": "live_settled_contracts",
               "deployment_kind": "live"
             }
           },
-          "spec_hash": "a5f23728b7726cd753b30010b5c4a1d8945515c19c524eb6fbe89616a49ec4fd",
-          "evidence_started_at": "2026-11-10 04:07:06.041731+00:00",
+          "spec_hash": "dbe3b7262a000fe338bc71605e131b4b39d0a493c9b20487a7122915dd7a4f3a",
+          "evidence_started_at": "2026-11-10 04:12:29.153040+00:00",
           "results": [
             {
               "verdict": "BLOCKED_DATA",
-              "computed_at": "2026-11-10 04:08:37.756317+00:00",
+              "computed_at": "2026-11-10 04:13:21.281461+00:00",
               "computed_by": "system",
               "sample": {
-                "live_settled_contracts/mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10": {
+                "live_settled_contracts/mmsell-win-set-4/v1/e1/winset": {
                   "n": 0,
                   "value": null
                 }
@@ -208,7 +196,7 @@
                   {
                     "n": 0,
                     "list": "sample",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">=",
@@ -221,11 +209,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -248,12 +236,12 @@
                   {
                     "n": 0,
                     "list": "horizon",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">",
                       "arms": [
-                        "mmsell10"
+                        "winset"
                       ],
                       "value": 600,
                       "metric": "live_settled_contracts",
@@ -264,11 +252,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -291,11 +279,11 @@
                   {
                     "n": 0,
                     "list": "pass_all",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 0.0,
                       "metric": "live_cents_per_contract",
                       "deployment_kind": "live"
@@ -305,11 +293,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -332,11 +320,11 @@
                   {
                     "n": 0,
                     "list": "pass_all",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": "<=",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 1.0,
                       "metric": "twin_live_winrate_gap_pp",
                       "deployment_kind": "live"
@@ -346,11 +334,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -373,12 +361,12 @@
                   {
                     "n": 0,
                     "list": "fail_any",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": "<=",
-                      "arm": "mmsell10",
-                      "value": -30.0,
+                      "arm": "winset",
+                      "value": -15.0,
                       "metric": "live_realized_pnl_usd",
                       "min_evidence": {
                         "op": ">=",
@@ -392,11 +380,11 @@
                     "missing": true,
                     "eligible": false,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -426,11 +414,11 @@
                   {
                     "n": 0,
                     "list": "fail_any",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 0.5,
                       "metric": "twin_live_paired_gap_cents",
                       "min_evidence": {
@@ -445,11 +433,11 @@
                     "missing": true,
                     "eligible": false,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -479,11 +467,11 @@
                   {
                     "n": 0,
                     "list": "fail_any",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": "<",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": -0.5,
                       "metric": "twin_live_paired_gap_cents",
                       "min_evidence": {
@@ -498,11 +486,11 @@
                     "missing": true,
                     "eligible": false,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -532,11 +520,11 @@
                   {
                     "n": 0,
                     "list": "fail_any",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 3.0,
                       "metric": "live_max_realized_loss_usd",
                       "min_evidence": {
@@ -551,11 +539,11 @@
                     "missing": true,
                     "eligible": false,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -585,11 +573,11 @@
                   {
                     "n": 0,
                     "list": "fail_any",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": ">",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 5.0,
                       "metric": "twin_live_winrate_gap_pp",
                       "min_evidence": {
@@ -604,11 +592,11 @@
                     "missing": true,
                     "eligible": false,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -638,11 +626,11 @@
                   {
                     "n": 0,
                     "list": "hold_if",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": "<",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 50.0,
                       "metric": "twin_mirror_coverage_pct",
                       "deployment_kind": "live"
@@ -652,11 +640,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -679,11 +667,11 @@
                   {
                     "n": 0,
                     "list": "hold_if",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
                     "value": null,
                     "clause": {
                       "op": "<",
-                      "arm": "mmsell10",
+                      "arm": "winset",
                       "value": 25.0,
                       "metric": "live_fill_rate_pct",
                       "deployment_kind": "live"
@@ -693,11 +681,11 @@
                     "missing": true,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "live_orders x fills x positions",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.708091+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.232868+00:00"
                       ],
                       "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
                       "deployments": [],
@@ -718,19 +706,19 @@
                     "bound_value": null
                   }
                 ],
-                "fingerprint": "1973013eff660b8748797e53abd37ae4a9b30aaf34dfa0cd50c35df021538805",
+                "fingerprint": "dc8ed53fb283172e63f48d1f38b87b065daed31ccabc87f0fa3326107b395cbd",
                 "blocking_reasons": [
-                  "sample 'live_settled_contracts' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "horizon 'live_settled_contracts' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "pass_all 'live_cents_per_contract' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "fail_any 'live_realized_pnl_usd' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "fail_any 'live_max_realized_loss_usd' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "fail_any 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "hold_if 'twin_mirror_coverage_pct' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch",
-                  "hold_if 'live_fill_rate_pct' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch"
+                  "sample 'live_settled_contracts' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "horizon 'live_settled_contracts' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "pass_all 'live_cents_per_contract' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "pass_all 'twin_live_winrate_gap_pp' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "fail_any 'live_realized_pnl_usd' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_paired_gap_cents' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_paired_gap_cents' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "fail_any 'live_max_realized_loss_usd' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "fail_any 'twin_live_winrate_gap_pp' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "hold_if 'twin_mirror_coverage_pct' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch",
+                  "hold_if 'live_fill_rate_pct' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch"
                 ],
                 "provider_revisions": {
                   "live_fill_rate_pct": "live_exec_v2",
@@ -743,7 +731,7 @@
                   "twin_live_paired_gap_cents": "twin_gap_v1"
                 }
               },
-              "explanation": "required metrics cannot be computed (missing is not zero): sample 'live_settled_contracts' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | horizon 'live_settled_contracts' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | pass_all 'live_cents_per_contract' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'live_realized_pnl_usd' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'live_max_realized_loss_usd' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | fail_any 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | hold_if 'twin_mirror_coverage_pct' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch | hold_if 'live_fill_rate_pct' on mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10: no live deployment tags for this scope in this epoch"
+              "explanation": "required metrics cannot be computed (missing is not zero): sample 'live_settled_contracts' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | horizon 'live_settled_contracts' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | pass_all 'live_cents_per_contract' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | pass_all 'twin_live_winrate_gap_pp' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | fail_any 'live_realized_pnl_usd' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | fail_any 'twin_live_paired_gap_cents' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | fail_any 'live_max_realized_loss_usd' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | fail_any 'twin_live_winrate_gap_pp' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | hold_if 'twin_mirror_coverage_pct' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch | hold_if 'live_fill_rate_pct' on mmsell-win-set-4/v1/e1/winset: no live deployment tags for this scope in this epoch"
             }
           ]
         },
@@ -756,19 +744,19 @@
             "pass_all": [
               {
                 "op": ">",
-                "arm": "*",
-                "value": 0,
-                "metric": "realizable_cents_per_trade"
+                "arm": "winset",
+                "value": -3.0,
+                "metric": "realized_pnl_usd"
               }
             ],
-            "description": "v1's registered bar, unchanged and unfloored: the calibrated live-fill projection must be positive. This is NOT a claim that observed paper P&L is positive \u2014 on v1 it was +0.232c/trade against a +1.286c/trade projection."
+            "description": "OWNER WAIVER of v1's 30-settled paper smoke bar (2026-10-16). Passes while the Pmmsell10 paper book has not lost more than one market's $3.00 bound since this Version. The evidence for arming is check 1 of docs/MMSELL_LIVE_CANARY_PATTERNS.md; the live keep gate, carried verbatim, is what can stop the canary."
           },
-          "spec_hash": "f15ea2a7bfb93f24b9ac80f86cd135b39761b65afa6c8806b1e341e36c8d2bba",
-          "evidence_started_at": "2026-11-10 04:07:06.041731+00:00",
+          "spec_hash": "fcf2c642aff1b5daa758ef7ca53d5b34149049d129c9a709b262be2e8b5a8928",
+          "evidence_started_at": "2026-11-10 04:12:29.153040+00:00",
           "results": [
             {
-              "verdict": "HOLD",
-              "computed_at": "2026-11-10 04:08:37.802919+00:00",
+              "verdict": "PASS",
+              "computed_at": "2026-11-10 04:13:21.330610+00:00",
               "computed_by": "system",
               "sample": null,
               "metrics": {
@@ -776,101 +764,33 @@
                   {
                     "n": 0,
                     "list": "pass_all",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
-                    "value": null,
+                    "scope": "mmsell-win-set-4/v1/e1/winset",
+                    "value": 0.0,
                     "clause": {
                       "op": ">",
-                      "arm": "*",
-                      "value": 0,
-                      "metric": "realizable_cents_per_trade"
-                    },
-                    "passed": null,
-                    "reason": "no settled trades in window",
-                    "missing": false,
-                    "eligible": true,
-                    "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
-                      "source": "paper_trades",
-                      "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 04:08:37.769039+00:00"
-                      ],
-                      "total_n": 0,
-                      "covered_n": 0,
-                      "fee_basis": "as-recorded (epoch-floored evidence is post-2026-08-11 maker-fee model)",
-                      "deployments": [
-                        "mmsell-cellsize3-paper-1"
-                      ],
-                      "window_basis": "created_at (entry time)",
-                      "strategy_tags": [
-                        "Immsell10"
-                      ],
-                      "min_cell_fills": 8,
-                      "deployment_kind": "paper",
-                      "settled_statuses": [
-                        "settled",
-                        "closed_sl",
-                        "closed_tp",
-                        "closed_timeout"
-                      ],
-                      "platform_snapshot": "55b51990e0492e4b",
-                      "provider_revision": "fill_model_v1",
-                      "platform_component": "FILL_MODEL",
-                      "fill_calibration_source": "mmsell3 live_orders x settled paper_trades (scripts/mmsell_fill_model.py)",
-                      "fill_calibration_version": "2026-08-11",
-                      "optimistic_cents_per_trade": null
-                    },
-                    "bound_value": null
-                  }
-                ],
-                "fingerprint": "1587d3218c4d1aa796858727e8bf49d2c4cd2e467095280758d1bd05f9cf7f70",
-                "blocking_reasons": [],
-                "provider_revisions": {
-                  "realizable_cents_per_trade": "fill_model_v1"
-                }
-              },
-              "explanation": "holding: mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10 realizable_cents_per_trade=undefined (needs > 0; no settled trades in window)"
-            },
-            {
-              "verdict": "PASS",
-              "computed_at": "2026-11-10 15:23:41.265575+00:00",
-              "computed_by": "system",
-              "sample": null,
-              "metrics": {
-                "clauses": [
-                  {
-                    "n": 1,
-                    "list": "pass_all",
-                    "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
-                    "value": 0.92,
-                    "clause": {
-                      "op": ">",
-                      "arm": "*",
-                      "value": 0,
-                      "metric": "realizable_cents_per_trade"
+                      "arm": "winset",
+                      "value": -3.0,
+                      "metric": "realized_pnl_usd"
                     },
                     "passed": true,
                     "reason": null,
                     "missing": false,
                     "eligible": true,
                     "provenance": {
-                      "scope": "mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10",
+                      "scope": "mmsell-win-set-4/v1/e1/winset",
                       "source": "paper_trades",
                       "window": [
-                        "2026-11-10 04:07:06.041731+00:00",
-                        "2026-11-10 15:23:41.243720+00:00"
+                        "2026-11-10 04:12:29.153040+00:00",
+                        "2026-11-10 04:13:21.296751+00:00"
                       ],
-                      "total_n": 1,
-                      "covered_n": 1,
                       "fee_basis": "as-recorded (epoch-floored evidence is post-2026-08-11 maker-fee model)",
                       "deployments": [
-                        "mmsell-cellsize3-paper-1"
+                        "mmsell-winset4-paper-1"
                       ],
                       "window_basis": "created_at (entry time)",
                       "strategy_tags": [
-                        "Immsell10"
+                        "Mmmsell10"
                       ],
-                      "min_cell_fills": 8,
                       "deployment_kind": "paper",
                       "settled_statuses": [
                         "settled",
@@ -879,22 +799,18 @@
                         "closed_timeout"
                       ],
                       "platform_snapshot": "55b51990e0492e4b",
-                      "provider_revision": "fill_model_v1",
-                      "platform_component": "FILL_MODEL",
-                      "fill_calibration_source": "mmsell3 live_orders x settled paper_trades (scripts/mmsell_fill_model.py)",
-                      "fill_calibration_version": "2026-08-11",
-                      "optimistic_cents_per_trade": 6.89
+                      "provider_revision": "universal_v1"
                     },
                     "bound_value": null
                   }
                 ],
-                "fingerprint": "7a5120fdabbee0d8e929d73562b8ee88c830747329d21c6aa15ed2818ff39427",
+                "fingerprint": "d77d598827a7d68a2bde8c26f4dc6054c44a21d5c6183db0ea33e176cff6b014",
                 "blocking_reasons": [],
                 "provider_revisions": {
-                  "realizable_cents_per_trade": "fill_model_v1"
+                  "realized_pnl_usd": "universal_v1"
                 }
               },
-              "explanation": "all pass conditions met: mmsell-price-ceiling-cell-size-3/v1/e1/mmsell10 realizable_cents_per_trade=0.92"
+              "explanation": "all pass conditions met: mmsell-win-set-4/v1/e1/winset realized_pnl_usd=0"
             }
           ]
         }
@@ -902,7 +818,7 @@
       "epochs": [
         {
           "epoch_number": 1,
-          "started_at": "2026-11-10 04:07:06.041731+00:00",
+          "started_at": "2026-11-10 04:12:29.153040+00:00",
           "ended_at": null,
           "reason": "first operating interval, pinned to the snapshot active at registration",
           "impact_class": null,
@@ -951,16 +867,16 @@
           ],
           "deployments": [
             {
-              "deployment_key": "mmsell-cellsize3-paper-1",
+              "deployment_key": "mmsell-winset4-paper-1",
               "stage": "PAPER",
               "kind": "paper",
               "twin_of_deployment_id": null,
-              "started_at": "2026-11-10 04:07:06.041731+00:00",
+              "started_at": "2026-11-10 04:12:29.153040+00:00",
               "ended_at": null,
               "arms": [
                 {
-                  "arm_key": "mmsell10",
-                  "strategy_tag": "Immsell10"
+                  "arm_key": "winset",
+                  "strategy_tag": "Mmmsell10"
                 }
               ]
             }
@@ -973,7 +889,7 @@
     {
       "from": null,
       "to": "IDEA",
-      "occurred_at": "2026-11-10 04:07:06.041731+00:00",
+      "occurred_at": "2026-11-10 04:12:29.153040+00:00",
       "actor": "claude-code",
       "approved_by": null,
       "reason": "experiment created",
@@ -982,19 +898,19 @@
     {
       "from": "IDEA",
       "to": "PROBE",
-      "occurred_at": "2026-11-10 04:07:06.041731+00:00",
+      "occurred_at": "2026-11-10 04:12:29.153040+00:00",
       "actor": "claude-code",
       "approved_by": null,
-      "reason": "contract registered; the probe is the 72h scorecard (docs/mmsell/scorecards/2026-11-10.md)",
+      "reason": "contract registered; the probe is the predecessor's live record",
       "gate_result_id": null
     },
     {
       "from": "PROBE",
       "to": "PAPER",
-      "occurred_at": "2026-11-10 04:07:06.041731+00:00",
+      "occurred_at": "2026-11-10 04:12:29.153040+00:00",
       "actor": "claude-code",
       "approved_by": null,
-      "reason": "paper on Immsell10",
+      "reason": "paper on Mmmsell10",
       "gate_result_id": null
     }
   ],
