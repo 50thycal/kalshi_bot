@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-cell-size-3"],"id":"shw-cs3-1112"}
