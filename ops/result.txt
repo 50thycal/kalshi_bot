@@ -1,8 +1,11 @@
 # ops request [READ]
-# type=db  id=rc-a2-1112-0310
-# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:09:00Z
-trades_4h  trade_mkts_4h  last_trade                      
----------  -------------  --------------------------------
-1113       85             2026-11-12 03:08:26.836220+00:00
+# type=db  id=pt-1112
+# code d482d857bd4413c7917c7aab79820dc42a6708d3 · started 2026-11-12T03:09:05Z
+strategy       n   settled  pnl   losers
+-------------  --  -------  ----  ------
+Immsell10      16  11       0.74  0     
+Mmmsell10      15  11       0.74  0     
+Xmmsell10_pt4  20  11       1.53  0     
+Ymmsell10_pt4  18  11       2.48  0     
 
-(1 row)
+(4 rows)
