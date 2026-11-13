@@ -1,7 +1,13 @@
 # ops request [READ]
-# type=db  id=rc-a4-1113-1513
-# code c6f85c70e649e847ea2ebcaaf2212ec1a4c1c3ec · started 2026-11-13T16:08:08Z
-series  live_progs
-------  ----------
+# type=db  id=rc-c-1113-1513
+# code c6f85c70e649e847ea2ebcaaf2212ec1a4c1c3ec · started 2026-11-13T16:08:26Z
+strategy   filled_orders  markets
+---------  -------------  -------
+Kmmsell10  4              4      
+Ommsell10  4              4      
+Ummsell10  5              5      
+Vmmsell10  3              3      
+Xmmsell10  56             56     
+Ymmsell10  50             50     
 
-(0 rows)
+(6 rows)
