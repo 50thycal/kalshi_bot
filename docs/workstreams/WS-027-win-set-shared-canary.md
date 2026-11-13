@@ -242,3 +242,10 @@ hard stop. Plan and sequence: `docs/MMSELL_WIN_SET_CANARY.md` §11.
   - `xos tag` shows both new books LIVE_CANARY e2;
   - the first live order is on the new tags.
 - X/Y at the swap: X −$0.96 on 50 settled, Y −$2.67 on 45; their open positions drain.
+
+**2026-11-13 03:30Z — 24h silent-arm check: PASS** (`sa24b-1113`).
+- Live orders since the 03:22Z swap: `Ummsell10` 3, `Ommsell10` 2; `Xmmsell10`/`Ymmsell10` none.
+- The twins `Ummsell10_pt4`/`Ommsell10_pt4` are trading (5 and 4 rows); paper `Immsell10` and
+  `Mmmsell10` 2 each.
+- No KXTRUMPSAY or KXTRUTHSOCIAL order on the new tags.
+- No new unresolved integrity event. The open ones are the stood-down records and the old #24.
