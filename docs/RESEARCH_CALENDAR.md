@@ -20,7 +20,7 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 | date (UTC) | check | what it decides | pre-registration | routine | status |
 |---|---|---|---|---|---|
 | 2026-11-13 15:17 | LIMM exits vs holding, run 3 | Do the liquidity book's stop/take exits beat holding to settlement? Needs ≥ 30 settled markets and ≥ 15 events, else HOLD. A FAIL makes a looser stop an owner decision. Also checks the shadow collector is still writing. | `LIMM_PROGRAMME_OUTCOMES.md` §9 (results §11, close-out §12) | `trig_01MtzLc4H1BoASXHY2AeePSJ` (deleted) | CLOSED 2026-11-08 unread (owner): `Alimm1` is stood down (§9.78), so the sample cannot grow past 18 of 30 |
-| 2026-11-13 15:47 | LIMM fill hazard, study 5 (read once) | Which incentive series pay net of the fills a resting bid takes? Nominates series to add (net above the live universe) or remove (reward eaten by fills). Needs ≥ 3 series with ≥ 20 market-days and ≥ 5 events, else HOLD and one re-read on 2026-11-27. Nominations are owner decisions. | `LIMM_FILL_HAZARD.md` §4 | `trig_015Lh4zakJj9qZQ23Hbk45mM` | scheduled |
+| 2026-11-13 15:47 | LIMM fill hazard, study 5 (read once) | Which incentive series pay net of the fills a resting bid takes? Nominates series to add (net above the live universe) or remove (reward eaten by fills). Needs ≥ 3 series with ≥ 20 market-days and ≥ 5 events, else HOLD and one re-read on 2026-11-27. Nominations are owner decisions. | `LIMM_FILL_HAZARD.md` §4 | `trig_015Lh4zakJj9qZQ23Hbk45mM` (fired, could not push; run by the review session 16:11Z) | DONE — V0 OK; V1 NOMINATE `KXGENERALCOUNTY`*, `KXSTATEBALLOTMEASURE`* (election-cycle series, model-sensitive); V2 none; live universe R −$0.11/md |
 | 2026-11-17 16:17 | LIMM step-aside, study 6, Part B (read once) | In the 48h→24h band before close, does a cheap-side bid earn more reward than its fills cost? NOMINATE 24H (owner decision), KEEP 48H, or HOLD. Needs ≥ 20 live-universe band markets in ≥ 8 events, else one re-read on 2026-12-01. Part A (backtest, 2026-11-03): live HOLD (accrual); `all` band +$1.48/md vs +$0.43 base, descriptive. | `LIMM_STEP_ASIDE.md` §4–§5 | `trig_01H9kxG5d74PesCBcfbyGYkw` | scheduled |
 | 2026-12-11 16:37 | LIMM fill early-warning, study 8, Part B (read once) | Did a snapshot signal (a print in the last 5 min, or depth at best halving) predict a fill in the next hour, and would pulling the bid then have saved more than it gave up? USEFUL nominates a pull-on-warning rule (owner decision). Needs ≥ 30 fills in ≥ 10 events. Part A (backtest, 2026-11-04): NO-SIGNAL — warning predicts fills (lift 37) but pulling bids loses more reward than it saves (−$330). | `LIMM_FILL_WARNING.md` §3–§4 | `trig_018fN69FNib5J6xZUihqbmE8` | scheduled |
 | 2026-12-03 16:47 | LIMM mid-band probe, study 9, Part B (read once) | Do $10 incentive bids where both sides bid 11–50¢ earn more estimated reward than their fills cost (CHEAP, DEAR or BOTH sides)? PROMISING (≥ $0.15 per leg-day, LCB > 0) makes a mid-band live trial an owner decision. Needs ≥ 100 leg-days in ≥ 10 events. Part A (backtest, 2026-11-08): NO-LEAD on all three policies (CHEAP +$0.07/leg-day, DEAR −$0.04, BOTH +$0.01; negative under the optimistic model). | `LIMM_BAND_PROBE.md` §4–§5 | `trig_01GNyKAr66gJ8pPBaaSspKyC` | CANCELLED 2026-11-08 (owner, DEC-043): Part A was NO-LEAD on all policies; routine deleted |
@@ -30,13 +30,18 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 | 2026-12-04 15:07 | P-SLOW v2 fill read (read once) | Do slow-information MMSELL markets still earn ≥ +2¢ on real fills? Needs ≥ 100 fills. A PASS makes sizing above 3 contracts an owner decision. | `MMSELL_FILL_FORWARD_READ.md` §6 | `trig_018N8ZxREHNrgABVh2C2HCxm` | scheduled |
 | 2026-12-07 15:23 | State gas ladder screen, re-run | Does the 7-state gas ladder family reach CANDIDATE (≥ 100 entries, t ≥ 3.0, both halves positive)? A CANDIDATE leads to a taker-price read, not a paper book. | `MMSELL_LOOKALIKE_PROBE.md` §16 (first result §17) | `trig_01N3tddvLTSEY2jebghEz9UA` | scheduled |
 
+**Routine access (2026-11-13).** The fresh-session `Kalshi:` routines start without push
+access to `50thycal/kalshi_bot`; study 5's run could not reach `ops`. Until the routines'
+sources include the repo, this session holds a backstop reminder 20–30 min after each
+routine (11-14 ×2, 11-17, 11-24). Each backstop runs the read only if the routine did not
+complete, so a read never runs twice. The December reads get backstops at a later review.
+
 ## Conditional follow-ups (added only if triggered)
 
 | when | follow-up | condition |
 |---|---|---|
 | 2027-01-08 | P-SLOW v2 extension, read once, same bars | the 2026-12-04 read has fewer than 100 cell fills |
 | 2026-12-01 16:17 | LIMM step-aside, re-read once, same bars | the 2026-11-17 read is HOLD (accrual) |
-| 2026-11-27 16:07 | LIMM fill hazard, re-read once, same bars | the 2026-11-13 read is HOLD under V0 (fewer than 3 series at the floor) |
 
 ## Other standing routines (operations, not this research)
 

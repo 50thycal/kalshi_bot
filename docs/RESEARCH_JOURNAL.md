@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## LIMM fill hazard (study 5) 2026-11-13: V1 nominates two election series; nothing to remove
+
+- **Result** ([doc](LIMM_FILL_HAZARD.md) §8, ops `rl-s5-run1-20261113`): 5 series at the floor, so the instrument is OK.
+  - **NET-LEAD:** `KXGENERALCOUNTY` (+$2.64/market-day) and `KXSTATEBALLOTMEASURE` (+$2.12). Both are model-sensitive, and both
+    are 2026-11-03 election markets.
+  - **NO-LEAD:** `KXRT` (−$0.39), `KXYTVIEWSHIGH` (+$0.01) and `KXPRESSTATE` (+$0.05).
+  - **FILL-TRAP:** none. The live universe pooled −$0.11 per market-day.
+- **Meaning:** reward minus fills is near zero across most watched series. The two clear winners were one-off
+  election ladders, so adding them is a next-cycle question for the owner. Rotten Tomatoes, the largest watched
+  series, loses to fills on this measure; the 11-24 paper read is its real test.
+- **Process:** the scheduled routine could not push (no repo access in fresh sessions), so this session ran it.
+  Backstops now cover the routines through 11-24.
+
 ## BANDREV run 1 2026-11-10 — KILL on NFL; mentions HOLD (instrument), recommend close
 
 - **Verdict as printed** ([`BANDREV_PREREG.md`](BANDREV_PREREG.md) Results, ops `rl-bandrev-run-1`, code `b92ee1e`):
