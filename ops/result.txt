@@ -1,12 +1,11 @@
 # ops request [READ]
-# type=db  id=rc-f7-1113-1913
-# code f32e9afe327269bbc46b67219a608df319f942aa · started 2026-11-13T19:20:58Z
-strategy   orders_7d  last_order                      
----------  ---------  --------------------------------
-Ommsell10  7          2026-11-13 15:42:57.864911+00:00
-Ummsell10  8          2026-11-13 15:42:56.724856+00:00
-Xmmsell10  39         2026-11-12 02:24:35.752957+00:00
-Ymmsell10  35         2026-11-11 22:18:46.098677+00:00
-Alimm1     6          2026-11-08 01:30:24.416143+00:00
-
-(5 rows)
+# type=script  id=rc-ps-1113-1913
+# code f32e9afe327269bbc46b67219a608df319f942aa · started 2026-11-13T19:21:21Z
+LIMM paper strategies — COUNTS ONLY since 2026-11-09T00:00 (as of 2026-11-13T19:21)
+  S1          quotes   2677  markets  115  bid-hours   2126.9
+  S2-best     quotes   1384  markets   69  bid-hours   1063.4
+  S2-behind   quotes   1373  markets   69  bid-hours   1062.8
+  S3-aside    quotes   1169  markets   30  bid-hours   1001.7
+  S3-control  quotes   1255  markets   30  bid-hours   1067.2
+  S4-burst    quotes   1315  markets   86  bid-hours   1037.6
+  S4-flat     quotes   1291  markets   86  bid-hours   1034.5
