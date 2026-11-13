@@ -1,22 +1,7 @@
 # ops request [READ]
-# type=db  id=rc-a3-1113-1513
-# code c6f85c70e649e847ea2ebcaaf2212ec1a4c1c3ec · started 2026-11-13T16:07:35Z
-series                mkts_24h
---------------------  --------
-KXRT                  158     
-KXFEDERALCHARGE       30      
-KXAAAGASM             26      
-KXNVDACEO             23      
-KXEOWEEK              15      
-KXDWTSRANK            12      
-KXAOCMAMDANICOMBO     12      
-KXBABELMANDEBWEEKLY   11      
-KXROLEINPRODUCTIONLI  11      
-KXTRUTHSOCIAL         10      
-KXHORMUZPEAK          8       
-KXPRESDEBATEFIRSTD    8       
-KXSENDEMNO3           8       
-KXPRESDEBATEFIRSTR    8       
-KXBAA                 8       
+# type=db  id=rc-a4-1113-1513
+# code c6f85c70e649e847ea2ebcaaf2212ec1a4c1c3ec · started 2026-11-13T16:08:08Z
+series  live_progs
+------  ----------
 
-(15 rows)
+(0 rows)
