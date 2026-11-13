@@ -1,1 +1,1 @@
-{"type": "db", "id": "sa24c-1113", "sql": "select id, kind, severity, detected_at, resolved_at from experiment_integrity_events where detected_at >= '2026-11-12 03:22' or resolved_at is null order by id"}
+{"type":"script","name":"mmsell_scorecard","args":["--days","3"],"id":"msc-261113-0335"}
