@@ -1,0 +1,13 @@
+# ops request [READ]
+# type=db  id=sa24b-1113
+# code b885d4a8bd49a8560a473c48e1cf372753bd761e · started 2026-11-13T03:26:27Z
+src    strategy       n  mkts  politics  trumpmention
+-----  -------------  -  ----  --------  ------------
+live   Ommsell10      2  2     0         0           
+live   Ummsell10      3  3     0         0           
+paper  Immsell10      2  2     0         0           
+paper  Mmmsell10      2  2     0         0           
+paper  Ommsell10_pt4  4  4     0         0           
+paper  Ummsell10_pt4  5  5     0         0           
+
+(6 rows)
