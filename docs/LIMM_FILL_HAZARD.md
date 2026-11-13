@@ -1,6 +1,6 @@
 # LIMM fill hazard — which incentive series pay net of the fills a resting bid takes
 
-**Status:** PRE-REGISTERED 2026-11-01 (Research Lab), before any run. Nothing in the window was
+**Status:** READ 2026-11-13 (§8): V0 OK, V1 nominates 2 series (both model-sensitive), V2 none. PRE-REGISTERED 2026-11-01 (Research Lab), before any run. Nothing in the window was
 read except collector row counts (the 4-hour check-in). **Read once on 2026-11-13** (see §7).
 
 Study 5 of the incentive-programme research (the first from the 72-hour research review,
@@ -110,4 +110,134 @@ A re-read under V0: `{"type":"script","name":"limm_fill_hazard","args":["--until
 
 ## 8. Results
 
-Not run.
+**Read once: `rl-s5-run1-20261113`, 2026-11-13T16:11Z, code `c6f85c7`.** The scheduled
+fresh-session routine fired at 15:57Z but could not push to `ops`, because it had no write
+access to the repo. It ran nothing. The 72h-review session ran the identical command an hour
+later. The window end is fixed by the script (15:00Z), so the data read is the same.
+
+```
+# ops request [READ]
+# type=script  id=rl-s5-run1-20261113
+# code c6f85c70e649e847ea2ebcaaf2212ec1a4c1c3ec · started 2026-11-13T16:11:16Z
+LIMM fill hazard — reward minus fill markout per market-day (pre-registered docs/LIMM_FILL_HAZARD.md)
+
+window 2026-10-30T16:00 -> 2026-11-13T15:00; hourly snapshots (incl. mark tail) 64030; prints 48910
+qualifying cheap-side hours 31814 (thin, no reward: 4); markets 581; markets with prints 364
+
+== series (deciding model: conservative; * = label differs under optimistic)
+  series                     live mkt-d evts  rew/md loss/md R net/md   ±se fills /100md   R opt  label
+  KXCABALLOTMEASURES                 12    1   +4.05   +0.00    +4.05   n/a     1    8.3   +0.50  THIN
+  KXGENERALCOUNTY                    77    6   +3.58   +0.94    +2.64  0.80    14   18.2   +2.99  NET-LEAD*
+  KXSTATEBALLOTMEASURE               43    5   +3.44   +1.32    +2.12  0.62     8   18.6   +0.31  NET-LEAD*
+  KXREPRODUCTIVEMEASURES              1    1   +1.21   +0.00    +1.21   n/a     0    0.0   +1.21  THIN
+  KXTRUMPENDORSEMENTS                22    1   +1.72   +0.64    +1.08   n/a     2    9.1   +0.00  THIN
+  KXHORMUZMAX                        12    1   +0.88   +0.00    +0.88   n/a     0    0.0   -1.19  THIN
+  KXNYCSUBWAY                         5    1   +0.77   +0.00    +0.77   n/a     1   20.0   +0.48  THIN
+  KXRETIREMM                          2    1   +0.75   +0.00    +0.75   n/a     0    0.0   +0.03  THIN
+  KXBRRATECUT                         7    1   +0.67   +0.00    +0.67   n/a     0    0.0   +0.09  THIN
+  KXNYSECEEMP                         7    1   +0.58   +0.00    +0.58   n/a     0    0.0   +0.58  THIN
+  KXWEEKSNUM1                         4    1   +0.56   +0.00    +0.56   n/a     0    0.0   +0.56  THIN
+  KXTXINCOMETAX                       4    1   +0.40   +0.00    +0.40   n/a     0    0.0   +0.40  THIN
+  KXTRUTHSOCIAL                      31    1   +0.52   +0.21    +0.31   n/a     7   22.6   +0.49  THIN
+  KXMLBTEAMSALE                       7    1   +0.28   +0.00    +0.28   n/a     0    0.0   +0.21  THIN
+  KXBAA                              10    1   +0.24   +0.00    +0.24   n/a     0    0.0   -0.09  THIN
+  KXBWAYATTENDANCE                    7    1   +0.24   +0.00    +0.24   n/a     0    0.0   -1.23  THIN
+  KXDWTSTOP3                          2    1   +0.24   +0.00    +0.24   n/a     0    0.0   +0.07  THIN
+  KXEOWEEK                           21    1   +0.90   +0.67    +0.23   n/a     2    9.5   +0.19  THIN
+  KXDWTSRANK                          6    2   +0.20   +0.00    +0.20  0.06     0    0.0   +0.19  THIN
+  KXPJMEMERGENCY                     28    1   +0.18   +0.00    +0.18   n/a     1    3.6   +0.18  THIN
+  KXTRUMPSAY                          2    1   +0.17   +0.00    +0.17   n/a     0    0.0   +0.17  THIN
+  KXBIGSKYOPEN                       56    1   +0.44   +0.27    +0.17   n/a     2    3.6   +0.01  THIN
+  KXCAGOVLAMAYOR                      3    1   +1.15   +0.99    +0.17   n/a     2   66.7   -7.51  THIN
+  KXMAMDANIEO                         1    1   +0.15   +0.00    +0.15   n/a     0    0.0   +0.15  THIN
+  KXPANAMAWEEKLY                     33    2   +0.14   +0.00    +0.14  0.04     0    0.0   -0.13  THIN
+  KXHORMUZWEEKLY                     23    2   +0.59   +0.45    +0.14  0.01     2    8.7   +0.19  THIN
+  KXSUEZWEEKLY                       11    1   +0.13   +0.00    +0.13   n/a     0    0.0   +0.09  THIN
+  KXPAMFGEMP                         63    1   +0.13   +0.00    +0.13   n/a     0    0.0   +0.08  THIN
+  KXASPENMTNOPEN                     54    1   +0.42   +0.30    +0.12   n/a     3    5.6   -0.12  THIN
+  KXWALLSTBONUS                      38    1   +0.12   +0.00    +0.12   n/a     0    0.0   +0.09  THIN
+  KXNYCASKRENT                       48    1   +0.11   +0.00    +0.11   n/a     0    0.0   -0.39  THIN
+  KXOPENVREQ                         10    2   +0.10   +0.00    +0.10  0.05     0    0.0   +0.10  THIN
+  KXILHPIYOY                         10    1   +0.09   +0.00    +0.09   n/a     0    0.0   +0.00  THIN
+  KXNYNJPORTTEU                      48    1   +0.09   +0.00    +0.09   n/a     0    0.0   +0.06  THIN
+  KXBABELMANDEBWEEKLY                18    1   +0.09   +0.00    +0.09   n/a     0    0.0   -0.88  THIN
+  KXORDPAX                           10    1   +0.09   +0.00    +0.09   n/a     0    0.0   +0.05  THIN
+  KXROLEINPRODUCTIONLI               11    1   +0.09   +0.00    +0.09   n/a     0    0.0   +0.09  THIN
+  KXCABUILDPERMITS                   37    1   +0.08   +0.00    +0.08   n/a     0    0.0   +0.08  THIN
+  KXCITYCHAMPS                       22    2   +0.08   +0.00    +0.08  0.02     0    0.0   +0.08  THIN
+  KXHORMUZPEAK                       25    1   +0.08   +0.00    +0.08   n/a     1    4.0   -1.01  THIN
+  KXSENDEMNO3                        13    1   +0.08   +0.00    +0.08   n/a     0    0.0   +0.08  THIN
+  KXTXERCOTPEAK                      67    1   +0.08   +0.00    +0.08   n/a     0    0.0   +0.02  THIN
+  KXTRUMPSAYCOMPANY                   3    1   +0.07   +0.00    +0.07   n/a     0    0.0   +0.07  THIN
+  KXNFLPLAYOFFC                       7    1   +0.07   +0.00    +0.07   n/a     0    0.0   +0.05  THIN
+  KXOPENVSPEND                        6    2   +0.06   +0.00    +0.06  0.01     0    0.0   +0.06  THIN
+  KXPRESDEBATEFIRSTD                  3    1   +0.05   +0.00    +0.05   n/a     0    0.0   +0.05  THIN
+  KXPRESSTATE                        20   10   +0.05   +0.00    +0.05  0.01     0    0.0   +0.05  NO-LEAD
+  KXMOONVSPEND                        5    2   +0.05   +0.00    +0.05  0.02     0    0.0   +0.05  THIN
+  KXONIONACT                         15    1   +0.05   +0.00    +0.05   n/a     0    0.0   +0.01  THIN
+  KXILNUCLEAR                        57    1   +0.08   +0.04    +0.04   n/a     1    1.8   -0.01  THIN
+  KXWAAEROEMP                       135    1   +0.08   +0.05    +0.03   n/a     1    0.7   +0.01  THIN
+  KXGOOGVREQ                          2    1   +0.03   +0.00    +0.03   n/a     0    0.0   +0.03  THIN
+  KXWATECHEMP                        93    1   +0.03   +0.00    +0.03   n/a     0    0.0   +0.03  THIN
+  KXPRESDEBATEFIRSTR                  4    1   +0.03   +0.00    +0.03   n/a     0    0.0   +0.03  THIN
+  KXAOCMAMDANICOMBO                  10    1   +0.02   +0.00    +0.02   n/a     0    0.0   +0.02  THIN
+  KXTXOIL                            40    1   +0.14   +0.12    +0.02   n/a     1    2.5   -0.14  THIN
+  KXYTVIEWSHIGH               yes   148   15   +0.17   +0.16    +0.01  0.10     3    2.0   -0.03  NO-LEAD
+  KXFEAR                              3    3   +0.01   +0.00    +0.01  0.00     0    0.0   -3.32  THIN
+  KXDPRESPRIMARY                     22    2   +0.00   +0.00    +0.00  0.00     0    0.0   +0.00  THIN
+  KXFLVISITORCOUNT                   42    1   +0.10   +0.12    -0.02   n/a     1    2.4   -0.20  THIN
+  KXAAAGASM                         212    1   +0.32   +0.40    -0.08   n/a    14    6.6   -0.22  THIN
+  KXFEDERALCHARGE                    28    1   +0.22   +0.36    -0.14   n/a     1    3.6   -0.75  THIN
+  KXRT                              318   14   +0.25   +0.64    -0.39  0.30    31    9.7   -0.97  NO-LEAD
+  KXNVDACEO                           9    1   +0.11   +0.57    -0.46   n/a     2   22.2   -1.59  THIN
+  KXPAPER                            17    1   +0.16   +0.74    -0.57   n/a     3   17.6   -1.70  THIN
+  KXMARATHONUSAWIN                    6    2   +1.88   +2.50    -0.62  0.53     2   33.3   -0.51  THIN
+  KXTRUMPACT                         16    1   +1.10   +1.83    -0.73   n/a     3   18.8   -1.35  THIN
+  KXNJPHARMAEMP                      12    1   +0.19   +1.04    -0.85   n/a     1    8.3   -0.85  THIN
+  KXAPRPOTUS                         13    1   +0.68   +1.55    -0.87   n/a     3   23.1   -0.22  THIN
+  KXTRUMPNOMNUM                       5    1   +0.48   +2.00    -1.51   n/a     2   40.0   -1.51  THIN
+  KXGOPSIXSENATE                      3    1   +0.54   +2.33    -1.80   n/a     1   33.3   +0.21  THIN
+  KXMAMDANIMENTION            yes     9    1   +0.14   +2.22    -2.08   n/a     1   11.1   -2.08  THIN
+  KXDANCINGWITHTHESTARS              10    1   +0.09   +3.25    -3.16   n/a     4   40.0   -1.73  THIN
+  KXTRUMPPHOTO                        8    1   +0.70   +4.71    -4.01   n/a     2   25.0   -4.01  THIN
+  KXSENATESEATSD                      6    1   +0.09   +9.79    -9.70   n/a     4   66.7   -9.90  THIN
+  KXHUANGTESTIFY                      1    1   +0.30  +10.00    -9.70   n/a     1  100.0   -9.70  THIN
+  unmarked fills (charged half price): 18
+
+== live universe pooled
+  R -0.11 ± 0.17 per market-day over 157 market-days, 16 events
+
+== VERDICT (descriptive; nominations are OWNER decisions, never automatic)
+  V0 instrument: OK — 5 series at the floor
+  V1 better markets: NOMINATE KXGENERALCOUNTY*, KXSTATEBALLOTMEASURE*
+  V2 markets to avoid: none
+  NET-LEAD     2  KXGENERALCOUNTY*, KXSTATEBALLOTMEASURE*
+  FILL-TRAP    0  
+  NO-LEAD      3  KXPRESSTATE, KXYTVIEWSHIGH, KXRT
+  (* = model-sensitive: label differs under optimistic)
+```
+
+**Reading.**
+
+- **V0 instrument: OK.** 5 series reached the floor of 20 market-days and 5 events, out of 581
+  markets.
+- **V1: two series nominated, both model-sensitive (`*`).**
+  - `KXGENERALCOUNTY`: R +$2.64 ± 0.80 per market-day over 77 market-days in 6 events.
+  - `KXSTATEBALLOTMEASURE`: R +$2.12 ± 0.62 over 43 market-days in 5 events.
+  - Both beat the live universe's pooled R (−$0.11).
+  - Under the optimistic fill model, STATEBALLOTMEASURE falls to +$0.31 per market-day.
+  - Context, not a re-scope: both are county-election and ballot-measure markets that resolved
+    with the **2026-11-03 election**. The nomination stands as registered. In practice it is a
+    question for the next election cycle, because these programmes do not recur weekly.
+- **V2: none.** No live-universe series is a FILL-TRAP.
+  - `KXYTVIEWSHIGH` is NO-LEAD: +$0.17 reward against $0.16 in fills per market-day, so about
+    break-even.
+  - The mention series are mostly THIN; `KXMAMDANIMENTION` is −$2.08 on only 9 market-days.
+- **Descriptive (not verdicts; the paper strategies read on 11-24).**
+  - `KXRT` (Rotten Tomatoes) is NO-LEAD at −$0.39 per market-day: 31 fills on 318 market-days
+    lose more than the reward.
+  - `KXAAAGASM` is −$0.08 on 212 market-days, though only 1 event.
+  - Many of the high-pool weekly series that S1 targets are THIN here, so S1's forward read is
+    the real test.
+- **What it moves:** this fills the ranker's fill-cost column (`LIMM_MARKET_RANKER.md` §3). It
+  moves none of the paper strategies' bars.
