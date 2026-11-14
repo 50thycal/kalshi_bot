@@ -137,3 +137,67 @@ S4 programmes clearing Kalshi's $1 minimum: {'S4-burst': {'programmes': 197, 'cl
   - Fill models: `queue_aware` equals `conservative` because the replay has no order-book
     deltas.
   - The window is about 3 weeks, on the older, smaller watched set.
+
+### Run 2 — `rl-psbt-run2-1114`, 2026-11-14T19:06Z, window 09-08 → 11-08T15:00Z
+
+Run by the 72h-review session's backstop. The scheduled fresh-session routine had no repo
+push access, so it ran nothing. Study 5 read on 11-13 (`LIMM_FILL_HAZARD.md` §8), so the
+precondition holds.
+
+```
+# ops request [READ]
+# type=script  id=rl-psbt-run2-1114
+# code 2d55c01f88d89e912052b83014a75f942a80e699 · started 2026-11-14T19:06:38Z
+LIMM paper strategies BACKTEST (Part A, descriptive; docs/LIMM_PAPER_STRATEGIES_BACKTEST.md)
+Moves no forward bar. S1 is not replayed (no history for its universe).
+
+window 2026-09-08T00:00 -> 2026-11-08T15:00; hourly snapshots 124543; prints 101934; arm-hours 43515; 24 h marks 1174
+
+arm         label          bid-days  events  progs  >=$1  net/$10-day [conservative]       whole-order net   paid c/h  fill c/h  thin%
+S2-best     PROMISING         370.1     183    398   194  +1.859 (se 0.377, k=183)       +1.746 (se 0.365, k=183)      8.16      0.42      0
+S2-behind   PROMISING         370.1     183    398   170  +1.699 (se 0.296, k=183)       +1.604 (se 0.287, k=183)      7.22      0.13      0
+S3-aside    NOT-PROMISING     237.0      11     87    26  +0.194 (se 0.109, k=11)        +0.172 (se 0.107, k=11)      1.58      0.77      0
+S3-control  NOT-PROMISING     266.3      11     94    30  +0.227 (se 0.127, k=11)        +0.198 (se 0.120, k=11)      1.80      0.85      0
+S4-burst    NOT-PROMISING    1073.2      96    230   108  +0.075 (se 0.096, k=96)        -0.013 (se 0.162, k=96)      3.56      2.38      0
+S4-flat     NOT-PROMISING     284.8      96    230    26  +0.060 (se 0.125, k=96)        -0.034 (se 0.163, k=96)      1.29      1.04      0
+
+fills and fill cost by model (24 h; settled-only at settlement):
+  S2-best     conservative: 66 fills $37.04/24h (settled 0: $0.00) | queue_aware: 66 fills $37.04/24h (settled 0: $0.00) | optimistic: 381 fills $234.64/24h (settled 0: $0.00) | whole_order: 67 fills $78.91/24h (settled 0: $0.00)
+  S2-behind   conservative: 36 fills $11.98/24h (settled 0: $0.00) | queue_aware: 36 fills $11.98/24h (settled 0: $0.00) | optimistic: 117 fills $108.71/24h (settled 0: $0.00) | whole_order: 36 fills $47.39/24h (settled 0: $0.00)
+  S3-aside    conservative: 10 fills $43.58/24h (settled 0: $0.00) | queue_aware: 10 fills $43.58/24h (settled 0: $0.00) | optimistic: 142 fills $325.85/24h (settled 0: $0.00) | whole_order: 10 fills $48.83/24h (settled 0: $0.00)
+  S3-control  conservative: 13 fills $54.31/24h (settled 0: $0.00) | queue_aware: 13 fills $54.31/24h (settled 0: $0.00) | optimistic: 169 fills $333.96/24h (settled 0: $0.00) | whole_order: 13 fills $62.01/24h (settled 0: $0.00)
+  S4-burst    conservative: 21 fills $162.51/24h (settled 0: $0.00) | queue_aware: 21 fills $162.51/24h (settled 0: $0.00) | optimistic: 117 fills $961.59/24h (settled 0: $0.00) | whole_order: 21 fills $256.55/24h (settled 0: $0.00)
+  S4-flat     conservative: 21 fills $71.16/24h (settled 0: $0.00) | queue_aware: 21 fills $71.16/24h (settled 0: $0.00) | optimistic: 117 fills $441.23/24h (settled 0: $0.00) | whole_order: 21 fills $97.90/24h (settled 0: $0.00)
+
+pairwise (per event, over the control's $10 bid-days):
+  S2-best - S2-behind [conservative]       events 183  +0.160 (se 0.140, k=183)       UNDECIDED
+  S2-best - S2-behind [whole_order]        events 183  +0.142 (se 0.135, k=183)       UNDECIDED
+  S3-aside - S3-control [conservative]     events  11  -0.054 (se 0.047, k=11)        UNDECIDED
+  S3-aside - S3-control [whole_order]      events  11  -0.045 (se 0.045, k=11)        UNDECIDED
+  S4-burst - S4-flat [conservative]        events  96  +0.223 (se 0.252, k=96)        UNDECIDED
+  S4-burst - S4-flat [whole_order]         events  96  -0.013 (se 0.462, k=96)        UNDECIDED
+
+S4 programmes clearing Kalshi's $1 minimum: {'S4-burst': {'programmes': 230, 'clearing_1usd': 108}, 'S4-flat': {'programmes': 230, 'clearing_1usd': 26}}
+```
+
+**Reading (descriptive; it moves no forward bar), compared with run 1:**
+
+- **S2 holds up on the longer window:** +$1.86 per $10 bid-day at the best bid (SE 0.38, 183
+  events) and +$1.70 one tick behind.
+  - Both are a little below run 1's +$2.17 and +$1.88.
+  - Fills now cost a little on net (66 conservative fills) instead of gaining, and the
+    whole-order model still leaves +$1.75.
+  - Touch against behind is +$0.16 (SE 0.14), still UNDECIDED; the lean toward the touch
+    shrank.
+- **S3 is now NOT-PROMISING:** +$0.19 against +$0.23 on 11 events, and stepping aside costs
+  −$0.05 (UNDECIDED). The ladders it watched paid little either way.
+- **S4 repeats run 1:**
+  - The $50 burst clears Kalshi's $1 minimum in **108 of 230** programmes, against **26 of
+    230** for $10 flat.
+  - Net stays about $0 per $10 bid-day.
+  - Burst minus flat is +$0.22 conservative and −$0.01 whole-order, both UNDECIDED.
+- **Same cautions as run 1:**
+  - The reward level rests on the 1.34 calibration, taken from mention and YouTube payouts.
+  - The replay has no order-book deltas, so `queue_aware` equals `conservative`.
+  - The forward read on 11-24 is the real test.
+
