@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"lo1114-ct-1"}
+{"type":"xos","command":"show","args":["liquidity-incentive-mm"],"id":"lo1114-show-limm"}
