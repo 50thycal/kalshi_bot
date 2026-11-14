@@ -229,6 +229,9 @@ qualifying cheap-side hours 31814 (thin, no reward: 4); markets 581; markets wit
   - Context, not a re-scope: both are county-election and ballot-measure markets that resolved
     with the **2026-11-03 election**. The nomination stands as registered. In practice it is a
     question for the next election cycle, because these programmes do not recur weekly.
+- **Owner decision on V1 (2026-11-14):** "note election markets for next cycle". No change now.
+  `KXGENERALCOUNTY` and `KXSTATEBALLOTMEASURE` are on the incentive candidate list
+  (`RESEARCH_REVIEW.md`), to be re-checked when the next election cycle's programmes list.
 - **V2: none.** No live-universe series is a FILL-TRAP.
   - `KXYTVIEWSHIGH` is NO-LEAD: +$0.17 reward against $0.16 in fills per market-day, so about
     break-even.

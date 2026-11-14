@@ -100,6 +100,11 @@ Ordered by expected value to the goal. A candidate is not work until a review st
   preceded a fill 5 times in 10. A new pre-registered test of that trigger alone, or combined
   with a print, is a candidate.
 
+- **Election-cycle ladders (owner, 2026-11-14: note for next cycle):** study 5 found
+  `KXGENERALCOUNTY` (+$2.64 per market-day) and `KXSTATEBALLOTMEASURE` (+$2.12) NET-LEAD, both
+  model-sensitive. Both resolved with the 2026-11-03 election. When the next cycle's programmes
+  list, re-screen them with the ranker and study 5's measure before any paper or live use.
+
 ### MMSELL
 
 - **NFL team props re-run** (lookalike §19: +3.8¢ on 36 entries) once the season adds ~100
