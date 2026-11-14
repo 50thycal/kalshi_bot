@@ -1,5 +1,14 @@
 # Weather-markets research journal
 
+## IDEA-MODEL 2026-11-14 — brainstorm for both lines: the new incentive money is unwatched (nothing built)
+
+- **Finding** ([run](IDEA_MODEL_20261114_BRAINSTORM.md), ops `idea-lims-1114a`, `idea-lims-1114c`): about 60% of the live
+  incentive pool now sits in two new families, spot "event" ladders (metals, FX, coins) and the next cycle's
+  nomination/race ladders. The collector watches 1 of about 4,560 of those markets.
+- **Slate:** 7 ideas. Picks: watch the new money and test nomination ladders (study 5's only winners were election
+  ladders), PAYOUT-TRUTH (real payouts per market type), then SPOT-GUARD (pull a bid when crypto spot nears its strike).
+- **Status:** brainstorm only; waits for the owner to lock. No probe, registration or live change.
+
 ## LIMM paper-strategies backtest run 2 (2026-11-14, descriptive): S2 holds, S3/S4 do not
 
 - **Replay** to 11-08 ([doc](LIMM_PAPER_STRATEGIES_BACKTEST.md) §7):
