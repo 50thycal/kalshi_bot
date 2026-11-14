@@ -251,3 +251,18 @@ Also still open: we do not persist hours-to-close at entry per trade. `hold_h` i
 proxy (`closed_at − created_at`) that conflates entry timing with settlement-detection lag. The
 real value lives in `mmsell_candidate_ticks.hours_to_close`, whose coverage needs checking before
 any timing study can run on our own book.
+
+## Retired 2026-11-14 — not evaluated
+
+`mmsell-type-tight` (`Tmmsell1`, `Tmmsell2`, `Tmmsell5`, `Tmmsell6`) was retired by the owner
+(`DEC-046`). It was **retired without being evaluated.** From the unapplied
+`MARKET_TAXONOMY:football_coverage_2026_10_12` impact onward, its `paper_keep` gate read
+BLOCKED_PLATFORM, so its evidence was never readable. Nothing here is a verdict on the type
+filter.
+
+- The four books left `MMSELL_VARIANTS` in ops `lo1114-closeout-env-1` (about 22:51Z). Every other
+  book was carried over from the live value. The last Tmmsell paper entry was at 22:32:15Z
+  (`lo1114-db-2`).
+- `STAND_DOWN → RETIRED` (`lo1114-tmm-retire-1`, SUCCEEDED 23:02:00Z, approved by Calvin): PAPER →
+  RETIRED. It closed epoch 3 and ended `tmmsell-paper-legacy-1-e2-e3`.
+

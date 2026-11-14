@@ -204,3 +204,11 @@ live dollar.
 - A structural regime change (pro MMs tightening the hourly tails, a fee change, Kalshi
   delisting the ladders) kills the edge; the paper book's rolling P&L is the tripwire, same
   as every other book here.
+
+## Retired 2026-11-14
+
+`theta-tail-sell` had been PAUSED since the 2026-07-09 shelve. It had no version, no gate and
+no evidence left to evaluate. The owner retired it (`DEC-046`): `STAND_DOWN → RETIRED`
+(`lo1114-theta-retire-1`, SUCCEEDED 23:00:08Z, approved by Calvin). No env change was needed,
+and `theta4-fat-tail` is unaffected.
+
