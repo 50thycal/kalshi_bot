@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-list","id":"lo1114-xcl-2"}
+{"type":"xos","command":"experiment-command-show","args":["lo1114-limm-repair-1"],"id":"s-lo1114-limm-repair-1"}
