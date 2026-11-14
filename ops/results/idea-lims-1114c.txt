@@ -1,0 +1,11 @@
+# ops request [READ]
+# type=db  id=idea-lims-1114c
+# code 79f0050ec727bc56ebda6eebea81f41691741982 · started 2026-11-14T22:10:36Z
+fam           live_mkts  watched_2d
+------------  ---------  ----------
+crypto_event  544        0         
+fx_event      1356       1         
+metal_event   1113       0         
+nom_race      1551       0         
+
+(4 rows)
