@@ -25,6 +25,7 @@ from .. import repository as repo
 from ..experiment_os.enforcement import LineageBlocked
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..liquidity_incentive import live as limm_live
+from ..liquidity_incentive import s2_live
 from ..paper.engine import kalshi_fee
 from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
@@ -35,6 +36,17 @@ from .queue_position import order_id_of, parse_batch, parse_one
 from .sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 
 logger = logging.getLogger(__name__)
+
+
+def _incentive_managed(strategy: str | None) -> bool:
+    """A tag whose resting v2 post-only bids are managed by an incentive runner, not by the
+    process-wide rules: Alimm1's (`limm_live.owns_tag`) or the S2 live test's
+    (`s2_live.owns_tag`, docs/LIMM_S2_LIVE_TEST.md). Both are exact-match over their own
+    registered tags, so no other book changes behaviour. Used where the executor must treat
+    such a row differently: the 4 h timeout cancel, the partial-fill status, the 409 and
+    gone-from-exchange settling, and the process-wide TP/SL in `manage_exits` (S2 holds its
+    fills to settlement, so the TP/SL must never sell them)."""
+    return limm_live.owns_tag(strategy) or s2_live.owns_tag(strategy)
 
 #: §9.66: reconcile also reads every page of RESTING orders (bounded), so an older resting order
 #: cannot fall off the default orders page and be resolved from a partial fill.
@@ -767,6 +779,66 @@ class LiveExecutor:
             if price * qty > cap * 100 + 1e-9:
                 return False
         return True
+
+    def place_s2_bid(self, session, *, ticker: str, event_ticker: str | None, side: str,
+                     price: int, qty: int, account_state=None) -> str:
+        """One resting $10 bid for the S2 live test (docs/LIMM_S2_LIVE_TEST.md), under its own
+        tag and its OWN caps (`s2_live.S2LiveRules`), never Alimm1's. Returns the outcome.
+
+        The same shared protections as every live entry, in the same order: the three master
+        switches and the allowlist, plus this book's own switch; the shared daily-loss stop;
+        the shared portfolio breaker; the strategy-agnostic dedup (never contest another
+        book's market); never a market the account holds; the default shard only. Then this
+        book's caps: <= max_markets open, <= max_resting_usd committed, a $10 bid on the cheap
+        side. Fail-closed: any gate places nothing."""
+        r = s2_live.DEFAULT_RULES
+        strategy = s2_live.LIVE_TAG
+        if (not self.settings.liquidity_incentive_s2_live_enabled
+                or not self._allowed(strategy) or not self._switches_on()):
+            self.summary.skipped_gate += 1
+            return "gate:switches"
+        if self._daily_loss_tripped or self._daily_loss_hit(session):
+            self.summary.skipped_gate += 1
+            return "gate:daily_loss"
+        if self._total_exposure_hit(session):
+            self.summary.risk_blocked += 1
+            return "gate:total_exposure"
+        if (repo.live_buy_exists_for_ticker(session, ticker, strategy)
+                or repo.live_open_order_exists(session, ticker)):
+            self.summary.skipped_dedup += 1
+            return "gate:dedup"
+        if self._account_holds(session, ticker):
+            self.summary.skipped_dedup += 1
+            return "gate:held"
+        if self._exchange_index_for(ticker) not in (None, 0):
+            self.summary.skipped_gate += 1
+            return limm_live.GATE_NON_DEFAULT_SHARD
+        price, qty = int(price), int(qty)
+        cost = price * qty / 100.0
+        if (side not in (limm_live.SIDE_YES, limm_live.SIDE_NO)
+                or not (1 <= price <= r.cheap_max_cents)
+                or not (1 <= qty <= r.max_contracts)
+                or cost > r.bid_usd + 1e-9):
+            self.summary.skipped_gate += 1
+            return "gate:size"
+        if repo.count_live_book_open_tradeable(
+                session, strategy, datetime.now(timezone.utc)) >= r.max_markets:
+            self.summary.skipped_gate += 1
+            return "gate:open_cap"
+        if repo.live_strategy_exposure(session, strategy) + cost > r.max_resting_usd + 1e-9:
+            self.summary.risk_blocked += 1
+            return "gate:strategy_exposure"
+        balance = None if account_state is None else account_state.get("cash_balance")
+        if balance is None:
+            self.summary.skipped_gate += 1
+            return "gate:no_balance"
+        if self._market_exposure(session, ticker) + cost > self.settings.max_market_exposure:
+            self.summary.risk_blocked += 1
+            return "gate:exposure"
+        return self._submit_incentive_bid(
+            session, strategy=strategy, event_ticker=event_ticker, ticker=ticker, side=side,
+            price=price, qty=qty, coid_prefix=s2_live.COID_PREFIX,
+            reason=f"s2_live:{side}@{price}c")
 
     def _submit_incentive_bid(self, session, *, strategy: str, event_ticker: str | None,
                               ticker: str, side: str, price: int, qty: int, coid_prefix: str,
@@ -1875,7 +1947,7 @@ class LiveExecutor:
         for row in repo.get_nonterminal_live_orders(session):
             if row.status != "resting":
                 continue
-            if limm_live.owns_tag(row.strategy):
+            if _incentive_managed(row.strategy):
                 # Operator decision (§9.47): the incentive book alone is exempt; it replaces its
                 # own pairs only when a better one is ready (`IncentiveLiveRunner`). Every other
                 # book keeps the timeout below.
@@ -2058,7 +2130,7 @@ class LiveExecutor:
         """"filled" only when the fills cover the order; "partial" otherwise, so a resting bid
         absent from the orders feed stays managed (§9.66). Scoped to the incentive book's resting
         bids — a v1 order, which this feed never shows, still resolves "filled" on its fill."""
-        if not limm_live.owns_tag(row.strategy) or row.action != "buy" or not row.quantity:
+        if not _incentive_managed(row.strategy) or row.action != "buy" or not row.quantity:
             return "filled"
         koid = row.kalshi_order_id or fill.get("order_id")
         got = LiveExecutor._order_filled_qty(session, koid, fills)
@@ -2246,7 +2318,7 @@ class LiveExecutor:
             # YES anyway. mmsell reaches the same place structurally (it is net-SHORT yes, and
             # `open_live_positions` returns net-LONG positions only); this book holds YES legs
             # too, so it needs saying rather than inheriting.
-            if limm_live.owns_tag(strategy):
+            if _incentive_managed(strategy):
                 continue
             # No bot order opened this position (a hand-placed pick): it belongs to no book, so
             # no book's TP/SL applies and there is no registered tag to close it under.
@@ -2865,7 +2937,7 @@ def _is_unconfirmed_incentive_409(row, now: datetime) -> bool:
 
     Scoped to that book on purpose: other books' 409 rows include v1 orders, which never appear
     in the v2 orders feed, so 'absent from the feed' proves nothing for them."""
-    if not limm_live.owns_tag(row.strategy):
+    if not _incentive_managed(row.strategy):
         return False
     if row.status != "submitted" or row.kalshi_order_id:
         return False
@@ -2883,7 +2955,7 @@ def _is_gone_incentive_order(row, now: datetime) -> bool:
     """A working liquidity-incentive order with an exchange id, past the grace period. Every
     order this book places is a v2 order, so it is listed while it rests; other books' rows may
     be v1 orders the feed never shows, and are left alone."""
-    if not limm_live.owns_tag(row.strategy):
+    if not _incentive_managed(row.strategy):
         return False
     if row.status not in ("resting", "partial") or not row.kalshi_order_id:
         return False

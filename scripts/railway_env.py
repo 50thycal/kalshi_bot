@@ -157,6 +157,9 @@ ALLOWED_VARS = frozenset({
     # var is not a pre-registered envelope.
     "LIQUIDITY_INCENTIVE_LIVE_ENABLED", "LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES",
     "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES",
+    # The S2 live test's own switch (docs/LIMM_S2_LIVE_TEST.md). Places nothing until
+    # LIVE_STRATEGIES names `As2best1`; its caps are constants in `liquidity_incentive.s2_live`.
+    "LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED",
     # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
     # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
     # then being unable to CREATE its book is the same defect class as #266: an approved

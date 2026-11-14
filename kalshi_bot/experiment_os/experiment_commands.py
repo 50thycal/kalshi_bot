@@ -395,10 +395,13 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "the best bid on the paper arm S2-best's markets, fresh tags, apart from "
                 "Alimm1. Freezes v1 with the envelope and three gates (instrument health x2, "
                 "a live loss stop), opens e1, registers a TAGLESS probe and stops at PROBE. "
-                "No arm verb: arming ships later with the runner change, on the owner's go. "
-                "Arms nothing, trades nothing, no real money."
+                "ARM_CANARY (an owner hard stop) walks PROBE->PAPER on a fresh probe-gate PASS "
+                "and arms As2best1 with its twin As2best1_pt1; it places nothing until the env "
+                "step names the tag. REGISTER_PACKAGE arms nothing."
             ),
             register=limm_s2_live.register,
+            arm=limm_s2_live.arm,
+            activation_vars=limm_s2_live.ACTIVATION_VARS,
             strategy_tags=(limm_s2_live.PAPER_TAG, limm_s2_live.LIVE_TAG,
                            limm_s2_live.TWIN_TAG),
         ),

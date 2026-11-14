@@ -17,10 +17,11 @@ WHAT THIS MODULE DOES AND DOES NOT DO
 registers a TAGLESS probe deployment (the shadow collector, which already records `S2-best`)
 and walks IDEA -> PROBE. No tag becomes admissible; nothing can trade.
 
-There is deliberately NO `arm` verb here. Arming needs (a) the paper read of 2026-11-24 to show
-`S2-best` PROMISING, (b) a runner change that does not exist yet (handoff "Build B"), and (c) the
-owner's explicit go — a hard stop. The `arm` function ships with Build B, in a pull request the
-owner approves at merge, so nothing merged by a research session can make this book armable.
+`arm` (added with the runner, Build B) walks PROBE -> PAPER on a fresh probe-gate PASS, ends the
+probe deployment, and calls `service.arm_live_canary` with fresh live and twin tags. It is sent
+only as an owner-approved `ARM_CANARY` (a hard stop). The owner decided on 2026-11-14 to arm as
+soon as Build B is merged rather than after the 2026-11-24 paper read (LIMM_S2_LIVE_TEST.md §0);
+the arming reason records that. `activation_env` builds the env step (another hard stop).
 
 WHY THE GATES SAY SO LITTLE
 ---------------------------
@@ -37,10 +38,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy import select
+
 from ..liquidity_incentive import s2_live as s2
 from . import service
-from .lifecycle import ArmRole, LifecycleState
-from .read import get_experiment
+from .lifecycle import ArmRole, GateVerdict, LifecycleState
+from .models import ExperimentGate, ExperimentVersion
+from .read import get_experiment, latest_version
 
 EXPERIMENT_KEY = "limm-s2-live"
 ARM_KEY = "s2best_live"
@@ -48,6 +52,9 @@ ARM_KEY = "s2best_live"
 PAPER_TAG = s2.PAPER_TAG
 LIVE_TAG = s2.LIVE_TAG
 TWIN_TAG = s2.TWIN_TAG
+
+#: No `mmsell_variants` spec: this book's economics are constants in `s2_live`.
+BOOK_PARAMS: str | None = None
 
 PROBE_DEPLOYMENT_KEY = "limm-s2-live-probe-1"
 LIVE_DEPLOYMENT_KEY = "limm-s2-live-1"
@@ -323,7 +330,91 @@ def register(session, *, actor: str = "research-lab", promotion_sample_floor: in
     }
 
 
+def material_config(*, live_tag: str = LIVE_TAG, twin_tag: str = TWIN_TAG) -> dict:
+    """The live deployment's `config_json`: the drift baseline plus the envelope."""
+    from . import enforcement
+
+    return {"material": enforcement.live_material_block(books={live_tag: (twin_tag, BOOK_PARAMS)}),
+            "risk_envelope": RISK_ENVELOPE}
+
+
+def _gate(session, version: ExperimentVersion, gate_key: str) -> ExperimentGate:
+    gate = session.scalar(select(ExperimentGate).where(
+        ExperimentGate.version_id == version.id, ExperimentGate.gate_key == gate_key))
+    if gate is None:
+        raise service.ExperimentOsError(f"gate {gate_key!r} not registered — REGISTER_PACKAGE first")
+    return gate
+
+
+ARM_REASON = ("S2 live test armed on the owner's decision of 2026-11-14 (arm as soon as the "
+              "runner is merged, before the 2026-11-24 paper read); envelope pre-registered in "
+              "docs/LIMM_S2_LIVE_TEST.md")
+
+
+def arm(session, *, approved_by: str, actor: str = "operator",
+        started_at: datetime | None = None, reason: str | None = None) -> dict:
+    """PROBE -> PAPER on a fresh PASS of the probe gate (ending the probe deployment, which
+    `arm_live_canary` cannot carry across the live boundary), then arm the canary and its twin
+    at one instant. EXPANDS REAL-MONEY CAPABILITY; places nothing until LIVE_STRATEGIES names
+    the tag and LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED is on (separate, owner-approved acts)."""
+    from .evaluator import evaluate_gate
+    from .liquidity_incentive_mm import _end_probe_deployments
+    from .models import ExperimentGateResult
+
+    at = started_at or _now()
+    experiment = get_experiment(session, EXPERIMENT_KEY)
+    if experiment is None:
+        raise service.ExperimentOsError(f"{EXPERIMENT_KEY!r} not found — send REGISTER_PACKAGE first")
+    version = latest_version(session, experiment)
+    if experiment.state == LifecycleState.PROBE.value:
+        outcome = evaluate_gate(session, _gate(session, version, PROBE_GATE_KEY))
+        if outcome.verdict != GateVerdict.PASS.value:
+            raise service.ExperimentOsError(
+                f"probe gate {PROBE_GATE_KEY!r} evaluates {outcome.verdict}, not PASS: "
+                f"{outcome.explanation}")
+        service.transition_experiment(
+            session, experiment, LifecycleState.PAPER, actor=actor,
+            gate_result=session.get(ExperimentGateResult, outcome.result_id), occurred_at=at,
+            version=version,
+            reason="instrument healthy on post-registration evidence; PAPER only to become armable")
+        _end_probe_deployments(session, version, at=at)
+    if experiment.state != LifecycleState.PAPER.value:
+        raise service.ExperimentOsError(f"{EXPERIMENT_KEY} is {experiment.state}; arms from PAPER")
+    live, twin, epoch = service.arm_live_canary(
+        session, experiment, gate=_gate(session, version, PROMOTION_GATE_KEY),
+        approved_by=approved_by, live_key=LIVE_DEPLOYMENT_KEY, twin_key=TWIN_DEPLOYMENT_KEY,
+        live_tags={ARM_KEY: LIVE_TAG}, twin_tags={ARM_KEY: TWIN_TAG},
+        config=material_config(), started_at=at, actor=actor, reason=reason or ARM_REASON)
+    return {"live": live, "twin": twin, "epoch": epoch}
+
+
+#: The switch-on settings. Caps are constants in `s2_live`, never env vars.
+ACTIVATION_SETTINGS: dict[str, str] = {"LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED": "true"}
+
+
+def activation_env(*, current_live_strategies: str, current_live_paper_twins: str = "") -> dict:
+    """The env step, DERIVED from the running values: appends this book to LIVE_PAPER_TWINS and
+    LIVE_STRATEGIES (last) and never drops another tag. Builds the mapping only; applying it is
+    a Live Ops act on the owner's go."""
+    from .liquidity_incentive_mm import _append_token
+
+    env = dict(ACTIVATION_SETTINGS)
+    env["LIVE_PAPER_TWINS"] = _append_token(current_live_paper_twins, f"{LIVE_TAG}:{TWIN_TAG}",
+                                            key=LIVE_TAG)
+    env["LIVE_STRATEGIES"] = _append_token(current_live_strategies, LIVE_TAG)
+    new = env["LIVE_STRATEGIES"].split(",")
+    for tag in (t.strip() for t in (current_live_strategies or "").split(",")):
+        if tag and tag not in new:
+            raise service.ExperimentOsError(f"derived allowlist would drop {tag!r}")
+    return env
+
+
+ACTIVATION_VARS: frozenset[str] = frozenset(
+    {"LIVE_STRATEGIES", "LIVE_PAPER_TWINS", *ACTIVATION_SETTINGS})
+
+
 __all__ = [
+    "ACTIVATION_VARS", "ARM_REASON", "BOOK_PARAMS", "activation_env", "arm", "material_config",
     "ARM_KEY", "EXPERIMENT_KEY", "KEEP_GATE_KEY", "KEEP_GATE_SPEC", "LIVE_DEPLOYMENT_KEY",
     "LIVE_TAG", "PAPER_TAG", "PROBE_DEPLOYMENT_KEY", "PROBE_GATE_KEY", "PROBE_GATE_SPEC",
     "PROMOTION_GATE_KEY", "PROMOTION_GATE_SPEC", "READ_RULE", "RISK_ENVELOPE",

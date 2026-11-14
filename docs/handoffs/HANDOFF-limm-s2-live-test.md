@@ -5,14 +5,12 @@ session (Build B). **Pre-registration:** `docs/LIMM_S2_LIVE_TEST.md` (the bars, 
 **Rules in code:** `kalshi_bot/liquidity_incentive/s2_live.py`. **Contract:**
 `kalshi_bot/experiment_os/limm_s2_live.py` (package `limm-s2-live`, register only).
 
-## 0. Nothing is live. It starts only when BOTH hold
+## 0. When it starts
 
-1. **The 2026-11-24 paper read labels `S2-best` PROMISING** (`LIMM_PAPER_STRATEGIES.md` §5–§6,
-   ops `rl-ps-read-<date>`). HOLD, FRAGILE or NOT-PROMISING → this test does not start. Record
-   that in `LIMM_S2_LIVE_TEST.md` §10 and the calendar row, and stop.
-2. **The owner says go for this test, by name**, after seeing that read. Every step below
-   marked **HARD STOP** needs that go, in words that name the action. A go for Build B's merge is
-   not a go for arming, and the reverse.
+As first written, the test was to wait for the 2026-11-24 paper read. On 2026-11-14 the owner
+chose to arm it as soon as Build B is merged (`DEC-046`). Each step marked **HARD STOP** below
+still needs the owner's go, in words that name that step. A go for the merge is not a go for
+arming, and a go for arming is not a go for the env switch-on.
 
 ## 1. What runs
 
@@ -21,40 +19,29 @@ quote rows. One market per event. ≤ $50 resting. Fills are held to settlement.
 tags: live **`As2best1`**, twin **`As2best1_pt1`** (paper tag `s2best1`). Separate from
 `Alimm1`, which stays stood down (`LIQUIDITY_INCENTIVE_LIVE_ENABLED=false`, thesis §9.78).
 
-## 2. Build B — the runner change (not built yet; owner approves the merge)
+## 2. Build B — the runner (built; its merge is a HARD STOP)
 
-The current live runner (`liquidity_incentive/runner.py`) is `Alimm1`'s: mention-only universe,
-behind-touch pricing, exits, resting sells. It cannot run this book. Build B adds a small,
-separate path. It touches the order path, so its PR is merged **only on the owner's go**
-(STANDING_AUTHORIZATIONS hard stop). Scope:
+- `liquidity_incentive/s2_runner.py` (`S2LiveRunner`):
+  - reads the open `S2-best` paper rows each live cycle and selects with `s2_live.select_live`
+    (a held fill keeps its market slot, its event and its dollars until it settles);
+  - cancels bids that left the selection or whose side or price the paper arm moved;
+  - places missing bids and mirrors each one to the twin;
+  - logs our order's uncalibrated estimate hourly (`system_events`, component
+    `limm_s2_estimate`);
+  - applies the stops (`limm_s2_stop`, recorded so a restart does not resume).
+- `LiveExecutor.place_s2_bid`:
+  - checks the shared gates (switches, daily loss, portfolio breaker, strategy-agnostic dedup,
+    account-held, shard);
+  - then checks this book's own caps: ≤ 5 open, ≤ $50, $10 a bid, ≤ 10¢.
+- `_incentive_managed`: the executor treats `As2best1` the way it treats `Alimm1`. No
+  process-wide TP/SL and no 4 h timeout, so fills are held and the runner manages its own
+  bids. No other book changes.
+- Own switch `LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED` (default off): when it is off, `main.py`
+  does not construct the runner and `place_s2_bid` refuses.
+- Package `limm-s2-live` gains `arm`, `material_config`, `activation_env` and
+  `ACTIVATION_VARS`.
 
-- **Own switch, default off:** `LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED` (config + `railway_env`
-  allowlist). Off → nothing constructed, nothing changes.
-- **Selection:** each hour read open `incentive_shadow_quotes` rows with `policy='S2-best'`
-  (side and price from `reason`, event and series from `book_json.arm`, rate from
-  `est_reward_per_hour_usd`, hours to step-aside from the programme and close times) and call
-  `s2_live.select_live` with the account's held tickers and this book's filled tickers.
-- **Placement:** `s2_live.bid_for` — the paper arm's side and price, $10 post-only. Cancel when
-  a market leaves the selection. Re-price when the paper arm re-prices.
-- **Executor:** an incentive-bid path for `As2best1` with **this book's** caps (5 open, $50
-  resting, $10 a bid, ≤ 10¢). It must not reuse `Alimm1`'s constants (10 open, $100), its exits
-  or its resting sells. `owns_tag` must also skip `As2best1` in `manage_exits`, so the
-  process-wide TP/SL never sells a held fill.
-- **Logging for the read:** each hour a bid rests, record the uncalibrated `scoring.estimate`
-  for our order (`Alimm1`'s runner already does this; reuse it).
-- **Stops:** compute `fill_loss_usd` (realized losses + held fills marked at the best bid) and
-  call `s2_live.stop_reason`. On a stop: cancel resting bids, log `stop_fill_loss_cap` /
-  `stop_duration_over`, place nothing more. Held fills stay to settlement.
-- **The `arm` verb** for package `limm-s2-live`, copying `liquidity_incentive_mm.arm`:
-  re-evaluate the probe gate → PROBE→PAPER (end the probe deployment) → `arm_live_canary`
-  with `live_tags={s2best_live: As2best1}`, `twin_tags={s2best_live: As2best1_pt1}` and
-  `material_config()` built with `enforcement.live_material_block`. Its `reason` must name the
-  11-24 read id and its label. Add `ACTIVATION_VARS` and an `activation_env(current_...)` that
-  **appends** to `LIVE_STRATEGIES` / `LIVE_PAPER_TWINS` and never drops a tag.
-- **Tests:** switch off ⇒ no runner object and no order; caps; one per event; no exits on the
-  tag; the stop; and `tests/test_live_material_baseline_contract.py` passing with the new arm.
-
-## 3. Arming steps (after §0 and Build B are merged)
+## 3. Arming steps (after Build B is merged)
 
 Ops-channel recipe: `CLAUDE.md`. Unique ids. Read before you write.
 
@@ -65,8 +52,8 @@ Ops-channel recipe: `CLAUDE.md`. Unique ids. Read before you write.
 2. **Wait for the probe gate.** `s2_instrument_ready` needs ≥ 12 discovery cycles and ≥ 50
    shadow quotes after registration (about an hour). `s2_paper_to_live` needs ≥ 200 quotes,
    ≥ 50 outcomes and ≥ 20 programmes (a few hours).
-3. **HARD STOP — arm.** `ARM_CANARY` for `limm-s2-live`, `approved_by` = the owner's name,
-   reason = the 11-24 read id + "S2-best PROMISING" + the owner's go. Then confirm with `xos show`
+3. **HARD STOP — arm.** `ARM_CANARY` for `limm-s2-live`, `approved_by` = the owner's name.
+   The package writes the reason (`ARM_REASON`, which cites DEC-046). Then confirm with `xos show`
    that `As2best1` and `As2best1_pt1` are each on an ACTIVE arm.
 4. **HARD STOP — switch on.** Read the LIVE values first (`env` read). Then set, as one
    request, built from `activation_env(current_live_strategies=<live value>, ...)`:

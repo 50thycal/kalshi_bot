@@ -1793,3 +1793,20 @@ in the kalshi-bot project depends on them.
 - **Workstreams:** WS-021, WS-022 and WS-025 are Abandoned. WS-026 D2 (the desk diagnostic
   secret) is moot.
 - **Experiment OS:** not involved. The desks ran outside it.
+
+## DEC-046 — S2 live test arms before the 11-24 paper read
+
+**Date:** 2026-11-14 UTC. **Owner direction:** asked to arm the S2 live test once CI passed,
+then chose option 2: "build the runner now and arm as soon as it is merged" over option 1
+(wait for the 2026-11-24 paper read).
+
+- **Decision:** the S2 live test (`docs/LIMM_S2_LIVE_TEST.md`) no longer waits for the 11-24
+  read of `S2-best`. It needs only the runner (Build B) merged and the owner's go at each
+  hard stop: the merge, `ARM_CANARY`, and the env switch-on.
+- **What does not change:** the envelope ($10 bids, at most 5 markets, 1 per event, at most
+  $50, $30 fill-loss stop, 14 days), the bars, the read, and the fact that every outcome is
+  an owner decision.
+- **Cost, stated:** the live result is no longer read alongside a finished paper read. The
+  11-24 paper read still happens on schedule and is reported next to the live data. Its label
+  no longer gates the start.
+- **Experiment OS:** the arming reason records this decision (`limm_s2_live.ARM_REASON`).

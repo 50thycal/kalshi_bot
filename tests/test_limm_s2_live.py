@@ -59,15 +59,17 @@ def test_the_owners_youtube_pause_still_binds():
     assert limm.ENTRY_PAUSED_SERIES <= s2.EXCLUDED_SERIES
 
 
-def test_not_wired_into_the_worker():
-    """Merging this module cannot change live behaviour because no trading code imports it.
-    The only importer is the Experiment OS package (`limm_s2_live`), which reads its constants
-    to freeze the contract and places nothing."""
+def test_only_the_s2_runner_executor_and_package_use_the_rules():
+    """The rules reach trading code through exactly three places: the S2 runner, the executor's
+    gated `place_s2_bid` / tag helper, and the Experiment OS package. Anything else importing
+    them would be a path nobody reviewed for this book."""
     import re
 
-    pat = re.compile(r"(?<!limm_)\bs2_live\b")
+    allowed = {"s2_live.py", "s2_runner.py", "limm_s2_live.py", "executor.py",
+               "experiment_commands.py", "main.py", "config.py"}
+    pat = re.compile(r"\bs2_(live|runner)\b")
     for path in (ROOT / "kalshi_bot").rglob("*.py"):
-        if path.name in ("s2_live.py", "limm_s2_live.py"):
+        if path.name in allowed:
             continue
         assert not pat.search(path.read_text()), f"{path} references the S2 live rules"
 
@@ -136,6 +138,16 @@ def test_selection_is_sticky_and_drops_what_the_paper_arm_left():
     assert {"E1-M-1", "E2-M-1"} <= tickers and len(tickers) == 5
     assert {"E7-M-1", "E6-M-1", "E5-M-1"} <= tickers
     assert sel.dropped == ["GONE-M-1"]
+
+
+def test_a_held_fill_keeps_its_slot_and_its_event():
+    rows = [row(f"E{e}-M-{k}", ev=f"E{e}", rate=0.01 * (10 - e) + 0.001 * k)
+            for e in range(8) for k in range(2)]
+    held = {"E0-M-1": ("E0", 10.0), "E1-M-1": ("E1", 10.0)}
+    sel = s2.select_live(rows, filled_before=set(held), held_fills=held)
+    assert len(sel.bids) == 3
+    assert {b.event for b in sel.bids} == {"E2", "E3", "E4"}       # E0, E1 still taken
+    assert sum(b.cost_usd for b in sel.bids) + 20.0 <= 50.0
 
 
 def test_a_held_incumbent_is_dropped():
