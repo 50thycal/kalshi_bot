@@ -1,0 +1,7 @@
+# ops request [READ]
+# type=db  id=rc-f-1114-2313
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T23:15:32Z
+strategy  orders  last_order
+--------  ------  ----------
+
+(0 rows)
