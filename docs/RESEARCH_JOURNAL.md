@@ -1,5 +1,12 @@
 # Weather-markets research journal
 
+## Close-out round 2026-11-14 (owner, DEC-046)
+
+- **Closed unread:** study 6 (step-aside) and study 8 (fill early-warning). Both were for the stood-down `Alimm1`.
+  S3 in the paper strategies carries the step-aside question forward.
+- **Handed to Live Ops:** retire `liquidity-incentive-mm`, `theta-tail-sell` and `mmsell-type-tight`.
+- **Noted:** the election-cycle ladders, for the next cycle.
+
 ## IDEA-MODEL 2026-11-14 — brainstorm for both lines: the new incentive money is unwatched (nothing built)
 
 - **Finding** ([run](IDEA_MODEL_20261114_BRAINSTORM.md), ops `idea-lims-1114a`, `idea-lims-1114c`): about 60% of the live
