@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=rc-a3-1114-1513
+# code f32e9afe327269bbc46b67219a608df319f942aa · started 2026-11-14T15:15:10Z
+series               mkts_24h
+-------------------  --------
+KXRT                 171     
+KXSBSETLISTS         30      
+KXFEDERALCHARGE      30      
+KXAAAGASM            26      
+KXOSCARS             23      
+KXTAIPEIMAYORMOVD    16      
+KXEOWEEK             15      
+KXBRAZILINF          11      
+KXBABELMANDEBWEEKLY  11      
+KXUSEDCARCPI         11      
+KXPANAMAWEEKLY       9       
+KXOPENVSPEND         9       
+KXARMOMINF           9       
+KXOPENVREQ           9       
+KXEXUSHOME           9       
+
+(15 rows)
