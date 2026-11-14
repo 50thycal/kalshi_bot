@@ -963,7 +963,7 @@ are usually not its only producer. What is already handled for you, and what is 
 | `ops/result.txt` | **no** — latest-run pointer, freely overwritten | do not rely on it |
 | pushing `ops/request.json` | **no** — one ref, one file | use the retry loop in step 3 |
 | result retention | bounded — newest 80, pruned every run | read promptly; persist what matters elsewhere |
-| `EXPERIMENT_OS_*_COMMAND` | guarded — see below | batch your commands; heed a `REFUSED` verdict |
+| `EXPERIMENT_OS_*_COMMAND` | guarded — see below | batch ISSUE commands as one array; EXPERIMENT/PLATFORM take one envelope per boot; heed a `REFUSED` verdict |
 
 **The command transports are single-slot.** `EXPERIMENT_OS_ISSUE_COMMAND`,
 `EXPERIMENT_OS_PLATFORM_COMMAND` and `EXPERIMENT_OS_EXPERIMENT_COMMAND` are each

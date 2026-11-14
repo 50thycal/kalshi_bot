@@ -3468,3 +3468,22 @@ that surveys all available markets. The YouTube leftovers stay held, and their s
 unmanaged. Payouts still to land need the operator's Rewards screenshot. The research leads are
 burst sizing, programme age, one paid-c/h yardstick across markets, per-type calibration and
 the $1-minimum harvest. They are in `docs/liquidity_incentive/HANDOFF_2026-11-08.md`.
+
+### 9.79 Retired (2026-11-14)
+
+The owner retired the experiment (`DEC-046`). Live Ops carried it out on 2026-11-14:
+
+- **Allowlist.** `Alimm1` was removed from `LIVE_STRATEGIES` (`Ummsell10,Alimm1,Ommsell10` →
+  `Ummsell10,Ommsell10`). Its explicit twin was cleared too (`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3` → empty).
+  This was ops `lo1114-closeout-env-1`, at about 22:51Z. Nothing was cancelled, because Alimm1 had no
+  resting orders. Its last two orders were already cancelled on 11-08 (`lo1114-db-1`).
+- **Record repair.** `REPAIR_LINEAGE limm-standdown-live-repair` (`lo1114-limm-repair-1`,
+  SUCCEEDED 22:56:41Z) ended the open live row `limm-smoke-live-1`. Without it, `STAND_DOWN` refuses.
+- **Retirement.** `STAND_DOWN → RETIRED` (`lo1114-limm-retire-1`, SUCCEEDED 22:58:45Z, approved by
+  Calvin) moved the experiment LIVE_CANARY → RETIRED. It closed epoch 2, which ended
+  `limm-smoke-live-1` and `limm-smoke-twin-1`. No gate ever read FAIL (the last verdict was BLOCKED_PLATFORM),
+  so `STAND_DOWN` was the correct verb. No verdict was written.
+- **Left untouched:** the 2 held positions (~$0.03), which settle at Kalshi;
+  `LIQUIDITY_INCENTIVE_LIVE_ENABLED=false`, `LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED=true`, the
+  shadow collector, `limm-paper-strategies` (S1–S4 keep recording for the 11-24 read), and
+  `limm-s2-live` (its own experiment on fresh tags).
