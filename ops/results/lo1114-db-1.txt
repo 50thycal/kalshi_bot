@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=lo1114-db-1
-# code 11fdce3faf39f4db51968104f1c04a4e2f8e07d4 · started 2026-11-14T22:30:01Z
-id    strategy  market_ticker                  side  action  limit_price  quantity  status    created_at                      
-----  --------  -----------------------------  ----  ------  -----------  --------  --------  --------------------------------
-8766  Alimm1    KXMAMDANIMENTION-26NOV18-FREE  yes   buy     6            166       canceled  2026-11-08 01:30:24.416143+00:00
-8765  Alimm1    KXMAMDANIMENTION-26NOV18-FREE  yes   buy     6            166       canceled  2026-11-07 23:24:06.187080+00:00
-
-(2 rows)
