@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select at, residual_cents, presumed_transfer, coalesce((notes_json->>'residual_untrustworthy'),'') untrust\nfrom incentive_balance_observations where residual_cents >= 100 and at <= '2026-11-10T23:59:59Z' order by at", "max_rows": 2000, "id": "pt-res-1114a"}
