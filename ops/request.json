@@ -1,1 +1,1 @@
-{"type":"db","sql":"select id,strategy,market_ticker,side,action,limit_price,quantity,status,created_at from live_orders where strategy like 'Alimm%' and (status in ('resting','pending') or created_at > now() - interval '7 days') order by created_at desc","max_rows":50,"id":"lo1114-db-1"}
+{"type":"xos","command":"experiment-command-list","id":"lo1114-xcl-1"}
