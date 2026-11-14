@@ -359,3 +359,52 @@ def test_arms_pin_their_universe_beyond_the_daily_pay_cap(settings):
         ev = s.scalars(select(m.IncentiveCollectorEvent).where(
             m.IncentiveCollectorEvent.kind == c.EV_DISCOVERY).order_by(m.IncentiveCollectorEvent.id.desc())).first()
     assert ev.detail_json["pinned_arms"] == 2
+
+
+# ------------------------------------------------- research watch pins (LIMM_NOM_LADDERS.md §2)
+
+def test_research_pins_are_watched_but_never_armed_or_shadow_quoted(settings):
+    client = _ReadClient()
+    nom = "KXSENATENOM-28TX-ABC"
+    client.programs = client.programs + [dict(client.programs[0], id="p9", market_id="m9",
+                                              market_ticker=nom, period_reward=100_000)]
+    db.init_engine(settings.database_url)
+    db.create_all()
+    settings.liquidity_incentive_capital_tiers = "25"
+    settings.liquidity_incentive_max_markets = 1
+    settings.liquidity_incentive_paper_arms_enabled = True
+    clock = _Clock()
+    st = c.ShadowState(client, settings, db.session_scope, clock=clock)
+    st.refresh_programs(force=True)
+    assert set(st.markets) == {"KXT-26-A", nom} and st.watch_only == {nom}
+    st.on_connected()
+    st.handle_message(_snapshot("KXT-26-A", yes=[(3, 2000)], no=[(5, 2000)]))
+    st.handle_message(_snapshot(nom, yes=[(3, 2000)], no=[(5, 2000)], seq=2))
+    st.tick()
+    st.tick(clock.tick(c.ARM_FIRST_SELECT_AFTER_SECONDS + 1))
+    assert nom not in st.arm_candidates
+    assert all(nom not in v for v in st.arms.selected.values())
+    with db.session_scope() as s:
+        quoted = set(s.scalars(select(m.IncentiveShadowQuote.market_ticker)).all())
+        snapped = set(s.scalars(select(m.IncentiveMarketSnapshot.market_ticker)).all())
+        ev = s.scalars(select(m.IncentiveCollectorEvent).where(
+            m.IncentiveCollectorEvent.kind == c.EV_DISCOVERY)).first()
+    assert nom in snapped and nom not in quoted and "KXT-26-A" in quoted
+    assert ev.detail_json["pinned_research"] == 1
+
+
+def test_research_pins_take_the_top_per_series_and_expire():
+    from kalshi_bot.liquidity_incentive.collector import ProgramTerms
+
+    def terms(i, ticker, reward):
+        return ProgramTerms.from_row(m.IncentiveProgram(
+            id=i, program_id=f"p{i}", market_ticker=ticker, series_ticker=ticker.split("-")[0],
+            incentive_type="liquidity", period_reward_usd=reward, target_size=1000.0,
+            discount_factor_bps=5000, terms_hash=f"h{i}", first_seen_at=T0, last_seen_at=T0,
+            start_date=T0 - timedelta(hours=1), end_date=T0 + timedelta(days=3)))
+
+    rows = {f"KXGOVNOM-28-{i:02d}": terms(i, f"KXGOVNOM-28-{i:02d}", 10.0 + i) for i in range(15)}
+    rows["KXRT-X-1"] = terms(99, "KXRT-X-1", 1e6)
+    pins = c.research_watch_pins(rows, T0)
+    assert pins == {f"KXGOVNOM-28-{i:02d}" for i in range(5, 15)}
+    assert c.research_watch_pins(rows, c.RESEARCH_WATCH_UNTIL) == set()

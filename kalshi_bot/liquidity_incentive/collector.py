@@ -163,6 +163,34 @@ def daily_pay_usd(terms: ProgramTerms) -> float | None:
     return float(terms.period_reward_usd) / (terms.period_seconds / 86_400.0)
 
 
+#: Watch-only research pins (docs/LIMM_NOM_LADDERS.md §2, pre-registered 2026-11-14). The top
+#: RESEARCH_WATCH_PER_SERIES markets by daily pay in each series are snapshotted beyond the
+#: market cap so a read-only study can score them. They are NEVER paper-arm candidates and get
+#: no shadow pairs: S1-S4 select from exactly the markets they would have seen without this.
+#: The pins switch off on their own at RESEARCH_WATCH_UNTIL.
+RESEARCH_WATCH_SERIES: tuple[str, ...] = (
+    "KXSENATENOM", "KXGOVNOM", "KXDPRESPRIMARY", "KXRPRESPRIMARY",
+    "KXAGRACE", "KXTREASRACE", "KXSOSRACE", "KXAUDITORRACE",
+)
+RESEARCH_WATCH_PER_SERIES = 10
+RESEARCH_WATCH_UNTIL = datetime(2026, 12, 22, 16, 0, tzinfo=timezone.utc)
+
+
+def research_watch_pins(terms: dict[str, "ProgramTerms"], now: datetime) -> set[str]:
+    """The research pins due now: per frozen series, the top markets by daily pay."""
+    if now >= RESEARCH_WATCH_UNTIL:
+        return set()
+    by_series: dict[str, list[ProgramTerms]] = {}
+    for t in terms.values():
+        if t.series_ticker in RESEARCH_WATCH_SERIES and t.target_size:
+            by_series.setdefault(t.series_ticker, []).append(t)
+    pins: set[str] = set()
+    for rows in by_series.values():
+        rows.sort(key=lambda t: (daily_pay_sort_key(t), t.market_ticker), reverse=True)
+        pins |= {t.market_ticker for t in rows[:RESEARCH_WATCH_PER_SERIES]}
+    return pins
+
+
 def daily_pay_sort_key(terms: ProgramTerms) -> tuple[int, float]:
     """Markets with a known daily pay rank first, by that pay; a programme with no usable
     dates ranks after every dated one, by its total reward (the old key)."""
@@ -265,6 +293,8 @@ class ShadowState:
         self.tiers: tuple[int, ...] = self._tiers()
         self.arms = pa.ArmSelector()
         self.arm_candidates: dict[str, pa.Candidate] = {}
+        #: Tracked only because of a research pin: snapshotted, never armed or shadow-quoted.
+        self.watch_only: set[str] = set()
         self._started_at: datetime | None = None
         self._last_arm_select_at: datetime | None = None
 
@@ -394,19 +424,22 @@ class ShadowState:
                 # (thesis §9.13). Pinning them costs at most a handful of extra subscriptions.
                 pinned = repo.live_book_open_tickers(session, live_tags.LIVE_TAG)
                 arm_pins = self._arm_pins(terms, now)
+                research = research_watch_pins(terms, now)
                 summary = {"listed": len(result.current), "new": result.new_terms,
                            "changed": result.changed_terms, "gone": result.disappeared,
                            "errors": result.errors, "liquidity_current": len(terms),
-                           "pinned_live": len(pinned), "pinned_arms": len(arm_pins)}
+                           "pinned_live": len(pinned), "pinned_arms": len(arm_pins),
+                           "pinned_research": len(research)}
                 pinned = set(pinned) | arm_pins
         except Exception as exc:  # noqa: BLE001
             self._record(EV_LOOP_ERROR, detail=f"refresh_programs: {type(exc).__name__}: {exc}")
             return []
         self._record(EV_DISCOVERY, detail_json=summary)
-        return self._reconcile(terms, now, pinned=pinned)
+        return self._reconcile(terms, now, pinned=pinned, research=research)
 
     def _reconcile(self, terms: dict[str, ProgramTerms], now: datetime,
-                   *, pinned: set[str] | None = None) -> list[dict]:
+                   *, pinned: set[str] | None = None,
+                   research: set[str] | None = None) -> list[dict]:
         min_reward = float(self._cfg("min_reward_usd", 0.0))
         cap = int(self._cfg("max_markets", 150))
         wanted = [t for t in terms.values()
@@ -424,6 +457,11 @@ class ShadowState:
         for ticker in sorted(pinned or ()):
             if ticker not in wanted_by_ticker and ticker in terms:
                 wanted_by_ticker[ticker] = terms[ticker]
+        # Research pins come last and only add markets nothing else wanted; those are the
+        # watch-only set (docs/LIMM_NOM_LADDERS.md §2).
+        self.watch_only = {t for t in (research or ()) if t not in wanted_by_ticker and t in terms}
+        for ticker in sorted(self.watch_only):
+            wanted_by_ticker[ticker] = terms[ticker]
         cmds: list[dict] = []
         new_tickers: list[str] = []
         for ticker, t in wanted_by_ticker.items():
@@ -751,6 +789,8 @@ class ShadowState:
                 self._accrue_arm(mk, pair, yes_lv, no_lv, now)
             else:
                 self._accrue(mk, pair, yes_lv, no_lv, now)
+        if mk.ticker in self.watch_only:
+            return      # research pin: the snapshot above is all it is for
         if self._arms_on():
             try:
                 self._maintain_arms(mk, view, yes_lv, no_lv, now)

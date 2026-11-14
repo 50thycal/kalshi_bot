@@ -5,6 +5,10 @@ incentive line, MMSELL and anything new), so the Phase 0.5 menu was skipped. **B
 only:** nothing here is built, registered or changed until the owner locks the ideas. Experiment
 OS stays canonical; this doc moves no gate, verdict, lifecycle state or exposure.
 
+**Owner lock (2026-11-14, "do one and two"):** #1 NOM-LADDERS (pre-registered,
+[`LIMM_NOM_LADDERS.md`](LIMM_NOM_LADDERS.md), reads 12-08) and #3 PAYOUT-TRUTH (run the same day: **FAIL**,
+[`LIMM_PAYOUT_TRUTH.md`](LIMM_PAYOUT_TRUTH.md)). The rest stay on the holds queue.
+
 ## Plain summary
 
 - **The board has moved and our instrument has not.** Two new families now hold about **60%** of
