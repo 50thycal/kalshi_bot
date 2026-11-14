@@ -1,5 +1,14 @@
 # Weather-markets research journal
 
+## LIMM paper-strategies backtest run 2 (2026-11-14, descriptive): S2 holds, S3/S4 do not
+
+- **Replay** to 11-08 ([doc](LIMM_PAPER_STRATEGIES_BACKTEST.md) §7):
+  - Bidding at the best price earns **+$1.86 per $10 bid-day**, and one tick behind earns +$1.70. Fills
+    barely dent either, and the touch-vs-behind gap is undecided.
+  - Stepping aside for releases (S3) earned nothing extra.
+  - The $50 burst (S4) clears Kalshi's $1 minimum four times as often but nets about $0.
+- **Moves no forward bar.** The forward read on 11-24 decides. The backstop ran it after the routine could not push.
+
 ## Mentions forward read 2026-11-14: 48 of 60, progress only
 
 - Pooled `mmsell10` + `Basemmsell10` mention first entries settled since 10-15: **48 of 60**. No mean was computed
