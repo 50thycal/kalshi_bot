@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT incentive_type, count(*) AS active, count(DISTINCT split_part(market_ticker,'-',1)) AS series, round(sum(period_reward_usd)::numeric, 0) AS pool_usd FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL AND coalesce(incentive_type,'') <> 'liquidity' AND end_date > now() AND last_seen_at > now() - interval '1 day' GROUP BY 1", "id": "rc-g-1114-1513"}
+{"type":"script","name":"limm_paper_strategies_read","args":["--counts"],"id":"rc-ps-1114-1513"}
