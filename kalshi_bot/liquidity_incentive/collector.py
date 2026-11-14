@@ -176,7 +176,7 @@ RESEARCH_WATCH_PER_SERIES = 10
 RESEARCH_WATCH_UNTIL = datetime(2026, 12, 22, 16, 0, tzinfo=timezone.utc)
 
 
-def research_watch_pins(terms: dict[str, "ProgramTerms"], now: datetime) -> set[str]:
+def research_watch_pins(terms: dict[str, ProgramTerms], now: datetime) -> set[str]:
     """The research pins due now: per frozen series, the top markets by daily pay."""
     if now >= RESEARCH_WATCH_UNTIL:
         return set()
