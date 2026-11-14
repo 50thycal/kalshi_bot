@@ -130,3 +130,23 @@ explicit confirmation, and nothing is armed from here.
 - It is mostly crypto (44 markets, −13.2¢), plus oil, gas and other. Weather is positive in it.
 - It is not evidence about sports entry timing.
 - Measured against the real game start, sports timing shows **NO SIGNAL**.
+
+## 8. Mentions forward read — progress check 2026-11-14 (ops `rl-mf-count-1114`)
+
+**Counts only. The mean was not computed, because the sample is under 60.**
+
+| tag | first entries per market (mention series) | settled since 2026-10-15 | open |
+|---|---|---|---|
+| `mmsell10` (through 2026-11-02) | 116 | 40 | 0 |
+| `Basemmsell10` (DEC-041, from 2026-11-03) | 8 | 8 | 0 |
+| **pooled** | 124 | **48 of 60** | 0 |
+
+- **Under 60, so progress only.** The bars are unchanged. The next count is on
+  **2026-11-28 16:32Z**, a reminder held by the research-review session.
+  - The stored prompt asked for a fresh-session routine. Fresh sessions currently have no push
+    access, so a reminder in this session replaces it (see the calendar note).
+- **Pace:** `Basemmsell10` adds about 0.7 settled mention markets a day, so 60 is likely around
+  late November or early December.
+- **Process:** the scheduled routine fired at 16:33Z and stopped within a minute (no repo push
+  access). This session's backstop ran the count at 17:01Z.
+

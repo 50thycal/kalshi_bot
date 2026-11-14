@@ -1,5 +1,10 @@
 # Weather-markets research journal
 
+## Mentions forward read 2026-11-14: 48 of 60, progress only
+
+- Pooled `mmsell10` + `Basemmsell10` mention first entries settled since 10-15: **48 of 60**. No mean was computed
+  ([doc](MMSELL_LIVE_CANARY_PATTERNS.md) §8). The next count is 11-28. The routine could not push; the backstop ran it.
+
 ## LIMM fill hazard (study 5) 2026-11-13: V1 nominates two election series; nothing to remove
 
 - **Result** ([doc](LIMM_FILL_HAZARD.md) §8, ops `rl-s5-run1-20261113`): 5 series at the floor, so the instrument is OK.

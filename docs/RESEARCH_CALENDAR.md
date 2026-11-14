@@ -56,7 +56,7 @@ own prompts and docs are canonical.
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
 | daily 08:57 Central | Railway usage check (read-only) | WS-024 |
-| 2026-11-14 16:32 | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). Fresh-session routine `trig_01WsVZJfPKbYRDn9eFgVwMYn`; the duplicate on the archived session was deleted 2026-11-08 (owner) | `MMSELL_LIVE_CANARY_PATTERNS.md` §6 |
+| 2026-11-28 16:32 | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). 11-14 check: **48 of 60** settled (§8); the fresh-session routine could not push, so the backstop ran it. Next count: reminder `trig_018MG4Kq1qmugbpQ9GogVkeJ` in the review session | `MMSELL_LIVE_CANARY_PATTERNS.md` §6, §8 |
 
 The operations routines above wake an existing session rather than starting a fresh one. They also
 run while that session is closed in the app, but stop if that session is archived.
