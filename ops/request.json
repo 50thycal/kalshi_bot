@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["theta-tail-sell"],"id":"lo1114-show-theta"}
+{"type":"xos","command":"show","args":["mmsell-type-tight"],"id":"lo1114-show-tmm"}
