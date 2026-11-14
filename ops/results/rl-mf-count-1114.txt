@@ -1,0 +1,9 @@
+# ops request [READ]
+# type=db  id=rl-mf-count-1114
+# code f32e9afe327269bbc46b67219a608df319f942aa · started 2026-11-14T17:01:33Z
+strategy      first_entries  settled_since_1015  open
+------------  -------------  ------------------  ----
+Basemmsell10  8              8                   0   
+mmsell10      116            40                  0   
+
+(2 rows)

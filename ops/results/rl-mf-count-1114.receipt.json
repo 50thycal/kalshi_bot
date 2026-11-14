@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "f32e9afe327269bbc46b67219a608df319f942aa",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-14T17:01:34Z",
+  "id": "rl-mf-count-1114",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-mf-count-1114.receipt.json",
+  "result_file": "ops/results/rl-mf-count-1114.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/43618795856",
+  "service": null,
+  "started_at": "2026-11-14T17:01:33Z",
+  "targets": [],
+  "type": "db"
+}
