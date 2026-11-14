@@ -139,7 +139,10 @@ measured ratio says.
   instrument health only, and `s2_live_loss_stop` (kill, live, the loss side).
 - **No `arm` verb in this package.** It ships with the runner change (handoff Build B), which the
   owner approves at merge.
-- **Not registered yet (decision, 2026-11-14).** `package-preflight` was run dry. Registration
+- **Not registered yet (decision, 2026-11-14).** `package-preflight` was run dry after the merge:
+  ops `rl-s2live-pf-1114` (code `79f0050`), **GO** on every check (package known, fresh
+  registration, complete snapshot, no tag collisions, transport idle). The envelope was **not**
+  sent. Registration
   waits for the 11-24 read: if S2-best is not PROMISING, nothing should exist to retire. Also,
   two pending Platform Revisions already list `limm-paper-strategies` as unaccounted (Control
   Tower `rl-s2live-ct-1114`), and a new experiment would add one more. The probe gate needs about
