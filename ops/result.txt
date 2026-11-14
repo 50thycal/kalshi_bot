@@ -1,4 +1,4 @@
-no experiment command 'lo1114-limm-retire-1'
+no experiment command 'lo1114-theta-retire-1'
 # ops request [READ]
-# type=xos  id=s-lo1114-limm-retire-1
-# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:53:08Z
+# type=xos  id=s-lo1114-theta-retire-1
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:53:46Z
