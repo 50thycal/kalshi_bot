@@ -1,37 +1,139 @@
-# latest deployment 860dbb3b-9d15-4970-b8d7-a85dd9dca811 (status=SUCCESS, created=2026-11-14T22:51:09.936Z)
-# ops request [READ]
-# type=logs  service=main  id=lo1114-logs-2
-# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:54:48Z
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# UNCONSUMED COMMAND: EXPERIMENT_OS_EXPERIMENT_COMMAND still holds 4 command(s) with no terminal receipt: lo1114-limm-repair-1, lo1114-limm-retire-1, lo1114-theta-retire-1, lo1114-tmm-retire-1. Another session is very likely waiting on the boot that would consume them, and overwriting the variable would discard that work silently. Wait for the receipt (xos issue-command-show <command_id>), or pass "force_replace": true if you know it will never be consumed
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=lo1114-xc-1
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:55:50Z
 # target service: main
-2026-11-14T22:52:09.194374639Z INFO  Starting Container
-2026-11-14T22:52:09.545851606Z ERROR  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-2026-11-14T22:52:09.545854486Z ERROR  INFO  [alembic.runtime.migration] Will assume transactional DDL.
-2026-11-14T22:52:10.292166399Z INFO  starting kalshi bot
-2026-11-14T22:52:10.514337187Z INFO  experiment OS platform command
-2026-11-14T22:52:10.514341467Z ERROR  experiment OS experiment command hook failed; continuing to trade
-2026-11-14T22:52:10.514346537Z INFO  experiment OS enforcement
-2026-11-14T22:52:10.724743344Z INFO  api limits probe: {"grants": [{"exchange_instance": "event_contract", "level": "advanced", "source": "manual"}], "read": {"bucket_capacity": 900, "refill_rate": 300}, "usage_tier": "advanced", "write": {"bucket_capacity": 900, "refill_rate": 300}}
-2026-11-14T22:52:11.518275975Z INFO  kalshi api tier upgrade skipped
-2026-11-14T22:52:11.687589484Z INFO  live/paper twins configured
-2026-11-14T22:52:11.737176883Z INFO  live recover: reconciling in-flight orders
-2026-11-14T22:53:01.604400492Z INFO  abandoned foreign paper positions
-2026-11-14T22:53:31.467971666Z INFO  exchange status
-2026-11-14T22:53:31.468054165Z INFO  gate evaluation cycle
-    considered| 12
-2026-11-14T22:54:21.500683964Z INFO  polymarket index
-2026-11-14T22:54:21.500689914Z INFO  weather market
-2026-11-14T22:54:21.500693024Z INFO  weather market
-2026-11-14T22:54:21.500696204Z INFO  weather market
-2026-11-14T22:54:21.501031980Z INFO  weather market
-2026-11-14T22:54:21.501035240Z INFO  weather market
-2026-11-14T22:54:21.501037990Z INFO  weather market
-2026-11-14T22:54:21.501996228Z INFO  weather market
-2026-11-14T22:54:21.501999458Z INFO  weather market
-2026-11-14T22:54:21.502003838Z INFO  weather market
-2026-11-14T22:54:21.502480092Z INFO  weather market
-2026-11-14T22:54:23.161830012Z INFO  weather cycle
-2026-11-14T22:54:23.161833932Z INFO  live cycle
-    placed| 0
-2026-11-14T22:54:43.160137173Z INFO  weather validation
-2026-11-14T22:54:43.160142323Z INFO  live/paper twin epoch
-2026-11-14T22:54:43.160146083Z INFO  live/paper twin epoch
+# BEFORE:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 1630 bytes, sha256:e5ab025f9005bd5f>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 327 bytes, sha256:988d2fee40c4fffb>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 327 bytes, sha256:988d2fee40c4fffb>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 87,
+#       "grandfathered": 13,
+#       "native": 74
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize2-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize2-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset3-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset3-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize3-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize3-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset4-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset4-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 13,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-11-14 22:56:18.820937+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "49 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Ommsell10",
+#             "Ummsell10",
+#             "Xmmsell10",
+#             "Ymmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "55b51990e0492e4b",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 87,
+#           "grandfathered": 13,
+#           "native": 74
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
