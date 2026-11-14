@@ -1,1 +1,1 @@
-{"type":"logs","lines":400,"id":"lo1114-logs-2"}
+{"type":"env","id":"lo1114-xc-1","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"lo1114-limm-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"package\":\"limm-standdown-live-repair\",\"reason\":\"DEC-046: Alimm1 stood down since 2026-11-08 and removed from LIVE_STRATEGIES in this boot; end its live row so the experiment can retire\"}}"},"force_replace":true}
