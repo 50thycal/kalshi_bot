@@ -1,0 +1,475 @@
+# ops request [READ]
+# type=xos  id=lo1114-xcl-2
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:51:57Z
+[
+  {
+    "command_id": "ui-arm-ws4-20261112",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "01ea1df72991f9db4256b1339e02ac86b1907067f9b7e8d4f4225df6b0c10396",
+    "completed_at": "2026-11-12 03:17:48.675622+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-win-set-4-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-winset4-live-1",
+      "live_started_at": "2026-11-12 03:17:47.825265+00:00",
+      "twin_deployment": "mmsell-winset4-twin-1",
+      "twin_started_at": "2026-11-12 03:17:47.825265+00:00",
+      "epoch_started_at": "2026-11-12 03:17:47.825265+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "ui-arm-cs3-20261112",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "d8bebc18aded6deb48e297f28f38c00f9d54d8f28215d7df95b8623c98345b7d",
+    "completed_at": "2026-11-12 03:13:32.989055+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-cell-size-3-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-cellsize3-live-1",
+      "live_started_at": "2026-11-12 03:13:32.663396+00:00",
+      "twin_deployment": "mmsell-cellsize3-twin-1",
+      "twin_started_at": "2026-11-12 03:13:32.663396+00:00",
+      "epoch_started_at": "2026-11-12 03:13:32.663396+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-win-set-4-canary-register-202611100410",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "d075467c996c094cb2456786051982c3008dade8a489c15346733b5dae2d551a",
+    "completed_at": "2026-11-10 04:12:29.383759+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-win-set-4-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-11-10 04:12:29.153040+00:00",
+      "version_frozen_at": "2026-11-10 04:12:29.153040+00:00",
+      "keep_gate_spec_hash": "dbe3b7262a000fe3",
+      "promotion_gate_spec_hash": "fcf2c642aff1b5da",
+      "paper_deployment_deployment": "mmsell-winset4-paper-1",
+      "paper_deployment_started_at": "2026-11-10 04:12:29.153040+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-cell-size-3-canary-register-202611100405",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "996c7d992975d2dd07f89c5d1702d13f527524d0831506b10bb272bcbd2a8a57",
+    "completed_at": "2026-11-10 04:07:06.285523+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-cell-size-3-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-11-10 04:07:06.041731+00:00",
+      "version_frozen_at": "2026-11-10 04:07:06.041731+00:00",
+      "keep_gate_spec_hash": "a5f23728b7726cd7",
+      "promotion_gate_spec_hash": "f15ea2a7bfb93f24",
+      "paper_deployment_deployment": "mmsell-cellsize3-paper-1",
+      "paper_deployment_started_at": "2026-11-10 04:07:06.041731+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "limm-paper-strategies-register-202611081528",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "5c5aa40d6d02a3fde77b43582ed5023060eaf2cf474b54a1879fdb8a9832dbda",
+    "completed_at": "2026-11-08 15:29:35.738373+00:00",
+    "result": {
+      "kind": "register",
+      "package": "limm-paper-strategies",
+      "version": 1,
+      "epoch_number": 1,
+      "epoch_started_at": "2026-11-08 15:29:35.428621+00:00",
+      "probe_deployment": "limm-paper-strategies-probe-1",
+      "probe_started_at": "2026-11-08 15:29:35.428621+00:00",
+      "version_frozen_at": "2026-11-08 15:29:35.428621+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "limm-paper-strategies-register-202611081511",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "FAILED",
+    "payload_hash": "d2d295c83d2053b0f64763a16d895080d394555ec36b54ee1af4bd29991e8edc",
+    "completed_at": "2026-11-08 15:13:42.191530+00:00",
+    "result": null,
+    "error": "DataError: (psycopg.errors.StringDataRightTruncation) value too long for type character varying(16)\n[SQL: INSERT INTO experiment_versions (experiment_id, version, created_at, frozen_at, hypothesis, mechanism, counterparty, falsification, universe_selector, universe_exclusions, entry_rule, exit_rule, sizing_rule, execution_style, independent_variable, held_constant_json, control_required, control_e",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "mmsell-mentions-forward-register-202611030240",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "2b0cd947c42aa1d31d4f83c870e85fddd65528a983d89ad3d559305cf6f476e7",
+    "completed_at": "2026-11-03 02:42:15.694311+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-mentions-forward",
+      "version": 1,
+      "epoch_number": 1,
+      "epoch_started_at": "2026-11-03 02:42:15.402278+00:00",
+      "probe_deployment": "mmsell-mentions-forward-probe-1",
+      "probe_started_at": "2026-11-03 02:42:15.402278+00:00",
+      "fields_unreadable": [
+        "gates"
+      ],
+      "version_frozen_at": "2026-11-03 02:42:15.402278+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd2-mmsell-price-ceiling-cell-size",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "33b5d439b0f6ffd785b15a2fc461cdb9240a69e87d0de2a4580426928b658f1f",
+    "completed_at": "2026-11-02 14:49:58.794836+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-price-ceiling-cell-size",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 2,
+      "ended_deployments": [
+        "mmsell-cellsize-live-1",
+        "mmsell-cellsize-paper-1-e2",
+        "mmsell-cellsize-twin-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd2-mmsell-price-ceiling",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "2010f6605d9c07a6f1c01ef46e139bd8f1c75226518c5656f43540b39b3696d9",
+    "completed_at": "2026-11-02 14:48:02.330609+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-price-ceiling",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 2,
+      "ended_deployments": [
+        "mmsell-ceiling-live-1",
+        "mmsell-ceiling-paper-2-e2",
+        "mmsell-ceiling-twin-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-m9-1",
+    "action": "REPAIR_LINEAGE",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "7f73af20b2424463298db88e296f0e37e586fc0dae5432e285212b2ba3362532",
+    "completed_at": "2026-11-02 14:46:28.372244+00:00",
+    "result": {
+      "kind": "repair",
+      "package": "mmsell9-stale-epoch-repair"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd-mmsell-win-set-2",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "bfced3b62600e4b15e7a93babf2468f45a68eedead7407ae3e399813a2c4d5e5",
+    "completed_at": "2026-11-01 23:32:38.380180+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-win-set-2",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 2,
+      "ended_deployments": [
+        "mmsell-winset2-live-1",
+        "mmsell-winset2-paper-1-e2",
+        "mmsell-winset2-twin-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd-mmsell-win-set",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "d9d34efa6603de0ed68e8c72766d1228fd8ebcaf5b0e780ceb36b97ad7091cb8",
+    "completed_at": "2026-11-01 23:31:06.755013+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-win-set",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 2,
+      "ended_deployments": [
+        "mmsell-winset-live-1",
+        "mmsell-winset-paper-1-e1-e2",
+        "mmsell-winset-twin-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd-size-split",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "bb432ff5e131d35f87be72621192bf73d9a5c3a9cb233239c06ff65f7b016b45",
+    "completed_at": "2026-11-01 23:28:39.357492+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-price-ceiling-size-split",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 3,
+      "ended_deployments": [
+        "mmsell-sizesplit-live-2",
+        "mmsell-sizesplit-paper-1-e2-e3",
+        "mmsell-sizesplit-twin-2"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd-contest-cap",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "6ba15818409c6498f22ebc067f037b38b2342962fe669d353ee707632fb0aeb7",
+    "completed_at": "2026-11-01 23:26:57.620133+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-price-ceiling-contest-cap",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 3,
+      "ended_deployments": [
+        "mmsell-contestcap-live-2",
+        "mmsell-contestcap-paper-1-e2-e3",
+        "mmsell-contestcap-twin-2"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-sd-capacity",
+    "action": "STAND_DOWN",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "46bc3b6ca142ef7a0cbca3a0bec82c9a2e69895cf36e439d75fa0265235d7094",
+    "completed_at": "2026-11-01 23:04:52.888854+00:00",
+    "result": {
+      "kind": "stand_down",
+      "package": null,
+      "to_state": "RETIRED",
+      "experiment": "mmsell-price-ceiling-capacity",
+      "from_state": "LIVE_CANARY",
+      "closed_epoch": 2,
+      "ended_deployments": [
+        "mmsell-capacity-live-1",
+        "mmsell-capacity-paper-1-e1-e1-e2",
+        "mmsell-capacity-twin-1"
+      ]
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-repair-2",
+    "action": "REPAIR_LINEAGE",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "64663b2c122f3e5d804ae47498ebee2a2e84a8f9a592d555a9c989809b8de258",
+    "completed_at": "2026-11-01 23:02:09.474969+00:00",
+    "result": {
+      "kind": "repair",
+      "package": "mmsell-standdown-live-repair"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "lo-mmclose-repair-1",
+    "action": "REPAIR_LINEAGE",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "REJECTED",
+    "payload_hash": "9385ef565d7aaaeb0bc6f209da13d7575394f5e54d24b884dd895da9bfe95a46",
+    "completed_at": "2026-11-01 22:41:19.334431+00:00",
+    "result": null,
+    "error": "ExperimentCommandRejected: REPAIR_LINEAGE would leave ['Cmmsell10', 'Dmmsell10', 'Fmmsell10', 'Jmmsell10', 'Kmmsell10', 'Nmmsell10', 'Vmmsell10'] with lineage and no active deployment arm: each had an open deployment on an open epoch before this command and has none after it. Under NEW_ONLY every entry they attempt would be refused at the write path and nothing would say why (XOS-000033). Rolled b",
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "rs-arm-ws3-20261030",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "3154e9a9549f4551b16523c571bdc1d899d485eb6a54227bad1d4f7ef640174d",
+    "completed_at": "2026-10-30 13:40:55.789166+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-win-set-3-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-winset3-live-1",
+      "live_started_at": "2026-10-30 13:40:55.565405+00:00",
+      "twin_deployment": "mmsell-winset3-twin-1",
+      "twin_started_at": "2026-10-30 13:40:55.565405+00:00",
+      "epoch_started_at": "2026-10-30 13:40:55.565405+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "rs-arm-cs2-20261030",
+    "action": "ARM_CANARY",
+    "actor": "claude-code",
+    "actor_role": "LIVE_OPS",
+    "status": "SUCCEEDED",
+    "payload_hash": "8bbe3cc466f177f42d2474959e8af12c80b412cca68f496a93cc98a66b6c7d70",
+    "completed_at": "2026-10-30 13:39:00.873590+00:00",
+    "result": {
+      "kind": "arm",
+      "package": "mmsell-cell-size-2-canary",
+      "epoch_number": 2,
+      "impact_class": "I2",
+      "live_deployment": "mmsell-cellsize2-live-1",
+      "live_started_at": "2026-10-30 13:39:00.571751+00:00",
+      "twin_deployment": "mmsell-cellsize2-twin-1",
+      "twin_started_at": "2026-10-30 13:39:00.571751+00:00",
+      "epoch_started_at": "2026-10-30 13:39:00.571751+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  },
+  {
+    "command_id": "rs-reg-ws3-20261029",
+    "action": "REGISTER_PACKAGE",
+    "actor": "claude-code",
+    "actor_role": "RESEARCH_LAB",
+    "status": "SUCCEEDED",
+    "payload_hash": "5f0efd972a64e4055d1ddb8776e77e47b1189cbd7fc3dcf98ce5b3ca5c91b36f",
+    "completed_at": "2026-10-29 10:46:46.099579+00:00",
+    "result": {
+      "kind": "register",
+      "package": "mmsell-win-set-3-canary",
+      "version": 1,
+      "keep_gate": "live_canary_keep",
+      "epoch_number": 1,
+      "promotion_gate": "paper_to_live_canary",
+      "epoch_started_at": "2026-10-29 10:46:45.893244+00:00",
+      "version_frozen_at": "2026-10-29 10:46:45.893244+00:00",
+      "keep_gate_spec_hash": "dbe3b7262a000fe3",
+      "promotion_gate_spec_hash": "fcf2c642aff1b5da",
+      "paper_deployment_deployment": "mmsell-winset3-paper-1",
+      "paper_deployment_started_at": "2026-10-29 10:46:45.893244+00:00"
+    },
+    "error": null,
+    "replayed": false,
+    "collision": false,
+    "executed": true
+  }
+]
