@@ -346,7 +346,7 @@ def _gate(session, version: ExperimentVersion, gate_key: str) -> ExperimentGate:
     return gate
 
 
-ARM_REASON = ("S2 live test armed on the owner's decision of 2026-11-14 (arm as soon as the "
+ARM_REASON = ("S2 live test armed on the owner's decision of 2026-11-14, DEC-047 (arm as soon as the "
               "runner is merged, before the 2026-11-24 paper read); envelope pre-registered in "
               "docs/LIMM_S2_LIVE_TEST.md")
 

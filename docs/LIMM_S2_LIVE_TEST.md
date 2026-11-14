@@ -7,7 +7,7 @@ weeks, separate from `Alimm1`, judged on confirmed payouts minus fill losses). R
 `kalshi_bot/experiment_os/limm_s2_live.py` (`limm-s2-live`, not yet registered — §9). Live Ops
 steps: `docs/handoffs/HANDOFF-limm-s2-live-test.md`.
 
-**Start condition — changed by the owner on 2026-11-14 (`DEC-046`).** As first written, the
+**Start condition — changed by the owner on 2026-11-14 (`DEC-047`).** As first written, the
 test was to start only after the 2026-11-24 paper read labelled `S2-best` PROMISING. The owner
 then chose to arm it as soon as the runner (handoff Build B) is merged. Every arming step is
 still a hard stop that needs the owner's go: the merge, `ARM_CANARY`, and the env switch-on.
@@ -144,7 +144,7 @@ measured ratio says.
   ops `rl-s2live-pf-1114` (code `79f0050`), **GO** on every check (package known, fresh
   registration, complete snapshot, no tag collisions, transport idle). The envelope was **not**
   sent then.
-  - *Superseded by `DEC-046`:* registration now follows the Build B merge. The registration
+  - *Superseded by `DEC-047`:* registration now follows the Build B merge. The registration
     is paper scope and arms nothing.
   - The pending Platform Revisions already list `limm-paper-strategies` as unaccounted
     (Control Tower `rl-s2live-ct-1114`). `limm-s2-live` will be one more experiment for

@@ -8,7 +8,7 @@ session (Build B). **Pre-registration:** `docs/LIMM_S2_LIVE_TEST.md` (the bars, 
 ## 0. When it starts
 
 As first written, the test was to wait for the 2026-11-24 paper read. On 2026-11-14 the owner
-chose to arm it as soon as Build B is merged (`DEC-046`). Each step marked **HARD STOP** below
+chose to arm it as soon as Build B is merged (`DEC-047`). Each step marked **HARD STOP** below
 still needs the owner's go, in words that name that step. A go for the merge is not a go for
 arming, and a go for arming is not a go for the env switch-on.
 
@@ -53,7 +53,7 @@ Ops-channel recipe: `CLAUDE.md`. Unique ids. Read before you write.
    shadow quotes after registration (about an hour). `s2_paper_to_live` needs ≥ 200 quotes,
    ≥ 50 outcomes and ≥ 20 programmes (a few hours).
 3. **HARD STOP — arm.** `ARM_CANARY` for `limm-s2-live`, `approved_by` = the owner's name.
-   The package writes the reason (`ARM_REASON`, which cites DEC-046). Then confirm with `xos show`
+   The package writes the reason (`ARM_REASON`, which cites DEC-047). Then confirm with `xos show`
    that `As2best1` and `As2best1_pt1` are each on an ACTIVE arm.
 4. **HARD STOP — switch on.** Read the LIVE values first (`env` read). Then set, as one
    request, built from `activation_env(current_live_strategies=<live value>, ...)`:
