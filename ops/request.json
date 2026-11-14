@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select coalesce(series_ticker,'?') s, count(*) mkts, round(sum(period_reward_usd)::numeric,0) reward_usd,\n round(avg(extract(epoch from (end_date-start_date))/86400)::numeric,1) avg_days,\n round(sum(period_reward_usd/greatest(extract(epoch from (end_date-start_date))/86400,1))::numeric,0) usd_per_day\nfrom incentive_programs where superseded_at is null and disappeared_at is null and incentive_type='liquidity' and end_date>now()\ngroup by 1 order by usd_per_day desc nulls last limit 40", "max_rows": 60, "id": "idea-lims-1114a"}
+{"type":"noop"}
