@@ -127,11 +127,11 @@ NEVER_TOUCH_TAGS = frozenset({"Xmmsell10", "Ymmsell10", "Smmsell10", "Zmmsell10"
 assert not NEVER_TOUCH_TAGS & {t for _, _, t, _ in TARGETS}
 
 
-def _refuse(msg: str):
-    raise service.ExperimentOsError(f"mmsell stand-down live-row repair refused: {msg}")
+def _refuse(msg: str, label: str = "mmsell"):
+    raise service.ExperimentOsError(f"{label} stand-down live-row repair refused: {msg}")
 
 
-def _assert_runtime_is_stopped(session) -> None:
+def _assert_runtime_is_stopped(session, targets=TARGETS, label: str = "mmsell") -> None:
     """Refuse unless BOTH the allowlist and the order history agree every book is
     stopped. Config is current but says nothing about what traded; history is
     measured but says nothing about what is armed right now."""
@@ -140,21 +140,21 @@ def _assert_runtime_is_stopped(session) -> None:
 
         allowlist = [p.lower() for p in get_settings().live_strategy_list]
     except Exception as exc:  # the allowlist must be READABLE, or we know nothing
-        _refuse(
+        _refuse(label=label, msg=
             "could not read the runtime allowlist to verify the books are stopped: "
             f"{exc!r}"
         )
 
-    for _, deployment_key, tag, _cutoff in TARGETS:
+    for _, deployment_key, tag, _cutoff in targets:
         hit = [p for p in allowlist if tag.lower().startswith(p)]
         if hit:
-            _refuse(
+            _refuse(label=label, msg=
                 f"{tag!r} is armed by the runtime allowlist (matched {hit}); "
                 f"{deployment_key!r} may be trading and its OPEN record is then "
                 "correct — stand the book down through Live Ops first"
             )
 
-    for _, _deployment_key, tag, cutoff in TARGETS:
+    for _, _deployment_key, tag, cutoff in targets:
         newest = session.scalar(
             select(func.max(LiveOrder.created_at)).where(LiveOrder.strategy == tag)
         )
@@ -163,7 +163,7 @@ def _assert_runtime_is_stopped(session) -> None:
         if newest.tzinfo is None:
             newest = newest.replace(tzinfo=UTC)
         if newest > cutoff:
-            _refuse(
+            _refuse(label=label, msg=
                 f"a live order for {tag} exists at {newest.isoformat()}, after its "
                 f"reviewed last order {cutoff.isoformat()} — the book resumed and "
                 "this repair is out of date"
@@ -173,23 +173,30 @@ def _assert_runtime_is_stopped(session) -> None:
 def repair(session, *, actor: str, now: datetime | None = None) -> dict:
     """End the seven stood-down live deployment rows. Moves no lifecycle state,
     closes no epoch, touches no gate."""
+    return end_stood_down_live_rows(session, actor=actor, now=now)
+
+
+def end_stood_down_live_rows(session, *, actor: str, now: datetime | None = None,
+                             targets=TARGETS, label: str = "mmsell") -> dict:
+    """The repair, over an explicit literal TARGETS tuple — shared with
+    `repair_limm_standdown_live_row`, so both close-outs run the same checks."""
     del actor
     at = now or datetime.now(UTC)
 
-    _assert_runtime_is_stopped(session)
+    _assert_runtime_is_stopped(session, targets, label)
 
     # Validate EVERY target before changing ANY row: a repair that half-applies to
     # a state it does not recognise is worse than no repair.
     to_end: list[ExperimentDeployment] = []
     already: list[str] = []
-    for experiment_key, deployment_key, _tag, _cutoff in TARGETS:
+    for experiment_key, deployment_key, _tag, _cutoff in targets:
         experiment = session.scalar(
             select(Experiment).where(Experiment.key == experiment_key)
         )
         if experiment is None:
-            _refuse(f"experiment {experiment_key!r} is not registered")
+            _refuse(label=label, msg=f"experiment {experiment_key!r} is not registered")
         if experiment.state != LifecycleState.LIVE_CANARY.value:
-            _refuse(
+            _refuse(label=label, msg=
                 f"{experiment_key} is {experiment.state!r}, not LIVE_CANARY — the "
                 "shape this repair was reviewed against is not the shape production "
                 "is in"
@@ -201,9 +208,9 @@ def repair(session, *, actor: str, now: datetime | None = None) -> dict:
             )
         )
         if deployment is None:
-            _refuse(f"deployment {deployment_key!r} does not exist")
+            _refuse(label=label, msg=f"deployment {deployment_key!r} does not exist")
         if deployment.kind != DeploymentKind.LIVE.value:
-            _refuse(
+            _refuse(label=label, msg=
                 f"{deployment_key!r} is kind {deployment.kind!r}, not 'live' — "
                 "refusing to touch a deployment this repair does not describe"
             )
@@ -211,13 +218,13 @@ def repair(session, *, actor: str, now: datetime | None = None) -> dict:
         epoch = session.get(ExperimentEpoch, deployment.epoch_id)
         version = session.get(ExperimentVersion, epoch.version_id)
         if version.experiment_id != experiment.id:
-            _refuse(
+            _refuse(label=label, msg=
                 f"{deployment_key!r} belongs to a different experiment — refusing "
                 "to touch it"
             )
         latest = read.latest_version(session, experiment)
         if latest is None or latest.id != version.id:
-            _refuse(
+            _refuse(label=label, msg=
                 f"{deployment_key!r} sits on v{version.version}, which is not "
                 f"{experiment_key}'s latest version — refusing"
             )
@@ -227,7 +234,7 @@ def repair(session, *, actor: str, now: datetime | None = None) -> dict:
             continue
 
         if epoch.ended_at is not None:
-            _refuse(
+            _refuse(label=label, msg=
                 f"epoch {epoch.epoch_number} of {experiment_key} is already CLOSED "
                 f"while {deployment_key!r} is open — that is the XOS-000011 shape "
                 "and a different repair"

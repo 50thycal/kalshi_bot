@@ -269,6 +269,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         recut_mmsell10_contest_cap,
         recut_mmsell10_size_split,
         repair_dark_live_canaries,
+        repair_limm_standdown_live_row,
         repair_live_material_baseline,
         repair_mmsell9_stale_epoch,
         repair_mmsell_standdown_live_rows,
@@ -523,6 +524,23 @@ def _packages() -> dict[str, ExperimentPackage]:
             register=_no_contract,
             repair=repair_mmsell_standdown_live_rows.repair,
             retires_tags=repair_mmsell_standdown_live_rows.RETIRES_TAGS,
+        ),
+        "limm-standdown-live-repair": ExperimentPackage(
+            name="limm-standdown-live-repair",
+            experiment_key=repair_limm_standdown_live_row.TARGETS[0][0],
+            description=(
+                "LIMM close-out (owner decision DEC-046, 2026-11-14): end the OPEN live "
+                "deployment row limm-smoke-live-1 (Alimm1) of liquidity-incentive-mm, "
+                "stood down since 2026-11-08, so STAND_DOWN -> RETIRED becomes "
+                "reachable. Same checks as mmsell-standdown-live-repair: refuses if "
+                "Alimm1 is armed in LIVE_STRATEGIES or has a live order after its "
+                "measured last one. Moves no lifecycle state, closes no epoch, touches "
+                "no gate, places or cancels no order; never reaches the S2 live test's "
+                "tags or limm-paper-strategies."
+            ),
+            register=_no_contract,
+            repair=repair_limm_standdown_live_row.repair,
+            retires_tags=repair_limm_standdown_live_row.RETIRES_TAGS,
         ),
         "live-material-baseline-repair": ExperimentPackage(
             name="live-material-baseline-repair",
