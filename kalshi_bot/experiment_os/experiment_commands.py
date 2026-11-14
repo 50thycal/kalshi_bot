@@ -254,6 +254,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         canary_mmsell10,
         correlation_cap,
         limm_paper_strategies,
+        limm_s2_live,
         liquidity_incentive_mm,
         marktangle,
         marktangle2,
@@ -385,6 +386,21 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "the paper-only activation switch is a separate env act."
             ),
             register=limm_paper_strategies.register,
+        ),
+        "limm-s2-live": ExperimentPackage(
+            name="limm-s2-live",
+            experiment_key=limm_s2_live.EXPERIMENT_KEY,
+            description=(
+                "The S2 live test's contract (docs/LIMM_S2_LIVE_TEST.md): ~5 live $10 bids at "
+                "the best bid on the paper arm S2-best's markets, fresh tags, apart from "
+                "Alimm1. Freezes v1 with the envelope and three gates (instrument health x2, "
+                "a live loss stop), opens e1, registers a TAGLESS probe and stops at PROBE. "
+                "No arm verb: arming ships later with the runner change, on the owner's go. "
+                "Arms nothing, trades nothing, no real money."
+            ),
+            register=limm_s2_live.register,
+            strategy_tags=(limm_s2_live.PAPER_TAG, limm_s2_live.LIVE_TAG,
+                           limm_s2_live.TWIN_TAG),
         ),
         "mmsell-mentions-forward": ExperimentPackage(
             name="mmsell-mentions-forward",

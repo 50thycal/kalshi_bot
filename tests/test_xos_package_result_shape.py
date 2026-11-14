@@ -47,7 +47,8 @@ from kalshi_bot.experiment_os import read
 #: Packages that register from an empty Experiment OS with no preconditions.
 #: The successor and repair packages are deliberately absent: they refuse
 #: outside a state this fixture does not build, and refusing is their contract.
-STANDALONE_PACKAGES = ("marktangle-reversion", "marktangle-2", "perp-v1", "limm-paper-strategies")
+STANDALONE_PACKAGES = ("marktangle-reversion", "marktangle-2", "perp-v1", "limm-paper-strategies",
+                       "limm-s2-live")
 
 
 @pytest.fixture(autouse=True)
