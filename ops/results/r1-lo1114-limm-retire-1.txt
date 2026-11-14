@@ -1,0 +1,28 @@
+# ops request [READ]
+# type=xos  id=r1-lo1114-limm-retire-1
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:58:44Z
+{
+  "command_id": "lo1114-limm-retire-1",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "587486b6720bd45473dbba6617174f24571e98d57278862c741dde7c3a836938",
+  "completed_at": "2026-11-14 22:58:45.283164+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "liquidity-incentive-mm",
+    "from_state": "LIVE_CANARY",
+    "closed_epoch": 2,
+    "ended_deployments": [
+      "limm-smoke-live-1",
+      "limm-smoke-twin-1"
+    ]
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
