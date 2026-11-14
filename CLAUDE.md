@@ -174,9 +174,7 @@ CLI — `control-tower`, `list`, `show`, `scoreboard`, `enforcement`, `readiness
 newest 80 files — read yours promptly and persist what matters elsewhere.
 
 **The `EXPERIMENT_OS_*_COMMAND` transports are single-slot**, consumed at the
-worker's next boot. The ISSUE transport takes a whole workflow as ONE array of
-envelopes; the EXPERIMENT and PLATFORM transports take ONE envelope per boot (an
-array there is rejected before any receipt, 2026-11-14). Expect a
+worker's next boot. ISSUE takes ONE array; EXPERIMENT/PLATFORM ONE envelope. Expect a
 `REFUSED` verdict if another session's envelope is still unconsumed — that guard
 is protecting their work. **Never force-refresh `ops`**: the runner executes
 default-branch code, so a merge is live on the next request; `refs/heads/ops` is
