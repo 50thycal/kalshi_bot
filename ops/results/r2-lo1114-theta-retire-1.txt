@@ -1,0 +1,24 @@
+# ops request [READ]
+# type=xos  id=r2-lo1114-theta-retire-1
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T23:00:33Z
+{
+  "command_id": "lo1114-theta-retire-1",
+  "action": "STAND_DOWN",
+  "actor": "claude-code",
+  "actor_role": "LIVE_OPS",
+  "status": "SUCCEEDED",
+  "payload_hash": "75e44429ea2a972e0fb3f726b1521366cde454357fca464e04d121f658264862",
+  "completed_at": "2026-11-14 23:00:08.172451+00:00",
+  "result": {
+    "kind": "stand_down",
+    "package": null,
+    "to_state": "RETIRED",
+    "experiment": "theta-tail-sell",
+    "from_state": "PAUSED",
+    "ended_deployments": []
+  },
+  "error": null,
+  "replayed": false,
+  "collision": false,
+  "executed": true
+}
