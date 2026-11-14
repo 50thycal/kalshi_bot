@@ -3,16 +3,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=lo1114-xc-2
-# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:57:48Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=lo1114-xc-3
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:59:13Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 327 bytes, sha256:988d2fee40c4fffb>
-  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 465 bytes, sha256:72987ed916e5e27f>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 465 bytes, sha256:72987ed916e5e27f>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 355 bytes, sha256:4335b63d49413a18>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 465 bytes, sha256:72987ed916e5e27f>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 355 bytes, sha256:4335b63d49413a18>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -72,7 +72,7 @@
 # $ xos readiness
 #   {
 #     "ok": false,
-#     "checked_at": "2026-11-14 22:58:04.441967+00:00",
+#     "checked_at": "2026-11-14 22:59:36.155595+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
