@@ -1,17 +1,147 @@
-# latest deployment 81f57419-28ba-4fe4-b696-306f8c377482 (status=SUCCESS, created=2026-11-14T22:49:33.275Z)
-# ops request [READ]
-# type=logs  service=main  id=lo1114-logs-1
-# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:50:26Z
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND,LIVE_PAPER_TWINS,LIVE_STRATEGIES,MMSELL_VARIANTS  id=lo1114-closeout-env-1
+# code 290376d0ccd161d66e970f1f0eecdb51a2462bec · started 2026-11-14T22:50:59Z
 # target service: main
-2026-11-14T22:50:19.078082027Z INFO  Starting Container
-2026-11-14T22:50:19.928483801Z ERROR  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-2026-11-14T22:50:19.928490285Z ERROR  INFO  [alembic.runtime.migration] Will assume transactional DDL.
-2026-11-14T22:50:20.984229762Z INFO  starting kalshi bot
-2026-11-14T22:50:21.297557281Z INFO  experiment OS platform command
-2026-11-14T22:50:21.297563718Z INFO  experiment OS experiment command
-2026-11-14T22:50:21.380370303Z INFO  experiment OS enforcement
-2026-11-14T22:50:21.654307075Z INFO  api limits probe: {"grants": [{"exchange_instance": "event_contract", "level": "advanced", "source": "manual"}], "read": {"bucket_capacity": 900, "refill_rate": 300}, "usage_tier": "advanced", "write": {"bucket_capacity": 900, "refill_rate": 300}}
-2026-11-14T22:50:21.654312447Z INFO  kalshi api tier upgrade skipped
-2026-11-14T22:50:21.990295654Z INFO  live/paper twins configured
-2026-11-14T22:50:21.990302854Z WARN  twin suffix is being ignored for this book
-2026-11-14T22:50:22.069527088Z INFO  live recover: reconciling in-flight orders
+# BEFORE:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 208 bytes, sha256:3c524ec2392d439b>
+  LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3
+  LIVE_STRATEGIES=Ummsell10,Alimm1,Ommsell10
+  MMSELL_VARIANTS=Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION
+  set LIVE_STRATEGIES=Ummsell10,Ommsell10
+  set LIVE_PAPER_TWINS=
+  set MMSELL_VARIANTS=Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 1630 bytes, sha256:e5ab025f9005bd5f>
+# 4/4 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 1630 bytes, sha256:e5ab025f9005bd5f>
+  LIVE_PAPER_TWINS=
+  LIVE_STRATEGIES=Ummsell10,Ommsell10
+  MMSELL_VARIANTS=Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 87,
+#       "grandfathered": 13,
+#       "native": 74
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "limm-smoke-live-1",
+#         "grandfathered": false,
+#         "twin": "limm-smoke-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize2-live-1",# readiness reported a problem — read the block above
+
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize2-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset3-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset3-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-cellsize3-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-cellsize3-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-winset4-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-winset4-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 12,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-11-14 22:51:14.999899+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "49 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Alimm1",
+#             "Ommsell10",
+#             "Ummsell10",
+#             "Xmmsell10",
+#             "Ymmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "55b51990e0492e4b",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 87,
+#           "grandfathered": 13,
+#           "native": 74
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": false,
+#         "detail": "7 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
