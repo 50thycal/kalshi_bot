@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as n, max(created_at) as last_entry from paper_trades where (strategy like 'Tmmsell%' or strategy like 'Alimm1%' or strategy in ('theta','theta1','theta2','theta3')) and created_at > '2026-11-14 22:30:00' group by strategy","max_rows":50,"id":"lo1114-db-2"}
+{"type":"xos","command":"control-tower","id":"lo1114-ct-2"}
