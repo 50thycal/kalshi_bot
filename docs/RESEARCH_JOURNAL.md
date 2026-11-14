@@ -1,5 +1,12 @@
 # Weather-markets research journal
 
+## Close-out round 2026-11-14 (owner, DEC-046)
+
+- **Closed unread:** study 6 (step-aside) and study 8 (fill early-warning). Both were for the stood-down `Alimm1`.
+  S3 in the paper strategies carries the step-aside question forward.
+- **Handed to Live Ops:** retire `liquidity-incentive-mm`, `theta-tail-sell` and `mmsell-type-tight`.
+- **Noted:** the election-cycle ladders, for the next cycle.
+
 ## LIMM paper-strategies backtest run 2 (2026-11-14, descriptive): S2 holds, S3/S4 do not
 
 - **Replay** to 11-08 ([doc](LIMM_PAPER_STRATEGIES_BACKTEST.md) §7):

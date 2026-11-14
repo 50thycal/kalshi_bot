@@ -1793,3 +1793,28 @@ in the kalshi-bot project depends on them.
 - **Workstreams:** WS-021, WS-022 and WS-025 are Abandoned. WS-026 D2 (the desk diagnostic
   secret) is moot.
 - **Experiment OS:** not involved. The desks ran outside it.
+
+## DEC-046 — Close-out round after the incentive stand-down (2026-11-14)
+
+**Date:** 2026-11-14 UTC. **Owner direction**, on the research session's audit: "go with all the
+recommendations for one through four. Close five as well."
+
+- **Decision (all are close-outs; nothing expands exposure):**
+  1. **Study 6, LIMM step-aside, Part B:** closed unread (`LIMM_STEP_ASIDE.md` §8). Done by
+     Research Lab.
+  2. **Study 8, LIMM fill early-warning, Part B:** closed unread (`LIMM_FILL_WARNING.md` §7).
+     Done by Research Lab.
+  3. **`liquidity-incentive-mm` (`Alimm1`):** retire the experiment. The book has been stood
+     down since 11-08 (thesis §9.78), and its 2 held positions ($0.03) settle on their own. The
+     S2 live test, if the owner later approves it, runs as its own experiment on fresh tags.
+  4. **`theta-tail-sell`:** paused with no gate and no evidence, so retire it.
+  5. **`mmsell-type-tight` (paper, `Tmmsell*` tags):** retire it, and stop its paper tags. Its
+     evidence has been BLOCKED_PLATFORM by an unapplied impact, so it could never be evaluated.
+- **Who carries out 3–5:** Live Ops, as recorded Experiment OS transitions plus the paper/live
+  env removals. This DEC is the owner's approval. Removing `Alimm1` from `LIVE_STRATEGIES` only
+  reduces exposure.
+- **Also noted (owner):** the election-cycle ladders from study 5 V1 are on the candidate list
+  for the next cycle. No change now.
+- **Not decided here:** closing the replaced MMSELL canaries (`mmsell-price-ceiling-cell-size-2`,
+  `mmsell-win-set-3`) once their held positions settle. That is the WS-027 session's planned
+  step.

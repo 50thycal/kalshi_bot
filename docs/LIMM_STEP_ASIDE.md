@@ -113,3 +113,14 @@ markets with band hours 532; with base hours 753; markets with prints 491
 - **What this does and does not say:** quoting closer to close was net positive on that tape,
   which was mostly sports ladders, not mentions. It says nothing yet about mention events, where
   informed flow near the event is the risk. Part B (2026-11-17) reads the live universe.
+
+## 8. Part B closed unread (2026-11-14, owner)
+
+The owner closed this study on 2026-11-14 ("go with all the recommendations"). Part B would
+have decided a step-aside rule (48 h vs 24 h) for `Alimm1`'s live universe, the mention series
+and `KXYTVIEWSHIGH`. That book is stood down (thesis §9.78), YouTube is paused, and the mention
+pools are small. The paper strategy S3 (`LIMM_PAPER_STRATEGIES.md`, read 11-24) carries the
+step-aside question forward on the markets now in play.
+
+- **Not read.** The routines (`trig_01H9kxG5d74PesCBcfbyGYkw` and its backstop) are deleted.
+  The conditional 12-01 re-read is removed. Part A (§7) stays as the record.

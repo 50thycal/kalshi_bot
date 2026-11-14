@@ -105,3 +105,16 @@ qualifying hours 40573; markets 753; markets with prints 359
   test, not a revision of this one.
 - **`live`:** no data in this window (12 hours), as with study 6.
 - **Part B still reads once on 2026-12-11, unchanged.**
+
+## 7. Part B closed unread (2026-11-14, owner)
+
+The owner closed this study on 2026-11-14 ("go with all the recommendations").
+
+- **Part A already read NO-SIGNAL.** The warning predicts fills, but pulling bids gave up more
+  reward than it saved (−$330).
+- **What Part B would have done:** nominate a pull-on-warning rule for `Alimm1`, which is stood
+  down (thesis §9.78).
+- **Not read.** The routine `trig_018fN69FNib5J6xZUihqbmE8` is deleted. Part A (§6) stays as
+  the record.
+- **If a future live book wants the rule:** a new pre-registration on that book's own markets
+  is the way back.
