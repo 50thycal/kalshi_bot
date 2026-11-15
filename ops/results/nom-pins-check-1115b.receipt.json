@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "71f5f5926869e673d26d95092fa6af7bf60f5705",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-11-15T00:25:04Z",
+  "id": "nom-pins-check-1115b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/nom-pins-check-1115b.receipt.json",
+  "result_file": "ops/results/nom-pins-check-1115b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/43658043795",
+  "service": null,
+  "started_at": "2026-11-15T00:25:03Z",
+  "targets": [],
+  "type": "db"
+}
