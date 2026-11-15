@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select at, detail_json->>'pinned_research' research, detail_json->>'pinned_arms' arms from incentive_collector_events where kind='discovery' order by at desc limit 4", "max_rows": 5, "id": "nom-pins-check-1115b"}
+{"type":"noop"}
