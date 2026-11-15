@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select distinct p.market_ticker, p.end_date from incentive_programs p\nwhere p.incentive_type='liquidity' and p.end_date is not null\nand p.market_ticker in (select distinct market_ticker from live_orders where strategy='Alimm1') order by 2", "max_rows": 5000, "id": "pt-ends-1114a"}
+{"type": "db", "sql": "select at, detail_json->>'pinned_research' research, detail_json->>'pinned_arms' arms from incentive_collector_events where kind='discovery' order by at desc limit 3", "max_rows": 5, "id": "nom-pins-check-1115a"}
