@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "quiet-1115", "sql": "select strategy, max(created_at) last_trade, count(*) filter (where created_at > now() - interval '7 days') n7d from paper_trades where strategy in ('Immsell10','Mmmsell10','Ummsell10_pt4','Ommsell10_pt4','Basemmsell10','Rainmmsell1','Rainmmsell3','Smmsell10') group by 1 order by 2 desc"}
