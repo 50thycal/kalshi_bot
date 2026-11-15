@@ -1,8 +1,13 @@
 # ops request [READ]
-# type=db  id=rv-a2-1115-0310
-# code 71f5f5926869e673d26d95092fa6af7bf60f5705 · started 2026-11-15T03:11:53Z
-trades_4h  trade_mkts_4h  last_trade                      
----------  -------------  --------------------------------
-326        74             2026-11-15 03:10:59.299132+00:00
+# type=db  id=rv-c-1115-0310
+# code 71f5f5926869e673d26d95092fa6af7bf60f5705 · started 2026-11-15T03:12:20Z
+strategy   filled_orders  markets
+---------  -------------  -------
+Kmmsell10  4              4      
+Ommsell10  7              7      
+Ummsell10  8              8      
+Vmmsell10  3              3      
+Xmmsell10  56             56     
+Ymmsell10  50             50     
 
-(1 row)
+(6 rows)
