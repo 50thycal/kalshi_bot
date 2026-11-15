@@ -1,4 +1,25 @@
 # ops request [READ]
-# type=noop
-# code 71f5f5926869e673d26d95092fa6af7bf60f5705 · started 2026-11-15T03:24:52Z
-(noop — nothing to do)
+# type=xos  id=rl-s2live-pf2-1115
+# code e19c09dec2b587445f78072052ecc595d5c3c897 · started 2026-11-15T05:47:36Z
+PACKAGE PREFLIGHT — limm-s2-live  (2026-11-15T05:47:36.898337+00:00)
+
+  [ok  ] package_known: The S2 live test's contract (docs/LIMM_S2_LIVE_TEST.md): ~5 live $10 bids at the best bid on the paper arm S2-best's markets, fresh tags, apart from Alimm1. Fre
+  [ok  ] package_registers: has a `register` verb
+  [info] enforcement_mode: NEW_ONLY
+         a tag trades only under an active deployment arm
+  [ok  ] platform_snapshot_complete: active snapshot 55b51990e049
+  [ok  ] experiment: 'limm-s2-live' not registered — a fresh registration
+  [ok  ] tag_collisions: no declared tag is carried by another experiment
+  [ok  ] transport_idle: no experiment command is mid-execution
+
+VERDICT: GO
+
+envelope (ops request, one line):
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"limm-s2-live-register-202611150547\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"limm-s2-live\"}, \"schema_version\": 1}"}, "id": "limm-s2-live-register-202611150547-send"}
+
+then:
+  1. send env_request as printed (record approved_by/reason from `audit` in the PR)
+  2. read the receipt: xos experiment-command-show limm-s2-live-register-202611150547
+  3. xos show limm-s2-live — every declared tag on an ACTIVE arm
+  4. runtime step (separate `env` request, read the live value FIRST and append, never retype): ['LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED', 'LIVE_PAPER_TWINS', 'LIVE_STRATEGIES']
+  5. xos control-tower after SILENT_ARM_HOURS — no silent arm
