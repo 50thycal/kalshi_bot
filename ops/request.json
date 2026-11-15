@@ -1,1 +1,1 @@
-{"type":"xos","command":"package-preflight","args":["limm-s2-live"],"id":"rl-s2live-pf2-1115"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"limm-s2-live-register-202611150547\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"claude-code\", \"actor_role\": \"RESEARCH_LAB\", \"payload\": {\"package\": \"limm-s2-live\"}, \"schema_version\": 1}"}, "id": "limm-s2-live-register-202611150547-send"}
