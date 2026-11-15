@@ -7,10 +7,11 @@ weeks, separate from `Alimm1`, judged on confirmed payouts minus fill losses). R
 `kalshi_bot/experiment_os/limm_s2_live.py` (`limm-s2-live`, not yet registered — §9). Live Ops
 steps: `docs/handoffs/HANDOFF-limm-s2-live-test.md`.
 
-**Nothing here is switched on.** The test starts only when **both**: (a) the 2026-11-24 paper
-read (`LIMM_PAPER_STRATEGIES.md` §5–§6) labels `S2-best` **PROMISING**, and (b) the owner says
-go, by name, for this test. Arming, `LIVE_STRATEGIES` and every limit going live are Live Ops
-acts and hard stops.
+**Start condition — changed by the owner on 2026-11-14 (`DEC-047`).** As first written, the
+test was to start only after the 2026-11-24 paper read labelled `S2-best` PROMISING. The owner
+then chose to arm it as soon as the runner (handoff Build B) is merged. Every arming step is
+still a hard stop that needs the owner's go: the merge, `ARM_CANARY`, and the env switch-on.
+Nothing else in this document changed. The 11-24 read is still reported next to the live result.
 
 ## 1. Why, and what it measures first
 
@@ -52,7 +53,7 @@ payout maps to exactly one of our markets.
 | | |
 |---|---|
 | Bid | **$10** of contracts at the paper arm's own side and price (the best bid, cheap side 1–10¢; ≤ 1,000 contracts) |
-| Markets | ≤ 5 resting at once; **≤ $50 resting** |
+| Markets | ≤ 5 at once and **≤ $50**, counting held fills: a fill keeps its market slot, its event and its dollars until it settles |
 | Fills | **held to settlement**. No stop-loss, take-profit or resting sell (the paper arm's fill cost assumes a held fill) |
 | Re-entry | a market that filled is not re-entered during the test |
 | Duration | **14 days** from arming |
@@ -137,16 +138,17 @@ measured ratio says.
 - Package `limm-s2-live`: one arm (`s2best_live`), envelope from `s2_live.S2LiveRules`, three
   gates: `s2_instrument_ready` (PROBE→PAPER), `s2_paper_to_live` (PAPER→LIVE_CANARY), both
   instrument health only, and `s2_live_loss_stop` (kill, live, the loss side).
-- **No `arm` verb in this package.** It ships with the runner change (handoff Build B), which the
-  owner approves at merge.
+- The `arm` verb shipped with the runner (Build B). It walks PROBE→PAPER only on a fresh
+  probe-gate PASS, then arms `As2best1` and its twin at one instant.
 - **Not registered yet (decision, 2026-11-14).** `package-preflight` was run dry after the merge:
   ops `rl-s2live-pf-1114` (code `79f0050`), **GO** on every check (package known, fresh
   registration, complete snapshot, no tag collisions, transport idle). The envelope was **not**
-  sent. Registration
-  waits for the 11-24 read: if S2-best is not PROMISING, nothing should exist to retire. Also,
-  two pending Platform Revisions already list `limm-paper-strategies` as unaccounted (Control
-  Tower `rl-s2live-ct-1114`), and a new experiment would add one more. The probe gate needs about
-  an hour of evidence, so registering after the read costs nothing.
+  sent then.
+  - *Superseded by `DEC-047`:* registration now follows the Build B merge. The registration
+    is paper scope and arms nothing.
+  - The pending Platform Revisions already list `limm-paper-strategies` as unaccounted
+    (Control Tower `rl-s2live-ct-1114`). `limm-s2-live` will be one more experiment for
+    Platform Change Review to account for before either revision activates.
 
 ## 10. Result
 

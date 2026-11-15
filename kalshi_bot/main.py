@@ -455,6 +455,14 @@ def run() -> int:
         from .liquidity_incentive.runner import IncentiveLiveRunner
 
         incentive_runner = IncentiveLiveRunner(client, settings, twin_harness=twin_harness)
+    # The S2 live test (docs/LIMM_S2_LIVE_TEST.md): its own runner and its own switch, apart
+    # from Alimm1. Not constructed at all unless LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED is on; even
+    # then the executor refuses every order until LIVE_STRATEGIES names As2best1.
+    s2_runner = None
+    if live and settings.liquidity_incentive_s2_live_enabled:
+        from .liquidity_incentive.s2_runner import S2LiveRunner
+
+        s2_runner = S2LiveRunner(client, settings, twin_harness=twin_harness)
     if twin_harness is not None and twin_harness.enabled:
         log_event(logger, logging.INFO, "live/paper twins configured",
                   pairs=[f"{sp.live_tag}->{sp.twin_tag}" for sp in twin_harness.specs],
@@ -639,6 +647,7 @@ def run() -> int:
                         theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
                         pin15_tracker, freeze_tracker, regime_history=regime_history,
                         incentive_runner=incentive_runner,
+                        s2_runner=s2_runner,
                     )
                 elif weather:
                     _run_weather_cycle(
@@ -1799,7 +1808,7 @@ def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
     wcprop_tracker=None, pin15_tracker=None, freeze_tracker=None, regime_history=None,
-    incentive_runner=None,
+    incentive_runner=None, s2_runner=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -1831,6 +1840,14 @@ def _run_live_cycle(
                                   **{k: v for k, v in incentive_summary.items() if k != "armed"})
                 except Exception:  # noqa: BLE001 — never let the smoke test break the cycle
                     logger.exception("incentive smoke cycle failed (other books unaffected)")
+            if s2_runner is not None:
+                try:
+                    s2_summary = s2_runner.cycle(session, executor, account_state)
+                    if s2_summary.get("armed"):
+                        log_event(logger, logging.INFO, "s2 live cycle",
+                                  **{k: v for k, v in s2_summary.items() if k != "armed"})
+                except Exception:  # noqa: BLE001 — never let the S2 test break the cycle
+                    logger.exception("s2 live cycle failed (other books unaffected)")
             repo.finish_bot_run(
                 session, run_row, status="completed",
                 markets_scanned=summary.events_seen, candidates_found=summary.tracked,

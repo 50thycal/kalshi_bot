@@ -1517,6 +1517,11 @@ class Settings(BaseSettings):
     # LIVE_STRATEGIES. This flag exists so the runner can be deployed dark and turned on as its
     # own deliberate act, separately from the allowlist that lets it spend anything.
     liquidity_incentive_live_enabled: bool = False
+    # The S2 live test (docs/LIMM_S2_LIVE_TEST.md): its OWN switch, separate from Alimm1's.
+    # DEFAULT OFF. Off -> the S2 runner is not constructed and `place_s2_bid` refuses. Even on,
+    # nothing is placed until LIVE_STRATEGIES names `As2best1` with the master switches set.
+    # Caps are constants in `liquidity_incentive.s2_live`, never settable.
+    liquidity_incentive_s2_live_enabled: bool = False
     # Order books fetched per cycle, soonest-ending program first. A bound on API calls, not a
     # ranking: the economics of each book are decided by liquidity_incentive.live.
     liquidity_incentive_live_max_book_fetches: int = 8
@@ -2572,6 +2577,7 @@ class Settings(BaseSettings):
             "perps_collector_enabled": self.perps_collector_enabled,
             "liquidity_incentive_shadow_enabled": self.liquidity_incentive_shadow_enabled,
             "liquidity_incentive_live_enabled": self.liquidity_incentive_live_enabled,
+            "liquidity_incentive_s2_live_enabled": self.liquidity_incentive_s2_live_enabled,
             "perps_assets": self.perps_assets,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,

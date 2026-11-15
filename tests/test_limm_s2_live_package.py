@@ -1,6 +1,7 @@
 """`kalshi_bot/experiment_os/limm_s2_live.py`: registered under NEW_ONLY, the contract lands at
-PROBE with a frozen envelope taken from `s2_live`, three gates, a tagless probe, and NO arm verb —
-so nothing a research merge ships can make the book armable."""
+PROBE with a frozen envelope taken from `s2_live`, three gates and a tagless probe; `arm` walks
+PROBE->PAPER only on a fresh probe-gate PASS and arms fresh live + twin tags at one instant;
+`activation_env` appends and never drops a running tag."""
 
 from __future__ import annotations
 
@@ -101,11 +102,70 @@ def test_keep_gate_is_live_only_and_stops_at_the_registered_loss():
     assert pnl["value"] == -s2.DEFAULT_RULES.fill_loss_stop_usd
 
 
-def test_wired_register_only_no_arm_no_activation_vars():
+def test_wired_with_arm_and_activation_vars_the_env_channel_accepts():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import railway_env
+
     p = cmds._packages()["limm-s2-live"]
-    assert p.register is pkg.register and p.experiment_key == pkg.EXPERIMENT_KEY
-    assert p.arm is None and not p.activation_vars
+    assert p.register is pkg.register and p.arm is pkg.arm
+    assert p.experiment_key == pkg.EXPERIMENT_KEY
     assert set(p.strategy_tags) == {pkg.PAPER_TAG, pkg.LIVE_TAG, pkg.TWIN_TAG}
+    assert p.activation_vars == pkg.ACTIVATION_VARS
+    for var in p.activation_vars:
+        assert var in railway_env.ALLOWED_VARS, var
+    # never the fleet-wide twin suffix, never Alimm1's switch, never a cap
+    for var in ("LIVE_PAPER_TWIN_SUFFIX", "LIQUIDITY_INCENTIVE_LIVE_ENABLED", "MAX_DAILY_LOSS",
+                "MAX_TOTAL_EXPOSURE", "LIVE_MAX_ORDER_DOLLARS"):
+        assert var not in p.activation_vars
+
+
+def test_activation_appends_last_and_never_drops_a_running_tag():
+    env = pkg.activation_env(current_live_strategies="Fmmsell10,Gmmsell2",
+                             current_live_paper_twins="Fmmsell10:Fmmsell10_pt4")
+    assert env["LIVE_STRATEGIES"] == f"Fmmsell10,Gmmsell2,{pkg.LIVE_TAG}"
+    assert env["LIVE_PAPER_TWINS"] == f"Fmmsell10:Fmmsell10_pt4,{pkg.LIVE_TAG}:{pkg.TWIN_TAG}"
+    assert env["LIQUIDITY_INCENTIVE_S2_LIVE_ENABLED"] == "true"
+    assert list(env)[-1] == "LIVE_STRATEGIES"
+    again = pkg.activation_env(current_live_strategies=env["LIVE_STRATEGIES"],
+                               current_live_paper_twins=env["LIVE_PAPER_TWINS"])
+    assert again["LIVE_STRATEGIES"] == env["LIVE_STRATEGIES"]
+
+
+def test_material_baseline_names_both_tags():
+    from kalshi_bot.experiment_os import enforcement as e
+
+    mat = e.live_material_or_none(pkg.material_config())
+    assert mat["live_strategies_contains"] == [pkg.LIVE_TAG]
+    assert mat["twin_pairs"][pkg.LIVE_TAG] == pkg.TWIN_TAG
+    assert pkg.BOOK_PARAMS is None
+
+
+def test_arm_refuses_on_thin_evidence(xos_session, xos_platform):
+    from datetime import datetime, timedelta, timezone
+
+    pkg.register(xos_session, now=datetime.now(timezone.utc) - timedelta(hours=2))
+    with pytest.raises(svc.ExperimentOsError, match="probe gate"):
+        pkg.arm(xos_session, approved_by="Calvin", actor="tester")
+
+
+def test_arm_ends_the_probe_and_arms_live_and_twin_at_one_instant(xos_session, xos_platform):
+    from datetime import datetime, timedelta, timezone
+
+    from tests.test_liquidity_incentive_xos_package import _seed_shadow_evidence
+
+    at = datetime.now(timezone.utc) - timedelta(hours=2)
+    out = pkg.register(xos_session, now=at)
+    _seed_shadow_evidence(xos_session, since=at)
+    armed = pkg.arm(xos_session, approved_by="Calvin", actor="tester")
+    xos_session.refresh(out["probe"])
+    assert out["probe"].ended_at is not None
+    live, twin = armed["live"], armed["twin"]
+    assert live.kind == "live" and twin.kind == "paper_twin"
+    assert live.started_at == twin.started_at and live.epoch_id == twin.epoch_id
+    exp = read.get_experiment(xos_session, pkg.EXPERIMENT_KEY)
+    assert exp.state == LifecycleState.LIVE_CANARY.value
 
 
 def test_cited_documents_exist():

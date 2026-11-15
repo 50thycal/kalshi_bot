@@ -41,6 +41,17 @@ PAPER_TAG = "s2best1"
 LIVE_TAG = "As2best1"
 TWIN_TAG = "As2best1_pt1"
 
+#: Client-order-id prefix of this book's bids.
+COID_PREFIX = "s2live:"
+
+
+def owns_tag(strategy: str | None) -> bool:
+    """This book's own live or twin tag, exact match (a prefix test would capture a future
+    book nobody has read). The executor uses it to keep the process-wide TP/SL and the 4 h
+    timeout off this book's bids and fills."""
+    return strategy in (LIVE_TAG, TWIN_TAG)
+
+
 #: The paper arm this book copies its markets, side and price from.
 SOURCE_ARM = pa.ARM_S2_BEST
 
@@ -171,6 +182,7 @@ def select_live(
     current: set[str] | frozenset[str] = frozenset(),
     account_held: set[str] | frozenset[str] = frozenset(),
     filled_before: set[str] | frozenset[str] = frozenset(),
+    held_fills: dict[str, tuple[str, float]] | None = None,
     rules: S2LiveRules = DEFAULT_RULES,
 ) -> Selection:
     """This hour's live markets, taken from the paper arm's open `S2-best` rows.
@@ -180,13 +192,26 @@ def select_live(
     slots are filled by the highest paper reward rate, at most one market per event, only
     where a $10 bid projects >= `min_projected_usd` to its step-aside, never on a market the
     account holds under any tag, and never on one this book has filled on. Total resting cost
-    stays <= `max_resting_usd`."""
+    stays <= `max_resting_usd`.
+
+    `held_fills` maps each market this book filled on and still holds (unsettled) to
+    (event, cost in USD). A held fill keeps its market slot, its event slot and its dollars
+    until it settles — the executor counts it the same way — so a fill is never "replaced"
+    by a sixth market or a second market of the same event."""
     out = Selection()
+    held_fills = held_fills or {}
     by_ticker: dict[str, PaperS2Row] = {}
     for r in rows:
         if r.ticker not in by_ticker or r.rate_per_hour_usd > by_ticker[r.ticker].rate_per_hour_usd:
             by_ticker[r.ticker] = r
-    resting = 0.0
+    resting = sum(cost for _ev, cost in held_fills.values())
+    held_events = [ev for ev, _cost in held_fills.values()]
+
+    def _open() -> int:
+        return len(out.bids) + len(held_fills)
+
+    def _event_count(event: str) -> int:
+        return sum(1 for b in out.bids if b.event == event) + held_events.count(event)
 
     def _blocked(r: PaperS2Row) -> str | None:
         if r.series.upper() in EXCLUDED_SERIES:
@@ -203,7 +228,7 @@ def select_live(
         if bid is None:
             out.skipped[r.ticker] = SKIP_BAD_ROW
             return False
-        if len(out.bids) >= rules.max_markets or resting + bid.cost_usd > rules.max_resting_usd + 1e-9:
+        if _open() >= rules.max_markets or resting + bid.cost_usd > rules.max_resting_usd + 1e-9:
             out.skipped[r.ticker] = SKIP_FULL
             return False
         out.bids.append(bid)
@@ -221,7 +246,7 @@ def select_live(
             out.dropped.append(t)
             out.skipped[t] = why
             continue
-        if sum(1 for b in out.bids if b.event == r.event) >= rules.max_per_event:
+        if _event_count(r.event) >= rules.max_per_event:
             out.dropped.append(t)
             out.skipped[t] = SKIP_EVENT_TAKEN
             continue
@@ -236,13 +261,13 @@ def select_live(
         if why is not None:
             out.skipped[r.ticker] = why
             continue
-        if sum(1 for b in out.bids if b.event == r.event) >= rules.max_per_event:
+        if _event_count(r.event) >= rules.max_per_event:
             out.skipped[r.ticker] = SKIP_EVENT_TAKEN
             continue
         if projected_usd(r, rules) < rules.min_projected_usd:
             out.skipped[r.ticker] = SKIP_UNDER_FLOOR
             continue
-        if len(out.bids) >= rules.max_markets:
+        if _open() >= rules.max_markets:
             out.skipped[r.ticker] = SKIP_FULL
             continue
         _take(r)
