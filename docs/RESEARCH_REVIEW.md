@@ -84,10 +84,12 @@ Ordered by expected value to the goal. A candidate is not work until a review st
 
 ### Incentive programme
 
-- **Reward attribution without screenshots:** rewards are confirmed only from the owner's
-  screenshots. A data source that reads payouts directly, such as the balance residuals in
-  `incentive_balance_observations` matched to programme end dates, would make every review's
-  net exact. This is an instrument, so the build is owned by Live Ops or a workstream.
+- ~~**Reward attribution without screenshots**~~ — run 2026-11-14 as PAYOUT-TRUTH: **FAIL**
+  (`LIMM_PAYOUT_TRUTH.md` §8). The ledger sees every payout but counts other cash too. A
+  forward test of the post-hoc timing signature (payouts land 10–12Z) is the only remaining lead.
+- **Spot-guard on the event ladders** (brainstorm 2026-11-14 #2): pull a cheap-side bid when crypto
+  spot nears its strike. Needs the event ladders watched first; not locked.
+
 - **Per-channel YouTube risk:** YouTube views became the loss source (scorecard 2026-10-31).
   Study 5 scores `KXYTVIEWSHIGH` as a series. If it reads `FILL-TRAP`, a per-channel split is
   the follow-up.

@@ -1,5 +1,20 @@
 # Weather-markets research journal
 
+## LIMM payout truth 2026-11-14 — FAIL: the ledger sees every payout but cannot tell it from other cash
+
+- **Result** ([doc](LIMM_PAYOUT_TRUTH.md) §8, ops `pt-res-1114a`, `pt-ends-1114a`): all 45 screenshot-confirmed payouts
+  ($113.86) appear as 16 balance steps, and the rule counts all of them (recall 100%). It also counts four steps Kalshi
+  never paid as rewards ($94.15 of $208.01), so precision is 54.7%. The old $25 cap misses the largest real payout.
+- **Meaning:** screenshots stay the only reward source, including for the S2 live test. Only 3 of 16 real steps are
+  single-type, so per-type calibration needs screenshots too. Post hoc only: real payouts land 10–12Z.
+
+## LIMM nomination ladders 2026-11-14 — pre-registered; collector watch-only pins added
+
+- **What:** owner locked idea #1 of the 11-14 brainstorm ([doc](LIMM_NOM_LADDERS.md)). The collector now snapshots the
+  top 10 markets by daily pay in 8 nomination/race series, beyond its cap. They are never paper-arm candidates and get
+  no shadow pairs, so S1–S4's 11-24 read is untouched. The pins expire 2026-12-22.
+- **Read once 2026-12-08** with study 5's script and labels, unchanged; window 11-16 → 12-08 15:00Z.
+
 ## Close-out round 2026-11-14 (owner, DEC-046)
 
 - **Closed unread:** study 6 (step-aside) and study 8 (fill early-warning). Both were for the stood-down `Alimm1`.
