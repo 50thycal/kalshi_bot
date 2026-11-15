@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["limm-s2-live"],"id":"rl-s2live-pf2-1115"}
