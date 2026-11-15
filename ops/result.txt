@@ -1,8 +1,13 @@
 # ops request [READ]
-# type=db  id=rc-a2-1115-1913
-# code e19c09dec2b587445f78072052ecc595d5c3c897 · started 2026-11-15T19:14:56Z
-trades_4h  trade_mkts_4h  last_trade                      
----------  -------------  --------------------------------
-613        75             2026-11-15 19:14:39.789010+00:00
+# type=db  id=rc-c-1115-1913
+# code e19c09dec2b587445f78072052ecc595d5c3c897 · started 2026-11-15T19:15:17Z
+strategy   filled_orders  markets
+---------  -------------  -------
+Kmmsell10  4              4      
+Ommsell10  8              8      
+Ummsell10  9              9      
+Vmmsell10  3              3      
+Xmmsell10  56             56     
+Ymmsell10  50             50     
 
-(1 row)
+(6 rows)
