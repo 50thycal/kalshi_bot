@@ -1,0 +1,18 @@
+# ops request [READ]
+# type=db  id=open-1116
+# code e19c09dec2b587445f78072052ecc595d5c3c897 · started 2026-11-16T11:54:38Z
+strategy       market_ticker          created_at                        status
+-------------  ---------------------  --------------------------------  ------
+Ommsell10_pt4  KXRAIN-26NOV15-LAX     2026-11-16 01:56:11.102171+00:00  open  
+Ummsell10_pt4  KXRAIN-26NOV15-LAX     2026-11-16 01:56:11.137191+00:00  open  
+Ommsell10_pt4  KXRAIN-26NOV15-WPB     2026-11-15 15:38:22.704060+00:00  open  
+Ummsell10_pt4  KXRAIN-26NOV15-WPB     2026-11-15 15:38:22.717397+00:00  open  
+Ommsell10_pt4  KXRAIN-26NOV16-OKC     2026-11-16 00:55:12.892598+00:00  open  
+Ummsell10_pt4  KXRAIN-26NOV16-OKC     2026-11-16 00:55:12.906424+00:00  open  
+Ommsell10_pt4  KXRAIN-26NOV16-PIT     2026-11-16 05:02:49.026836+00:00  open  
+Ummsell10_pt4  KXRAIN-26NOV16-PIT     2026-11-16 05:02:49.044295+00:00  open  
+Ommsell10_pt4  KXRAIN-26NOV16-SATX    2026-11-16 01:26:31.317966+00:00  open  
+Ummsell10_pt4  KXRAIN-26NOV16-SATX    2026-11-16 01:26:31.337432+00:00  open  
+Ummsell10_pt4  KXRAINWKND-26NOV14-DC  2026-11-12 03:25:40.347521+00:00  open  
+
+(11 rows)
