@@ -1,7 +1,11 @@
 # ops request [READ]
-# type=db  id=rc-g-1116-1513
-# code df1dd1b89a9162606b37b11bff59e6a81d2af0c0 · started 2026-11-16T15:21:08Z
-incentive_type  active  series  pool_usd
---------------  ------  ------  --------
-
-(0 rows)
+# type=script  id=rc-ps-1116-1513
+# code df1dd1b89a9162606b37b11bff59e6a81d2af0c0 · started 2026-11-16T15:21:42Z
+LIMM paper strategies — COUNTS ONLY since 2026-11-09T00:00 (as of 2026-11-16T15:21)
+  S1          quotes   4224  markets  173  bid-hours   3330.9
+  S2-best     quotes   2192  markets  106  bid-hours   1667.4
+  S2-behind   quotes   2174  markets  106  bid-hours   1666.6
+  S3-aside    quotes   1827  markets   36  bid-hours   1568.8
+  S3-control  quotes   1963  markets   36  bid-hours   1677.2
+  S4-burst    quotes   2054  markets  128  bid-hours   1638.9
+  S4-flat     quotes   2019  markets  128  bid-hours   1636.3
