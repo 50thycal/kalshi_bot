@@ -1,0 +1,22 @@
+# ops request [READ]
+# type=db  id=rc-a3-1117-1513
+# code df1dd1b89a9162606b37b11bff59e6a81d2af0c0 · started 2026-11-17T15:17:28Z
+series               mkts_24h
+-------------------  --------
+KXRT                 125     
+KXYTVIEWSHIGH        28      
+KXAAAGASM            26      
+KXBABELMANDEBWEEKLY  21      
+KXSUEZWEEKLY         19      
+KXPANAMAWEEKLY       18      
+KXHORMUZWEEKLY       18      
+KXHORMUZPEAK         15      
+KXHORMUZMAX          13      
+KXEOWEEK             13      
+KXDPRESPRIMARY       10      
+KXTRUMPACT           10      
+KXRPRESPRIMARY       10      
+KXTRUTHSOCIAL        10      
+KXAPRPOTUS           6       
+
+(15 rows)
