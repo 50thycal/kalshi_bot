@@ -1,5 +1,12 @@
 # Weather-markets research journal
 
+## Research review 2026-11-18 — nothing due; two drained MMSELL books ready to close
+
+- **Status** ([review](research_reviews/2026-11-18.md)): incentive 3 of 10, MMSELL 13 of 20; no read due before 11-24.
+  The S2 live runner merged and its gates recorded PASS, but it is not armed (owner go, Live Ops).
+- **Close-out candidates:** `mmsell-price-ceiling-cell-size-2` and `mmsell-win-set-3` hold nothing now (WS-027).
+- **New:** none in either line; the incentive candidates wait for the owner to lock them.
+
 ## LIMM payout truth 2026-11-14 — FAIL: the ledger sees every payout but cannot tell it from other cash
 
 - **Result** ([doc](LIMM_PAYOUT_TRUTH.md) §8, ops `pt-res-1114a`, `pt-ends-1114a`): all 45 screenshot-confirmed payouts
