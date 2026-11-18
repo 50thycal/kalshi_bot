@@ -1,11 +1,7 @@
 # ops request [READ]
-# type=db  id=rc-f7-1118-1513
-# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-18T15:18:18Z
-strategy   orders_7d  last_order                      
----------  ---------  --------------------------------
-Ommsell10  24         2026-11-18 13:24:59.649046+00:00
-Ummsell10  25         2026-11-18 13:24:58.119381+00:00
-Xmmsell10  8          2026-11-12 02:24:35.752957+00:00
-Ymmsell10  6          2026-11-11 22:18:46.098677+00:00
+# type=db  id=rc-g-1118-1513
+# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-18T15:18:37Z
+incentive_type  active  series  pool_usd
+--------------  ------  ------  --------
 
-(4 rows)
+(0 rows)
