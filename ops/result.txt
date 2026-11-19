@@ -1,9 +1,9 @@
 # ops request [READ]
-# type=db  id=rc-f-1119-2313
-# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-19T23:15:23Z
-strategy   orders  last_order                      
----------  ------  --------------------------------
-Ummsell10  2       2026-11-19 21:20:24.173618+00:00
-Ommsell10  1       2026-11-19 20:49:22.227876+00:00
+# type=db  id=rc-f7-1119-2313
+# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-19T23:15:42Z
+strategy   orders_7d  last_order                      
+---------  ---------  --------------------------------
+Ummsell10  28         2026-11-19 21:20:24.173618+00:00
+Ommsell10  27         2026-11-19 20:49:22.227876+00:00
 
 (2 rows)
