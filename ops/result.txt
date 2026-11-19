@@ -1,13 +1,9 @@
 # ops request [READ]
-# type=db  id=rc-c-1119-0313
-# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-19T03:15:28Z
-strategy   filled_orders  markets
----------  -------------  -------
-Kmmsell10  4              4      
-Ommsell10  17             17     
-Ummsell10  18             18     
-Vmmsell10  3              3      
-Xmmsell10  56             56     
-Ymmsell10  50             50     
+# type=db  id=rc-f-1119-0313
+# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-19T03:15:49Z
+strategy   orders  last_order                      
+---------  ------  --------------------------------
+Ommsell10  1       2026-11-19 02:15:41.323116+00:00
+Ummsell10  1       2026-11-19 02:15:40.217681+00:00
 
-(6 rows)
+(2 rows)
