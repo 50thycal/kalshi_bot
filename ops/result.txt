@@ -1,67 +1,79 @@
 # ops request [READ]
-# type=db  id=cost-sizes-1
-# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-20T15:34:52Z
-relname                         sz       b           est_rows
-------------------------------  -------  ----------  --------
-execution_book_events           9128 MB  9571655680  14361161
-live_order_queue_ticks          4372 MB  4584808448  3791070 
-incentive_shadow_outcomes       4112 MB  4311973888  10931893
-incentive_shadow_quotes         3898 MB  4086939648  4082291 
-incentive_market_snapshots      3752 MB  3934273536  4608460 
-mmsell_position_ticks           3540 MB  3711827968  15216978
-crypto_ladder_snapshots         2557 MB  2681356288  7019479 
-backfill_regime_candles         2179 MB  2284396544  9512799 
-incentive_programs              1266 MB  1327349760  417417  
-positions                       549 MB   575578112   1015950 
-incentive_shadow_marks          548 MB   574816256   3091334 
-mmsell_candidate_ticks          522 MB   546873344   1719406 
-weather_bucket_snapshots        496 MB   520364032   2175686 
-game_tape_snapshots             386 MB   405037056   1071640 
-weather_forecast_outcomes       374 MB   391675904   289752  
-weather_forecasts               365 MB   382607360   1349292 
-execution_trade_events          268 MB   281149440   321131  
-incentive_shadow_fills          267 MB   280051712   1183617 
-polymarket_snapshots            199 MB   208527360   1046219 
-weather_ensembles               190 MB   198942720   258020  
-backfill_weather_candles        148 MB   155320320   647445  
-incentive_trade_events          129 MB   135413760   163388  
-mmsell_settlement_meta          88 MB    92176384    345555  
-crypto_spot_candles             73 MB    76455936    287989  
-backfill_regime_markets         67 MB    70270976    151525  
-evo_search_trades               67 MB    70000640    272368  
-incentive_collector_events      58 MB    60751872    212986  
-live_paper_parity_events        57 MB    59260928    140715  
-paper_trades                    57 MB    59244544    190999  
-perp_market_snapshots           49 MB    51109888    28350   
-market_snapshots                44 MB    46358528    22290   
-paper_positions                 41 MB    43171840    195173  
-orderbook_snapshots             31 MB    32481280    22590   
-evo_sandbox_runs                31 MB    32309248    13445   
-system_events                   25 MB    26124288    18394   
-evo_memories                    22 MB    22970368    10870   
-perp_orderbook_snapshots        22 MB    22708224    15852   
-evo_opportunities               19 MB    20013056    31413   
-weather_observations            15 MB    15785984    96796   
-bot_runs                        12 MB    12763136    112737  
-incentive_shadow_events         11 MB    11984896    22760   
-live_orders                     11 MB    11714560    8732    
-evo_heartbeats                  9840 kB  10076160    7170    
-live_order_queue_decisions      7416 kB  7593984     8803    
-signals                         7360 kB  7536640     22590   
-backfill_weather_markets        6816 kB  6979584     18978   
-execution_order_events          6432 kB  6586368     4943    
-evo_positions                   5200 kB  5324800     9144    
-evo_orders                      4984 kB  5103616     7821    
-execution_order_context         4840 kB  4956160     1861    
-incentive_discovery_cycles      4600 kB  4710400     18722   
-series_observations             4384 kB  4489216     7390    
-fills                           3944 kB  4038656     3448    
-evo_fills                       3896 kB  3989504     9730    
-execution_collector_events      3848 kB  3940352     15025   
-incentive_balance_observations  3600 kB  3686400     4975    
-evo_search_candidates           3112 kB  3186688     1218    
-evo_llm_usage                   2032 kB  2080768     5285    
-execution_fill_events           1952 kB  1998848     1334    
-evo_audit_events                1792 kB  1835008     6375    
-
-(60 rows)
+# type=env  service=main  id=cost-env-1
+# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-20T15:35:16Z
+# target service: main
+# current allowlisted env vars (secrets hidden):
+  BOT_MODE=live
+  EVO_ROUTINE_HEARTBEATS_PER_DAY=24
+  EVO_WEEKLY_LLM_CEILING_USD=8
+  EVO_WEEKLY_TOKEN_BUDGET=6000000
+  EXPERIMENT_OS_CUTOVER_ACTOR=claude-code
+  EXPERIMENT_OS_CUTOVER_ID=prod-new-only-20260816
+  EXPERIMENT_OS_CUTOVER_REASON=Operator-directed production cutover. The legacy experiment universe is imported and grandfathered (27 experiments; 0 unmapped strategy tags; 11 active grandfathered deployments; baseline platform snapshot complete at 10/10 components). Verified before recording: all readiness checks pass, every configured live strategy (theta4, Lmmsell8, Lmmsell10) resolves to exactly one active deployment arm, no ambiguous tags, live/twin links intact with theta4's known boundary asymmetry recorded rather than invented, and 25 consecutive new paper rows across 8 books stamped with lineage under mode OFF. From this instant, NEW experimental activity requires Experiment OS lineage; grandfathered books continue but may not evolve outside the system.
+  EXPERIMENT_OS_ENFORCEMENT_MODE=NEW_ONLY
+  EXPERIMENT_OS_EVALUATE_GATES=true
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 197 bytes, sha256:244cdee9c5142083>
+  EXPERIMENT_OS_IMPORT_ON_BOOT=false
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_PLATFORM_COMMAND=<redacted 343 bytes, sha256:cc937c11c691d03e>
+  EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=false
+  KALSHI_UPGRADE_API_TIER=true
+  KILL_SWITCH=false
+  LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE
+  LIQUIDITY_INCENTIVE_LIVE_ENABLED=false
+  LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES=30
+  LIQUIDITY_INCENTIVE_PAPER_ARMS_ENABLED=true
+  LIQUIDITY_INCENTIVE_REQUOTE_SECONDS=300
+  LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true
+  LIVE_CELLS=
+  LIVE_CITIES=
+  LIVE_ENABLED=true
+  LIVE_ENTRY_GRACE_HOURS=2
+  LIVE_ENTRY_STYLE=marketable
+  LIVE_EXIT_MAX_ATTEMPTS=3
+  LIVE_EXIT_MODE=tp_sl
+  LIVE_EXIT_SLIPPAGE_CENTS=1
+  LIVE_EXIT_USE_MARKET_FALLBACK=false
+  LIVE_FRACTIONAL=true
+  LIVE_KILL_ON_DAILY_LOSS=true
+  LIVE_MAX_ORDER_DOLLARS=3.0
+  LIVE_ONE_POSITION_PER_EVENT=true
+  LIVE_ORDER_TIMEOUT_SECONDS=14400
+  LIVE_PAPER_TWINS=
+  LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS=250
+  LIVE_PAPER_TWIN_SUFFIX=_pt4
+  LIVE_PROBE=
+  LIVE_QUEUE_CANCEL_MODE=off
+  LIVE_SHAPE_PROBE=false
+  LIVE_STOP_LOSS_CENTS=
+  LIVE_STRATEGIES=Ummsell10,Ommsell10
+  LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
+  LIVE_TAKE_PROFIT_CENTS=1
+  LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
+  LIVE_WINDOWS=
+  LOG_LEVEL=INFO
+  MAX_DAILY_LOSS=50.0
+  MAX_MARKET_EXPOSURE=25.0
+  MAX_ORDER_SIZE=2
+  MAX_SPREAD_CENTS=30
+  MAX_TOTAL_EXPOSURE=125
+  MIN_HOURS_TO_CLOSE=1
+  MIN_OPEN_INTEREST=10
+  MIN_VOLUME=25
+  MMSELL_EVENT_RUNG_CAP=3
+  MMSELL_EVENT_RUNG_CAP_ENABLED=true
+  MMSELL_LIVE_CAPS_COUNT_LIVE_ELIGIBLE_ONLY=true
+  MMSELL_LIVE_MAX_OPEN_POSITIONS=40
+  MMSELL_LIVE_OFFSET_AB_ARMS=
+  MMSELL_LIVE_PRICE_OFFSET_CENTS=0
+  MMSELL_LIVE_SHARED_MARKET_PAIRS=Ommsell10+Ummsell10:6:6.00
+  MMSELL_PREFILTER_ENABLED=false
+  MMSELL_SETTLEMENT_CAP_ENABLED=true
+  MMSELL_SETTLEMENT_CAP_PCT=0.25
+  MMSELL_SETTLEMENT_EVENT_CAP=5
+  MMSELL_TWIN_APPLIES_LIVE_BARS=true
+  MMSELL_VARIANTS=Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Rainmmsell1:lo=5,hi=10,maxyes=7,onlyx=KXRAIN;Rainmmsell2:lo=8,hi=14,maxyes=12,onlyx=KXRAIN;Tempmmsell1:lo=5,hi=10,maxyes=7,htcmax=48,optin=KXHIGH+KXLOW,only=KXHIGH+KXLOW;Tempmmsell2:lo=10,hi=16,maxyes=15,htcmax=48,optin=KXHIGH,only=KXHIGH;Tempmmsell3:lo=1,hi=5,maxyes=4,htcmax=48,optin=KXHIGH,only=KXHIGHT;Rainmmsell3:lo=1,hi=5,maxyes=4,onlyx=KXRAIN;Smmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Zmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Xmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+KXTRUMP+KXTRUTHSOCIAL+MENTION;Ymmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION+KXTRUMPSAY;Basemmsell10:lo=5,hi=10,maxyes=7;Immsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Mmmsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION;Ummsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=1,bigtypes=event_stat+mention+exact_score+outright+game_prop,bigsize=3,universe=graduated,only=KXRAIN+KXHIGH+KXLOW+KXSNOW+KXINX+KXNASDAQ+KXDOW+KXSPX+MENTION;Ommsell10:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split,size=3,universe=graduated,onlyx=KXFEDMENTION+KXINX+KXINXU+KXNASDAQ100U+KXRAIN+KXTRUMPMENTION
+  PERPS_COLLECTOR_ENABLED=false
+  RUN_ONCE=false
+  SCAN_INTERVAL_SECONDS=60
+  WEATHER_ENTRY_HOURS=20,14,8,17
