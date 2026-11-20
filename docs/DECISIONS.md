@@ -1835,3 +1835,42 @@ then chose option 2: "build the runner now and arm as soon as it is merged" over
   11-24 paper read still happens on schedule and is reported next to the live data. Its label
   no longer gates the start.
 - **Experiment OS:** the arming reason records this decision (`limm_s2_live.ARM_REASON`).
+
+## DEC-048 — Cost cut and a stop rule: the S2 path decides whether the project continues
+
+**Date:** 2026-11-20 UTC. **Owner direction:** after reviewing whether anything points toward
+the $100/month north star, the owner chose to wait for the 2026-11-24 paper read and to
+"pause basically everything else going on to cut down all the cost of this on railway".
+He selected all three cost cuts and stopping the research routines.
+
+- **Evidence behind it:**
+  - Live MMSELL is up about $3 in total over about five weeks (all books, including open
+    positions marked at today's price), with an edge of 1–7¢ per contract at 3 contracts.
+  - The incentive line is the only one that has paid near the goal's scale: $4–5.50 a day of
+    rewards in October against about $3.50 a day of fill losses.
+  - S2 targets exactly that gap.
+- **Stop rule:**
+  - If S2 fails its 2026-11-24 paper read, the project ends.
+  - If it passes, the S2 live test arms on the owner's go (DEC-047 still applies to each
+    hard stop).
+  - If, after its 14 days, real paid rewards minus fill losses are not on pace for about
+    $3 a day per five $10 bids, the project ends.
+- **Kept:**
+  - the main worker and Postgres;
+  - the LIMM collector, the S1–S4 paper arms and the S2 runner;
+  - the nomination-ladder pins and their 2026-12-08 read;
+  - the 11-24 read routine and its backstop;
+  - the daily Railway usage check.
+- **Cut (carried out by Live Ops, session `session_015SseruQVcpdf1eU8HBz2i7`):**
+  1. Remove `market-catalog` (and its volume), `live-dash` and the retired `kalshi-desks`
+     project.
+  2. Stop the MMSELL line, live and paper: stand down the politics-free live books (this
+     reduces exposure; held positions settle on their own), stop the paper tapes and their
+     MMSELL-only collectors, and record the lifecycle moves in Experiment OS.
+  3. Trim old Postgres snapshot data, keeping every window the 11-24, S2 and 12-08 reads need,
+     and add a retention rule.
+- **Paused routines:** the 4-hour research check-in, the 72-hour research review, and the
+  MMSELL reads with their backstops (mentions 11-28, P-SLOW 12-04, gas ladders 12-07). GRIDPIN
+  (12-06) and FAVHELD (2027-01-09) are paused too. All are disabled, not deleted, so each can be
+  re-enabled.
+- **Expected cost:** Railway about $48/month → about $30–36/month, plus far less Claude usage.
