@@ -1,0 +1,23 @@
+# ops request [READ]
+# type=db  id=cost-post-2
+# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-20T21:40:51Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 675, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 671, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 481, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 525, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedColumn: column "opened_at" does not exist
+LINE 1: ...3 days' union all select 'mmsell_paper_last', max(opened_at)...
+                                                             ^
