@@ -1,1 +1,1 @@
-{"type":"env","action":"get","id":"cost-env-1"}
+{"type":"xos","command":"list","id":"cost-xlist-1"}
