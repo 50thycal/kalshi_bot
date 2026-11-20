@@ -30,14 +30,20 @@ Times are UTC (US Central is UTC−6 after 2026-11-01).
 | 2026-11-08 14:51 | LIMM programme-age study, read once on existing history | Does a programme pay more per contract in its first hours (thesis §9.42)? Sets S4's burst window. DEC-044. | `LIMM_PROGRAMME_AGE.md` §4 (result §9) | run by the build session (`rl-age-run1-1108`) | DONE — NOT-EARLY (within-programme R 1.23, 95% CI 0.85–1.63; late hours still pay $0.31/$10 bid-day): S4 has no burst window and drops to $10 after the burst |
 | 2026-11-14 23:40 | LIMM payout truth (read once) | Can a screenshot-free rule on the balance ledger count incentive rewards? AUTOMATE (coverage, recall and precision ≥ 90%) nominates dropping screenshots for an audit (owner decision); ESTIMATE ≥ 75%; else FAIL. | `LIMM_PAYOUT_TRUTH.md` §3–§5 | run by the build session (`pt-res-1114a`, `pt-ends-1114a`) | DONE — FAIL (recall 100%, precision 54.7%): screenshots stay |
 | 2026-12-08 16:57 | LIMM nomination ladders (read once) | Do the new election nomination/race ladders pay a cheap-side bid net of fills? Study 5's script and labels on 8 frozen series, window 11-16 → 12-08 15:00Z. FAMILY-LEAD (≥ 2 NET-LEAD, pooled R ≥ $0.50) nominates them for the incentive universe (owner decision); fewer than 3 series at the floor → HOLD and one re-read 12-22. | `LIMM_NOM_LADDERS.md` §3–§5 | `trig_01PV7RmEiLXnMt1AiLkSxkZC` (reminder in the build session) | scheduled |
-| 2026-12-04 15:07 | P-SLOW v2 fill read (read once) | Do slow-information MMSELL markets still earn ≥ +2¢ on real fills? Needs ≥ 100 fills. A PASS makes sizing above 3 contracts an owner decision. | `MMSELL_FILL_FORWARD_READ.md` §6 | `trig_018N8ZxREHNrgABVh2C2HCxm` | scheduled |
-| 2026-12-07 15:23 | State gas ladder screen, re-run | Does the 7-state gas ladder family reach CANDIDATE (≥ 100 entries, t ≥ 3.0, both halves positive)? A CANDIDATE leads to a taker-price read, not a paper book. | `MMSELL_LOOKALIKE_PROBE.md` §16 (first result §17) | `trig_01N3tddvLTSEY2jebghEz9UA` | scheduled |
+| 2026-12-04 15:07 | P-SLOW v2 fill read (read once) | Do slow-information MMSELL markets still earn ≥ +2¢ on real fills? Needs ≥ 100 fills. A PASS makes sizing above 3 contracts an owner decision. | `MMSELL_FILL_FORWARD_READ.md` §6 | `trig_018N8ZxREHNrgABVh2C2HCxm` | PAUSED 2026-11-20 (owner, DEC-048): MMSELL line stopped; routine and backstop disabled |
+| 2026-12-07 15:23 | State gas ladder screen, re-run | Does the 7-state gas ladder family reach CANDIDATE (≥ 100 entries, t ≥ 3.0, both halves positive)? A CANDIDATE leads to a taker-price read, not a paper book. | `MMSELL_LOOKALIKE_PROBE.md` §16 (first result §17) | `trig_01N3tddvLTSEY2jebghEz9UA` | PAUSED 2026-11-20 (owner, DEC-048): MMSELL line stopped; routine and backstop disabled |
 
 **Routine access (2026-11-13).** The fresh-session `Kalshi:` routines start without push
 access to `50thycal/kalshi_bot`; study 5's run could not reach `ops`. Until the routines'
 sources include the repo, this session holds a backstop reminder 20–30 min after each
 routine (11-14 ×2, 11-24; the 11-17 backstop was deleted with study 6). Each backstop runs the read only if the routine did not
 complete, so a read never runs twice. The December reads get backstops at a later review.
+
+**Cost cut (2026-11-20, DEC-048).** The owner paused everything except the incentive S2 path.
+Still scheduled: the 2026-11-24 S1–S4 read (and its backstop) and the 2026-12-08 nomination
+ladders read. The MMSELL reads, GRIDPIN, FAVHELD and the 4 h / 72 h research routines are
+disabled, not deleted. Stop rule: if S2 fails on 11-24, or its 14-day live test misses about
+$3 a day net per five $10 bids, the project ends.
 
 ## Conditional follow-ups (added only if triggered)
 
@@ -54,12 +60,12 @@ own prompts and docs are canonical.
 | cadence | routine | owner doc |
 |---|---|---|
 | every 2 h | LIMM check-in (Alimm1 positions, fills, rewards) | `docs/liquidity_incentive/` |
-| every 72 h (from 2026-11-01) | Research review (72h): which experiments are done or need action, close-out candidates, and whether to start one new experiment per line (caps: 10 incentive, 20 MMSELL). Covers both lines. Latest: `research_reviews/2026-11-18.md`. Routine `trig_011bcVM8wWmtqMgLUoWGhLPg` | `docs/RESEARCH_REVIEW.md` |
-| every 4 h (01:13, 05:13, 09:13, 13:13, 17:13, 21:13 Central) | Research check-in (4h): read-only progress and health on the checks above (collector, LIMM and P-SLOW accrual counts, live tags, these routines). Counts only, never an early read. Routine `trig_013hWGXAquPc28pjj8AFu1jX` | `docs/handoffs/HANDOFF-research-checkin.md` |
+| every 72 h (from 2026-11-01) — **PAUSED 2026-11-20 (DEC-048)** | Research review (72h): which experiments are done or need action, close-out candidates, and whether to start one new experiment per line (caps: 10 incentive, 20 MMSELL). Covers both lines. Latest: `research_reviews/2026-11-18.md`. Routine `trig_011bcVM8wWmtqMgLUoWGhLPg` | `docs/RESEARCH_REVIEW.md` |
+| every 4 h (01:13, 05:13, 09:13, 13:13, 17:13, 21:13 Central) — **PAUSED 2026-11-20 (DEC-048)** | Research check-in (4h): read-only progress and health on the checks above (collector, LIMM and P-SLOW accrual counts, live tags, these routines). Counts only, never an early read. Routine `trig_013hWGXAquPc28pjj8AFu1jX` | `docs/handoffs/HANDOFF-research-checkin.md` |
 | every 72 h | LIMM scorecard and trend review | `docs/liquidity_incentive/scorecards/README.md` |
 | every 72 h | MMSELL scorecard and trend review | `docs/mmsell/scorecards/README.md` |
 | daily 08:57 Central | Railway usage check (read-only) | WS-024 |
-| 2026-11-28 16:32 | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). 11-14 check: **48 of 60** settled (§8); the fresh-session routine could not push, so the backstop ran it. Next count: reminder `trig_018MG4Kq1qmugbpQ9GogVkeJ` in the review session | `MMSELL_LIVE_CANARY_PATTERNS.md` §6, §8 |
+| 2026-11-28 16:32 — **PAUSED 2026-11-20 (DEC-048)** | Mentions forward read (progress toward 60 trades). Sample: `mmsell10` through 2026-11-02, then `Basemmsell10` (DEC-041). 11-14 check: **48 of 60** settled (§8); the fresh-session routine could not push, so the backstop ran it. Next count: reminder `trig_018MG4Kq1qmugbpQ9GogVkeJ` in the review session | `MMSELL_LIVE_CANARY_PATTERNS.md` §6, §8 |
 
 The operations routines above wake an existing session rather than starting a fresh one. They also
 run while that session is closed in the app, but stop if that session is archived.

@@ -1,5 +1,13 @@
 # Weather-markets research journal
 
+## Cost cut 2026-11-20 (owner, DEC-048) — everything paused except the S2 path
+
+- **Why:** nothing yet points at $100/month. Live MMSELL is up about $3 in five weeks. The incentive line came closest
+  (about $4–5.50 a day of rewards in October against about $3.50 of fills), and S2 targets that gap.
+- **Stop rule:** if S2 fails on 11-24, or its 14-day live test misses about $3 a day net per five $10 bids, the project ends.
+- **Cut:** catalog, live dashboard and desks services, the MMSELL line (live and paper), old database data (Live Ops), and
+  the research routines. Kept: the main worker, Postgres, the LIMM collector, S1–S4, S2 and the 12-08 read.
+
 ## Research review 2026-11-18 — nothing due; two drained MMSELL books ready to close
 
 - **Status** ([review](research_reviews/2026-11-18.md)): incentive 3 of 10, MMSELL 13 of 20; no read due before 11-24.
