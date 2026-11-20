@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"cost-own-1","max_rows":5,"sql":"select to_regclass('public.kalshi_market_ownership')::text as own_tbl, pg_size_pretty(pg_database_size(current_database())) as db_size, current_database() as db"}
