@@ -1,0 +1,80 @@
+# ops request [READ]
+# type=script  id=rl-msc-1120-1130
+# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-20T14:44:14Z
+MMSELL scorecard  as of 2026-11-20T14:44+00:00  (live books, own fills, settled markets)
+
+BY BOOK, THEN CATEGORY (lifetime of the tag = its epoch)
+  book / category        settled   contr    P&L $   c/ct losing  open  open $  unreal.   last 7d:    n   P&L $
+  Ummsell10                   18    52.0    -2.39  -4.60      2     4   11.10    -2.43              17   -2.57
+    weather                   17    51.0    -2.49  -4.88      2     4   11.10    -2.43              16   -2.67
+    index                      1     1.0     0.10  10.00      0     0    0.00     0.00               1    0.10
+    twin Ummsell10_pt4: 18 same-market pairs, live -4.60c/ct vs twin -4.71c/ct, gap +0.11c
+  Ommsell10                   17    51.0    -2.40  -4.71      2     4   11.10    -2.43              16   -2.58
+    weather                   16    48.0    -2.70  -5.62      2     4   11.10    -2.43              15   -2.88
+    index                      1     3.0     0.30  10.00      0     0    0.00     0.00               1    0.30
+    twin Ommsell10_pt4: 17 same-market pairs, live -4.71c/ct vs twin -4.82c/ct, gap +0.11c
+  Xmmsell10                   56   149.5     0.39   0.26      4     0    0.00     0.00               2    0.39
+    weather                   31    90.5     3.33   3.68      1     0    0.00     0.00               0    0.00
+    index                      8     8.0    -0.42  -5.25      1     0    0.00     0.00               0    0.00
+    politics                   7    21.0    -1.68  -8.00      1     0    0.00     0.00               2    0.39
+    mentions                  10    30.0    -0.84  -2.80      1     0    0.00     0.00               0    0.00
+    twin Xmmsell10_pt4: 56 same-market pairs, live +0.26c/ct vs twin +0.11c/ct, gap +0.16c
+  Ymmsell10                   50   150.0    -1.53  -1.02      4     0    0.00     0.00               1    0.18
+    weather                   28    84.0     2.82   3.36      1     0    0.00     0.00               0    0.00
+    index                      8    24.0    -1.26  -5.25      1     0    0.00     0.00               0    0.00
+    politics                   4    12.0    -2.25 -18.75      1     0    0.00     0.00               1    0.18
+    mentions                  10    30.0    -0.84  -2.80      1     0    0.00     0.00               0    0.00
+    twin Ymmsell10_pt4: 50 same-market pairs, live -1.02c/ct vs twin -1.23c/ct, gap +0.21c
+  Kmmsell10                  319   463.6     8.02   1.73     21     1    0.93    -0.93               0    0.00
+    weather                   46   138.0     6.78   4.91      1     0    0.00     0.00               0    0.00
+    index                      4     4.0     0.27   6.75      0     0    0.00     0.00               0    0.00
+    politics                   8    22.2    -1.52  -6.83      1     0    0.00     0.00               0    0.00
+    mentions                   6    18.0     1.20   6.67      0     0    0.00     0.00               0    0.00
+    sports                   214   236.4     2.07   0.88     15     1    0.93    -0.93               0    0.00
+    other                     41    45.0    -0.78  -1.73      4     0    0.00     0.00               0    0.00
+    twin Kmmsell10_pt4: 318 same-market pairs, live +1.72c/ct vs twin +1.75c/ct, gap -0.02c
+  Vmmsell10                   16    48.0     3.36   7.00      0     0    0.00     0.00               0    0.00
+    weather                    9    27.0     1.89   7.00      0     0    0.00     0.00               0    0.00
+    mentions                   7    21.0     1.47   7.00      0     0    0.00     0.00               0    0.00
+    twin Vmmsell10_pt4: 16 same-market pairs, live +7.00c/ct vs twin +6.95c/ct, gap +0.05c
+  Nmmsell10                   34    97.0     3.63   3.74      1     0    0.00     0.00               0    0.00
+    weather                   29    82.0     5.67   6.92      0     0    0.00     0.00               0    0.00
+    index                      2     6.0     0.39   6.50      0     0    0.00     0.00               0    0.00
+    politics                   3     9.0    -2.43 -27.00      1     0    0.00     0.00               0    0.00
+    twin Nmmsell10_pt4: 34 same-market pairs, live +3.74c/ct vs twin +3.89c/ct, gap -0.14c
+  ALL BOOKS: realized 9.08  open 9 ($23.13)  unrealized -5.79 (marked to the held side's bid now)  total 3.29
+
+KXTRUMPMENTION (also quoted by Alimm1 for rewards)
+  Vmmsell10    markets   6  settled   6  P&L   1.20  also traded by Alimm1: 1
+  Kmmsell10    markets   6  settled   6  P&L   1.20  also traded by Alimm1: 1
+  Ymmsell10    markets  10  settled  10  P&L  -0.84  also traded by Alimm1: 0
+  Xmmsell10    markets  10  settled  10  P&L  -0.84  also traded by Alimm1: 0
+
+LOSING MARKETS (worst 25): entry price, fills, hours from first fill to settlement
+  KXRAIN-26OCT13-MIN                             Kmmsell10  weather     -2.82   3.0 @ 94.0c  3 fills  46.9h
+  KXTRUMPMENTION-26NOV08-CRYP                    Ymmsell10  mentions    -2.82   3.0 @ 94.0c  1 fills  10.3h
+  KXTRUMPMENTION-26NOV08-CRYP                    Xmmsell10  mentions    -2.82   3.0 @ 94.0c  1 fills  10.3h
+  KXTRUMPSAY-26NOV09-UFO                         Xmmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  126.9h
+  KXTRUMPSAY-26NOV09-UFO                         Ymmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  126.9h
+  KXTRUMPSAY-26OCT26-EPST                        Nmmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  69.2h
+  KXTRUMPSAY-26OCT26-EPST                        Kmmsell10  politics    -2.82   3.0 @ 94.0c  1 fills  69.2h
+  KXNASDAQ100U-26NOV09H1600-T27679.99            Ymmsell10  index       -2.79   3.0 @ 93.0c  1 fills  8.2h
+  KXRAIN-26NOV07-ABQ                             Ymmsell10  weather     -2.79   3.0 @ 93.0c  1 fills  32.2h
+  KXRAIN-26NOV07-ABQ                             Xmmsell10  weather     -2.79   3.0 @ 93.0c  1 fills  32.2h
+  KXRAIN-26NOV13-MIA                             Ommsell10  weather     -2.73   3.0 @ 91.0c  1 fills  23.4h
+  KXRAIN-26NOV13-MIA                             Ummsell10  weather     -2.73   3.0 @ 91.0c  1 fills  23.4h
+  KXRAIN-26NOV19-NOLA                            Ummsell10  weather     -2.70   3.0 @ 90.0c  1 fills  14.3h
+  KXRAIN-26NOV19-NOLA                            Ommsell10  weather     -2.70   3.0 @ 90.0c  1 fills  14.3h
+  KXUCLGAME-26OCT13VIKBMU-TIE                    Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  36.4h
+  KXMLBHR-26OCT112000LADMIL-MILBTURANG2-1        Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  3.2h
+  KXMLBHR-26OCT272000MILTB-MILCPRATT87-1         Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  4.1h
+  KXPERLIGA1GAME-26OCT29CHACUS-CUS               Kmmsell10  sports      -0.94   1.0 @ 94.0c  1 fills  0.2h
+  KXRT-WILDW-99                                  Kmmsell10  other       -0.94   1.0 @ 94.0c  1 fills  158.5h
+  KXWTI-26OCT1514-T95.49                         Kmmsell10  other       -0.94   1.0 @ 94.0c  1 fills  21.7h
+  KXNFLTOTAL-26OCT18HOUJAC-64                    Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  3.3h
+  KXBTC-26OCT1617-B81750                         Kmmsell10  other       -0.93   1.0 @ 93.0c  1 fills  102.6h
+  KXDIMAYORGAME-26OCT11JAGTOL-JAG                Kmmsell10  sports      -0.93   1.0 @ 93.0c  1 fills  0.1h
+  KXMLSGAME-26OCT17MINSTL-MIN                    Kmmsell10  sports      -0.93   1.0 @ 93.0c  2 fills  1.4h
+  KXNASDAQ100U-26NOV09H1600-T27679.99            Xmmsell10  index       -0.93   1.0 @ 93.0c  1 fills  8.2h
+
+JSON {"as_of": "2026-11-20T14:44+00:00", "avg_loss": -1.68, "books": {"Kmmsell10": {"cents_per_contract": 1.73, "contracts": 463.65, "losing": 21, "open": 1, "pnl": 8.02, "recent_pnl": 0.0, "recent_settled": 0, "settled": 319, "twin": {"gap": -0.02, "live_cpc": 1.72, "pairs": 318, "twin_cpc": 1.75}, "unpriced": 0, "unrealized": -0.93}, "Nmmsell10": {"cents_per_contract": 3.74, "contracts": 96.96, "losing": 1, "open": 0, "pnl": 3.63, "recent_pnl": 0.0, "recent_settled": 0, "settled": 34, "twin": {"gap": -0.14, "live_cpc": 3.74, "pairs": 34, "twin_cpc": 3.89}, "unpriced": 0, "unrealized": 0.0}, "Ommsell10": {"cents_per_contract": -4.71, "contracts": 51.0, "losing": 2, "open": 4, "pnl": -2.4, "recent_pnl": -2.58, "recent_settled": 16, "settled": 17, "twin": {"gap": 0.11, "live_cpc": -4.71, "pairs": 17, "twin_cpc": -4.82}, "unpriced": 0, "unrealized": -2.43}, "Ummsell10": {"cents_per_contract": -4.6, "contracts": 52.0, "losing": 2, "open": 4, "pnl": -2.39, "recent_pnl": -2.57, "recent_settled": 17, "settled": 18, "twin": {"gap": 0.11, "live_cpc": -4.6, "pairs": 18, "twin_cpc": -4.71}, "unpriced": 0, "unrealized": -2.43}, "Vmmsell10": {"cents_per_contract": 7.0, "contracts": 48.0, "losing": 0, "open": 0, "pnl": 3.36, "recent_pnl": 0.0, "recent_settled": 0, "settled": 16, "twin": {"gap": 0.05, "live_cpc": 7.0, "pairs": 16, "twin_cpc": 6.95}, "unpriced": 0, "unrealized": 0.0}, "Xmmsell10": {"cents_per_contract": 0.26, "contracts": 149.48, "losing": 4, "open": 0, "pnl": 0.39, "recent_pnl": 0.39, "recent_settled": 2, "settled": 56, "twin": {"gap": 0.16, "live_cpc": 0.26, "pairs": 56, "twin_cpc": 0.11}, "unpriced": 0, "unrealized": 0.0}, "Ymmsell10": {"cents_per_contract": -1.02, "contracts": 150.0, "losing": 4, "open": 0, "pnl": -1.53, "recent_pnl": 0.18, "recent_settled": 1, "settled": 50, "twin": {"gap": 0.21, "live_cpc": -1.02, "pairs": 50, "twin_cpc": -1.23}, "unpriced": 0, "unrealized": 0.0}}, "categories": {"Kmmsell10/index": {"pnl": 0.27, "recent_pnl": 0.0, "settled": 4, "unrealized": 0.0}, "Kmmsell10/mentions": {"pnl": 1.2, "recent_pnl": 0.0, "settled": 6, "unrealized": 0.0}, "Kmmsell10/other": {"pnl": -0.78, "recent_pnl": 0.0, "settled": 41, "unrealized": 0.0}, "Kmmsell10/politics": {"pnl": -1.52, "recent_pnl": 0.0, "settled": 8, "unrealized": 0.0}, "Kmmsell10/sports": {"pnl": 2.07, "recent_pnl": 0.0, "settled": 214, "unrealized": -0.93}, "Kmmsell10/weather": {"pnl": 6.78, "recent_pnl": 0.0, "settled": 46, "unrealized": 0.0}, "Nmmsell10/index": {"pnl": 0.39, "recent_pnl": 0.0, "settled": 2, "unrealized": 0.0}, "Nmmsell10/politics": {"pnl": -2.43, "recent_pnl": 0.0, "settled": 3, "unrealized": 0.0}, "Nmmsell10/weather": {"pnl": 5.67, "recent_pnl": 0.0, "settled": 29, "unrealized": 0.0}, "Ommsell10/index": {"pnl": 0.3, "recent_pnl": 0.3, "settled": 1, "unrealized": 0.0}, "Ommsell10/weather": {"pnl": -2.7, "recent_pnl": -2.88, "settled": 16, "unrealized": -2.43}, "Ummsell10/index": {"pnl": 0.1, "recent_pnl": 0.1, "settled": 1, "unrealized": 0.0}, "Ummsell10/weather": {"pnl": -2.49, "recent_pnl": -2.67, "settled": 17, "unrealized": -2.43}, "Vmmsell10/mentions": {"pnl": 1.47, "recent_pnl": 0.0, "settled": 7, "unrealized": 0.0}, "Vmmsell10/weather": {"pnl": 1.89, "recent_pnl": 0.0, "settled": 9, "unrealized": 0.0}, "Xmmsell10/index": {"pnl": -0.42, "recent_pnl": 0.0, "settled": 8, "unrealized": 0.0}, "Xmmsell10/mentions": {"pnl": -0.84, "recent_pnl": 0.0, "settled": 10, "unrealized": 0.0}, "Xmmsell10/politics": {"pnl": -1.68, "recent_pnl": 0.39, "settled": 7, "unrealized": 0.0}, "Xmmsell10/weather": {"pnl": 3.33, "recent_pnl": 0.0, "settled": 31, "unrealized": 0.0}, "Ymmsell10/index": {"pnl": -1.26, "recent_pnl": 0.0, "settled": 8, "unrealized": 0.0}, "Ymmsell10/mentions": {"pnl": -0.84, "recent_pnl": 0.0, "settled": 10, "unrealized": 0.0}, "Ymmsell10/politics": {"pnl": -2.25, "recent_pnl": 0.18, "settled": 4, "unrealized": 0.0}, "Ymmsell10/weather": {"pnl": 2.82, "recent_pnl": 0.0, "settled": 28, "unrealized": 0.0}}, "days": 7, "loss_markets": 34, "overlap": {"Kmmsell10": {"markets": 6, "pnl": 1.2, "settled": 6, "with_limm": 1}, "Vmmsell10": {"markets": 6, "pnl": 1.2, "settled": 6, "with_limm": 1}, "Xmmsell10": {"markets": 10, "pnl": -0.84, "settled": 10, "with_limm": 0}, "Ymmsell10": {"markets": 10, "pnl": -0.84, "settled": 10, "with_limm": 0}}, "totals": {"open": 9, "open_cost": 23.13, "pnl": 9.08, "recent_pnl": -4.58, "settled": 510, "total": 3.29, "unpriced": 0, "unrealized": -5.79}}
