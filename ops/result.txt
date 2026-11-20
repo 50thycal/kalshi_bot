@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=cost-post-2
-# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-20T21:40:51Z
+# type=db  id=cost-post-3
+# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-20T21:41:19Z
 Traceback (most recent call last):
   File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 675, in <module>
     raise SystemExit(serve())
@@ -18,6 +18,4 @@ Traceback (most recent call last):
     cur.execute(sql)
   File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
     raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column "opened_at" does not exist
-LINE 1: ...3 days' union all select 'mmsell_paper_last', max(opened_at)...
-                                                             ^
+psycopg.errors.QueryCanceled: canceling statement due to statement timeout
