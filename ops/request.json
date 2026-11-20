@@ -1,1 +1,1 @@
-{"type":"db","id":"cost-sizes-1","max_rows":60,"sql":"select relname, pg_size_pretty(pg_total_relation_size(c.oid)) sz, pg_total_relation_size(c.oid) b, c.reltuples::bigint est_rows from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='r' and n.nspname='public' union all select '__own_'||owner, null, count(*), null from kalshi_market_ownership group by owner order by 3 desc limit 60"}
+{"type":"env","action":"get","id":"cost-env-1"}
