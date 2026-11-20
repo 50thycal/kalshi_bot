@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=cost-own-1
-# code 0b4d54d8bed4a46e45f3956d3f8a5eed43445522 · started 2026-11-20T15:34:28Z
-own_tbl                  db_size  db     
------------------------  -------  -------
-kalshi_market_ownership  39 GB    railway
-
-(1 row)
