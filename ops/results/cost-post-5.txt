@@ -1,0 +1,26 @@
+# ops request [READ]
+# type=db  id=cost-post-5
+# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-20T21:42:47Z
+k             strategy        status     cancel_reason    t                            
+------------  --------------  ---------  ---------------  -----------------------------
+live_order    Ummsell10       canceled   book_stood_down  2026-11-20 14:20:19.31828+00 
+live_order    Ommsell10       filled                      2026-11-20 07:06:04.806885+00
+live_order    Ummsell10       filled                      2026-11-20 07:06:03.822006+00
+live_order    Ommsell10       filled                      2026-11-20 05:04:11.973932+00
+live_order    Ummsell10       filled                      2026-11-20 05:04:05.720107+00
+bot_run                       completed                   2026-11-20 21:41:58.576121+00
+bot_run                       completed                   2026-11-20 21:40:42.500467+00
+bot_run                       completed                   2026-11-20 21:39:29.215432+00
+paper         Tempmmsell3                                 2026-11-20 15:22:31.885599+00
+paper         Tempmmsell3                                 2026-11-20 15:22:31.61766+00 
+paper         Tempmmsell2                                 2026-11-20 15:22:30.895022+00
+paper         Tempmmsell3                                 2026-11-20 15:22:30.55102+00 
+paper         Tempmmsell2                                 2026-11-20 15:22:25.689289+00
+paper         Basemmsell10                                2026-11-20 15:22:12.299235+00
+paper         Gmmsell0                                    2026-11-20 15:22:12.26052+00 
+paper         Basemmsell10                                2026-11-20 15:21:59.537193+00
+shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
+shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
+shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
+
+(19 rows)
