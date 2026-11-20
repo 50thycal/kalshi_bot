@@ -1,1 +1,1 @@
-{"type":"xos","command":"list","id":"cost-xlist-1"}
+{"type":"db","id":"cost-own-2","max_rows":20,"sql":"select owner, count(*) n, null::text as x from kalshi_market_ownership group by owner union all select 'resting_live', count(*), string_agg(distinct strategy, ',') from live_orders where status='resting'"}
