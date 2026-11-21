@@ -1,24 +1,4 @@
 # ops request [READ]
-# type=db  id=lo1121-db-1
-# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-21T03:36:39Z
-Traceback (most recent call last):
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 675, in <module>
-    raise SystemExit(serve())
-                     ^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 671, in serve
-    return main()
-           ^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 481, in main
-    status = _dispatch(rtype, req, receipt)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 525, in _dispatch
-    return db_query.main()
-           ^^^^^^^^^^^^^^^
-  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 119, in main
-    with psycopg.connect(url, options=options, connect_timeout=15) as conn:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.18/x64/lib/python3.11/site-packages/psycopg/connection.py", line 126, in connect
-    raise last_ex.with_traceback(None)
-psycopg.OperationalError: connection failed: connection to server at "66.33.22.226", port 40181 failed: server closed the connection unexpectedly
-	This probably means the server terminated abnormally
-	before or while processing the request.
+# type=noop
+# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-21T04:00:50Z
+(noop — nothing to do)
