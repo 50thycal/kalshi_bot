@@ -1,1 +1,1 @@
-{"type":"db","sql":"select (select max(created_at) from paper_trades) as last_paper, (select max(created_at) from live_orders) as last_live_order, (select count(*) from live_orders where status in ('resting','pending')) as resting_live, now() as db_now","id":"lo1121-db-1"}
+{"type":"noop"}
