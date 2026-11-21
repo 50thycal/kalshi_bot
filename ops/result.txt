@@ -1,26 +1,223 @@
+# latest deployment 690fb968-c807-4120-8933-5514e5db15cf (status=REMOVED, created=2026-11-20T15:48:44.720Z)
 # ops request [READ]
-# type=db  id=cost-post-5
-# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-20T21:42:47Z
-k             strategy        status     cancel_reason    t                            
-------------  --------------  ---------  ---------------  -----------------------------
-live_order    Ummsell10       canceled   book_stood_down  2026-11-20 14:20:19.31828+00 
-live_order    Ommsell10       filled                      2026-11-20 07:06:04.806885+00
-live_order    Ummsell10       filled                      2026-11-20 07:06:03.822006+00
-live_order    Ommsell10       filled                      2026-11-20 05:04:11.973932+00
-live_order    Ummsell10       filled                      2026-11-20 05:04:05.720107+00
-bot_run                       completed                   2026-11-20 21:41:58.576121+00
-bot_run                       completed                   2026-11-20 21:40:42.500467+00
-bot_run                       completed                   2026-11-20 21:39:29.215432+00
-paper         Tempmmsell3                                 2026-11-20 15:22:31.885599+00
-paper         Tempmmsell3                                 2026-11-20 15:22:31.61766+00 
-paper         Tempmmsell2                                 2026-11-20 15:22:30.895022+00
-paper         Tempmmsell3                                 2026-11-20 15:22:30.55102+00 
-paper         Tempmmsell2                                 2026-11-20 15:22:25.689289+00
-paper         Basemmsell10                                2026-11-20 15:22:12.299235+00
-paper         Gmmsell0                                    2026-11-20 15:22:12.26052+00 
-paper         Basemmsell10                                2026-11-20 15:21:59.537193+00
-shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
-shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
-shadow_quote  C_conservative                              2026-11-20 21:39:40.107879+00
-
-(19 rows)
+# type=logs  service=main  id=lo1121-logs-1
+# code aa2308f09fbfc943728139ecdf68227029667331 · started 2026-11-21T03:36:13Z
+# target service: main
+2026-11-21T03:18:31.196498244Z INFO  weather market
+2026-11-21T03:18:31.196501944Z INFO  weather market
+2026-11-21T03:18:31.197651471Z INFO  weather market
+2026-11-21T03:18:31.197658601Z INFO  weather market
+2026-11-21T03:18:31.197664491Z INFO  weather market
+2026-11-21T03:18:31.198113646Z INFO  weather market
+2026-11-21T03:18:31.198118856Z INFO  weather market
+2026-11-21T03:18:31.198123736Z INFO  weather market
+2026-11-21T03:18:31.198838929Z INFO  weather market
+2026-11-21T03:18:31.231376202Z INFO  weather cycle
+2026-11-21T03:18:31.231384542Z INFO  live cycle
+    placed| 0
+2026-11-21T03:19:41.246576960Z INFO  exchange status
+2026-11-21T03:19:41.246580240Z INFO  weather market
+2026-11-21T03:19:41.246582920Z INFO  weather market
+2026-11-21T03:19:41.246585210Z INFO  weather market
+2026-11-21T03:19:41.251875392Z INFO  weather market
+2026-11-21T03:19:41.251879723Z INFO  weather market
+2026-11-21T03:19:41.251883653Z INFO  weather market
+2026-11-21T03:19:41.252159740Z INFO  weather market
+2026-11-21T03:19:41.252164520Z INFO  weather market
+2026-11-21T03:19:41.252168720Z INFO  weather market
+2026-11-21T03:19:41.260099213Z INFO  weather market
+2026-11-21T03:19:41.260104513Z INFO  weather cycle
+2026-11-21T03:19:41.260107923Z INFO  live cycle
+    placed| 0
+2026-11-21T03:20:41.268239788Z INFO  exchange status
+2026-11-21T03:20:43.214071748Z INFO  weather market
+2026-11-21T03:20:43.228463250Z INFO  weather market
+2026-11-21T03:20:43.238586409Z INFO  weather market
+2026-11-21T03:20:43.246147797Z INFO  weather market
+2026-11-21T03:20:43.260604048Z INFO  weather market
+2026-11-21T03:20:43.271589978Z INFO  weather market
+2026-11-21T03:20:43.286160219Z INFO  weather market
+2026-11-21T03:20:43.299064108Z INFO  weather market
+2026-11-21T03:20:43.306251249Z INFO  weather market
+2026-11-21T03:20:43.312007556Z INFO  weather market
+2026-11-21T03:20:50.821139625Z INFO  weather cycle
+2026-11-21T03:20:50.821143555Z INFO  live cycle
+    placed| 0
+2026-11-21T03:22:00.842830266Z INFO  exchange status
+2026-11-21T03:22:00.842834316Z INFO  weather market
+2026-11-21T03:22:00.842836926Z INFO  weather market
+2026-11-21T03:22:00.842839316Z INFO  weather market
+2026-11-21T03:22:00.843363980Z INFO  weather market
+2026-11-21T03:22:00.843367170Z INFO  weather market
+2026-11-21T03:22:00.843369400Z INFO  weather market
+2026-11-21T03:22:00.843891934Z INFO  weather market
+2026-11-21T03:22:00.843895034Z INFO  weather market
+2026-11-21T03:22:00.843898244Z INFO  weather market
+2026-11-21T03:22:00.844610307Z INFO  weather market
+2026-11-21T03:22:00.844615027Z INFO  weather cycle
+2026-11-21T03:22:00.844618287Z INFO  live cycle
+    placed| 0
+2026-11-21T03:23:00.856136356Z INFO  exchange status
+2026-11-21T03:23:00.856141316Z INFO  weather market
+2026-11-21T03:23:00.856144456Z INFO  weather market
+2026-11-21T03:23:00.856148636Z INFO  weather market
+2026-11-21T03:23:00.857135345Z INFO  weather market
+2026-11-21T03:23:00.857142695Z INFO  weather market
+2026-11-21T03:23:00.857146405Z INFO  weather market
+2026-11-21T03:23:00.857903987Z INFO  weather market
+2026-11-21T03:23:00.857909447Z INFO  weather market
+2026-11-21T03:23:00.857912887Z INFO  weather market
+2026-11-21T03:23:00.859535089Z INFO  weather market
+2026-11-21T03:23:03.850115146Z INFO  weather cycle
+2026-11-21T03:23:03.850117986Z INFO  live cycle
+    placed| 0
+2026-11-21T03:23:23.850264013Z ERROR  keepalive ping failed
+    exc| "TimeoutError: timed out while closing connection\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/opt/venv/lib/python3.12/site-packages/websockets/sync/connection.py\", line 833, in keepalive\n    with self.send_context():\n         ^^^^^^^^^^^^^^^^^^^\n  File \"/root/.nix-profile/lib/python3.12/contextlib.py\", line 144, in __exit__\n    next(self.gen)\n  File \"/opt/venv/lib/python3.12/site-packages/websockets/sync/connection.py\", line 1084, in send_context\n    raise self.close_exc\nwebsockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received"
+2026-11-21T03:23:23.850269073Z WARN  incentive shadow session ended: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
+2026-11-21T03:24:13.881501021Z INFO  exchange status
+2026-11-21T03:24:13.881508681Z INFO  weather market
+2026-11-21T03:24:13.881512671Z INFO  weather market
+2026-11-21T03:24:13.881515711Z INFO  weather market
+2026-11-21T03:24:13.881909176Z INFO  weather market
+2026-11-21T03:24:13.881912556Z INFO  weather market
+2026-11-21T03:24:13.881915156Z INFO  weather market
+2026-11-21T03:24:13.882559089Z INFO  weather market
+2026-11-21T03:24:13.882562319Z INFO  weather market
+2026-11-21T03:24:13.882564919Z INFO  weather market
+2026-11-21T03:24:13.883485209Z INFO  weather market
+2026-11-21T03:24:13.883662917Z INFO  weather cycle
+2026-11-21T03:24:13.883667167Z INFO  live cycle
+    placed| 0
+2026-11-21T03:25:13.896691533Z INFO  exchange status
+2026-11-21T03:25:14.560015084Z INFO  weather market
+2026-11-21T03:25:14.577108578Z INFO  weather market
+2026-11-21T03:25:14.579196356Z INFO  weather market
+2026-11-21T03:25:14.581359383Z INFO  weather market
+2026-11-21T03:25:14.594925166Z INFO  weather market
+2026-11-21T03:25:14.595671928Z INFO  weather market
+2026-11-21T03:25:14.600712642Z INFO  weather market
+2026-11-21T03:25:14.601196718Z INFO  weather market
+2026-11-21T03:25:14.606005706Z INFO  weather market
+2026-11-21T03:25:14.606011796Z INFO  weather market
+2026-11-21T03:25:19.504645287Z INFO  weather cycle
+2026-11-21T03:25:19.504649857Z INFO  live cycle
+    placed| 0
+2026-11-21T03:26:29.520578460Z INFO  exchange status
+2026-11-21T03:26:29.520583340Z INFO  weather market
+2026-11-21T03:26:29.520591650Z INFO  weather market
+2026-11-21T03:26:29.520595130Z INFO  weather market
+2026-11-21T03:26:29.521146154Z INFO  weather market
+2026-11-21T03:26:29.521150434Z INFO  weather market
+2026-11-21T03:26:29.521154394Z INFO  weather market
+2026-11-21T03:26:29.522764975Z INFO  weather market
+2026-11-21T03:26:29.522768775Z INFO  weather market
+2026-11-21T03:26:29.522772325Z INFO  weather market
+2026-11-21T03:26:29.523565077Z INFO  weather market
+2026-11-21T03:26:29.523571327Z INFO  weather cycle
+2026-11-21T03:26:29.523577557Z INFO  live cycle
+    placed| 0
+2026-11-21T03:27:29.539964676Z INFO  exchange status
+2026-11-21T03:27:29.539970186Z INFO  weather market
+2026-11-21T03:27:29.539974816Z INFO  weather market
+2026-11-21T03:27:29.539978506Z INFO  weather market
+2026-11-21T03:27:29.540695928Z INFO  weather market
+2026-11-21T03:27:29.540700388Z INFO  weather market
+2026-11-21T03:27:29.540704378Z INFO  weather market
+2026-11-21T03:27:29.541376421Z INFO  weather market
+2026-11-21T03:27:29.541380981Z INFO  weather market
+2026-11-21T03:27:29.541384161Z INFO  weather market
+2026-11-21T03:27:29.541904726Z INFO  weather market
+2026-11-21T03:27:31.116441317Z WARN  kalshi transient response 429
+2026-11-21T03:27:33.303036566Z INFO  weather cycle
+2026-11-21T03:27:33.303039746Z INFO  live cycle
+    placed| 0
+2026-11-21T03:28:43.313745064Z INFO  exchange status
+2026-11-21T03:28:43.313751824Z WARN  kalshi transient response 429
+2026-11-21T03:28:43.313755914Z INFO  weather market
+2026-11-21T03:28:43.313760094Z INFO  weather market
+2026-11-21T03:28:43.313763124Z INFO  weather market
+2026-11-21T03:28:43.314245839Z INFO  weather market
+2026-11-21T03:28:43.314249499Z INFO  weather market
+2026-11-21T03:28:43.314253399Z INFO  weather market
+2026-11-21T03:28:43.315007251Z INFO  weather market
+2026-11-21T03:28:43.315012101Z INFO  weather market
+2026-11-21T03:28:43.315015181Z INFO  weather market
+2026-11-21T03:28:43.315515875Z INFO  weather market
+2026-11-21T03:28:43.315519775Z INFO  weather cycle
+2026-11-21T03:28:43.315522525Z INFO  live cycle
+    placed| 0
+2026-11-21T03:29:43.330797383Z INFO  exchange status
+2026-11-21T03:29:43.988303125Z INFO  weather market
+2026-11-21T03:29:43.992510880Z INFO  weather market
+2026-11-21T03:29:43.997062641Z INFO  weather market
+2026-11-21T03:29:44.001141827Z INFO  weather market
+2026-11-21T03:29:44.005590818Z INFO  weather market
+2026-11-21T03:29:44.010175948Z INFO  weather market
+2026-11-21T03:29:44.014588140Z INFO  weather market
+2026-11-21T03:29:44.019027032Z INFO  weather market
+2026-11-21T03:29:44.020226410Z INFO  weather market
+2026-11-21T03:29:44.024406793Z INFO  weather market
+2026-11-21T03:29:47.901812540Z INFO  weather cycle
+2026-11-21T03:29:47.901817210Z INFO  live cycle
+    placed| 0
+2026-11-21T03:29:54.699696407Z ERROR  keepalive ping failed
+    exc| "TimeoutError: timed out while closing connection\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/opt/venv/lib/python3.12/site-packages/websockets/sync/connection.py\", line 833, in keepalive\n    with self.send_context():\n         ^^^^^^^^^^^^^^^^^^^\n  File \"/root/.nix-profile/lib/python3.12/contextlib.py\", line 144, in __exit__\n    next(self.gen)\n  File \"/opt/venv/lib/python3.12/site-packages/websockets/sync/connection.py\", line 1084, in send_context\n    raise self.close_exc\nwebsockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received"
+2026-11-21T03:29:54.710329702Z WARN  incentive shadow session ended: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
+2026-11-21T03:30:54.725397504Z INFO  exchange status
+2026-11-21T03:30:54.725409424Z INFO  weather market
+2026-11-21T03:30:54.725414344Z INFO  weather market
+2026-11-21T03:30:54.725419564Z INFO  weather market
+2026-11-21T03:30:54.725609571Z INFO  weather market
+2026-11-21T03:30:54.725618201Z INFO  weather market
+2026-11-21T03:30:54.725622661Z INFO  weather market
+2026-11-21T03:30:54.726411443Z INFO  weather market
+2026-11-21T03:30:54.726418223Z INFO  weather market
+2026-11-21T03:30:54.726421173Z INFO  weather market
+2026-11-21T03:30:54.727501571Z INFO  weather market
+2026-11-21T03:30:54.727509441Z INFO  weather cycle
+2026-11-21T03:30:54.727514231Z INFO  live cycle
+    placed| 0
+2026-11-21T03:31:54.734078776Z INFO  exchange status
+2026-11-21T03:31:56.875312804Z INFO  weather market
+2026-11-21T03:31:56.885578042Z INFO  weather market
+2026-11-21T03:31:56.896930710Z INFO  weather market
+2026-11-21T03:31:56.905529246Z INFO  weather market
+2026-11-21T03:31:56.910428063Z INFO  weather market
+2026-11-21T03:31:56.939479149Z INFO  weather market
+2026-11-21T03:31:56.943981720Z INFO  weather market
+2026-11-21T03:31:56.949826737Z INFO  weather market
+2026-11-21T03:31:56.960278144Z INFO  weather market
+2026-11-21T03:31:56.960283144Z INFO  weather market
+2026-11-21T03:32:00.827885830Z INFO  weather cycle
+2026-11-21T03:32:00.827891840Z INFO  live cycle
+    placed| 0
+2026-11-21T03:33:10.847476305Z INFO  exchange status
+2026-11-21T03:33:10.847478995Z INFO  weather market
+2026-11-21T03:33:10.847482775Z INFO  weather market
+2026-11-21T03:33:10.847486225Z INFO  weather market
+2026-11-21T03:33:10.847988319Z INFO  weather market
+2026-11-21T03:33:10.847990899Z INFO  weather market
+2026-11-21T03:33:10.847993729Z INFO  weather market
+2026-11-21T03:33:10.849015928Z INFO  weather market
+2026-11-21T03:33:10.849021608Z INFO  weather market
+2026-11-21T03:33:10.849025628Z INFO  weather market
+2026-11-21T03:33:10.849868159Z INFO  weather market
+2026-11-21T03:33:10.849873029Z INFO  weather cycle
+2026-11-21T03:33:10.849876379Z INFO  live cycle
+    placed| 0
+2026-11-21T03:34:10.797390567Z INFO  exchange status
+2026-11-21T03:34:10.797393577Z INFO  weather market
+2026-11-21T03:34:10.797399787Z INFO  weather market
+2026-11-21T03:34:10.797403407Z INFO  weather market
+2026-11-21T03:34:10.798145549Z INFO  weather market
+2026-11-21T03:34:10.798157159Z INFO  weather market
+2026-11-21T03:34:10.798169649Z INFO  weather market
+2026-11-21T03:34:10.799100919Z INFO  weather market
+2026-11-21T03:34:10.799107819Z INFO  weather market
+2026-11-21T03:34:10.799111879Z INFO  weather market
+2026-11-21T03:34:10.803464462Z INFO  weather market
+2026-11-21T03:34:11.305560332Z INFO  weather cycle
+2026-11-21T03:34:11.305568002Z INFO  live cycle
+    placed| 0
+2026-11-21T03:35:01.308290687Z INFO  received shutdown signal; will exit after current cycle
+2026-11-21T03:35:05.716192792Z INFO  Stopping Container
